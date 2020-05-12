@@ -1,0 +1,29 @@
+from eve.auth import TokenAuth
+from flask import request
+
+from hive.util.constants import DID_PREFIX
+from hive.util.did_info import get_did_info_by_token
+
+
+class HiveTokenAuth(TokenAuth):
+    def check_auth(self, token, allowed_roles, resource, method):
+        info = get_did_info_by_token(token)
+        if info is not None:
+            did = info["_id"]
+            self.set_mongo_prefix(did + DID_PREFIX)
+            return True
+        else:
+            return False
+
+
+def did_auth():
+    auth = request.headers.get("Authorization").strip()
+    if auth.lower().startswith(("token", "bearer")):
+        token = auth.split(" ")[1]
+        info = get_did_info_by_token(token)
+        if info is not None:
+            return info["_id"]
+        else:
+            return None
+    else:
+        return None

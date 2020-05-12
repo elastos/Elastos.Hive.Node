@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import os
+TESTING = True
 
 MONGO_HOST = 'localhost'
 MONGO_PORT = 27017
 
-MONGO_DBNAME = 'elastos_hive_node'
+MONGO_DBNAME = 'elastos_hive_node_test'
 
 RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
 

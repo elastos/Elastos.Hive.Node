@@ -1,0 +1,4 @@
+pymongo
+Flask
+Flask-Script
+eve

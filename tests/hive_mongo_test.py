@@ -124,5 +124,14 @@ class SampleTestCase(unittest.TestCase):
         )
         self.assert200(r1.status_code)
 
+    def test_login_resume_collection_data(self):
+        if self.auth is None:
+            self.test_login()
+
+        r1 = self.test_client.get(
+            'api/v1/db/col/works', headers=self.auth
+        )
+        self.assert200(r1.status_code)
+
     if __name__ == '__main__':
         unittest.main()

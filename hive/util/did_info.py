@@ -5,7 +5,7 @@ from pymongo import MongoClient
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID_INFO_REGISTER_PASSWORD, DID_INFO_REGISTER_TOKEN
 
 
-def save_did_info_to_db(did, password):
+def add_did_info_to_db(did, password):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]

@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+import json
 
 from flask import request
 
 from hive.util.auth import did_auth
-from hive.util.constants import DID_PREFIX, DID_DB_PREFIX, DID_INFO_REGISTER_PASSWORD
-from hive.util.did_info import save_did_info_to_db, get_did_info_by_did, save_token_to_db, create_token
+from hive.util.constants import DID_PREFIX, DID_DB_PREFIX, DID_INFO_REGISTER_PASSWORD, DID_RESOURCE_NAME, \
+    DID_RESOURCE_SCHEMA
+from hive.util.did_info import add_did_info_to_db, get_did_info_by_did, save_token_to_db, create_token
+from hive.util.did_resource import get_all_resource_of_did, find_schema_of_did_resource, add_did_resource_to_db, \
+    update_schema_of_did_resource
 from hive.util.server_response import response_ok, response_err
 from hive.settings import MONGO_HOST, MONGO_PORT
 
@@ -23,6 +27,13 @@ class HiveMongo:
                 MONGO_PORT,
                 DID_DB_PREFIX + did,
             )
+            resource_list = get_all_resource_of_did(did)
+            for resource in resource_list:
+                collection = resource[DID_RESOURCE_NAME]
+                schema = resource[DID_RESOURCE_SCHEMA]
+                settings = {"schema": json.loads(schema), "mongo_prefix": did + DID_PREFIX}
+                self.app.register_resource(collection, settings)
+
         return did
 
     def did_register(self):
@@ -35,7 +46,7 @@ class HiveMongo:
             return response_err(400, "parameter is null")
 
         try:
-            save_did_info_to_db(did, password)
+            add_did_info_to_db(did, password)
         except Exception as e:
             print("Exception in did_register::", e)
 
@@ -59,7 +70,6 @@ class HiveMongo:
         if password != pw:
             return response_err(401, "Password error")
 
-        # todo 加入到初始化模块,从数据获取信息create_db
         self.create_db(did)
 
         token = create_token()
@@ -83,7 +93,15 @@ class HiveMongo:
 
         settings = {"schema": schema, "mongo_prefix": did + DID_PREFIX}
 
-        # todo 创建成功后需要加入初始化模块,启动服务的时候或者用户登录的时候从数据库获取schema信息register_resource
+        schema_db = find_schema_of_did_resource(did, collection)
+        if schema_db is None:
+            add_did_resource_to_db(did, collection, json.dumps(schema))
+        else:
+            # If allow a collection with same name in db of this did,
+            # should add list and delete(drop collection) function
+            # temporarily not support
+            return response_err(409, "Collection: "+collection+" exist")
+
         with self.app.app_context():
             self.app.register_resource(collection, settings)
 

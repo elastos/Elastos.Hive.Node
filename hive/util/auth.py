@@ -17,8 +17,11 @@ class HiveTokenAuth(TokenAuth):
 
 
 def did_auth():
-    auth = request.headers.get("Authorization").strip()
-    if auth.lower().startswith(("token", "bearer")):
+    auth = request.headers.get("Authorization")
+    if auth is None:
+        return None
+
+    if auth.strip().lower().startswith(("token", "bearer")):
         token = auth.split(" ")[1]
         info = get_did_info_by_token(token)
         if info is not None:

@@ -3,6 +3,8 @@ import os
 import unittest
 import tempfile
 import sqlite3
+from io import StringIO, BytesIO
+
 from flask import session, request, make_response, render_template, appcontext_pushed, g
 from contextlib import closing, contextmanager
 from hive import create_app
@@ -18,23 +20,27 @@ def name_set(app, name):
 
 
 class SampleTestCase(unittest.TestCase):
+    def __init__(self, methodName='runTest'):
+        super(SampleTestCase, self).__init__(methodName)
 
     def setUp(self):
         self.app = create_app('testing')
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
         self.content_type = ("Content-Type", "application/json")
+        self.upload_file_content_type = ("Content-Type", "multipart/form-data")
 
         self.json_header = [
             self.content_type,
         ]
         self.auth = None
+        self.upload_auth = None
 
-    def init_auth(self, token):
-        self.auth = [
-            ("Authorization", "token " + token),
-            self.content_type,
-        ]
+    def init_all_auth(self):
+        self.register()
+        token = self.login()
+        self.init_auth(token)
+        self.init_upload_auth(token)
 
     def tearDown(self):
         pass
@@ -55,16 +61,7 @@ class SampleTestCase(unittest.TestCase):
     def assert201(self, status):
         self.assertEqual(status, 201)
 
-    def test_echo(self):
-        r, s = self.parse_response(
-            self.test_client.post('/api/v1/echo',
-                                  data=json.dumps({"key": "value"}),
-                                  headers=self.json_header)
-        )
-        self.assert200(s)
-        print("** r:" + str(r))
-
-    def test_register(self):
+    def register(self):
         r, s = self.parse_response(
             self.test_client.post('/api/v1/did/register',
                                   data=json.dumps({
@@ -73,12 +70,8 @@ class SampleTestCase(unittest.TestCase):
                                   }),
                                   headers=self.json_header)
         )
-        self.assert200(s)
-        self.assertEqual({
-            "_status": "OK"
-        }, r)
 
-    def test_login(self):
+    def login(self):
         r, s = self.parse_response(
             self.test_client.post('/api/v1/did/login',
                                   data=json.dumps({
@@ -87,42 +80,66 @@ class SampleTestCase(unittest.TestCase):
                                   }),
                                   headers=self.json_header)
         )
+        return r["token"]
+
+    def init_auth(self, token):
+        self.auth = [
+            ("Authorization", "token " + token),
+            self.content_type,
+        ]
+
+    def init_upload_auth(self, token):
+        self.upload_auth = [
+            ("Authorization", "token " + token),
+            self.upload_file_content_type,
+        ]
+
+    def test_upload_file(self):
+        if self.upload_auth is None:
+            self.init_all_auth()
+
+        temp = BytesIO()
+        temp.write(b'Hello Temp!')
+        temp.seek(0)
+        temp.name = 'hello-temp.txt'
+        files = {'file': (temp, "test.txt")}
+
+        r, s = self.parse_response(
+            self.test_client.post('api/v1/file/uploader',
+                                  data=files,
+                                  headers=self.upload_auth)
+        )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
-        self.init_auth(r["token"])
 
-    def test_create_collection(self):
+    def test_list_file(self):
         if self.auth is None:
-            self.test_login()
-
-        r, s = self.parse_response(
-            self.test_client.post('/api/v1/db/create_collection',
-                                  data=json.dumps(
-                                      {
-                                          "collection": "works",
-                                          "schema": {"title": {"type": "string"}, "author": {"type": "string"}}
-                                      }
-                                  ),
-                                  headers=self.auth)
-        )
-        self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
-
-    def test_add_collection_data(self):
-        self.test_create_collection()
-        r, s = self.parse_response(
-            self.test_client.post('/works',
-                                  data=json.dumps(
-                                      {"author": "john doe2", "title": "Eve for Dummies2"}
-                                  ),
-                                  headers=self.auth)
-        )
-        self.assert201(s)
-
+            self.init_all_auth()
         r1 = self.test_client.get(
-            '/works', headers=self.auth
+            'api/v1/file/list', headers=self.auth
         )
         self.assert200(r1.status_code)
+
+    def test_download_file(self):
+        if self.auth is None:
+            self.init_all_auth()
+        r1 = self.test_client.get(
+            'api/v1/file/downloader?filename=test.txt', headers=self.auth
+        )
+        self.assert200(r1.status_code)
+
+    def test_delete_file(self):
+        if self.auth is None:
+            self.init_all_auth()
+        r, s = self.parse_response(
+            self.test_client.post('api/v1/file/delete',
+                                  data=json.dumps({
+                                      "file_name": "test.txt"
+                                  }),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
 
     if __name__ == '__main__':
         unittest.main()

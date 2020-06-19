@@ -68,16 +68,38 @@ class HiveFile:
             return response_err(401, "auth failed")
 
         filename = request.args.get('filename')
+        if filename is None:
+            return response_err(401, "file name is null")
 
         path = self.get_file_path(did)
 
-        if not os.path.exists(path+filename.encode('utf-8').decode('utf-8')):
+        if not os.path.exists(path + filename.encode('utf-8').decode('utf-8')):
             return response_err(404, "file not found")
 
         response = make_response(
             send_from_directory(path, filename.encode('utf-8').decode('utf-8'), as_attachment=True))
         response.headers["Content-Disposition"] = "attachment; filename={}".format(filename.encode().decode('latin-1'))
         return response
+
+    def get_file_info(self):
+        did = did_auth()
+        if did is None:
+            return response_err(401, "auth failed")
+
+        filename = request.args.get('filename')
+        if filename is None:
+            return response_err(401, "file name is null")
+
+
+        path = self.get_file_path(did)
+
+        file_full_name = path + filename.encode('utf-8').decode('utf-8')
+        if not os.path.exists(file_full_name):
+            return response_err(404, "file not found")
+
+        size = os.path.getsize(file_full_name)
+
+        return response_ok({"file": filename, "size": size})
 
     def list_files(self):
         did = did_auth()

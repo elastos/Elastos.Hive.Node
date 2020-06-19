@@ -51,6 +51,11 @@ def download_file():
     return hive_file.download_file()
 
 
+@main.route('/api/v1/file/info', methods=['GET'])
+def file_info():
+    return hive_file.get_file_info()
+
+
 @main.route('/api/v1/file/delete', methods=['POST'])
 def delete_file():
     return hive_file.delete_file()

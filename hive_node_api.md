@@ -148,6 +148,20 @@
             ]
         }
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
+        
+1. get file info 
+    HTTP: GET 
+    URL : api/v1/file/info?filename="file.name"
+    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
+    Content-Type: "application/json"
+    return: 
+        成功:
+        {
+            "_status": "OK",
+            "file": "test.png"
+            "size": 123012 
+        }
+        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
     
 1. file delete 
     HTTP: POST

@@ -3,15 +3,21 @@ from werkzeug.utils import secure_filename
 
 from hive.main.hive_file import HiveFile
 from hive.main.hive_mongo import HiveMongo
+from hive.main.hive_auth import HiveAuth
+from hive.main.hive_sync import HiveSync
 
 hive_mongo = HiveMongo()
 hive_file = HiveFile()
+hive_auth = HiveAuth()
+hive_sync = HiveSync()
 main = Blueprint('main', __name__)
 
 
 def init_app(app):
+    hive_auth.init_app(app)
     hive_mongo.init_app(app)
     hive_file.init_app(app)
+    hive_sync.init_app(app)
     app.register_blueprint(main)
 
 
@@ -24,14 +30,14 @@ def echo():
 
 
 # did register
-@main.route('/api/v1/did/register', methods=['POST'])
-def did_register_view():
-    return hive_mongo.did_register()
+@main.route('/api/v1/did/auth', methods=['POST'])
+def did_auth_challenge():
+    return hive_auth.did_auth_challenge()
 
 
-@main.route('/api/v1/did/login', methods=['POST'])
-def did_login_view():
-    return hive_mongo.did_login()
+@main.route('/api/v1/did/<did_base58>/callback', methods=['POST'])
+def did_auth_callback(did_base58):
+    return hive_auth.did_auth_callback(did_base58)
 
 
 # db create and get
@@ -64,3 +70,8 @@ def delete_file():
 @main.route('/api/v1/file/list', methods=['GET'])
 def list_files():
     return hive_file.list_files()
+
+
+@main.route('/api/v1/syn/setup/google_drive', methods=['POST'])
+def setup_syn_google_drive():
+    return hive_sync.setup_google_drive_rclone()

@@ -6,3 +6,6 @@ pymongo
 Flask
 Flask-Script
 eve
+cffi
+setuptools
+base58

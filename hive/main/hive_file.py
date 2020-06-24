@@ -3,7 +3,7 @@ import os
 from flask import request, send_from_directory, make_response
 
 from hive.util.auth import did_auth
-from hive.util.constants import DID_FILE_DIR
+from hive.util.constants import DID_FILE_DIR, did_tail_part
 from hive.util.server_response import response_err, response_ok
 
 
@@ -19,9 +19,9 @@ class HiveFile:
     def get_file_path(self, did):
         if not os.path.isabs(DID_FILE_DIR):
             directory = os.getcwd()
-            path = directory + "/" + DID_FILE_DIR + "/" + did + "/"
+            path = directory + "/" + DID_FILE_DIR + "/" + did_tail_part(did) + "/"
         else:
-            path = DID_FILE_DIR + "/" + did + "/"
+            path = DID_FILE_DIR + "/" + did_tail_part(did) + "/"
         return path
 
     def upload_file(self):
@@ -89,7 +89,6 @@ class HiveFile:
         filename = request.args.get('filename')
         if filename is None:
             return response_err(401, "file name is null")
-
 
         path = self.get_file_path(did)
 

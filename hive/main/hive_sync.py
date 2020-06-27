@@ -1,14 +1,15 @@
 import json
 import os
 import pathlib
+import re
 import subprocess
-import time
+from datetime import datetime
 
 from flask import Blueprint, request, jsonify
 from flask_apscheduler import APScheduler
 
 from hive.util.auth import did_auth
-from hive.util.constants import did_tail_part, RCLONE_CONFIG_FILE
+from hive.util.constants import did_tail_part, RCLONE_CONFIG_FILE, DID_FILE_DIR
 from hive.util.server_response import response_err, response_ok
 
 scheduler = APScheduler()
@@ -56,32 +57,84 @@ class HiveSync:
         data = {"drive": drive}
         return response_ok(data)
 
-    def add_drive_to_rclone(self, config_data):
+    @staticmethod
+    def find_rclone_config():
         env_dist = os.environ
         rclone_config = env_dist["HOME"] + RCLONE_CONFIG_FILE
         config_file = pathlib.Path(rclone_config).absolute()
+        return config_file
+
+    @staticmethod
+    def get_all_rclone_config_drive():
+        config_file = HiveSync.find_rclone_config()
+        drives = list()
+        with open(config_file) as h_file:
+            for l in h_file.readlines():
+                l = l.strip("\n")
+                line = re.match(r"^\[([^\[\]]*)\]$", l)
+                if line is not None:
+                    drives.append(line.group().strip("[]"))
+        return drives
+
+    @staticmethod
+    def get_all_did_dirs():
+        did_dirs = list()
+        file_dirs = pathlib.Path(DID_FILE_DIR).absolute()
+        if not file_dirs.exists():
+            return
+        for dirs in file_dirs.iterdir():
+            if dirs.is_dir():
+                did_dirs.append(dirs.name)
+        return did_dirs
+
+    @staticmethod
+    def get_all_syn_drive():
+        did_dirs = HiveSync.get_all_did_dirs()
+        drives = HiveSync.get_all_rclone_config_drive()
+        syn = dict()
+        for drive in drives:
+            for did in did_dirs:
+                if drive.find(did) != -1:
+                    syn[did] = drive
+        return syn
+
+    def add_drive_to_rclone(self, config_data):
+        config_file = self.find_rclone_config()
 
         with open(config_file, 'a') as h_file:
             # Do not change the string format!!!
-            lines ='''
+            lines = '''
 [gdrive_%s]
 type = drive
 client_id = %s
 client_secret = %s
 scope = %s
 token = %s
-''' % (config_data["did"], config_data["client_id"], config_data["client_secret"], config_data["scope"], config_data["token"])
+''' % (config_data["did"], config_data["client_id"], config_data["client_secret"], config_data["scope"],
+       config_data["token"])
             print(lines)
             h_file.writelines(lines)
         return "gdrive_%s" % config_data["did"]
 
 
+# if __name__ == '__main__':
+#     # HiveSync.get_all_rclone_config_drive()
+#     syn = HiveSync.get_all_syn_drive()
+#     for key, value in syn.items():
+#         files = pathlib.Path(DID_FILE_DIR).absolute() / key
+#         line = 'rclone sync %s %s:elastos' % (files.as_posix(), value)
+#         print(line)
 
 
 # @scheduler.task(trigger='interval', id='syn_job', hours=1)
-# @scheduler.task(trigger='interval', id='syn_job', seconds=20)
-# def syn_job():
-#     print('rclone syncing')
-#     subprocess.call(
-#         'rclone sync ./did_file/iUWjzkS4Di75yCXiKJqxrHYxQdBcS2NaPk iUWjzkS4Di75yCXiKJqxrHYxQdBcS2NaPk_drive:elastos',
-#         shell=True)
+# @scheduler.task(trigger='interval', id='syn_job', seconds=10)
+def syn_job():
+    print('rclone syncing start:' + str(datetime.now()))
+    syn_dirs = HiveSync.get_all_syn_drive()
+    for key, value in syn_dirs.items():
+        files = pathlib.Path(DID_FILE_DIR).absolute() / key
+        line = 'rclone sync %s %s:elastos' % (files.as_posix(), value)
+        print(line)
+        subprocess.call(line, shell=True)
+        # subprocess.Popen(line, shell=True)
+    print('rclone syncing end:' + str(datetime.now()))

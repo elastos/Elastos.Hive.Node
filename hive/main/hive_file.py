@@ -16,7 +16,7 @@ class HiveFile:
         self.app.config['UPLOAD_FOLDER'] = "./temp_file"
         self.app.config['MAX_CONTENT_PATH'] = 10000000
 
-    def get_file_path(self, did):
+    def get_file_path(did):
         if not os.path.isabs(DID_FILE_DIR):
             directory = os.getcwd()
             path = directory + "/" + DID_FILE_DIR + "/" + did_tail_part(did) + "/"

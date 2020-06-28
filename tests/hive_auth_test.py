@@ -8,7 +8,7 @@ from contextlib import closing, contextmanager
 from hive import create_app
 from hive.util.did.ela_did_util import did_sign, init_test_did_store, did_verify
 
-did_str = "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym1"
+did_str = "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"
 auth_key_name = "key2"
 storepass = "123456"
 

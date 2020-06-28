@@ -1,19 +1,30 @@
 # Hive node plus plus api
 
-1. User register
+# todo add auth api doc
+1. did auth
     HTTP: POST
-    URL : /api/v1/did/register
+    URL : /api/v1/did/auth
     Content-Type: "application/json"
-    data: {"did":"iUWjzkS4Di75yCXiKJqxrHYxQdBcS2NaPk", "password":"adujejd"}
+    data: {"iss":" "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"}
     return: 
-        成功:{"_status":"OK"} 
+        成功:{"_status":"OK", 
+             "subject":"didauth",
+             "iss":"elastos_hive_node",
+             "nonce":"4607e6de-b5f0-11ea-a859-f45c898fba57",
+             "callback":"/api/v1/did/iWFAUYhTa35c1fPe3iCJvihZHx6quumnym/callback"} 
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
-        
-1. User login 
+
+1. did auth callback
     HTTP: POST
-    URL : /api/v1/did/login
+    URL : /api/v1/did/.../callback
     Content-Type: "application/json"
-    data: {"did":"iUWjzkS4Di75yCXiKJqxrHYxQdBcS2NaPk", "password":"adujejd"}
+    data: {"subject":"didauth",
+           "iss":"did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym",
+           "realm": "elastos_hive_node",
+           "nonce" : "4607e6de-b5f0-11ea-a859-f45c898fba57"
+           "key_name" : "key2",
+           "sig" : "iWFAUYhTa35c1fPiWFAUYhTa35c1fPe3iCJvihZHx6quumnyme3iCJvihZHx6quumnymiWFAUYhTa35c1fPe3iCJvihZHx6quumnym"
+           }
     return: 
         成功:{"_status":"OK", "token":"38b8c2c1093dd0fec383a9d9ac940515"}
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}

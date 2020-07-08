@@ -14,7 +14,7 @@ from hive.util.did_resource import get_all_resource_of_did
 
 from hive.util.constants import DID_PREFIX, DID_DB_PREFIX, DID_INFO_NONCE, DID_RESOURCE_NAME, \
     DID_RESOURCE_SCHEMA, DID_CHALLENGE_EXPIRE, DID_AUTH_REALM, DID_INFO_NONCE_EXPIRE, DID_TOKEN_EXPIRE, \
-    RCLONE_CONFIG_FILE, did_tail_part
+    RCLONE_CONFIG_FILE, did_tail_part, DID, APP_ID
 from hive.settings import MONGO_HOST, MONGO_PORT
 from datetime import datetime
 
@@ -32,7 +32,8 @@ class HiveAuth:
         if content is None:
             return response_err(400, "parameter is not application/json")
         did = content.get('iss', None)
-        if did is None:
+        app_id = content.get('app_id', None)
+        if (did is None) or (app_id is None):
             return response_err(400, "parameter is null")
 
         ret = is_did_resolve(did)
@@ -42,13 +43,13 @@ class HiveAuth:
         nonce = create_nonce()
         time = datetime.now().timestamp()
 
-        info = get_did_info_by_id(did)
+        info = get_did_info_by_id(did, app_id)
 
         try:
             if info is None:
-                add_did_info_to_db(did, nonce, time + DID_CHALLENGE_EXPIRE)
+                add_did_info_to_db(did, app_id, nonce, time + DID_CHALLENGE_EXPIRE)
             else:
-                update_nonce_of_did_info(did, nonce, time + DID_CHALLENGE_EXPIRE)
+                update_nonce_of_did_info(did, app_id, nonce, time + DID_CHALLENGE_EXPIRE)
         except Exception as e:
             print("Exception in did_auth_challenge::", e)
             return response_err(500, "Exception in did_auth_challenge:" + e)
@@ -69,6 +70,7 @@ class HiveAuth:
             return response_err(400, "parameter is not application/json")
         subject = content.get('subject', None)
         iss = content.get('iss', None)
+        app_id_in = content.get('app_id', None)
         realm = content.get('realm', None)
         nonce = content.get('nonce', None)
         key_name = content.get('key_name', None)
@@ -90,11 +92,14 @@ class HiveAuth:
         info = get_did_info_by_nonce(nonce)
         if info is None:
             return response_err(406, "auth nonce error")
-        did = info["_id"]
+        did = info[DID]
+        app_id = info[APP_ID]
         url_did = base58.b58decode(did_base58)
         # "utf-8"
         if (did != iss) or (did != str(url_did, encoding="utf-8")):
             return response_err(406, "auth did error")
+        if app_id != app_id_in:
+            return response_err(406, "auth app_id error")
 
         # 2. 验证过期时间
         expire = info[DID_INFO_NONCE_EXPIRE]
@@ -111,7 +116,7 @@ class HiveAuth:
         self.create_db(did)
 
         token = create_token()
-        save_token_to_db(did, token, now + DID_TOKEN_EXPIRE)
+        save_token_to_db(did, app_id, token, now + DID_TOKEN_EXPIRE)
 
         data = {"token": token}
         return response_ok(data)
@@ -131,4 +136,3 @@ class HiveAuth:
                 self.app.register_resource(collection, settings)
 
         return did
-

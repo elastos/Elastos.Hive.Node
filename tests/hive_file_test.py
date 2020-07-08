@@ -9,7 +9,7 @@ from flask import session, request, make_response, render_template, appcontext_p
 from contextlib import closing, contextmanager
 from hive import create_app
 
-token = "4607e6de-b5f0-11ea-a859-f45c898fba57"
+token = "f8f54b38-c022-11ea-88b6-f45c898fba57"
 
 
 @contextmanager
@@ -87,15 +87,62 @@ class SampleTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
+    def test_upload_file_new(self):
+        file_pro = {"file_name": "test_big_file.txt",
+                    "other_property": "test_property"
+                    }
+
+        rt, s = self.parse_response(
+            self.test_client.post('api/v1/file/create',
+                                  data=json.dumps(file_pro),
+                                  headers=self.upload_auth)
+        )
+        self.assert200(s)
+        self.assertEqual(rt["_status"], "OK")
+
+        upload_file_url = rt["upload_file_url"]
+
+        temp = BytesIO()
+        temp.write(b'Hello Temp!')
+        temp.seek(0)
+        temp.name = 'hello-temp.txt'
+        # files = {'file': (temp, "test.txt")}
+
+        r, s = self.parse_response(
+            self.test_client.post(upload_file_url,
+                                  data=temp,
+                                  headers=self.upload_auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
     def test_list_file(self):
         r1 = self.test_client.get(
             'api/v1/file/list', headers=self.auth
         )
         self.assert200(r1.status_code)
 
+    def test_file_property(self):
+
+        file_pro = {"file_name": "test.txt",
+                    "other_property1": "test_property1"
+                    }
+        rt, s = self.parse_response(
+            self.test_client.post('api/v1/file/info',
+                                  data=json.dumps(file_pro),
+                                  headers=self.upload_auth)
+        )
+        self.assert200(s)
+        self.assertEqual(rt["_status"], "OK")
+
+        r1 = self.test_client.get(
+            'api/v1/file/info?filename=test.txt', headers=self.auth
+        )
+        self.assert200(r1.status_code)
+
     def test_download_file(self):
         r1 = self.test_client.get(
-            'api/v1/file/downloader?filename=test.txt', headers=self.auth
+            'api/v1/file/downloader?filename=test_big_file.txt', headers=self.auth
         )
         self.assert200(r1.status_code)
 
@@ -108,7 +155,11 @@ class SampleTestCase(unittest.TestCase):
                                   headers=self.auth)
         )
         self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
+
+        r1 = self.test_client.get(
+            'api/v1/file/info?filename=test.txt', headers=self.auth
+        )
+        self.assert200(s)
 
 
 if __name__ == '__main__':

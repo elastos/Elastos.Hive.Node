@@ -17,8 +17,8 @@ class HiveMongo:
         self.app = app
 
     def create_collection(self):
-        did = did_auth()
-        if did is None:
+        did, app_id = did_auth()
+        if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
 
         content = request.get_json(force=True, silent=True)

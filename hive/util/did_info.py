@@ -2,24 +2,24 @@ import uuid
 
 from pymongo import MongoClient
 
-from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID_INFO_NONCE, DID_INFO_TOKEN, \
+from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
     DID_INFO_NONCE_EXPIRE, DID_INFO_TOKEN_EXPIRE
 
 
-def add_did_info_to_db(did, nonce, expire):
+def add_did_info_to_db(did, app_id, nonce, expire):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    did_dic = {"_id": did, DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRE: expire}
+    did_dic = {DID: did, APP_ID: app_id, DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRE: expire}
     i = col.insert_one(did_dic)
     return i
 
 
-def update_nonce_of_did_info(did, nonce, expire):
+def update_nonce_of_did_info(did, app_id, nonce, expire):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {"_id": did}
+    query = {DID: did, APP_ID: app_id}
     value = {"$set": {DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRE: expire}}
     ret = col.update_one(query, value)
     return ret
@@ -34,20 +34,20 @@ def get_did_info_by_nonce(nonce):
     return info
 
 
-def get_did_info_by_id(did):
+def get_did_info_by_id(did, app_id):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {"_id": did}
+    query = {DID: did, APP_ID: app_id}
     info = col.find_one(query)
     return info
 
 
-def save_token_to_db(did, token, expire):
+def save_token_to_db(did, app_id, token, expire):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {"_id": did}
+    query = {DID: did, APP_ID: app_id}
     value = {"$set": {
         DID_INFO_TOKEN: token,
         DID_INFO_TOKEN_EXPIRE: expire,

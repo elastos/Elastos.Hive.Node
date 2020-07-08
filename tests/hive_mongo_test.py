@@ -7,7 +7,7 @@ from flask import session, request, make_response, render_template, appcontext_p
 from contextlib import closing, contextmanager
 from hive import create_app
 
-token = "4607e6de-b5f0-11ea-a859-f45c898fba57"
+token = "f8f54b38-c022-11ea-88b6-f45c898fba57"
 
 
 @contextmanager

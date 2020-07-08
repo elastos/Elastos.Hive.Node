@@ -9,6 +9,7 @@ from hive import create_app
 from hive.util.did.ela_did_util import did_sign, init_test_did_store, did_verify
 
 did_str = "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"
+app_id = "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"
 auth_key_name = "key2"
 storepass = "123456"
 
@@ -67,11 +68,13 @@ class SampleTestCase(unittest.TestCase):
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/auth',
                                   data=json.dumps({
-                                      "iss": did_str
+                                      "iss": did_str,
+                                      "app_id": app_id
                                   }),
                                   headers=self.json_header)
         )
         self.assert200(s)
+        self.assertEqual(rt["_status"], "OK")
 
         subject = rt["subject"]
         iss = rt["iss"]
@@ -84,6 +87,7 @@ class SampleTestCase(unittest.TestCase):
         param["subject"] = subject
         param["realm"] = iss
         param["iss"] = did_str
+        param["app_id"] = app_id
         param["nonce"] = nonce
         param["key_name"] = auth_key_name
         param["sig"] = str(sig, encoding="utf-8")

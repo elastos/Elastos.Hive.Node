@@ -48,8 +48,18 @@ def create_collection_view():
 
 # file create and get
 @main.route('/api/v1/file/uploader', methods=['POST'])
-def upload_file():
-    return hive_file.upload_file()
+def upload_file_old():
+    return hive_file.upload_file_old()
+
+
+@main.route('/api/v1/file/create', methods=['POST'])
+def add_file_property():
+    return hive_file.create_upload_file()
+
+
+@main.route('/api/v1/<file_id>/upload', methods=['POST'])
+def upload_file_callback(file_id):
+    return hive_file.upload_file_callback(file_id)
 
 
 @main.route('/api/v1/file/downloader', methods=['GET'])
@@ -57,9 +67,12 @@ def download_file():
     return hive_file.download_file()
 
 
-@main.route('/api/v1/file/info', methods=['GET'])
+@main.route('/api/v1/file/info', methods=['GET', 'POST'])
 def file_info():
-    return hive_file.get_file_info()
+    if request.method == 'POST':
+        return hive_file.set_file_property()
+    else:
+        return hive_file.get_file_property()
 
 
 @main.route('/api/v1/file/delete', methods=['POST'])

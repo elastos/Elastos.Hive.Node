@@ -25,8 +25,8 @@ class HiveSync:
         scheduler.start()
 
     def setup_google_drive_rclone(self):
-        did = did_auth()
-        if did is None:
+        did, app_id = did_auth()
+        if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
 
         content = request.get_json(force=True, silent=True)

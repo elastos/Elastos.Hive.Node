@@ -1,21 +1,13 @@
-import json
-import os
-import pathlib
-
 import base58
 from flask import request
 
-from hive.util.auth import did_auth
 from hive.util.did.ela_did_util import setup_did_backend, is_did_resolve, did_verify
 from hive.util.did_info import add_did_info_to_db, create_token, save_token_to_db, create_nonce, \
-    get_did_info_by_nonce, update_nonce_of_did_info, get_did_info_by_id
+    get_did_info_by_nonce, update_nonce_of_did_info, get_did_info_by_did_appid
 from hive.util.server_response import response_err, response_ok
-from hive.util.did_resource import get_all_resource_of_did
 
-from hive.util.constants import DID_PREFIX, DID_DB_PREFIX, DID_INFO_NONCE, DID_RESOURCE_NAME, \
-    DID_RESOURCE_SCHEMA, DID_CHALLENGE_EXPIRE, DID_AUTH_REALM, DID_INFO_NONCE_EXPIRE, DID_TOKEN_EXPIRE, \
-    RCLONE_CONFIG_FILE, did_tail_part, DID, APP_ID
-from hive.settings import MONGO_HOST, MONGO_PORT
+from hive.util.constants import DID_AUTH_REALM, DID_INFO_NONCE_EXPIRE, DID, APP_ID
+from hive.settings import DID_CHALLENGE_EXPIRE, DID_TOKEN_EXPIRE
 from datetime import datetime
 
 
@@ -43,7 +35,7 @@ class HiveAuth:
         nonce = create_nonce()
         time = datetime.now().timestamp()
 
-        info = get_did_info_by_id(did, app_id)
+        info = get_did_info_by_did_appid(did, app_id)
 
         try:
             if info is None:
@@ -54,17 +46,18 @@ class HiveAuth:
             print("Exception in did_auth_challenge::", e)
             return response_err(500, "Exception in did_auth_challenge:" + e)
 
-        s = base58.b58encode(did)
+        s_did = base58.b58encode(did)
+        s_app_id = base58.b58encode(app_id)
 
         data = {
             "subject": "didauth",
             "iss": "elastos_hive_node",
             "nonce": nonce,
-            "callback": "/api/v1/did/%s/callback" % str(s, encoding="utf-8")
+            "callback": "/api/v1/did/%s/%s/callback" % (str(s_did, encoding="utf-8"), str(s_app_id, encoding="utf-8"))
         }
         return response_ok(data)
 
-    def did_auth_callback(self, did_base58):
+    def did_auth_callback(self, did_base58, app_id_base58):
         content = request.get_json(force=True, silent=True)
         if content is None:
             return response_err(400, "parameter is not application/json")
@@ -88,15 +81,18 @@ class HiveAuth:
         if realm != DID_AUTH_REALM:
             return response_err(406, "auth realm error")
 
-        # 1. nonce找出数据库did， 对比iss， url_did
+        # 1. nonce找出数据库did, app_id 对比iss， url_did, app_id
         info = get_did_info_by_nonce(nonce)
         if info is None:
             return response_err(406, "auth nonce error")
+
         did = info[DID]
         app_id = info[APP_ID]
         url_did = base58.b58decode(did_base58)
-        # "utf-8"
-        if (did != iss) or (did != str(url_did, encoding="utf-8")):
+        url_app_id = base58.b58decode(app_id_base58)
+        if (did != str(url_did, encoding="utf-8")) or (app_id != str(url_app_id, encoding="utf-8")):
+            return response_err(406, "auth url error")
+        if did != iss:
             return response_err(406, "auth did error")
         if app_id != app_id_in:
             return response_err(406, "auth app_id error")
@@ -112,27 +108,9 @@ class HiveAuth:
         if not ret:
             return response_err(406, "auth sig error")
 
-        # 校验成功, 生成token
-        self.create_db(did)
-
+        # 校验成功, 恢复数据库，生成token
         token = create_token()
         save_token_to_db(did, app_id, token, now + DID_TOKEN_EXPIRE)
 
         data = {"token": token}
         return response_ok(data)
-
-    def create_db(self, did):
-        with self.app.app_context():
-            self.app.config[did + DID_PREFIX + "_URI"] = "mongodb://%s:%s/%s" % (
-                MONGO_HOST,
-                MONGO_PORT,
-                DID_DB_PREFIX + did,
-            )
-            resource_list = get_all_resource_of_did(did)
-            for resource in resource_list:
-                collection = resource[DID_RESOURCE_NAME]
-                schema = resource[DID_RESOURCE_SCHEMA]
-                settings = {"schema": json.loads(schema), "mongo_prefix": did + DID_PREFIX}
-                self.app.register_resource(collection, settings)
-
-        return did

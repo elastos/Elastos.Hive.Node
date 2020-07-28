@@ -3,7 +3,8 @@ import datetime
 from eve.auth import TokenAuth
 from flask import request
 
-from hive.util.constants import DID_PREFIX, DID_INFO_TOKEN_EXPIRE, DID, APP_ID
+from hive.util.constants import DID_INFO_TOKEN_EXPIRE, DID, APP_ID
+from hive.util.common import gene_eve_mongo_db_prefix
 from hive.util.did_info import get_did_info_by_token
 
 
@@ -16,7 +17,8 @@ class HiveTokenAuth(TokenAuth):
             # if now > expire:
             #     return False
             did = info[DID]
-            self.set_mongo_prefix(did + DID_PREFIX)
+            app_id = info[APP_ID]
+            self.set_mongo_prefix(gene_eve_mongo_db_prefix(did, app_id))
             return True
         else:
             return False
@@ -25,7 +27,7 @@ class HiveTokenAuth(TokenAuth):
 def did_auth():
     auth = request.headers.get("Authorization")
     if auth is None:
-        return None
+        return None, None
 
     if auth.strip().lower().startswith(("token", "bearer")):
         token = auth.split(" ")[1]
@@ -33,6 +35,6 @@ def did_auth():
         if info is not None:
             return info[DID], info[APP_ID]
         else:
-            return None
+            return None, None
     else:
-        return None
+        return None, None

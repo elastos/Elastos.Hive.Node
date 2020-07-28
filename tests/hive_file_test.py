@@ -9,7 +9,7 @@ from flask import session, request, make_response, render_template, appcontext_p
 from contextlib import closing, contextmanager
 from hive import create_app
 
-token = "f8f54b38-c022-11ea-88b6-f45c898fba57"
+token = "1b30b24e-cfd9-11ea-8157-f45c898fba57"
 
 
 @contextmanager
@@ -21,9 +21,29 @@ def name_set(app, name):
         yield
 
 
-class SampleTestCase(unittest.TestCase):
+class HiveFileTestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):
-        super(SampleTestCase, self).__init__(methodName)
+        super(HiveFileTestCase, self).__init__(methodName)
+
+    def clear_all_test_files(self):
+        r1, s = self.parse_response(
+            self.test_client.get('/api/v1/files/list/folder', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r1["_status"], "OK")
+        for name in r1["files"]:
+            if name[-1] == '/':
+                self.test_client.post('/api/v1/files/deleter/folder',
+                                      data=json.dumps({
+                                          "name": name
+                                      }),
+                                      headers=self.auth)
+            else:
+                self.test_client.post('/api/v1/files/deleter/file',
+                                      data=json.dumps({
+                                          "name": name
+                                      }),
+                                      headers=self.auth)
 
     def setUp(self):
         self.app = create_app('testing')
@@ -36,6 +56,7 @@ class SampleTestCase(unittest.TestCase):
             self.content_type,
         ]
         self.init_all_auth()
+        self.clear_all_test_files()
 
     def init_auth(self):
         self.auth = [
@@ -54,6 +75,7 @@ class SampleTestCase(unittest.TestCase):
         self.init_upload_auth()
 
     def tearDown(self):
+        self.clear_all_test_files()
         pass
 
     def init_db(self):
@@ -72,94 +94,256 @@ class SampleTestCase(unittest.TestCase):
     def assert201(self, status):
         self.assertEqual(status, 201)
 
-    def test_upload_file(self):
-        temp = BytesIO()
-        temp.write(b'Hello Temp!')
-        temp.seek(0)
-        temp.name = 'hello-temp.txt'
-        files = {'file': (temp, "test.txt")}
+    def create_upload_file(self, file_name, data):
+        filename = {"name": file_name}
 
         r, s = self.parse_response(
-            self.test_client.post('api/v1/file/uploader',
-                                  data=files,
+            self.test_client.post('/api/v1/files/creator/file',
+                                  data=json.dumps(filename),
                                   headers=self.upload_auth)
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
+        upload_file_url = r["upload_file_url"]
 
-    def test_upload_file_new(self):
-        file_pro = {"file_name": "test_big_file.txt",
-                    "other_property": "test_property"
-                    }
-
-        rt, s = self.parse_response(
-            self.test_client.post('api/v1/file/create',
-                                  data=json.dumps(file_pro),
-                                  headers=self.upload_auth)
+        r1, s = self.parse_response(
+            self.test_client.get('/api/v1/files/properties?name=' + file_name, headers=self.auth)
         )
-        self.assert200(s)
-        self.assertEqual(rt["_status"], "OK")
 
-        upload_file_url = rt["upload_file_url"]
+        self.assert200(s)
+        self.assertEqual(r1["_status"], "OK")
 
         temp = BytesIO()
-        temp.write(b'Hello Temp!')
+        temp.write(data.encode(encoding="utf-8"))
         temp.seek(0)
         temp.name = 'hello-temp.txt'
-        # files = {'file': (temp, "test.txt")}
 
-        r, s = self.parse_response(
+        r2, s = self.parse_response(
             self.test_client.post(upload_file_url,
                                   data=temp,
                                   headers=self.upload_auth)
         )
         self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
+        self.assertEqual(r2["_status"], "OK")
 
-    def test_list_file(self):
-        r1 = self.test_client.get(
-            'api/v1/file/list', headers=self.auth
+        r3, s = self.parse_response(
+            self.test_client.get('/api/v1/files/properties?name=' + file_name, headers=self.auth)
         )
-        self.assert200(r1.status_code)
 
-    def test_file_property(self):
+        self.assert200(s)
+        self.assertEqual(r3["_status"], "OK")
+        print(json.dumps(r3))
 
-        file_pro = {"file_name": "test.txt",
-                    "other_property1": "test_property1"
-                    }
+    def test_create_folder(self):
+        file_name = {
+            "name": "folder1/folder2",
+        }
+
         rt, s = self.parse_response(
-            self.test_client.post('api/v1/file/info',
-                                  data=json.dumps(file_pro),
+            self.test_client.post('/api/v1/files/creator/folder',
+                                  data=json.dumps(file_name),
                                   headers=self.upload_auth)
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
 
-        r1 = self.test_client.get(
-            'api/v1/file/info?filename=test.txt', headers=self.auth
+        r1, s = self.parse_response(
+            self.test_client.get('/api/v1/files/properties?name=folder1/folder2', headers=self.auth)
         )
-        self.assert200(r1.status_code)
+
+        self.assert200(s)
+        self.assertEqual(r1["_status"], "OK")
+        print(json.dumps(r1))
+
+    def test_create_and_upload_file_root(self):
+        self.create_upload_file("test_0.txt", "Hello Temp test 0!")
+
+    def test_create_and_upload_file_in_folder(self):
+        self.create_upload_file("folder1/test1.txt", "Hello Temp test 1!")
+
+    def test_create_and_upload_file_further_folder(self):
+        self.create_upload_file("folder1/folder2/folder3/test0.txt", "Hello Temp test 0!")
+
+    def test_create_and_upload_file_new_folder(self):
+        self.create_upload_file("f1/f2/f3/test_f3_1.txt", "Hello Temp test f3_1!")
+        self.create_upload_file("f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
 
     def test_download_file(self):
-        r1 = self.test_client.get(
-            'api/v1/file/downloader?filename=test_big_file.txt', headers=self.auth
+        self.create_upload_file("f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
+        r = self.test_client.get('api/v1/files/downloader?name=f1/f2/f3/test_f3_2.txt', headers=self.auth)
+
+        self.assert200(r.status_code)
+        print("data:" + str(r.get_data()))
+
+    def test_move_file(self):
+        self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1_2!")
+
+        move_file = {
+            "src_name": "f1/test_f1.txt",
+            "dst_name": "f1/f2/f3/test_f1.txt",
+        }
+
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/files/mover',
+                                  data=json.dumps(move_file),
+                                  headers=self.upload_auth)
         )
-        self.assert200(r1.status_code)
+        self.assert200(s)
+        self.assertEqual(rt["_status"], "OK")
+
+        r1, s = self.parse_response(
+            self.test_client.get('/api/v1/files/properties?name=f1/test_f1.txt', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertNotEqual(r1["_status"], "OK")
+
+        r1, s = self.parse_response(
+            self.test_client.get('/api/v1/files/properties?name=f1/f2/f3/test_f1.txt', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r1["_status"], "OK")
+
+    def test_move_folder(self):
+        self.create_upload_file("f1/f2/f3/f4/test_f4.txt", "Hello Temp test f1_2!")
+        self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1.txt", "Hello Temp test fr4_1!")
+        self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1_2.txt", "Hello Temp test fr4_2!")
+
+        move_file = {
+            "src_name": "f1/f2/f3/fr4_1",
+            "dst_name": "f1/f2/f3/f4",
+        }
+
+        r1, s = self.parse_response(
+            self.test_client.post('/api/v1/files/mover',
+                                  data=json.dumps(move_file),
+                                  headers=self.upload_auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r1["_status"], "OK")
+
+        r2, s = self.parse_response(
+            self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3', headers=self.auth)
+        )
+
+        self.assert200(s)
+        self.assertEqual(r2["_status"], "OK")
+        print(json.dumps(r2))
+
+        r3, s = self.parse_response(
+            self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3/f4', headers=self.auth)
+        )
+
+        self.assert200(s)
+        self.assertEqual(r3["_status"], "OK")
+        print(json.dumps(r3))
+
+    def test_copy_file(self):
+        self.create_upload_file("f1/f2/test_f2.txt", "Hello Temp test f2_2!")
+
+        move_file = {
+            "src_name": "f1/f2/test_f2.txt",
+            "dst_name": "f1/f2/f3/test_f2.txt",
+        }
+
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/files/copier',
+                                  data=json.dumps(move_file),
+                                  headers=self.upload_auth)
+        )
+        self.assert200(s)
+        self.assertEqual(rt["_status"], "OK")
+
+        r1, s = self.parse_response(
+            self.test_client.get('/api/v1/files/properties?name=f1/f2/test_f2.txt', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r1["_status"], "OK")
+
+        r2, s = self.parse_response(
+            self.test_client.get('/api/v1/files/properties?name=f1/f2/f3/test_f2.txt', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r2["_status"], "OK")
+
+    def test_copy_folder(self):
+        self.create_upload_file("f1/f2/f3/f4/test_f4_1.txt", "Hello Temp test f4_1!")
+        self.create_upload_file("f1/f2/f3/fr4_2/test_fr4_2.txt", "Hello Temp test fr4_1!")
+        self.create_upload_file("f1/f2/f3/fr4_2/test_fr4_2_2.txt", "Hello Temp test fr4_2!")
+
+        move_file = {
+            "src_name": "f1/f2/f3/fr4_2",
+            "dst_name": "f1/f2/f3/f4/fr_42",
+        }
+
+        r1, s = self.parse_response(
+            self.test_client.post('/api/v1/files/copier',
+                                  data=json.dumps(move_file),
+                                  headers=self.upload_auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r1["_status"], "OK")
+
+        r2, s = self.parse_response(
+            self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3', headers=self.auth)
+        )
+
+        self.assert200(s)
+        self.assertEqual(r2["_status"], "OK")
+        print(json.dumps(r2))
+
+        r3, s = self.parse_response(
+            self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3/f4', headers=self.auth)
+        )
+
+        self.assert200(s)
+        self.assertEqual(r3["_status"], "OK")
+        print(json.dumps(r3))
+
+    def test_file_hash(self):
+        self.create_upload_file("f1/f2/test_f2_hash.txt", "Hello Temp test f2_hash!")
+        r1, s = self.parse_response(
+            self.test_client.get('/api/v1/files/file/hash?name=f1/f2/test_f2_hash.txt', headers=self.auth)
+        )
+
+        self.assert200(s)
+        self.assertEqual(r1["_status"], "OK")
+        print(json.dumps(r1))
 
     def test_delete_file(self):
+        self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1!")
+        self.create_upload_file("f1/test_f2.txt", "Hello Temp test f1!")
         r, s = self.parse_response(
-            self.test_client.post('api/v1/file/delete',
+            self.test_client.post('/api/v1/files/deleter/file',
                                   data=json.dumps({
-                                      "file_name": "test.txt"
+                                      "name": "f1/test_f1.txt"
                                   }),
                                   headers=self.auth)
         )
         self.assert200(s)
 
-        r1 = self.test_client.get(
-            'api/v1/file/info?filename=test.txt', headers=self.auth
+        r1, s = self.parse_response(
+            self.test_client.get('/api/v1/files/properties?name=f1/test_f1.txt', headers=self.auth)
         )
         self.assert200(s)
+        self.assertNotEqual(r1["_status"], "OK")
+
+    def test_delete_folder(self):
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/files/deleter/folder',
+                                  data=json.dumps({
+                                      "name": "f1"
+                                  }),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+
+        r1, s = self.parse_response(
+            self.test_client.get('/api/v1/files/list/folder', headers=self.auth)
+        )
+
+        self.assert200(s)
+        self.assertEqual(r1["_status"], "OK")
+        print(json.dumps(r1))
 
 
 if __name__ == '__main__':

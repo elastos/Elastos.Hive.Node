@@ -1,25 +1,28 @@
 # Hive node plus plus api
 
-# todo add auth api doc
-1. did auth
+## Auth of did and app (there will be a new version)
+1. User auth
     HTTP: POST
     URL : /api/v1/did/auth
     Content-Type: "application/json"
-    data: {"iss":" "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"}
+    data: {"iss":" "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym",
+            "app_id":" "iJvihZHx6quumnymWFAUYhTa35c1fPe3iC",
+            }
     return: 
         成功:{"_status":"OK", 
              "subject":"didauth",
              "iss":"elastos_hive_node",
              "nonce":"4607e6de-b5f0-11ea-a859-f45c898fba57",
-             "callback":"/api/v1/did/iWFAUYhTa35c1fPe3iCJvihZHx6quumnym/callback"} 
+             "callback":"/api/v1/did/hZHx6quumnym/a35c1fPe3iC/callback"} 
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
 
-1. did auth callback
+1. User auth callback
     HTTP: POST
-    URL : /api/v1/did/.../callback
+    URL : did auth return "callback"
     Content-Type: "application/json"
     data: {"subject":"didauth",
            "iss":"did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym",
+           "app_id":" "iJvihZHx6quumnymWFAUYhTa35c1fPe3iC",
            "realm": "elastos_hive_node",
            "nonce" : "4607e6de-b5f0-11ea-a859-f45c898fba57"
            "key_name" : "key2",
@@ -28,10 +31,27 @@
     return: 
         成功:{"_status":"OK", "token":"38b8c2c1093dd0fec383a9d9ac940515"}
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
-        
-1. Setup mongodb collection
+
+## Synchronization 
+1. Init synchronization from google drive 
+* If there is a new user auth of hive++, must call this api before any other data operation(mongoDB or file etc)
     HTTP: POST
-    URL : api/v1/db/create_collection
+    URL : /api/v1/sync/setup/google_drive
+    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
+    Content-Type: "application/json"
+    data: {
+           "token": "ya29.a0AfH6SMAVaP_gNAdbF25L5hktoPRdV8mBkcra6UaneG2w7ZYSusXevycqvhUrGrQ_FpsBPYYvxq2Sdx13zEwG1-m8I-pSFV05UY52X6wNnVlpxG7hsyBteEdUiiQPDT52zbK5ceQZ4-cpfXSlrplsQ8kZvPYC5nR1yks", "refresh_token": "1//06llFKBe-DBkRCgYIARAAGAYSNwF-L9Irfka2E6GP-J9gKBZN5AQS3z19vHOtjHq67p2ezCsJiVUZO-jKMSDKLgkiGfXgmBYimwc", "token_uri": "https://oauth2.googleapis.com/token", "client_id": "24235223939-7335upec07n0c3qc7mnd19jqoeglrg3t.apps.googleusercontent.com", "client_secret": "-7Ls5u1NpRe77Dy6VkL5W4pe", "scopes": ["https://www.googleapis.com/auth/drive.file"], "expiry": "2020-06-24 03:10:49.960710"
+            }
+    return: 
+        成功:{"_status":"OK"}
+        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
+    comments: The input data is google oauth2 token to json, no need to change anything
+
+
+## MongoDB operation
+1. Setup mongoDB collection
+    HTTP: POST
+    URL : /api/v1/db/create_collection
     Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
     Content-Type: "application/json"
     data: { "collection":"works",
@@ -40,16 +60,16 @@
     return: 
         成功:{"_status":"OK", "collection":"works"}
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
-    comments: "collection" is collection name of mongodb. schema definition is in EVE document: [Schema Definition](https://docs.python-eve.org/en/stable/config.html#schema-definition)
+    comments: "collection" is collection name of user's mongoDB. schema definition is in EVE document: [Schema Definition](https://docs.python-eve.org/en/stable/config.html#schema-definition)
 
-1. use mongodb collection
+1. Use mongoDB collection
     HTTP: POST GET PATCH DELETE
     URL : api/v1/db/col/*
     Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
     Content-Type: "application/json"
     data: defined by eve schema
     return: defined by eve
-    comments: If you define a "collection" for mongodb, You can CURD your collection item in mongodb. 
+    comments: If you define a "collection" for mongoDB, You can CURD your collection item in mongoDB. 
     detailed usage is in EVE document: 
     [Features sub-resources](https://docs.python-eve.org/en/stable/features.html#sub-resources)
     [Features editing](https://docs.python-eve.org/en/stable/features.html#editing-a-document-patch)
@@ -119,35 +139,113 @@
                     }
                 }
         ```
- 
-1. file upload 
+
+## File operation 
+1. Create folder
     HTTP: POST
-    URL : api/v1/file/uploader
+    URL : /api/v1/files/creator/folder
     Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
-    Content-Type: "multipart/form-data"
-    data: file="path/of/file/name" 
+    Content-Type: "application/json"
+    data: {name="path/of/folder/name"}
     return: 
         成功:{"_status":"OK"}
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
 
-1. file list 
-    HTTP: GET 
-    URL : api/v1/file/list
+1. Create file 
+    HTTP: POST
+    URL : /api/v1/files/creator/file
     Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
     Content-Type: "application/json"
+    data: {name="path/of/file/name"}
     return: 
-        成功:
-        {
-            "_status": "OK",
-            "files": [
-                "test.png"
-            ]
+        成功:{"_status":"OK",
+            "upload_file_url":"/api/v1/files/uploader/some/url"
         }
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
-    
-1. file download
+
+1. Upload file
+    HTTP: POST
+    URL : Create file api return "upload_file_url"
+    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
+    data: file data 
+    return: 
+        成功:{"_status":"OK"}
+        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
+
+1. Download file
     HTTP: GET 
-    URL : api/v1/file/downloader?filename="file.name"
+    URL : api/v1/files/downloader?name="file.name"
+    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
+    return: 
+        成功: file data
+        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
+    comment: support content range 
+
+1. Delete file 
+    HTTP: POST
+    URL : /api/v1/files/deleter/file
+    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
+    Content-Type: "application/json"
+    data: {"name": "test.png"}
+    return: 
+        成功:{"_status":"OK"}
+        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
+
+1. Delete folder 
+    HTTP: POST
+    URL : /api/v1/files/deleter/folder
+    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
+    Content-Type: "application/json"
+    data: {"name": "test.png"}
+    return: 
+        成功:{"_status":"OK"}
+        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
+
+1. Move file or folder
+    HTTP: POST
+    URL : /api/v1/files/mover
+    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
+    Content-Type: "application/json"
+    data: {"src_name": "path/of/src/folder/or/file",
+            "dst_name": "path/of/dst/folder/or/file",
+        }
+    return: 
+        成功:{"_status":"OK"}
+        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
+    comment: usage like shell command "mv" 
+
+1. Copy file or folder
+    HTTP: POST
+    URL : /api/v1/files/copier
+    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
+    Content-Type: "application/json"
+    data: {"src_name": "path/of/src/folder/or/file",
+            "dst_name": "path/of/dst/folder/or/file",
+        }
+    return: 
+        成功:{"_status":"OK"}
+        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
+    comment: usage like shell command "cp" 
+
+1. Get properties of file or folder
+    HTTP: GET 
+    URL : api/v1/files/properties?name="file.or.folder.name"
+    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
+    Content-Type: "application/json"
+    return: 
+        成功:
+        {
+            "_status": "OK",
+            "st_ctime": 123012.2342
+            "st_mtime": 123012.2342
+            "st_atime": 123012.2342 
+            "st_size": 230 
+        }
+        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
+
+1. List folder 
+    HTTP: GET 
+    URL : /api/v1/files/list/folder?name="folder.name"
     Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
     Content-Type: "application/json"
     return: 
@@ -155,32 +253,22 @@
         {
             "_status": "OK",
             "files": [
+                "folder_name/",
+                "filename",
                 "test.png"
             ]
         }
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
         
-1. get file info 
+1. Get file hash(MD5)
     HTTP: GET 
-    URL : api/v1/file/info?filename="file.name"
+    URL : /api/v1/files/file/hash?name="file.name"
     Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
     Content-Type: "application/json"
     return: 
         成功:
         {
             "_status": "OK",
-            "file": "test.png"
-            "size": 123012 
+            "MD5": "3a29a81d7b2718a588a5f6f3491b3c57"
         }
         失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
-    
-1. file delete 
-    HTTP: POST
-    URL : api/v1/file/delete
-    Authorization:"token 38b8c2c1093dd0fec383a9d9ac940515"
-    Content-Type: "multipart/form-data"
-    data: {"file_name": "test.png"}
-    return: 
-        成功:{"_status":"OK"}
-        失败:{"_status": "ERR", "_error": {"code": 401, "message": "Error message"}}
-

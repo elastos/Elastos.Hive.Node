@@ -1,11 +1,16 @@
+import hashlib
 import os
+import urllib.parse
+from datetime import datetime
+from pathlib import Path
+import shutil
 
-from flask import request, send_from_directory, make_response
+from flask import request, Response
 
 from hive.util.auth import did_auth
-from hive.util.constants import DID_FILE_DIR, did_tail_part, FILE_INFO_FILE_NAME, FILE_INFO_FILE_SIZE
-from hive.util.file_info import add_file_info, update_file_info, get_file_info_by_id, remove_file_info, \
-    update_file_size, get_file_info
+from hive.util.common import did_tail_part
+from hive.settings import DID_FILE_DIR
+from hive.util.flask_rangerequest import RangeRequest
 from hive.util.server_response import response_err, response_ok
 
 
@@ -18,90 +23,113 @@ class HiveFile:
         self.app.config['UPLOAD_FOLDER'] = "./temp_file"
         self.app.config['MAX_CONTENT_PATH'] = 10000000
 
-    def get_file_path(self, did, app_id):
-        if not os.path.isabs(DID_FILE_DIR):
-            directory = os.getcwd()
-            path = directory + "/" + DID_FILE_DIR + "/" + did_tail_part(did) + "/" + app_id + "/"
+    def get_save_files_path(self, did, app_id):
+        path = Path(DID_FILE_DIR)
+        if path.is_absolute():
+            path = path / did_tail_part(did) / app_id / "files"
         else:
-            path = DID_FILE_DIR + "/" + did_tail_part(did) + "/" + app_id + "/"
-        return path
+            path = path.resolve() / did_tail_part(did) / app_id / "files"
+        return path.resolve()
 
-    def create_full_path(self, path):
+    def create_full_path_dir(self, path):
         try:
-            os.makedirs(path, exist_ok=True)
+            path.mkdir(exist_ok=True, parents=True)
         except Exception as e:
             print("Exception in create_full_path:" + e)
             return False
-        return True;
+        return True
 
-    def create_upload_file(self):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
-        content = request.get_json(force=True, silent=True)
-        if content is None:
-            return response_err(400, "parameter is not application/json")
-        filename = content.get('file_name', None)
-        del content['file_name']
-
-        file_id = ""
-        info = get_file_info(did, app_id, filename)
-        if (info is not None) and (FILE_INFO_FILE_SIZE in info):
-            return response_err(400, "file exist")
+    def filter_path_root(self, name):
+        if name[0] == "/":
+            return name[1:]
         else:
-            if info:
-                file_id = info["_id"]
-            else:
-                r = add_file_info(did, app_id, filename, content)
-                file_id = r.inserted_id
+            return name
 
-        data = {"upload_file_url": "/api/v1/%s/upload" % file_id}
-
-        return response_ok(data)
-
-    def set_file_property(self):
+    def create(self, is_file):
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
+
         content = request.get_json(force=True, silent=True)
         if content is None:
             return response_err(400, "parameter is not application/json")
-        filename = content.get('file_name', None)
-        del content['file_name']
-        update_file_info(did, app_id, filename, content)
+
+        name = content.get('name', None)
+        if name is None:
+            return response_err(404, "name is null")
+        name = self.filter_path_root(name)
+
+        path = self.get_save_files_path(did, app_id)
+        full_path_name = (path / name).resolve()
+        if is_file:
+            if not self.create_full_path_dir(full_path_name.parent):
+                return response_err(500, "make path dir error")
+            if not full_path_name.exists():
+                full_path_name.touch(exist_ok=True)
+            data = {"upload_file_url": "/api/v1/files/uploader/%s" % urllib.parse.quote_plus(name)}
+            return response_ok(data)
+        else:
+            if not full_path_name.exists():
+                if not self.create_full_path_dir(full_path_name):
+                    return response_err(500, "make folder error")
+            return response_ok()
+
+    def move(self, is_copy):
+        did, app_id = did_auth()
+        if (did is None) or (app_id is None):
+            return response_err(401, "auth failed")
+
+        content = request.get_json(force=True, silent=True)
+        if content is None:
+            return response_err(400, "parameter is not application/json")
+
+        src_name = content.get('src_name', None)
+        if src_name is None:
+            return response_err(404, "src_name is null")
+        src_name = self.filter_path_root(src_name)
+
+        dst_name = content.get('dst_name', None)
+        if dst_name is None:
+            return response_err(404, "dst_name is null")
+        dst_name = self.filter_path_root(dst_name)
+
+        path = self.get_save_files_path(did, app_id)
+        src_full_path_name = (path / src_name).resolve()
+        dst_full_path_name = (path / dst_name).resolve()
+
+        if not src_full_path_name.exists():
+            return response_err(404, "src_name not exists")
+
+        if dst_full_path_name.exists() and dst_full_path_name.is_file():
+            return response_err(409, "dst_name file exists")
+
+        dst_parent_folder = dst_full_path_name.parent
+        if not dst_parent_folder.exists():
+            if not self.create_full_path_dir(dst_parent_folder):
+                return response_err(500, "make dst parent path dir error")
+        try:
+            if is_copy:
+                if src_full_path_name.is_file():
+                    shutil.copy2(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
+                else:
+                    shutil.copytree(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
+            else:
+                shutil.move(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+
         return response_ok()
 
-    def get_file_property(self):
+    def upload_file(self, file_name):
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
 
-        filename = request.args.get('filename')
-        if filename is None:
-            return response_err(401, "file name is null")
+        path = self.get_save_files_path(did, app_id)
+        file_full_name = (path / urllib.parse.unquote_plus(file_name)).resolve()
 
-        info = get_file_info(did, app_id, filename)
-        if info is None:
-            return response_err(404, "File not found")
-
-        info["upload_file_url"] = "/api/v1/%s/upload" % info["_id"]
-
-        del info["_id"]
-        return response_ok(info)
-
-    def upload_file_callback(self, file_id):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
-
-        info = get_file_info_by_id(file_id)
-        if info is None:
-            return response_err(404, "file not found")
-
-        path = self.get_file_path(did, app_id)
-        file_full_name = path + info[FILE_INFO_FILE_NAME]
-        if not self.create_full_path(path):
-            return response_err(500, "make dir error")
+        if not (file_full_name.exists() and file_full_name.is_file()):
+            return response_err(404, "file not create first")
 
         with open(file_full_name, "bw") as f:
             chunk_size = 4096
@@ -111,37 +139,127 @@ class HiveFile:
                     break
                 f.write(chunk)
 
-        size = os.path.getsize(file_full_name)
-
-        r = update_file_size(did, app_id, info[FILE_INFO_FILE_NAME], {FILE_INFO_FILE_SIZE: size})
         return response_ok()
 
+    def download_file(self):
+        resp = Response()
+        did, app_id = did_auth()
+        if (did is None) or (app_id is None):
+            resp.status_code = 401
+            return resp
 
-    def upload_file_old(self):
+        filename = request.args.get('name')
+        if filename is None:
+            resp.status_code = 400
+            return resp
+        filename = self.filter_path_root(filename)
+
+        path = self.get_save_files_path(did, app_id)
+        file_full_name = (path / filename).resolve()
+
+        if not file_full_name.exists():
+            resp.status_code = 404
+            return resp
+
+        if not file_full_name.is_file():
+            resp.status_code = 403
+            return resp
+
+        size = file_full_name.stat().st_size
+        with open(file_full_name, 'rb') as f:
+            etag = RangeRequest.make_etag(f)
+        last_modified = datetime.utcnow()
+
+        return RangeRequest(open(file_full_name, 'rb'),
+                            etag=etag,
+                            last_modified=last_modified,
+                            size=size).make_response()
+
+    def get_property(self):
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
-        f = request.files['file']
-        if f is None:
-            return response_err(400, "file is null")
 
-        path = self.get_file_path(did, app_id)
-        file_full_name = path + f.filename.strip('"')
-        if not self.create_full_path(path):
-            return response_err(500, "make dir error")
+        name = request.args.get('name')
+        if name is None:
+            return response_err(404, "name is null")
+
+        name = self.filter_path_root(name)
+
+        path = self.get_save_files_path(did, app_id)
+        full_path_name = (path / name).resolve()
+
+        if not full_path_name.exists():
+            return response_err(404, "file not exists")
+
+        stat_info = full_path_name.stat()
+        data = {
+            "st_ctime": stat_info.st_ctime,
+            "st_mtime": stat_info.st_mtime,
+            "st_atime": stat_info.st_atime,
+            "st_size": stat_info.st_size,
+        }
+
+        return response_ok(data)
+
+    def list_files(self):
+        did, app_id = did_auth()
+        if (did is None) or (app_id is None):
+            return response_err(401, "auth failed")
+
+        path = self.get_save_files_path(did, app_id)
+
+        name = request.args.get('name')
+        if name is None:
+            full_path_name = path
+        else:
+            name = self.filter_path_root(name)
+            full_path_name = (path / name).resolve()
+
+        if not (full_path_name.exists() and full_path_name.is_dir()):
+            return response_err(404, "folder not exists")
 
         try:
-            f.save(file_full_name)
+            files = os.listdir(full_path_name.as_posix())
         except Exception as e:
-            print("Exception in upload_file:" + e)
-            return response_err(500, "Save file error")
+            return response_ok({"files": []})
 
-        size = os.path.getsize(file_full_name)
+        names = list()
+        for name in files:
+            if (full_path_name / name).is_file():
+                names.append(name)
+            elif (full_path_name / name).is_dir():
+                names.append(name + "/")
+        return response_ok({"files": names})
 
-        r = add_file_info(did, app_id, f.filename.strip('"'), {FILE_INFO_FILE_SIZE: size})
-        return response_ok()
+    def file_hash(self):
+        did, app_id = did_auth()
+        if (did is None) or (app_id is None):
+            return response_err(401, "auth failed")
 
-    def delete_file(self):
+        name = request.args.get('name')
+        if name is None:
+            return response_err(404, "name is null")
+        name = self.filter_path_root(name)
+
+        path = self.get_save_files_path(did, app_id)
+        full_path_name = (path / name).resolve()
+
+        if not full_path_name.exists() or (not full_path_name.is_file()):
+            return response_err(404, "file not exists")
+
+        buf_size = 65536  # lets read stuff in 64kb chunks!
+        md5 = hashlib.md5()
+        with full_path_name.open() as f:
+            while True:
+                data = f.read(buf_size)
+                if not data:
+                    break
+                md5.update(data.encode("utf-8"))
+        data = {"MD5": md5.hexdigest()}
+        return response_ok(data)
+
+    def delete(self):
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
@@ -149,46 +267,17 @@ class HiveFile:
         content = request.get_json(force=True, silent=True)
         if content is None:
             return response_err(400, "parameter is not application/json")
-        filename = content.get('file_name', None)
-
-        path = self.get_file_path(did, app_id)
-        fullname = os.path.join(path, filename)
-        if os.path.exists(fullname) and os.path.isfile(fullname):
-            os.remove(fullname)
-            remove_file_info(did, app_id, filename)
-            return response_ok()
-        else:
-            return response_err(404, "File not found")
-
-    def download_file(self):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
-
-        filename = request.args.get('filename')
+        filename = content.get('name', None)
         if filename is None:
-            return response_err(401, "file name is null")
+            return response_err(404, "name is null")
+        name = self.filter_path_root(name)
 
-        path = self.get_file_path(did, app_id)
+        path = self.get_save_files_path(did, app_id)
+        file_full_name = (path / filename).resolve()
+        if file_full_name.exists():
+            if file_full_name.is_dir():
+                shutil.rmtree(file_full_name)
+            else:
+                file_full_name.unlink()
 
-        if not os.path.exists(path + filename.encode('utf-8').decode('utf-8')):
-            return response_err(404, "file not found")
-
-        response = make_response(
-            send_from_directory(path, filename.encode('utf-8').decode('utf-8'), as_attachment=True))
-        response.headers["Content-Disposition"] = "attachment; filename={}".format(filename.encode().decode('latin-1'))
-        return response
-
-    def list_files(self):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
-        path = self.get_file_path(did, app_id)
-        try:
-            files = os.listdir(path)
-        except Exception as e:
-            return response_ok({"files": []})
-
-        names = [name for name in files
-                 if os.path.isfile(os.path.join(path, name)) or os.path.isdir(os.path.join(path, name))]
-        return response_ok({"files": names})
+        return response_ok()

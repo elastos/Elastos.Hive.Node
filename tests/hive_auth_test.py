@@ -23,7 +23,9 @@ def name_set(app, name):
         yield
 
 
-class SampleTestCase(unittest.TestCase):
+class HiveAuthTestCase(unittest.TestCase):
+    def __init__(self, methodName='runTest'):
+        super(HiveAuthTestCase, self).__init__(methodName)
 
     def setUp(self):
         self.app = create_app('testing')

@@ -25,6 +25,14 @@ def update_nonce_of_did_info(did, app_id, nonce, expire):
     return ret
 
 
+def get_all_did_info():
+    connection = MongoClient()
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+    infos = col.find()
+    return infos
+
+
 def get_did_info_by_nonce(nonce):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
@@ -34,7 +42,7 @@ def get_did_info_by_nonce(nonce):
     return info
 
 
-def get_did_info_by_id(did, app_id):
+def get_did_info_by_did_appid(did, app_id):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
@@ -74,3 +82,5 @@ def create_token():
 def create_nonce():
     nonce = uuid.uuid1()
     return str(nonce)
+
+

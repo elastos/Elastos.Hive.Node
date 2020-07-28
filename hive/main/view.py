@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from werkzeug.utils import secure_filename
 
 from hive.main.hive_file import HiveFile
 from hive.main.hive_mongo import HiveMongo
@@ -35,9 +34,9 @@ def did_auth_challenge():
     return hive_auth.did_auth_challenge()
 
 
-@main.route('/api/v1/did/<did_base58>/callback', methods=['POST'])
-def did_auth_callback(did_base58):
-    return hive_auth.did_auth_callback(did_base58)
+@main.route('/api/v1/did/<did_base58>/<app_id_base58>/callback', methods=['POST'])
+def did_auth_callback(did_base58, app_id_base58):
+    return hive_auth.did_auth_callback(did_base58, app_id_base58)
 
 
 # db create and get
@@ -47,44 +46,62 @@ def create_collection_view():
 
 
 # file create and get
-@main.route('/api/v1/file/uploader', methods=['POST'])
-def upload_file_old():
-    return hive_file.upload_file_old()
+@main.route('/api/v1/files/creator/folder', methods=['POST'])
+def create_folder():
+    return hive_file.create(is_file=False)
 
 
-@main.route('/api/v1/file/create', methods=['POST'])
-def add_file_property():
-    return hive_file.create_upload_file()
+@main.route('/api/v1/files/creator/file', methods=['POST'])
+def create_file():
+    return hive_file.create(is_file=True)
 
 
-@main.route('/api/v1/<file_id>/upload', methods=['POST'])
-def upload_file_callback(file_id):
-    return hive_file.upload_file_callback(file_id)
+@main.route('/api/v1/files/uploader/<path:file_name>', methods=['POST'])
+def upload_file(file_name):
+    return hive_file.upload_file(file_name)
 
 
-@main.route('/api/v1/file/downloader', methods=['GET'])
+@main.route('/api/v1/files/downloader', methods=['GET'])
 def download_file():
     return hive_file.download_file()
 
 
-@main.route('/api/v1/file/info', methods=['GET', 'POST'])
+@main.route('/api/v1/files/deleter/file', methods=['POST'])
+def remove_file():
+    return hive_file.delete()
+
+
+@main.route('/api/v1/files/deleter/folder', methods=['POST'])
+def remove_folder():
+    return hive_file.delete()
+
+
+@main.route('/api/v1/files/mover', methods=['POST'])
+def move_files():
+    return hive_file.move(is_copy=False)
+
+
+@main.route('/api/v1/files/copier', methods=['POST'])
+def copy_files():
+    return hive_file.move(is_copy=True)
+
+
+@main.route('/api/v1/files/properties', methods=['GET'])
 def file_info():
-    if request.method == 'POST':
-        return hive_file.set_file_property()
-    else:
-        return hive_file.get_file_property()
+    return hive_file.get_property()
 
 
-@main.route('/api/v1/file/delete', methods=['POST'])
-def delete_file():
-    return hive_file.delete_file()
-
-
-@main.route('/api/v1/file/list', methods=['GET'])
+@main.route('/api/v1/files/list/folder', methods=['GET'])
 def list_files():
     return hive_file.list_files()
 
 
-@main.route('/api/v1/syn/setup/google_drive', methods=['POST'])
+@main.route('/api/v1/files/file/hash', methods=['GET'])
+def get_file_hash():
+    return hive_file.file_hash()
+
+
+# file synchronization todo:启动文件/mongodb功能之前，必须启动同步（首先从drive中获取现有文件和数据库信息）
+@main.route('/api/v1/sync/setup/google_drive', methods=['POST'])
 def setup_syn_google_drive():
     return hive_sync.setup_google_drive_rclone()

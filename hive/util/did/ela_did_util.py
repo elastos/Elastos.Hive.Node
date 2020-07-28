@@ -60,8 +60,8 @@ def store_document(did_store, file_name, alias):
 def store_private_key(did_store, store_pass, subject, key_name, key_file_name):
     h_file_name = load_resources_file(key_file_name)
     with open(h_file_name) as h_file:
-        str = h_file.read()
-        private_key = base58.b58decode(str)
+        s = h_file.read()
+        private_key = base58.b58decode(s)
         did_url = lib.DIDURL_NewByDid(subject, key_name.encode())
         did = lib.DIDURL_GetDid(did_url)
         rt = lib.DIDStore_StorePrivateKey(did_store, store_pass.encode(), did, did_url, private_key)

@@ -5,6 +5,7 @@ google-auth-httplib2
 pymongo
 Flask
 Flask-Script
+Flask-APScheduler
 eve
 cffi
 setuptools

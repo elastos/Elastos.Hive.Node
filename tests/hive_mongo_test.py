@@ -6,8 +6,8 @@ import sqlite3
 from flask import session, request, make_response, render_template, appcontext_pushed, g
 from contextlib import closing, contextmanager
 from hive import create_app
+token = "824d4cb4-d0a4-11ea-854b-f45c898fba57"
 
-token = "f8f54b38-c022-11ea-88b6-f45c898fba57"
 
 
 @contextmanager
@@ -19,7 +19,9 @@ def name_set(app, name):
         yield
 
 
-class SampleTestCase(unittest.TestCase):
+class HiveMongoDbTestCase(unittest.TestCase):
+    def __init__(self, methodName='runTest'):
+        super(HiveMongoDbTestCase, self).__init__(methodName)
 
     def setUp(self):
         self.app = create_app('testing')
@@ -82,7 +84,18 @@ class SampleTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_add_collection_data(self):
-        self.test_create_collection()
+        # r, s = self.parse_response(
+        #     self.test_client.post('/api/v1/db/create_collection',
+        #                           data=json.dumps(
+        #                               {
+        #                                   "collection": "works",
+        #                                   "schema": {"title": {"type": "string"}, "author": {"type": "string"}}
+        #                               }
+        #                           ),
+        #                           headers=self.auth)
+        # )
+        # self.assert200(s)
+
         r, s = self.parse_response(
             self.test_client.post('api/v1/db/col/works',
                                   data=json.dumps(
@@ -92,12 +105,6 @@ class SampleTestCase(unittest.TestCase):
         )
         self.assert201(s)
 
-        r1 = self.test_client.get(
-            'api/v1/db/col/works', headers=self.auth
-        )
-        self.assert200(r1.status_code)
-
-    def test_auth_resume_collection_data(self):
         r1 = self.test_client.get(
             'api/v1/db/col/works', headers=self.auth
         )

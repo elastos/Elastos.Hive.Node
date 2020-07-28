@@ -9,7 +9,8 @@ from flask import Blueprint, request, jsonify
 from flask_apscheduler import APScheduler
 
 from hive.util.auth import did_auth
-from hive.util.constants import did_tail_part, RCLONE_CONFIG_FILE, DID_FILE_DIR
+from hive.util.common import did_tail_part
+from hive.settings import DID_FILE_DIR, RCLONE_CONFIG_FILE
 from hive.util.server_response import response_err, response_ok
 
 scheduler = APScheduler()
@@ -50,7 +51,7 @@ class HiveSync:
             "client_secret": client_secret,
             "scope": "drive.file",
             "token": json.dumps(token),
-            "did": did_tail_part(did)
+            "did": did_tail_part(did),
         }
 
         drive = self.add_drive_to_rclone(config_data)
@@ -110,10 +111,15 @@ client_id = %s
 client_secret = %s
 scope = %s
 token = %s
-''' % (config_data["did"], config_data["client_id"], config_data["client_secret"], config_data["scope"],
+''' % (config_data["did"],
+       config_data["client_id"],
+       config_data["client_secret"],
+       config_data["scope"],
        config_data["token"])
             print(lines)
             h_file.writelines(lines)
+        # todo 1. register user will copy from drive
+        # todo 2. login user no need
         return "gdrive_%s" % config_data["did"]
 
 
@@ -131,6 +137,7 @@ token = %s
 def syn_job():
     print('rclone syncing start:' + str(datetime.now()))
     syn_dirs = HiveSync.get_all_syn_drive()
+    # todo: add mongodb sync
     for key, value in syn_dirs.items():
         files = pathlib.Path(DID_FILE_DIR).absolute() / key
         line = 'rclone sync %s %s:elastos' % (files.as_posix(), value)

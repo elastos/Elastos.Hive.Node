@@ -18,7 +18,7 @@ URL_PREFIX = 'api/v1/db/col'
 
 DOMAIN = {
 }
-DID_FILE_DIR = "./did_user_data"
+DID_BASE_DIR = "./did_user_data"
 DID_CHALLENGE_EXPIRE = 15 * 60
 DID_TOKEN_EXPIRE = 24 * 60 * 60
 RCLONE_CONFIG_FILE = "/.config/rclone/rclone.conf"

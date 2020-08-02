@@ -6,8 +6,7 @@ import sqlite3
 from flask import session, request, make_response, render_template, appcontext_pushed, g
 from contextlib import closing, contextmanager
 from hive import create_app
-token = "824d4cb4-d0a4-11ea-854b-f45c898fba57"
-
+import test_common
 
 
 @contextmanager
@@ -36,6 +35,7 @@ class HiveMongoDbTestCase(unittest.TestCase):
         self.init_auth()
 
     def init_auth(self):
+        token = test_common.get_auth_token(self)
         self.auth = [
             ("Authorization", "token " + token),
             self.content_type,

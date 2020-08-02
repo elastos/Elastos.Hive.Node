@@ -101,7 +101,7 @@ def get_file_hash():
     return hive_file.file_hash()
 
 
-# file synchronization todo:启动文件/mongodb功能之前，必须启动同步（首先从drive中获取现有文件和数据库信息）
+# file synchronization
 @main.route('/api/v1/sync/setup/google_drive', methods=['POST'])
 def setup_syn_google_drive():
     return hive_sync.setup_google_drive_rclone()

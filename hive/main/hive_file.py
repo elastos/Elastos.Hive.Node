@@ -7,9 +7,10 @@ import shutil
 
 from flask import request, Response
 
+from hive.main.hive_sync import HiveSync
 from hive.util.auth import did_auth
 from hive.util.common import did_tail_part
-from hive.settings import DID_FILE_DIR
+from hive.settings import DID_BASE_DIR
 from hive.util.flask_rangerequest import RangeRequest
 from hive.util.server_response import response_err, response_ok
 
@@ -24,7 +25,7 @@ class HiveFile:
         self.app.config['MAX_CONTENT_PATH'] = 10000000
 
     def get_save_files_path(self, did, app_id):
-        path = Path(DID_FILE_DIR)
+        path = Path(DID_BASE_DIR)
         if path.is_absolute():
             path = path / did_tail_part(did) / app_id / "files"
         else:
@@ -49,6 +50,9 @@ class HiveFile:
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
+
+        if not HiveSync.is_app_sync_prepared(did, app_id):
+            return response_err(406, "drive is not prepared")
 
         content = request.get_json(force=True, silent=True)
         if content is None:
@@ -78,6 +82,9 @@ class HiveFile:
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
+
+        if not HiveSync.is_app_sync_prepared(did, app_id):
+            return response_err(406, "drive is not prepared")
 
         content = request.get_json(force=True, silent=True)
         if content is None:
@@ -125,6 +132,9 @@ class HiveFile:
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
 
+        if not HiveSync.is_app_sync_prepared(did, app_id):
+            return response_err(406, "drive is not prepared")
+
         path = self.get_save_files_path(did, app_id)
         file_full_name = (path / urllib.parse.unquote_plus(file_name)).resolve()
 
@@ -147,6 +157,9 @@ class HiveFile:
         if (did is None) or (app_id is None):
             resp.status_code = 401
             return resp
+
+        if not HiveSync.is_app_sync_prepared(did, app_id):
+            return response_err(406, "drive is not prepared")
 
         filename = request.args.get('name')
         if filename is None:
@@ -180,6 +193,9 @@ class HiveFile:
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
 
+        if not HiveSync.is_app_sync_prepared(did, app_id):
+            return response_err(406, "drive is not prepared")
+
         name = request.args.get('name')
         if name is None:
             return response_err(404, "name is null")
@@ -206,6 +222,9 @@ class HiveFile:
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
+
+        if not HiveSync.is_app_sync_prepared(did, app_id):
+            return response_err(406, "drive is not prepared")
 
         path = self.get_save_files_path(did, app_id)
 
@@ -237,6 +256,9 @@ class HiveFile:
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
 
+        if not HiveSync.is_app_sync_prepared(did, app_id):
+            return response_err(406, "drive is not prepared")
+
         name = request.args.get('name')
         if name is None:
             return response_err(404, "name is null")
@@ -264,13 +286,16 @@ class HiveFile:
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
 
+        if not HiveSync.is_app_sync_prepared(did, app_id):
+            return response_err(406, "drive is not prepared")
+
         content = request.get_json(force=True, silent=True)
         if content is None:
             return response_err(400, "parameter is not application/json")
         filename = content.get('name', None)
         if filename is None:
             return response_err(404, "name is null")
-        name = self.filter_path_root(name)
+        filename = self.filter_path_root(filename)
 
         path = self.get_save_files_path(did, app_id)
         file_full_name = (path / filename).resolve()

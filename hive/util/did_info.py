@@ -33,6 +33,15 @@ def get_all_did_info():
     return infos
 
 
+def get_all_did_info_by_did(did):
+    connection = MongoClient()
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+    query = {DID: did}
+    infos = col.find(query)
+    return infos
+
+
 def get_did_info_by_nonce(nonce):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
@@ -82,5 +91,3 @@ def create_token():
 def create_nonce():
     nonce = uuid.uuid1()
     return str(nonce)
-
-

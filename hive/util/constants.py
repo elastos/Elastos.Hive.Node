@@ -8,6 +8,12 @@ DID_INFO_TOKEN = "token"
 DID_INFO_NONCE_EXPIRE = "nonce_expire"
 DID_INFO_TOKEN_EXPIRE = "token_expire"
 
+DID_SYNC_INFO_COL = "did_sync_info"
+DID_SYNC_INFO_STATE = "state"
+DID_SYNC_INFO_MSG = "msg"
+DID_SYNC_INFO_TIME = "time"
+DID_SYNC_INFO_DRIVE = "drive"
+
 DID_RESOURCE_COL = "user_db_col_schema"
 DID_RESOURCE_DID = "did"
 DID_RESOURCE_APP_ID = "app_id"
@@ -25,3 +31,4 @@ FILE_INFO_FILE_MODIFY_TIME = "file_modify_time"
 
 DID_AUTH_SUBJECT = "didauth"
 DID_AUTH_REALM = "elastos_hive_node"
+

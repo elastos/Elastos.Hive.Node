@@ -28,7 +28,7 @@ MONGO_PORT = 27017
 
 * Config save file dir 
 ```python
-DID_FILE_DIR = "./did_file"
+DID_BASE_DIR = "./did_file"
 ```
 
 * Config rclone config file path

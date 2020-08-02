@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pymongo import MongoClient
 
-from hive.settings import DID_FILE_DIR, MONGO_HOST, MONGO_PORT
+from hive.settings import DID_BASE_DIR, MONGO_HOST, MONGO_PORT
 from hive.util.constants import DID_INFO_DB_NAME, DID_RESOURCE_COL, DID_RESOURCE_NAME, DID_RESOURCE_SCHEMA, \
     DID_RESOURCE_DID, DID_RESOURCE_APP_ID
 from hive.util.common import did_tail_part, create_full_path_dir
@@ -71,7 +71,7 @@ def gene_mongo_db_name(did, app_id):
 
 
 def get_save_mongo_db_path(did, app_id):
-    path = Path(DID_FILE_DIR)
+    path = Path(DID_BASE_DIR)
     if path.is_absolute():
         path = path / did_tail_part(did) / app_id / "mongo_db"
     else:
@@ -99,15 +99,13 @@ def export_mongo_db(did, app_id):
     db_name = gene_mongo_db_name(did, app_id)
     line2 = 'mongodump -h %s --port %s  -d %s -o %s' % (MONGO_HOST, MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
+    return True
 
 
 def import_mongo_db(did, app_id):
     path = get_save_mongo_db_path(did, app_id)
     if not path.exists():
-        if not create_full_path_dir(path):
-            return False
-        else:
-            return True
+        return False
 
     # 1. import collection schema data
     line1 = "mongoimport -h %s --port %s  --db=%s --collection=%s --upsert %s" % (MONGO_HOST,
@@ -122,6 +120,7 @@ def import_mongo_db(did, app_id):
     save_path = path / db_name
     line2 = 'mongorestore -h %s --port %s  -d %s --drop %s' % (MONGO_HOST, MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
+    return True
 
 
 # if __name__ == '__main__':

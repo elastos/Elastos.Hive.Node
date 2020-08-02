@@ -1,4 +1,4 @@
-from . import view, hive_sync
+from . import view
 
 
 def init_app(app):

@@ -8,8 +8,7 @@ from io import StringIO, BytesIO
 from flask import session, request, make_response, render_template, appcontext_pushed, g
 from contextlib import closing, contextmanager
 from hive import create_app
-
-token = "1b30b24e-cfd9-11ea-8157-f45c898fba57"
+import test_common
 
 
 @contextmanager
@@ -59,6 +58,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.clear_all_test_files()
 
     def init_auth(self):
+        token = test_common.get_auth_token(self)
         self.auth = [
             ("Authorization", "token " + token),
             self.content_type,

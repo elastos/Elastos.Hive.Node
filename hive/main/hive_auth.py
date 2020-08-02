@@ -1,6 +1,7 @@
 import base58
 from flask import request
 
+from hive.main import view
 from hive.util.did.ela_did_util import setup_did_backend, is_did_resolve, did_verify
 from hive.util.did_info import add_did_info_to_db, create_token, save_token_to_db, create_nonce, \
     get_did_info_by_nonce, update_nonce_of_did_info, get_did_info_by_did_appid
@@ -108,9 +109,12 @@ class HiveAuth:
         if not ret:
             return response_err(406, "auth sig error")
 
-        # 校验成功, 恢复数据库，生成token
+        # 校验成功, 生成token
         token = create_token()
         save_token_to_db(did, app_id, token, now + DID_TOKEN_EXPIRE)
+
+        # 设置eve
+        view.hive_mongo.init_eve(did, app_id)
 
         data = {"token": token}
         return response_ok(data)

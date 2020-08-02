@@ -1,13 +1,16 @@
 import json
-import os
+import shutil
 import unittest
-import tempfile
-import sqlite3
-from flask import session, request, make_response, render_template, appcontext_pushed, g
-from contextlib import closing, contextmanager
-from hive import create_app
+from time import time
 
-token = "1b30b24e-cfd9-11ea-8157-f45c898fba57"
+from flask import appcontext_pushed, g
+from contextlib import contextmanager
+
+from did_sync import get_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
+    DATA_SYNC_STATE_NONE
+from hive import create_app
+import test_common
+from hive_sync import HiveSync
 
 
 @contextmanager
@@ -36,6 +39,7 @@ class HiveSyncTestCase(unittest.TestCase):
         self.init_auth()
 
     def init_auth(self):
+        token = test_common.get_auth_token(self)
         self.auth = [
             ("Authorization", "token " + token),
             self.content_type,
@@ -70,7 +74,7 @@ class HiveSyncTestCase(unittest.TestCase):
         print("** r:" + str(r))
 
     def test_setup_google_drive(self):
-        google_auth_token = '{"token": "ya29.a0AfH6SMAVaP_gNAdbF25L5hktoPRdV8mBkcra6UaneG2w7ZYSusXevycqvhUrGrQ_FpsBPYYvxq2Sdx13zEwG1-m8I-pSFV05UY52X6wNnVlpxG7hsyBteEdUiiQPDT52zbK5ceQZ4-cpfXSlrplsQ8kZvPYC5nR1yks", "refresh_token": "1//06llFKBe-DBkRCgYIARAAGAYSNwF-L9Irfka2E6GP-J9gKBZN5AQS3z19vHOtjHq67p2ezCsJiVUZO-jKMSDKLgkiGfXgmBYimwc", "token_uri": "https://oauth2.googleapis.com/token", "client_id": "24235223939-7335upec07n0c3qc7mnd19jqoeglrg3t.apps.googleusercontent.com", "client_secret": "-7Ls5u1NpRe77Dy6VkL5W4pe", "scopes": ["https://www.googleapis.com/auth/drive.file"], "expiry": "2020-06-24 03:10:49.960710"}'
+        google_auth_token = '{"token": "ya29.a0AfH6SMDknoTvi2dnt5HLqit4W6XbPmW-zNmPc9B_oiqLowJT1-QpFSTWKbhtbbArZqvFMgWAM4FpxGh-aNZoA93V3kMWjfFLgz1hGE65GXF-WvN_gmvfQZ8sbAtVrcABrJPTqVA_MCOBEKKgCXXbkZnwxzJDjxbs8Dk", "refresh_token": "1//06d2r9StwWRzZCgYIARAAGAYSNwF-L9IrbrCxgQk5mDvTVNeNT-M7DUtMjR0XuvQx0VEfkSUwzN1k8fwW7V_ZjCJFCCpj9XSJzqU", "token_uri": "https://oauth2.googleapis.com/token", "client_id": "24235223939-guh47dijl0f0idm7h04bd44ulfcodta0.apps.googleusercontent.com", "client_secret": "mqaI40MlghlNkfaFtDBzvpGg", "scopes": ["https://www.googleapis.com/auth/drive"], "expiry": "2020-07-31T09:26:14.816501+08:00"}'
         r, s = self.parse_response(
             self.test_client.post('/api/v1/sync/setup/google_drive',
                                   data=google_auth_token,
@@ -79,6 +83,22 @@ class HiveSyncTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
+    def test_init_sync(self):
+        did = "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"
+        drive = HiveSync.gene_did_google_drive_name(did)
+        update_did_sync_info(did, DATA_SYNC_STATE_NONE, DATA_SYNC_STATE_NONE, time(), drive)
+        did_folder = HiveSync.get_did_sync_path(did)
+        if did_folder.exists():
+            shutil.rmtree(did_folder)
+        info = get_did_sync_info(did)
+        HiveSync.sync_did_data(info)
+
+    def test_sync(self):
+        did = "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"
+        drive = HiveSync.gene_did_google_drive_name(did)
+        update_did_sync_info(did, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, time(), drive)
+        info = get_did_sync_info(did)
+        HiveSync.sync_did_data(info)
 
 if __name__ == '__main__':
     unittest.main()

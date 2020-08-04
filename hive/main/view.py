@@ -30,8 +30,8 @@ def echo():
 
 # did register
 @main.route('/api/v1/did/auth', methods=['POST'])
-def did_auth_challenge():
-    return hive_auth.did_auth_challenge()
+def request_did_auth():
+    return hive_auth.request_did_auth()
 
 
 @main.route('/api/v1/did/<did_base58>/<app_id_base58>/callback', methods=['POST'])

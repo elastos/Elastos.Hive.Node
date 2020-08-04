@@ -6,21 +6,21 @@ from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, AP
     DID_INFO_NONCE_EXPIRE, DID_INFO_TOKEN_EXPIRE
 
 
-def add_did_info_to_db(did, app_id, nonce, expire):
+def add_did_info_to_db(did, app_id, nonce, token, expire):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    did_dic = {DID: did, APP_ID: app_id, DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRE: expire}
+    did_dic = {DID: did, APP_ID: app_id, DID_INFO_NONCE: nonce, DID_INFO_TOKEN: token, DID_INFO_NONCE_EXPIRE: expire}
     i = col.insert_one(did_dic)
     return i
 
 
-def update_nonce_of_did_info(did, app_id, nonce, expire):
+def update_nonce_of_did_info(did, app_id, nonce, token, expire):
     connection = MongoClient()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID: did, APP_ID: app_id}
-    value = {"$set": {DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRE: expire}}
+    value = {"$set": {DID_INFO_NONCE: nonce, DID_INFO_TOKEN: token, DID_INFO_NONCE_EXPIRE: expire}}
     ret = col.update_one(query, value)
     return ret
 

@@ -10,12 +10,15 @@ idchain_path = str(pathlib.Path("." + os.sep + "data" + os.sep +"idchain").absol
 
 @ffi.def_extern()
 def CreateIdTransactionHandle(adapter, payload, memo):
-    print("run CreateIdTransactionHandle")
+    # print("run CreateIdTransactionHandle")
     #TODO:: need to improve
     return True
 
-def print_err():
-    print(str(ffi.string(lib.DIDError_GetMessage()), encoding="utf-8"))
+def print_err(fun_name = None):
+    err = "Error:: "
+    if fun_name != None:
+        err += fun_name + ": "
+    print(err + str(ffi.string(lib.DIDError_GetMessage()), encoding="utf-8"))
 
 def new_adapter():
     adapter = ffi.new("struct DIDAdapter *")
@@ -35,6 +38,7 @@ class Entity:
     def __init__(self, name, mnemonic = None):
         self.name = name
         # self.mnemonic = mnemonic
+        print("Entity name:" + self.name)
         self.init_did_store()
         self.init_private_identity()
         self.init_did()
@@ -59,7 +63,6 @@ class Entity:
             mnemonic_str = str(ffi.string(mnemonic), encoding="utf-8")
             self.mnemonic = mnemonic_str
             lib.Mnemonic_Free(mnemonic)
-        print("Name:" + self.name)
         print("  mnemonic:" + self.mnemonic)
 
 
@@ -81,27 +84,28 @@ class Entity:
                 return False
             self.did = lib.DIDDocument_GetSubject(doc)
             lib.DIDDocument_Destroy(doc)
-            return True
+        return True
 
 
     def init_did(self):
+        print("init did, please wait ... ...")
         did = lib.DIDStore_GetDIDByIndex(self.store, 0)
         if not did:
-            print_err()
+            print_err("DIDStore_GetDIDByIndex")
             return
 
         check, sync = self.check_did_and_sync(did)
         if not check:
             if sync == -1:
-                print_err()
+                print_err("check_did_and_sync")
                 return
             if not self.check_did_and_new(did):
-                print_err()
+                print_err("check_did_and_new")
                 return
 
         ret = lib.DIDStore_PublishDID(self.store, self.storepass, self.did, ffi.NULL, False)
         if ret == -1:
-            print_err()
+            print_err("DIDStore_PublishDID")
 
         self.did_str = self.get_did_string_from_did(self.did)
         print(self.did_str)
@@ -113,6 +117,8 @@ class Entity:
         return ffi.string(didstr).decode()
 
     def get_did_string(self):
+        if self.did_str is None:
+            self.did_str = self.get_did_string_from_did(self.did)
         return self.did_str
 
     def get_did_store():

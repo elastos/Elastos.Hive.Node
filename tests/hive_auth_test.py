@@ -7,7 +7,6 @@ from datetime import datetime
 from entity import Entity
 from eladid import ffi, lib
 
-sys.path.append(os.getcwd())
 from hive import create_app
 
 @contextmanager
@@ -35,7 +34,7 @@ class DIDApp(Entity):
         types = ffi.new("char*[]", [ffi.new("char[]", "DIDAuthCredential".encode())])
         props = {
             'userDid': "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym",
-            'appDid': app.did_str,
+            'appDid': app.get_did_string(),
             'purpose': 'did:elastos:ieaA5VMWydQmVJtM5daW5hoTQpcuV38mHM',
             'scope': ['read', 'write']
         }

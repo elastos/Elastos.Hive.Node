@@ -113,13 +113,14 @@ class HiveAuth(Entity):
         return credentialSubject
 
     def __create_access_token(self, credentialSubject, exp):
+        did_str = self.get_did_string()
         doc = lib.DIDStore_LoadDID(self.store, self.did)
         builder = lib.DIDDocument_GetJwtBuilder(doc)
         lib.JWTBuilder_SetHeader(builder, "typ".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
 
         lib.JWTBuilder_SetSubject(builder, "AccessAuthority".encode())
-        lib.JWTBuilder_SetIssuer(builder, self.did_str.encode())
+        lib.JWTBuilder_SetIssuer(builder, did_str.encode())
         lib.JWTBuilder_SetExpiration(builder, exp)
         lib.JWTBuilder_SetClaimWithJson(builder, "accessSubject".encode(), json.dumps(credentialSubject).encode())
         token = ffi.string(lib.JWTBuilder_Compact(builder)).decode()

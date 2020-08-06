@@ -8,7 +8,7 @@ from hive.util.constants import DID_INFO_DB_NAME
 
 from flask import request
 from datetime import datetime
-from eladid import ffi, lib
+from hive.util.did.eladid import ffi, lib
 
 from hive.util.did_info import add_did_info_to_db, create_nonce, update_nonce_of_did_info, get_did_info_by_did_appid
 from hive.util.server_response import response_err, response_ok

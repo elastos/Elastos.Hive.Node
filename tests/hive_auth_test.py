@@ -4,8 +4,8 @@ from flask import appcontext_pushed, g
 from contextlib import contextmanager
 from datetime import datetime
 
-from entity import Entity
-from eladid import ffi, lib
+from hive.util.did.entity import Entity
+from hive.util.did.eladid import ffi, lib
 
 from hive import create_app
 
@@ -45,7 +45,7 @@ class DIDApp(Entity):
         vc = lib.Issuer_CreateCredentialByString(self.issuer, issuerid, credid, types, 1,
                 json.dumps(props).encode(), expires, self.storepass)
         vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
-        #print(vcJson)
+        print(vcJson)
         return vc
 
 # ---------------
@@ -141,6 +141,9 @@ class HiveAuthTestCase(unittest.TestCase):
         vc = self.didapp.issue_auth(self.testapp)
         vp_json = self.testapp.create_presentation(vc, "testapp", "873172f58701a9ee686f0630204fee59")
         auth_token = self.testapp.create_token(vp_json)
+        print("--auth_token---")
+        print(auth_token)
+        print("-----")
 
         rt, s = self.parse_response(
         self.test_client.post('/api/v1/did/auth',

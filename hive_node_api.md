@@ -5,7 +5,7 @@
     HTTP: POST
     URL : /api/v1/did/auth
     Content-Type: "application/json"
-    data: {"jwt":" auth_token,}
+    data: {"jwt":" auth_token}
     return:
         成功:{"_status":"OK",
              "subject": "didauth",

@@ -33,7 +33,7 @@ class DIDApp(Entity):
     def issue_auth(self, app):
         types = ffi.new("char*[]", [ffi.new("char[]", "DIDAuthCredential".encode())])
         props = {
-            'userDid': "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym",
+            'userDid': self.get_did_string(),
             'appDid': app.get_did_string(),
             'purpose': 'did:elastos:ieaA5VMWydQmVJtM5daW5hoTQpcuV38mHM',
             'scope': ['read', 'write']

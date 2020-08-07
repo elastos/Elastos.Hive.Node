@@ -104,11 +104,10 @@ class HiveAuth(Entity):
         vc_json = vp_json.get("verifiableCredential")[0]
         credentialSubject = vc_json.get("credentialSubject")
         vp_issuer = vc_json.get("issuer")
-        appDid = credentialSubject.get("appDid")
-        if (vp_issuer != appDid):
-            response_err(400, "issuer isn't appDid")
+        userDid = credentialSubject.get("userDid")
+        if (vp_issuer != userDid):
+            response_err(400, "vp issuer isn't userDid")
             return None
-        #TODO:: need check userdid?
 
         return credentialSubject
 

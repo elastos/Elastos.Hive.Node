@@ -43,6 +43,9 @@ class Entity:
         self.init_private_identity()
         self.init_did()
 
+    def __del__(self):
+        pass
+
     def init_did_store(self):
         store_path = idchain_path + os.sep + self.name + os.sep + ".store"
         self.store = lib.DIDStore_Open(store_path.encode(), adapter)

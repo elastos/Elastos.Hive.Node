@@ -1,7 +1,6 @@
 import json
 import os
 import pathlib
-import jwt
 
 from pymongo import MongoClient
 from hive.util.constants import DID_INFO_DB_NAME

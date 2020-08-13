@@ -5,7 +5,7 @@ from pymongo import MongoClient
 
 from hive.util.constants import DID_INFO_DB_NAME, FILE_INFO_COL, FILE_INFO_BELONG_DID, FILE_INFO_BELONG_APP_ID, \
     FILE_INFO_FILE_NAME, FILE_INFO_FILE_SIZE, FILE_INFO_FILE_CREATE_TIME, FILE_INFO_FILE_MODIFY_TIME
-from settings import MONGO_HOST, MONGO_PORT
+from hive.settings import MONGO_HOST, MONGO_PORT
 
 
 def add_file_info(did, app_id, name, info_dic):

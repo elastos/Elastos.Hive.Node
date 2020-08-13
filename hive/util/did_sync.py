@@ -4,7 +4,7 @@ from pymongo import MongoClient
 
 from hive.util.constants import DID, DID_INFO_DB_NAME, DID_SYNC_INFO_COL, DID_SYNC_INFO_STATE, DID_SYNC_INFO_MSG, \
     DID_SYNC_INFO_TIME, DID_SYNC_INFO_DRIVE
-from settings import MONGO_HOST, MONGO_PORT
+from hive.settings import MONGO_HOST, MONGO_PORT
 
 DATA_SYNC_STATE_NONE = "none"
 DATA_SYNC_STATE_INIT = "init"

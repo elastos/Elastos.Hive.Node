@@ -4,7 +4,7 @@ from pymongo import MongoClient
 
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
     DID_INFO_NONCE_EXPIRE, DID_INFO_TOKEN_EXPIRE
-from settings import MONGO_HOST, MONGO_PORT
+from hive.settings import MONGO_HOST, MONGO_PORT
 
 
 def add_did_info_to_db(did, app_id, nonce, token, expire):

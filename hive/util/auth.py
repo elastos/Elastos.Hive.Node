@@ -1,9 +1,7 @@
-import datetime
-
 from eve.auth import TokenAuth
 from flask import request
 
-from hive.util.constants import DID_INFO_TOKEN_EXPIRE, DID, APP_ID
+from hive.util.constants import DID, APP_ID
 from hive.util.common import gene_eve_mongo_db_prefix
 from hive.util.did_info import get_did_info_by_token
 

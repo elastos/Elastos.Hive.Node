@@ -1,11 +1,4 @@
 import json
-import os
-import sys
-import pathlib
-
-from pymongo import MongoClient
-from hive.util.constants import DID_INFO_DB_NAME
-
 from flask import request
 from datetime import datetime
 
@@ -23,6 +16,7 @@ ACCESS_AUTH_COL = "did_auth"
 APP_DID = "appdid"
 ACCESS_TOKEN = "access_token"
 TOKEN_EXPIRE = "token_expire"
+
 
 class HiveAuth(Entity):
     access_token = None
@@ -47,28 +41,28 @@ class HiveAuth(Entity):
         return vp_token
 
     def request_did_auth(self):
-        #get jwt
+        # get jwt
         body = request.get_json(force=True, silent=True)
         if body is None:
             return response_err(400, "parameter is not application/json")
         jwt = body.get('jwt', None)
 
-        #check auth token
+        # check auth token
         credentialSubject = self.__check_auth_token(jwt)
         if credentialSubject is None:
             return
 
-        #create access token
+        # create access token
         exp = int(datetime.now().timestamp()) + DID_CHALLENGE_EXPIRE
         access_token = self.__create_access_token(credentialSubject, exp)
         if not access_token:
             return response_err(400, "create access token fail!")
 
-        #save to db
+        # save to db
         if not self.__save_to_db(credentialSubject, access_token, exp):
             return response_err(400, "save to db fail!")
 
-        #response token
+        # response token
         data = {
             "subject": "didauth",
             "issuer": "elastos_hive_node",
@@ -127,7 +121,6 @@ class HiveAuth(Entity):
         lib.JWTBuilder_Destroy(builder)
         return token
 
-
     def __save_to_db(self, credentialSubject, token, exp):
         did = credentialSubject.get("userDid")
         app_id = credentialSubject.get("appDid")
@@ -145,6 +138,3 @@ class HiveAuth(Entity):
             return False
 
         return True
-
-
-

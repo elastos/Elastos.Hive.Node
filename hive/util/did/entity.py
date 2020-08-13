@@ -1,30 +1,33 @@
 import os
-import json
 import pathlib
 from eladid import ffi, lib
 
 from hive.settings import DID_SIDECHAIN_URL
 
-resolver = DID_SIDECHAIN_URL.encode() #20606
+resolver = DID_SIDECHAIN_URL.encode()  # 20606
 language = "english".encode()
-idchain_path = str(pathlib.Path("." + os.sep + "data" + os.sep +"idchain").absolute())
+idchain_path = str(pathlib.Path("." + os.sep + "data" + os.sep + "idchain").absolute())
+
 
 @ffi.def_extern()
 def CreateIdTransactionHandle(adapter, payload, memo):
     # print("run CreateIdTransactionHandle")
-    #TODO:: need to improve
+    # TODO:: need to improve
     return True
 
-def print_err(fun_name = None):
+
+def print_err(fun_name=None):
     err = "Error:: "
-    if fun_name != None:
+    if fun_name:
         err += fun_name + ": "
     print(err + str(ffi.string(lib.DIDError_GetMessage()), encoding="utf-8"))
+
 
 def new_adapter():
     adapter = ffi.new("struct DIDAdapter *")
     adapter.createIdTransaction = lib.CreateIdTransactionHandle
     return adapter
+
 
 # ---------------
 class Entity:
@@ -36,7 +39,7 @@ class Entity:
     name = "Entity"
     mnemonic = "advance duty suspect finish space matter squeeze elephant twenty over stick shield"
 
-    def __init__(self, name, mnemonic = None):
+    def __init__(self, name, mnemonic=None):
         self.name = name
         # self.mnemonic = mnemonic
         print("Entity name:" + self.name)
@@ -54,9 +57,9 @@ class Entity:
 
     def init_private_identity(self):
         ret = lib.DIDStore_ContainsPrivateIdentity(self.store)
-        #Check the store whether contains the root private identity.
-        if (ret):
-            return #Already exists
+        # Check the store whether contains the root private identity.
+        if ret:
+            return  # Already exists
 
         if self.mnemonic is None:
             mnemonic = lib.Mnemonic_Generate(language)
@@ -68,7 +71,6 @@ class Entity:
             self.mnemonic = mnemonic_str
             lib.Mnemonic_Free(mnemonic)
         print("  mnemonic:" + self.mnemonic)
-
 
     def check_did_and_sync(self, did):
         if lib.DIDStore_ContainsDID(self.store, did) and lib.DIDSotre_ContainsPrivateKeys(self.store, did):
@@ -89,7 +91,6 @@ class Entity:
             self.did = lib.DIDDocument_GetSubject(doc)
             lib.DIDDocument_Destroy(doc)
         return True
-
 
     def init_did(self):
         print("init did, please wait ... ...")
@@ -125,26 +126,28 @@ class Entity:
             self.did_str = self.get_did_string_from_did(self.did)
         return self.did_str
 
-    def get_did_store():
+    def get_did_store(self):
         return self.store
 
-    def get_did():
+    def get_did(self):
         return self.did
 
-    def get_document():
+    def get_document(self):
         return lib.DIDStore_LoadDID(self.store, self.did)
 
-    def get_name():
+    def get_name(self):
         return self.name
 
-    def get_store_password():
+    def get_store_password(self):
         return self.storepass
+
 
 # ---------------
 def init_did_backend():
     cache_dir = idchain_path + os.sep + ".cache"
     ret = lib.DIDBackend_InitializeDefault(resolver, cache_dir.encode())
     return ret
+
 
 adapter = new_adapter()
 init_did_backend()

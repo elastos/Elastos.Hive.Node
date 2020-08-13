@@ -1,4 +1,5 @@
-import os
+from decouple import config
+
 TESTING = True
 
 DID_SIDECHAIN_URL = config('DID_SIDECHAIN_URL', default="http://api.elastos.io:21606", cast=str)

@@ -1,5 +1,3 @@
-import uuid
-
 from pymongo import MongoClient
 
 from hive.util.constants import DID, DID_INFO_DB_NAME, DID_SYNC_INFO_COL, DID_SYNC_INFO_STATE, DID_SYNC_INFO_MSG, \

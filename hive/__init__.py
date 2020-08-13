@@ -1,5 +1,4 @@
 from eve import Eve
-from flask import request, jsonify
 
 from hive.main.hive_mongo import HiveMongo
 from hive.util.auth import HiveTokenAuth

@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
-
 import os
 TESTING = True
 
-MONGO_HOST = 'localhost'
-MONGO_PORT = 27017
+DID_SIDECHAIN_URL = config('DID_SIDECHAIN_URL', default="http://api.elastos.io:21606", cast=str)
 
-MONGO_DBNAME = 'elastos_hive_node_test'
+MONGO_HOST = config('MONGO_HOST', default="localhost", cast=str)
+MONGO_PORT = config('MONGO_PORT', default=27020, cast=int)
+MONGO_DBNAME = "hivedb_test"
 
 RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
 

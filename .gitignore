@@ -148,3 +148,6 @@ dmypy.json
 
 # Max osx
 .DS_Store
+
+# Mongodb data
+.mongodb-data/

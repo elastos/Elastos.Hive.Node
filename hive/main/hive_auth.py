@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import pathlib
 
 from pymongo import MongoClient
@@ -7,6 +8,28 @@ from hive.util.constants import DID_INFO_DB_NAME
 
 from flask import request
 from datetime import datetime
+
+from ctypes import *
+
+'''
+def loadElaDIDLibrary():
+    script_path = os.path.dirname(os.path.abspath(__file__)).split("/")
+    script_path = "/".join(script_path[:-1])
+    if sys.platform.startswith("darwin"):
+        dll_name = "eladid.cpython-37m-darwin.so"
+    else:
+        dll_name = "eladid.cpython-36m-x86_64-linux-gnu.so"
+    dll_path = os.path.abspath(os.path.join(script_path, 'util/did', dll_name))
+    if not dll_path in os.environ['LD_LIBRARY_PATH']:
+        os.environ['LD_LIBRARY_PATH'] += ':' + dll_path
+    cdll.LoadLibrary(dll_path)
+
+loadElaDIDLibrary()
+'''
+
+os.environ['LD_LIBRARY_PATH'] = "hive/util/did/"
+print(os.environ['LD_LIBRARY_PATH'])
+
 from hive.util.did.eladid import ffi, lib
 
 from hive.util.did_info import add_did_info_to_db, create_nonce, update_nonce_of_did_info, get_did_info_by_did_appid

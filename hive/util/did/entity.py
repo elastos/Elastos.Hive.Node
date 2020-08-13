@@ -1,10 +1,11 @@
-
 import os
 import json
 import pathlib
 from eladid import ffi, lib
 
-resolver = "http://api.elastos.io:21606".encode() #20606
+from hive.settings import DID_SIDECHAIN_URL
+
+resolver = DID_SIDECHAIN_URL.encode() #20606
 language = "english".encode()
 idchain_path = str(pathlib.Path("." + os.sep + "data" + os.sep +"idchain").absolute())
 

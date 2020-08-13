@@ -1,46 +1,32 @@
 # Elastos Hive Node
 
-##Install
-* Install python3.5 or latter
-* Install mongodb and run mongodb
-* Install rclone
-
-###Prerequisite and environment
-First clone the git repository, then go to the root repository folder.
-Create python virtual environment and install the prerequisite.
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+To start, clone Elastos.NET.Hive.Node repo
+```
+git clone https://gitlab.com/elastos/Elastos.NET.Hive.Node.git;
+cd Elastos.NET.Hive.Node;
 ```
 
-After that you can run Hive node using the new created virtual env.
-
-###Custom the Configuration
-Configuration is in hive/settings.py:
-
-* Config mongodb. 
-```python
-MONGO_HOST = 'localhost'
-MONGO_PORT = 27017
+# Prerequisites
+- Install docker at [https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/)
+- Install required packages[Only needs to be done once]
+```
+./install.sh
 ```
 
-* Config save file dir 
-```python
-DID_BASE_DIR = "./did_file"
+# Run Elastos Hive Node
+- Copy example environment file
 ```
-
-* Config rclone config file path
-```python
-RCLONE_CONFIG_FILE = "/.config/rclone/rclone.conf"
+cp .env.example .env
 ```
-
-* set system environment variables LD_LIBRARY_PATH to hive/util/did/
-
-### Run
-```bash
-python manage.py runserver
+- Modify .env file with your own values
+- [OPTIONAL]: If you want to remove previous mongodb data and start fresh, remove the mongodb directory
+```
+rm -rf .mongodb-data
+```
+- Set system environment variables LD_LIBRARY_PATH to hive/util/did/
+- Start API server
+```
+./run.sh start
 ```
 
 The server will run on url like: http://127.0.0.1:5000

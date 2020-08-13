@@ -1,12 +1,9 @@
-#!/usr/bin/env python
-# coding=utf-8
 from flask import request
 from flask_script import Server, Shell, Manager, Command, prompt_bool
 
 from hive import create_app
 
 app = create_app(config='production')
-
 
 @app.before_request
 def handle_chunking():
@@ -21,9 +18,9 @@ def handle_chunking():
         request.environ["wsgi.input_terminated"] = True
 
 
-manager = Manager(app)
-# manager.add_option('-c', '--config', dest='config', required=False)
+application = Manager(app)
+# application.add_option('-c', '--config', dest='config', required=False)
 
 if __name__ == "__main__":
-    # app.run(debug=False)
-    manager.run()
+    # application.run(debug=False)
+    application.run()

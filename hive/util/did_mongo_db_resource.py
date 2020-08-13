@@ -13,7 +13,7 @@ from hive.util.common import did_tail_part, create_full_path_dir
 
 # settings must be json string
 def add_did_resource_to_db(did, app_id, resource, schema):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_RESOURCE_COL]
 
@@ -24,7 +24,7 @@ def add_did_resource_to_db(did, app_id, resource, schema):
 
 
 def update_schema_of_did_resource(did, app_id, resource, schema):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_RESOURCE_COL]
 
@@ -35,7 +35,7 @@ def update_schema_of_did_resource(did, app_id, resource, schema):
 
 
 def find_schema_of_did_resource(did, app_id, resource):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_RESOURCE_COL]
     query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id, DID_RESOURCE_NAME: resource}
@@ -47,7 +47,7 @@ def find_schema_of_did_resource(did, app_id, resource):
 
 
 def get_all_resource_of_did_app_id(did, app_id):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_RESOURCE_COL]
     query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id}
@@ -56,7 +56,7 @@ def get_all_resource_of_did_app_id(did, app_id):
 
 
 def delete_did_resource_from_db(did, app_id, resource):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_RESOURCE_COL]
     query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id, DID_RESOURCE_NAME: resource}
@@ -121,7 +121,6 @@ def import_mongo_db(did, app_id):
     line2 = 'mongorestore -h %s --port %s  -d %s --drop %s' % (MONGO_HOST, MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
     return True
-
 
 # if __name__ == '__main__':
 #     did_str = "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"

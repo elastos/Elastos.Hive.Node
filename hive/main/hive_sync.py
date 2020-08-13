@@ -170,7 +170,7 @@ class HiveSync:
         with open(config_file, 'r') as h_file:
             lines = h_file.readlines()
             for line in lines:
-                if 0 < line.find(drive):
+                if not (0 > line.find(drive)):
                     return True
         return False
 
@@ -197,7 +197,7 @@ token = %s
             return
         file_data = ""
         content_replace = False
-        with open(config_file, 'a') as h_file:
+        with open(config_file, 'r') as h_file:
             lines = h_file.readlines()
             for line in lines:
                 if 0 < line.find(drive_name):

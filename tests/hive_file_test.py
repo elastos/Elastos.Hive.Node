@@ -29,7 +29,8 @@ class HiveFileTestCase(unittest.TestCase):
             self.test_client.get('/api/v1/files/list/folder', headers=self.auth)
         )
         self.assert200(s)
-        self.assertEqual(r1["_status"], "OK")
+        if r1["_status"] != "OK":
+            return
         for name in r1["files"]:
             if name[-1] == '/':
                 self.test_client.post('/api/v1/files/deleter/folder',
@@ -54,7 +55,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.json_header = [
             self.content_type,
         ]
-        self.init_all_auth()
+        self.init_auth()
         self.clear_all_test_files()
 
     def init_auth(self):
@@ -63,16 +64,10 @@ class HiveFileTestCase(unittest.TestCase):
             ("Authorization", "token " + token),
             self.content_type,
         ]
-
-    def init_upload_auth(self):
         self.upload_auth = [
             ("Authorization", "token " + token),
-            self.upload_file_content_type,
+            # self.upload_file_content_type,
         ]
-
-    def init_all_auth(self):
-        self.init_auth()
-        self.init_upload_auth()
 
     def tearDown(self):
         self.clear_all_test_files()

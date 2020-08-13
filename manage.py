@@ -5,7 +5,7 @@ from flask_script import Server, Shell, Manager, Command, prompt_bool
 
 from hive import create_app
 
-app = create_app()
+app = create_app(config='production')
 
 
 @app.before_request

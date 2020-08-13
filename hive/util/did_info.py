@@ -4,10 +4,11 @@ from pymongo import MongoClient
 
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
     DID_INFO_NONCE_EXPIRE, DID_INFO_TOKEN_EXPIRE
+from settings import MONGO_HOST, MONGO_PORT
 
 
 def add_did_info_to_db(did, app_id, nonce, token, expire):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     did_dic = {DID: did, APP_ID: app_id, DID_INFO_NONCE: nonce, DID_INFO_TOKEN: token, DID_INFO_NONCE_EXPIRE: expire}
@@ -16,7 +17,7 @@ def add_did_info_to_db(did, app_id, nonce, token, expire):
 
 
 def update_nonce_of_did_info(did, app_id, nonce, token, expire):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID: did, APP_ID: app_id}
@@ -26,7 +27,7 @@ def update_nonce_of_did_info(did, app_id, nonce, token, expire):
 
 
 def get_all_did_info():
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     infos = col.find()
@@ -34,7 +35,7 @@ def get_all_did_info():
 
 
 def get_all_did_info_by_did(did):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID: did}
@@ -43,7 +44,7 @@ def get_all_did_info_by_did(did):
 
 
 def get_did_info_by_nonce(nonce):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID_INFO_NONCE: nonce}
@@ -52,7 +53,7 @@ def get_did_info_by_nonce(nonce):
 
 
 def get_did_info_by_did_appid(did, app_id):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID: did, APP_ID: app_id}
@@ -61,7 +62,7 @@ def get_did_info_by_did_appid(did, app_id):
 
 
 def save_token_to_db(did, app_id, token, expire):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID: did, APP_ID: app_id}
@@ -75,7 +76,7 @@ def save_token_to_db(did, app_id, token, expire):
 
 
 def get_did_info_by_token(token):
-    connection = MongoClient()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID_INFO_TOKEN: token}

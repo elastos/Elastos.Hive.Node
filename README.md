@@ -18,7 +18,8 @@ cd Elastos.NET.Hive.Node;
 ```
 cp .env.example .env
 ```
-- Modify .env file with your own values
+- Modify .env file with your own values. Please note that "172.17.0.1" means "localhost" but lets us access it from inside 
+docker container as well as it's a docker dedicated localhost IP
 - [OPTIONAL]: If you want to remove previous mongodb data and start fresh, remove the mongodb directory
 ```
 rm -rf .mongodb-data
@@ -27,33 +28,25 @@ rm -rf .mongodb-data
 # Option 1: Run Elastos Hive Node locally
 - [OPTIONAL]: If you want to remove data directory and start from scratch:
 ```
-    rm -rf data
+rm -rf data
 ```
 - Start API server
 ```
-./run.sh start
+./run.sh direct
 ```
 
 # Option 2: Run Elastos Hive Node on Docker
-- Stop previously running docker container
-```
-    docker container stop hive-node || true && docker container rm -f hive-node || true
-```
 - Build docker image
 ``` 
-    docker build -t elastos/hive-node .
+docker build -t elastos/hive-node .
 ```
 - [OPTIONAL]: If you want to remove data directory and start from scratch:
 ```
-    rm -rf .data
+rm -rf .data
 ```
 - Run docker container
 ```
-   docker run --name hive-node                     \
-        -v ${PWD}/.data:/src/data               \
-        -v ${PWD}/.env:/src/.env                \
-        -p 5000:5000                                  \
-        elastos/hive-node
+./run.sh docker 
 ```
         
 The server will run on url like: http://127.0.0.1:5000

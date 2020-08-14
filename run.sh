@@ -7,7 +7,6 @@ function start () {
         -p 27020:27017                                  \
         mongo
 
-    echo $1
     if [ ! "$1" = "docker" ]
     then
       echo "Running directly on the machine..."

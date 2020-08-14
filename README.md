@@ -13,7 +13,7 @@ cd Elastos.NET.Hive.Node;
 ./install.sh
 ```
 
-# Run Elastos Hive Node
+# Set up
 - Copy example environment file
 ```
 cp .env.example .env
@@ -23,10 +23,37 @@ cp .env.example .env
 ```
 rm -rf .mongodb-data
 ```
-- Set system environment variables LD_LIBRARY_PATH to hive/util/did/
+
+# Option 1: Run Elastos Hive Node locally
+- [OPTIONAL]: If you want to remove data directory and start from scratch:
+```
+    rm -rf data
+```
 - Start API server
 ```
 ./run.sh start
 ```
 
+# Option 2: Run Elastos Hive Node on Docker
+- Stop previously running docker container
+```
+    docker container stop hive-node || true && docker container rm -f hive-node || true
+```
+- Build docker image
+``` 
+    docker build -t elastos/hive-node .
+```
+- [OPTIONAL]: If you want to remove data directory and start from scratch:
+```
+    rm -rf .data
+```
+- Run docker container
+```
+   docker run --name hive-node                     \
+        -v ${PWD}/.data:/src/data               \
+        -v ${PWD}/.env:/src/.env                \
+        -p 5000:5000                                  \
+        elastos/hive-node
+```
+        
 The server will run on url like: http://127.0.0.1:5000

@@ -151,3 +151,7 @@ dmypy.json
 
 # Mongodb data
 .mongodb-data/
+
+# Hive Node data
+.data
+data

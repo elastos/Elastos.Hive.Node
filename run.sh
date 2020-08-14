@@ -7,7 +7,7 @@ function start () {
         -p 27020:27017                                  \
         mongo
 
-    virtualenv -p `which python3` .venv
+    virtualenv -p `which python3.6` .venv
     source .venv/bin/activate
     pip install --upgrade pip
 
@@ -23,8 +23,7 @@ function start () {
     ;;
     esac
 
-    export LD_LIBRARY_PATH="$PWD/hive/util/did/"
-    gunicorn -b 0.0.0.0:5000 --reload wsgi:application
+    LD_LIBRARY_PATH="$PWD/hive/util/did/" gunicorn -b 0.0.0.0:5000 --reload wsgi:application
 }
 
 function stop () {

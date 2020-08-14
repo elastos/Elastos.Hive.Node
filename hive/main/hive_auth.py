@@ -8,8 +8,6 @@ from hive.util.did_info import add_did_info_to_db, create_nonce, update_nonce_of
 from hive.util.server_response import response_err, response_ok
 from hive.settings import DID_CHALLENGE_EXPIRE, DID_TOKEN_EXPIRE
 
-# import sys
-# sys.path.append(os.getcwd() + "/hive/util/did")
 from hive.util.did.entity import Entity
 
 ACCESS_AUTH_COL = "did_auth"

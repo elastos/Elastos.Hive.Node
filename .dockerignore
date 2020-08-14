@@ -1,0 +1,7 @@
+.env
+.env.prod
+.venv
+venv
+.mongodb-data
+.data
+data

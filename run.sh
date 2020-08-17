@@ -31,6 +31,7 @@ function start () {
     else
       echo "Running using docker..."
       docker container stop hive-node || true && docker container rm -f hive-node || true
+      docker build -t elastos/hive-node .
       docker run --name hive-node                     \
         -v ${PWD}/data:/src/data               \
         -v ${PWD}/.env:/src/.env                \

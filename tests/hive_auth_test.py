@@ -9,6 +9,7 @@ from hive.util.did.eladid import ffi, lib
 
 from hive import create_app
 
+
 @contextmanager
 def name_set(app, name):
     def handler(sender, **kwargs):
@@ -22,7 +23,7 @@ def name_set(app, name):
 class DIDApp(Entity):
     issuer = None
 
-    def __init__(self, name, mnemonic = None):
+    def __init__(self, name, mnemonic=None):
         Entity.__init__(self, name, mnemonic)
         self.issuer = lib.Issuer_Create(self.did, ffi.NULL, self.store)
 
@@ -43,15 +44,17 @@ class DIDApp(Entity):
         expires = lib.DIDDocument_GetExpires(issuerdoc)
         credid = lib.DIDURL_NewByDid(issuerid, self.name.encode())
         vc = lib.Issuer_CreateCredentialByString(self.issuer, issuerid, credid, types, 1,
-                json.dumps(props).encode(), expires, self.storepass)
+                                                 json.dumps(props).encode(), expires, self.storepass)
         vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
         print(vcJson)
         return vc
 
+
 # ---------------
 class DApp(Entity):
     access_token = "123"
-    def __init__(self, name, mnemonic = None):
+
+    def __init__(self, name, mnemonic=None):
         Entity.__init__(self, name, mnemonic)
 
     def access_api_by_token(self):
@@ -62,7 +65,7 @@ class DApp(Entity):
 
     def create_presentation(self, vc, realm, nonce):
         vp = lib.Presentation_Create(self.did, ffi.NULL, self.store, self.storepass, nonce.encode(),
-            realm.encode(), 1, vc)
+                                     realm.encode(), 1, vc)
         # print_err()
         vp_json = ffi.string(lib.Presentation_ToJson(vp, True)).decode()
         print(vp_json)
@@ -90,7 +93,8 @@ class DApp(Entity):
         lib.JWTBuilder_Destroy(builder)
         return token
 
- #------------------
+
+# ------------------
 class HiveAuthTestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):
         super(HiveAuthTestCase, self).__init__(methodName)
@@ -146,16 +150,17 @@ class HiveAuthTestCase(unittest.TestCase):
         print("-----")
 
         rt, s = self.parse_response(
-        self.test_client.post('/api/v1/did/auth',
-                              data=json.dumps({
-                                  "jwt": auth_token,
-                              }),
-                              headers=self.json_header)
+            self.test_client.post('/api/v1/did/auth',
+                                  data=json.dumps({
+                                      "jwt": auth_token,
+                                  }),
+                                  headers=self.json_header)
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
         print("token:" + rt["token"])
         self.testapp.set_access_token(rt["token"])
+
 
 if __name__ == '__main__':
     unittest.main()

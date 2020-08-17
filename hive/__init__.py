@@ -1,3 +1,4 @@
+import os
 from eve import Eve
 
 from hive.main.hive_mongo import HiveMongo
@@ -7,15 +8,15 @@ from hive import main
 DEFAULT_APP_NAME = 'Hive Node'
 
 configs = {
-    'development': "settings_dev.py",
-    'testing': "settings_test.py",
-    'production': "settings.py",
-    'default': "settings_dev.py"
+    'development': "hive/settings_dev.py",
+    'testing': "hive/settings_test.py",
+    'production': "hive/settings.py",
+    'default': "hive/settings_dev.py"
 }
 
 
 def create_app(config='default'):
-    app = Eve(auth=HiveTokenAuth, settings=configs[config])
+    app = Eve(auth=HiveTokenAuth, settings=os.path.abspath(configs[config]))
     main.init_app(app)
     return app
 

@@ -1,9 +1,10 @@
 from flask import request
-from flask_script import Server, Shell, Manager, Command, prompt_bool
+from flask_script import Manager
 
 from hive import create_app
 
 app = create_app(config='production')
+
 
 @app.before_request
 def handle_chunking():

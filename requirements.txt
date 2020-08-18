@@ -11,3 +11,4 @@ base58==2.0.1
 python-decouple==3.3
 gunicorn==20.0.4
 Eve==1.1.2
+pytest==6.0.1

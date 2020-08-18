@@ -50,3 +50,8 @@ rm -rf .data
 ```
         
 The server will run on url like: http://127.0.0.1:5000
+
+# Test
+```
+./run.sh test
+```

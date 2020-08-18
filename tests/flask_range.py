@@ -2,9 +2,11 @@ from datetime import datetime
 from flask import Flask
 from os import path
 
+import os
+
 from hive.util.flask_rangerequest import RangeRequest
 
-my_file = '/Users/wanghan/Downloads/movie/test.rmvb'
+my_file = os.path.abspath('tests/flask_range.py')
 app = Flask(__name__)
 size = path.getsize(my_file)
 with open(my_file, 'rb') as f:

@@ -6,7 +6,7 @@ import sqlite3
 from flask import session, request, make_response, render_template, appcontext_pushed, g
 from contextlib import closing, contextmanager
 from hive import create_app
-import test_common
+from tests import test_common
 
 
 @contextmanager

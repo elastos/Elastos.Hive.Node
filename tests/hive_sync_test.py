@@ -6,11 +6,11 @@ from time import time
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
 
-from did_sync import get_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
+from hive.util.did_sync import get_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
     DATA_SYNC_STATE_NONE
 from hive import create_app
-import test_common
-from hive_sync import HiveSync
+from tests import test_common
+from hive.main.hive_sync import HiveSync
 
 
 @contextmanager

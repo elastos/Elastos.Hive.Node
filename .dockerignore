@@ -3,5 +3,5 @@
 .venv
 venv
 .mongodb-data
-.data
 data
+tests

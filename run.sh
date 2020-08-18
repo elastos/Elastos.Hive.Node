@@ -55,7 +55,7 @@ function test () {
 
     setup_venv
 
-    for test_file in `find tests/ -type f -name '*.py'`
+    for test_file in `find tests/ -type f -name 'hive_*_test.py'`
     do
       echo "Running tests in $test_file"
       LD_LIBRARY_PATH="$PWD/hive/util/did/" pytest $test_file

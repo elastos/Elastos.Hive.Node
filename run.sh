@@ -58,7 +58,7 @@ function test () {
     for test_file in `find tests/ -type f -name 'hive_*_test.py'`
     do
       echo "Running tests in $test_file"
-      LD_LIBRARY_PATH="$PWD/hive/util/did/" pytest $test_file
+      pytest $test_file
     done
 }
 

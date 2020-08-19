@@ -55,11 +55,11 @@ function test () {
 
     setup_venv
 
-    for test_file in `find tests/ -type f -name 'hive_*_test.py'`
-    do
-      echo "Running tests in $test_file"
-      pytest $test_file
-    done
+    # Run tests
+    pytest tests/hive_auth_test.py
+    pytest tests/hive_sync_test.py
+    pytest tests/hive_mongo_test.py
+    pytest tests/hive_file_test.py
 }
 
 case "$1" in

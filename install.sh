@@ -4,11 +4,12 @@ echo "Install required packages"
 case `uname` in
     Linux )
         sudo apt-get update -y 
-        sudo apt-get install build-essential python3.6 python3.6-dev -y
+        sudo apt-get install build-essential python3.6 python3.6-dev mongo-tools -y
+        curl https://rclone.org/install.sh | sudo bash
         ;;
     Darwin )
         brew update
-        brew install python3.6
+        brew install python3.6 rclone mongodb/brew/mongodb-database-tools
         ;;
     *)
     exit 1

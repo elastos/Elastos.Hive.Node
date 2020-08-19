@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import unittest
 import tempfile
 import sqlite3
@@ -60,7 +61,7 @@ class HiveMongoDbTestCase(unittest.TestCase):
     def assert201(self, status):
         self.assertEqual(status, 201)
 
-    def test_echo(self):
+    def test_a_echo(self):
         r, s = self.parse_response(
             self.test_client.post('/api/v1/echo',
                                   data=json.dumps({"key": "value"}),
@@ -69,7 +70,7 @@ class HiveMongoDbTestCase(unittest.TestCase):
         self.assert200(s)
         print("** r:" + str(r))
 
-    def test_create_collection(self):
+    def test_b_create_collection(self):
         r, s = self.parse_response(
             self.test_client.post('/api/v1/db/create_collection',
                                   data=json.dumps(
@@ -80,10 +81,12 @@ class HiveMongoDbTestCase(unittest.TestCase):
                                   ),
                                   headers=self.auth)
         )
+        # Wait for collection to be created before continuing
+        time.sleep(2)
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
-    def test_add_collection_data(self):
+    def test_c_add_collection_data(self):
         # r, s = self.parse_response(
         #     self.test_client.post('/api/v1/db/create_collection',
         #                           data=json.dumps(
@@ -97,7 +100,7 @@ class HiveMongoDbTestCase(unittest.TestCase):
         # self.assert200(s)
 
         r, s = self.parse_response(
-            self.test_client.post('api/v1/db/col/works',
+            self.test_client.post('/api/v1/db/col/works',
                                   data=json.dumps(
                                       {"author": "john doe2", "title": "Eve for Dummies2"}
                                   ),
@@ -106,7 +109,7 @@ class HiveMongoDbTestCase(unittest.TestCase):
         self.assert201(s)
 
         r1 = self.test_client.get(
-            'api/v1/db/col/works', headers=self.auth
+            '/api/v1/db/col/works', headers=self.auth
         )
         self.assert200(r1.status_code)
 

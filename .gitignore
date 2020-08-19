@@ -154,3 +154,6 @@ dmypy.json
 
 # Hive Node data
 data
+
+# DID data
+did_user_data

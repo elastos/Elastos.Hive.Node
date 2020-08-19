@@ -25,15 +25,15 @@ from hive.util.server_response import response_err, response_ok
 
 scheduler = APScheduler()
 
-
 class HiveSync:
     def __init__(self, app=None):
         self.app = app
 
     def init_app(self, app):
         self.app = app
-        scheduler.init_app(app)
-        scheduler.start()
+        if not scheduler.running:
+            scheduler.init_app(app)
+            scheduler.start()
 
     def setup_google_drive_rclone(self):
         did, app_id = did_auth()

@@ -9,7 +9,6 @@ from hive.util.did.eladid import ffi, lib
 
 from hive import create_app
 
-
 @contextmanager
 def name_set(app, name):
     def handler(sender, **kwargs):
@@ -132,7 +131,7 @@ class HiveAuthTestCase(unittest.TestCase):
     def assert201(self, status):
         self.assertEqual(status, 201)
 
-    def test_echo(self):
+    def test_a_echo(self):
         r, s = self.parse_response(
             self.test_client.post('/api/v1/echo',
                                   data=json.dumps({"key": "value"}),
@@ -141,13 +140,10 @@ class HiveAuthTestCase(unittest.TestCase):
         self.assert200(s)
         print("** r:" + str(r))
 
-    def test_auth(self):
+    def test_b_auth(self):
         vc = self.didapp.issue_auth(self.testapp)
         vp_json = self.testapp.create_presentation(vc, "testapp", "873172f58701a9ee686f0630204fee59")
         auth_token = self.testapp.create_token(vp_json)
-        print("--auth_token---")
-        print(auth_token)
-        print("-----")
 
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/auth',

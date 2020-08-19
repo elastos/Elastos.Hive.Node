@@ -129,7 +129,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r3["_status"], "OK")
         print(json.dumps(r3))
 
-    def test_create_folder(self):
+    def test_a_create_folder(self):
         file_name = {
             "name": "folder1/folder2",
         }
@@ -150,27 +150,27 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r1["_status"], "OK")
         print(json.dumps(r1))
 
-    def test_create_and_upload_file_root(self):
+    def test_b_create_and_upload_file_root(self):
         self.create_upload_file("test_0.txt", "Hello Temp test 0!")
 
-    def test_create_and_upload_file_in_folder(self):
+    def test_c_create_and_upload_file_in_folder(self):
         self.create_upload_file("folder1/test1.txt", "Hello Temp test 1!")
 
-    def test_create_and_upload_file_further_folder(self):
+    def test_d_create_and_upload_file_further_folder(self):
         self.create_upload_file("folder1/folder2/folder3/test0.txt", "Hello Temp test 0!")
 
-    def test_create_and_upload_file_new_folder(self):
+    def test_e_create_and_upload_file_new_folder(self):
         self.create_upload_file("f1/f2/f3/test_f3_1.txt", "Hello Temp test f3_1!")
         self.create_upload_file("f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
 
-    def test_download_file(self):
+    def test_f_download_file(self):
         self.create_upload_file("f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
         r = self.test_client.get('api/v1/files/downloader?name=f1/f2/f3/test_f3_2.txt', headers=self.auth)
 
         self.assert200(r.status_code)
         print("data:" + str(r.get_data()))
 
-    def test_move_file(self):
+    def test_g_move_file(self):
         self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1_2!")
 
         move_file = {
@@ -198,7 +198,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r1["_status"], "OK")
 
-    def test_move_folder(self):
+    def test_h_move_folder(self):
         self.create_upload_file("f1/f2/f3/f4/test_f4.txt", "Hello Temp test f1_2!")
         self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1.txt", "Hello Temp test fr4_1!")
         self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1_2.txt", "Hello Temp test fr4_2!")
@@ -232,7 +232,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r3["_status"], "OK")
         print(json.dumps(r3))
 
-    def test_copy_file(self):
+    def test_i_copy_file(self):
         self.create_upload_file("f1/f2/test_f2.txt", "Hello Temp test f2_2!")
 
         move_file = {
@@ -260,7 +260,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r2["_status"], "OK")
 
-    def test_copy_folder(self):
+    def test_j_copy_folder(self):
         self.create_upload_file("f1/f2/f3/f4/test_f4_1.txt", "Hello Temp test f4_1!")
         self.create_upload_file("f1/f2/f3/fr4_2/test_fr4_2.txt", "Hello Temp test fr4_1!")
         self.create_upload_file("f1/f2/f3/fr4_2/test_fr4_2_2.txt", "Hello Temp test fr4_2!")
@@ -294,7 +294,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r3["_status"], "OK")
         print(json.dumps(r3))
 
-    def test_file_hash(self):
+    def test_k_file_hash(self):
         self.create_upload_file("f1/f2/test_f2_hash.txt", "Hello Temp test f2_hash!")
         r1, s = self.parse_response(
             self.test_client.get('/api/v1/files/file/hash?name=f1/f2/test_f2_hash.txt', headers=self.auth)
@@ -304,7 +304,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r1["_status"], "OK")
         print(json.dumps(r1))
 
-    def test_delete_file(self):
+    def test_l_delete_file(self):
         self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1!")
         self.create_upload_file("f1/test_f2.txt", "Hello Temp test f1!")
         r, s = self.parse_response(
@@ -322,7 +322,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertNotEqual(r1["_status"], "OK")
 
-    def test_delete_folder(self):
+    def test_m_delete_folder(self):
         r, s = self.parse_response(
             self.test_client.post('/api/v1/files/deleter/folder',
                                   data=json.dumps({

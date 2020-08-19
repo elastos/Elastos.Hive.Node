@@ -88,9 +88,6 @@ def get_auth_token(self):
     vc = self.didapp.issue_auth(self.testapp)
     vp_json = self.testapp.create_presentation(vc, "testapp", "873172f58701a9ee686f0630204fee59")
     auth_token = self.testapp.create_token(vp_json)
-    print("--auth_token---")
-    print(auth_token)
-    print("-----")
 
     rt, s = self.parse_response(
         self.test_client.post('/api/v1/did/auth',
@@ -101,7 +98,6 @@ def get_auth_token(self):
     )
     self.assert200(s)
     self.assertEqual(rt["_status"], "OK")
-    print("token:" + rt["token"])
     self.testapp.set_access_token(rt["token"])
 
     print("token:" + rt["token"])

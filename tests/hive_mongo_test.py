@@ -1,11 +1,8 @@
 import json
-import os
 import time
 import unittest
-import tempfile
-import sqlite3
-from flask import session, request, make_response, render_template, appcontext_pushed, g
-from contextlib import closing, contextmanager
+from flask import appcontext_pushed, g
+from contextlib import contextmanager
 from hive import create_app
 from tests import test_common
 

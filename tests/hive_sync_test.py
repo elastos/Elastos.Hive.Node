@@ -7,7 +7,7 @@ from flask import appcontext_pushed, g
 from contextlib import contextmanager
 
 from hive.util.did_sync import get_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
-    DATA_SYNC_STATE_NONE, add_did_sync_info
+    add_did_sync_info
 from hive.util.constants import DID
 from hive import create_app
 from tests import test_common

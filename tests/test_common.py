@@ -4,9 +4,6 @@ from datetime import datetime
 from hive.util.did.entity import Entity
 from hive.util.did.eladid import ffi, lib
 
-from hive import create_app
-
-
 class DIDApp(Entity):
     issuer = None
 

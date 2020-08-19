@@ -22,6 +22,7 @@ cp .env.example .env
 docker container as well as it's a docker dedicated localhost IP
 - [OPTIONAL]: If you want to remove previous mongodb data and start fresh, remove the mongodb directory
 ```
+docker container rm -f hive-mongo
 rm -rf .mongodb-data
 ```
 
@@ -52,6 +53,15 @@ rm -rf .data
 The server will run on url like: http://127.0.0.1:5000
 
 # Test
+- [OPTIONAL]: If you want to remove previous mongodb data and start fresh, remove the mongodb directory
+```
+docker container rm -f hive-mongo
+rm -rf .mongodb-data
+```
+- [OPTIONAL]: Make sure to remove the previous data directory if you want
+```
+rm -rf data did_user_data
+```
 Run all the tests in order
 ```
 ./run.sh test

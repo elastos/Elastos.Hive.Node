@@ -68,7 +68,7 @@ rm -rf .mongodb-data
 ```
 - [OPTIONAL]: Make sure to remove the previous data directory if you want
 ```
-rm -rf data did_user_data-test
+rm -rf data test_did_user_data
 ```
 Run all the tests in order
 ```

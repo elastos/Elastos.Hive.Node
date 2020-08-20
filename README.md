@@ -43,6 +43,7 @@ docker build -t elastos/hive-node .
 ```
 - [OPTIONAL]: If you want to remove data directory and start from scratch:
 ```
+# Note that docker uses ".data" while directly running on the host uses "data" directory
 rm -rf .data
 ```
 - Modify the .env file if needed(You may need to modify the value 'MONGO_HOST' and 'MONGO_PORTT' to your host IP)

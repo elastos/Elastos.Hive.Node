@@ -39,7 +39,7 @@ function start_docker () {
     docker build -t elastos/hive-node .
     docker run --name hive-node               \
       --network hive                          \
-      -v ${PWD}/data:/src/data                \
+      -v ${PWD}/.data:/src/data                \
       -v ${PWD}/.env:/src/.env                \
       -p 5000:5000                            \
       elastos/hive-node

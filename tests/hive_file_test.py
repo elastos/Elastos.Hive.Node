@@ -1,11 +1,16 @@
 import json
+import sys
 import unittest
+import logging
 from io import BytesIO
 
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
 from hive import create_app
 from tests import test_common
+
+logger = logging.getLogger()
+logger.level = logging.DEBUG
 
 
 @contextmanager
@@ -20,6 +25,17 @@ def name_set(app, name):
 class HiveFileTestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):
         super(HiveFileTestCase, self).__init__(methodName)
+
+    @classmethod
+    def setUpClass(cls):
+        cls.stream_handler = logging.StreamHandler(sys.stdout)
+        logger.addHandler(cls.stream_handler)
+        logging.getLogger("HiveFileTestCase").debug("Setting up HiveFileTestCase\n")
+
+    @classmethod
+    def tearDownClass(cls):
+        logging.getLogger("HiveAuthTestCase").debug("\n\nShutting down HiveFileTestCase")
+        logger.removeHandler(cls.stream_handler)
 
     def clear_all_test_files(self):
         r1, s = self.parse_response(
@@ -43,6 +59,7 @@ class HiveFileTestCase(unittest.TestCase):
                                       headers=self.auth)
 
     def setUp(self):
+        logging.getLogger("HiveFileTestCase").info("\n")
         self.app = create_app('testing')
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
@@ -67,8 +84,8 @@ class HiveFileTestCase(unittest.TestCase):
         ]
 
     def tearDown(self):
+        logging.getLogger("HiveFileTestCase").info("\n")
         self.clear_all_test_files()
-        pass
 
     def init_db(self):
         pass
@@ -124,9 +141,10 @@ class HiveFileTestCase(unittest.TestCase):
 
         self.assert200(s)
         self.assertEqual(r3["_status"], "OK")
-        print(json.dumps(r3))
+        logging.getLogger("HiveFileTestCase").debug(json.dumps(r3))
 
     def test_a_create_folder(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_a_create_folder")
         file_name = {
             "name": "folder1/folder2",
         }
@@ -145,29 +163,35 @@ class HiveFileTestCase(unittest.TestCase):
 
         self.assert200(s)
         self.assertEqual(r1["_status"], "OK")
-        print(json.dumps(r1))
+        logging.getLogger("HiveFileTestCase").debug(json.dumps(r1))
 
     def test_b_create_and_upload_file_root(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_b_create_and_upload_file_root")
         self.create_upload_file("test_0.txt", "Hello Temp test 0!")
 
     def test_c_create_and_upload_file_in_folder(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_c_create_and_upload_file_in_folder")
         self.create_upload_file("folder1/test1.txt", "Hello Temp test 1!")
 
     def test_d_create_and_upload_file_further_folder(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_d_create_and_upload_file_further_folder")
         self.create_upload_file("folder1/folder2/folder3/test0.txt", "Hello Temp test 0!")
 
     def test_e_create_and_upload_file_new_folder(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_e_create_and_upload_file_new_folder")
         self.create_upload_file("f1/f2/f3/test_f3_1.txt", "Hello Temp test f3_1!")
         self.create_upload_file("f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
 
     def test_f_download_file(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_f_download_file")
         self.create_upload_file("f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
         r = self.test_client.get('api/v1/files/downloader?name=f1/f2/f3/test_f3_2.txt', headers=self.auth)
 
         self.assert200(r.status_code)
-        print("data:" + str(r.get_data()))
+        logging.getLogger("HiveFileTestCase").debug("data:" + str(r.get_data()))
 
     def test_g_move_file(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_g_move_file")
         self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1_2!")
 
         move_file = {
@@ -196,6 +220,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r1["_status"], "OK")
 
     def test_h_move_folder(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_h_move_folder")
         self.create_upload_file("f1/f2/f3/f4/test_f4.txt", "Hello Temp test f1_2!")
         self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1.txt", "Hello Temp test fr4_1!")
         self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1_2.txt", "Hello Temp test fr4_2!")
@@ -219,7 +244,7 @@ class HiveFileTestCase(unittest.TestCase):
 
         self.assert200(s)
         self.assertEqual(r2["_status"], "OK")
-        print(json.dumps(r2))
+        logging.getLogger("HiveFileTestCase").debug(json.dumps(r2))
 
         r3, s = self.parse_response(
             self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3/f4', headers=self.auth)
@@ -227,9 +252,10 @@ class HiveFileTestCase(unittest.TestCase):
 
         self.assert200(s)
         self.assertEqual(r3["_status"], "OK")
-        print(json.dumps(r3))
+        logging.getLogger("HiveFileTestCase").debug(json.dumps(r3))
 
     def test_i_copy_file(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_i_copy_file")
         self.create_upload_file("f1/f2/test_f2.txt", "Hello Temp test f2_2!")
 
         move_file = {
@@ -258,6 +284,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r2["_status"], "OK")
 
     def test_j_copy_folder(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_j_copy_folder")
         self.create_upload_file("f1/f2/f3/f4/test_f4_1.txt", "Hello Temp test f4_1!")
         self.create_upload_file("f1/f2/f3/fr4_2/test_fr4_2.txt", "Hello Temp test fr4_1!")
         self.create_upload_file("f1/f2/f3/fr4_2/test_fr4_2_2.txt", "Hello Temp test fr4_2!")
@@ -281,7 +308,7 @@ class HiveFileTestCase(unittest.TestCase):
 
         self.assert200(s)
         self.assertEqual(r2["_status"], "OK")
-        print(json.dumps(r2))
+        logging.getLogger("HiveFileTestCase").debug(json.dumps(r2))
 
         r3, s = self.parse_response(
             self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3/f4', headers=self.auth)
@@ -289,9 +316,10 @@ class HiveFileTestCase(unittest.TestCase):
 
         self.assert200(s)
         self.assertEqual(r3["_status"], "OK")
-        print(json.dumps(r3))
+        logging.getLogger("HiveFileTestCase").debug(json.dumps(r3))
 
     def test_k_file_hash(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_k_file_hash")
         self.create_upload_file("f1/f2/test_f2_hash.txt", "Hello Temp test f2_hash!")
         r1, s = self.parse_response(
             self.test_client.get('/api/v1/files/file/hash?name=f1/f2/test_f2_hash.txt', headers=self.auth)
@@ -299,9 +327,10 @@ class HiveFileTestCase(unittest.TestCase):
 
         self.assert200(s)
         self.assertEqual(r1["_status"], "OK")
-        print(json.dumps(r1))
+        logging.getLogger("HiveFileTestCase").debug(json.dumps(r1))
 
     def test_l_delete_file(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_l_delete_file")
         self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1!")
         self.create_upload_file("f1/test_f2.txt", "Hello Temp test f1!")
         r, s = self.parse_response(
@@ -320,6 +349,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertNotEqual(r1["_status"], "OK")
 
     def test_m_delete_folder(self):
+        logging.getLogger("HiveFileTestCase").debug("\nRunning test_m_delete_folder")
         r, s = self.parse_response(
             self.test_client.post('/api/v1/files/deleter/folder',
                                   data=json.dumps({
@@ -335,7 +365,7 @@ class HiveFileTestCase(unittest.TestCase):
 
         self.assert200(s)
         self.assertEqual(r1["_status"], "OK")
-        print(json.dumps(r1))
+        logging.getLogger("HiveFileTestCase").debug(json.dumps(r1))
 
 
 if __name__ == '__main__':

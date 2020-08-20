@@ -1,4 +1,5 @@
 import os
+import logging
 from eve import Eve
 
 from hive.main.hive_mongo import HiveMongo
@@ -20,3 +21,10 @@ def create_app(config='default'):
     main.init_app(app)
     return app
 
+
+# Set up logging
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.DEBUG,
+    datefmt='%Y-%m-%d %H:%M:%S'
+)

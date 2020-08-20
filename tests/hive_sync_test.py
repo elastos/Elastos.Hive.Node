@@ -1,6 +1,8 @@
 import json
 import shutil
+import sys
 import unittest
+import logging
 from time import time
 
 from flask import appcontext_pushed, g
@@ -12,6 +14,9 @@ from hive.util.constants import DID
 from hive import create_app
 from tests import test_common
 from hive.main.hive_sync import HiveSync
+
+logger = logging.getLogger()
+logger.level = logging.DEBUG
 
 
 @contextmanager
@@ -27,7 +32,19 @@ class HiveSyncTestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):
         super(HiveSyncTestCase, self).__init__(methodName)
 
+    @classmethod
+    def setUpClass(cls):
+        cls.stream_handler = logging.StreamHandler(sys.stdout)
+        logger.addHandler(cls.stream_handler)
+        logging.getLogger("HiveSyncTestCase").debug("Setting up HiveSyncTestCase\n")
+
+    @classmethod
+    def tearDownClass(cls):
+        logging.getLogger("HiveSyncTestCase").debug("\n\nShutting down HiveSyncTestCase")
+        logger.removeHandler(cls.stream_handler)
+
     def setUp(self):
+        logging.getLogger("HiveSyncTestCase").info("\n")
         self.app = create_app('testing')
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
@@ -47,7 +64,7 @@ class HiveSyncTestCase(unittest.TestCase):
         ]
 
     def tearDown(self):
-        pass
+        logging.getLogger("HiveSyncTestCase").info("\n")
 
     def init_db(self):
         pass
@@ -66,15 +83,17 @@ class HiveSyncTestCase(unittest.TestCase):
         self.assertEqual(status, 201)
 
     def test_a_echo(self):
+        logging.getLogger("HiveSyncTestCase").debug("\nRunning test_a_echo")
         r, s = self.parse_response(
             self.test_client.post('/api/v1/echo',
                                   data=json.dumps({"key": "value"}),
                                   headers=self.json_header)
         )
         self.assert200(s)
-        print("** r:" + str(r))
+        logging.getLogger("HiveSyncTestCase").debug("** r:" + str(r))
 
     def test_b_init_sync(self):
+        logging.getLogger("HiveSyncTestCase").debug("\nRunning test_b_init_sync")
         did = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
         drive = HiveSync.gene_did_google_drive_name(did)
         add_did_sync_info(did, time(), drive)
@@ -85,6 +104,7 @@ class HiveSyncTestCase(unittest.TestCase):
         HiveSync.sync_did_data(info[DID])
 
     def test_c_sync(self):
+        logging.getLogger("HiveSyncTestCase").debug("\nRunning test_c_sync")
         did = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
         drive = HiveSync.gene_did_google_drive_name(did)
         update_did_sync_info(did, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, time(), drive)
@@ -92,6 +112,7 @@ class HiveSyncTestCase(unittest.TestCase):
         HiveSync.sync_did_data(info[DID])
 
     def test_d_setup_google_drive(self):
+        logging.getLogger("HiveSyncTestCase").debug("\nRunning test_d_setup_google_drive")
         google_auth_token = '{"token": "ya29.a0AfH6SMDknoTvi2dnt5HLqit4W6XbPmW-zNmPc9B_oiqLowJT1' \
                             '-QpFSTWKbhtbbArZqvFMgWAM4FpxGh-aNZoA93V3kMWjfFLgz1hGE65GXF' \
                             '-WvN_gmvfQZ8sbAtVrcABrJPTqVA_MCOBEKKgCXXbkZnwxzJDjxbs8Dk", "refresh_token": ' \

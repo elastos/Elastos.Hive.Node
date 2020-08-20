@@ -62,10 +62,10 @@ function test () {
     setup_venv
 
     # Run tests
-    pytest tests/hive_auth_test.py
-    pytest tests/hive_sync_test.py
-    pytest tests/hive_mongo_test.py
-    pytest tests/hive_file_test.py
+    MONGO_DBNAME="test_hivedb" DID_INFO_DB_NAME="test_hive_manage_info" DID_BASE_DIR="./test_did_user_data" pytest --disable-pytest-warnings -xs tests/hive_auth_test.py
+    MONGO_DBNAME="test_hivedb" DID_INFO_DB_NAME="test_hive_manage_info" DID_BASE_DIR="./test_did_user_data" pytest --disable-pytest-warnings -xs tests/hive_sync_test.py
+    MONGO_DBNAME="test_hivedb" DID_INFO_DB_NAME="test_hive_manage_info" DID_BASE_DIR="./test_did_user_data" pytest --disable-pytest-warnings -xs tests/hive_mongo_test.py
+    MONGO_DBNAME="test_hivedb" DID_INFO_DB_NAME="test_hive_manage_info" DID_BASE_DIR="./test_did_user_data" pytest --disable-pytest-warnings -xs tests/hive_file_test.py
 }
 
 case "$1" in

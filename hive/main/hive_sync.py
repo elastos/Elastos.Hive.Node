@@ -1,5 +1,6 @@
 import _thread
 import json
+import logging
 import os
 import pathlib
 import re
@@ -163,7 +164,7 @@ class HiveSync:
     def is_google_drive_exist(did):
         config_file = HiveSync.find_rclone_config()
         if not config_file.exists():
-            print("Error: rclone config file do not exist")
+            logging.debug(f"Error: rclone config file do not exist")
             return False
 
         drive = "[gdrive_%s]" % did_tail_part(did)
@@ -193,7 +194,7 @@ token = %s
 
         config_file = HiveSync.find_rclone_config()
         if not config_file.exists():
-            print("Error: rclone config file do not exist")
+            logging.debug(f"Error: rclone config file do not exist")
             return
         file_data = ""
         content_replace = False
@@ -222,7 +223,7 @@ token = %s
 
         config_file = HiveSync.find_rclone_config()
         if not config_file.exists():
-            print("Error: rclone config file do not exist")
+            logging.debug(f"Error: rclone config file do not exist")
             return
 
         with open(config_file, 'a') as h_file:
@@ -246,6 +247,6 @@ token = %s
 
 @scheduler.task(trigger='interval', id='syn_job', hours=1)
 def syn_job():
-    print('rclone syncing start:' + str(datetime.now()))
+    logging.debug(f"rclone syncing start: {str(datetime.now())}")
     HiveSync.syn_all_drive()
-    print('rclone syncing end:' + str(datetime.now()))
+    logging.debug(f"rclone syncing end: {str(datetime.now())}")

@@ -1,5 +1,7 @@
 import json
+import sys
 import unittest
+import logging
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
 from datetime import datetime
@@ -8,6 +10,10 @@ from hive.util.did.entity import Entity
 from hive.util.did.eladid import ffi, lib
 
 from hive import create_app
+
+logger = logging.getLogger()
+logger.level = logging.DEBUG
+
 
 @contextmanager
 def name_set(app, name):
@@ -98,7 +104,19 @@ class HiveAuthTestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):
         super(HiveAuthTestCase, self).__init__(methodName)
 
+    @classmethod
+    def setUpClass(cls):
+        cls.stream_handler = logging.StreamHandler(sys.stdout)
+        logger.addHandler(cls.stream_handler)
+        logging.getLogger("HiveAuthTestCase").debug("Setting up HiveAuthTestCase\n")
+
+    @classmethod
+    def tearDownClass(cls):
+        logging.getLogger("HiveAuthTestCase").debug("\n\nShutting down HiveAuthTestCase")
+        logger.removeHandler(cls.stream_handler)
+
     def setUp(self):
+        logging.getLogger("HiveAuthTestCase").info("\n")
         self.app = create_app('testing')
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
@@ -113,7 +131,7 @@ class HiveAuthTestCase(unittest.TestCase):
         self.testapp = DApp("testapp")
 
     def tearDown(self):
-        pass
+        logging.getLogger("HiveAuthTestCase").info("\n")
 
     def init_db(self):
         pass
@@ -132,15 +150,17 @@ class HiveAuthTestCase(unittest.TestCase):
         self.assertEqual(status, 201)
 
     def test_a_echo(self):
+        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_a_echo")
         r, s = self.parse_response(
             self.test_client.post('/api/v1/echo',
                                   data=json.dumps({"key": "value"}),
                                   headers=self.json_header)
         )
+        logging.getLogger("HiveAuthTestCase").debug(f"r:{r}")
         self.assert200(s)
-        print("** r:" + str(r))
 
     def test_b_auth(self):
+        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_auth")
         vc = self.didapp.issue_auth(self.testapp)
         vp_json = self.testapp.create_presentation(vc, "testapp", "873172f58701a9ee686f0630204fee59")
         auth_token = self.testapp.create_token(vp_json)
@@ -154,7 +174,7 @@ class HiveAuthTestCase(unittest.TestCase):
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
-        print("token:" + rt["token"])
+        logging.getLogger("HiveAuthTestCase").debug(f"token: {rt['token']}")
         self.testapp.set_access_token(rt["token"])
 
 

@@ -1,4 +1,5 @@
 import json
+import logging
 
 from datetime import datetime
 from hive.util.did.entity import Entity
@@ -30,7 +31,7 @@ class DIDApp(Entity):
         vc = lib.Issuer_CreateCredentialByString(self.issuer, issuerid, credid, types, 1,
                                                  json.dumps(props).encode(), expires, self.storepass)
         vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
-        print(vcJson)
+        logging.debug(vcJson)
         return vc
 
 
@@ -52,7 +53,7 @@ class DApp(Entity):
                                      realm.encode(), 1, vc)
         # print_err()
         vp_json = ffi.string(lib.Presentation_ToJson(vp, True)).decode()
-        print(vp_json)
+        logging.debug(vp_json)
         return vp_json
 
     def create_token(self, vp_json):
@@ -97,5 +98,5 @@ def get_auth_token(self):
     self.assertEqual(rt["_status"], "OK")
     self.testapp.set_access_token(rt["token"])
 
-    print("token:" + rt["token"])
+    logging.debug(f"token: {rt['token']}")
     return rt["token"]

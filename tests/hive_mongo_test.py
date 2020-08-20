@@ -1,10 +1,15 @@
 import json
+import sys
 import time
 import unittest
+import logging
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
 from hive import create_app
 from tests import test_common
+
+logger = logging.getLogger()
+logger.level = logging.DEBUG
 
 
 @contextmanager
@@ -20,7 +25,19 @@ class HiveMongoDbTestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):
         super(HiveMongoDbTestCase, self).__init__(methodName)
 
+    @classmethod
+    def setUpClass(cls):
+        cls.stream_handler = logging.StreamHandler(sys.stdout)
+        logger.addHandler(cls.stream_handler)
+        logging.getLogger("HiveMongoDbTestCase").debug("Setting up HiveMongoDbTestCase\n")
+
+    @classmethod
+    def tearDownClass(cls):
+        logging.getLogger("HiveMongoDbTestCase").debug("\n\nShutting down HiveMongoDbTestCase")
+        logger.removeHandler(cls.stream_handler)
+
     def setUp(self):
+        logging.getLogger("HiveMongoDbTestCase").info("\n")
         self.app = create_app('testing')
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
@@ -40,7 +57,7 @@ class HiveMongoDbTestCase(unittest.TestCase):
         ]
 
     def tearDown(self):
-        pass
+        logging.getLogger("HiveMongoDbTestCase").info("\n")
 
     def init_db(self):
         pass
@@ -59,15 +76,17 @@ class HiveMongoDbTestCase(unittest.TestCase):
         self.assertEqual(status, 201)
 
     def test_a_echo(self):
+        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_a_echo")
         r, s = self.parse_response(
             self.test_client.post('/api/v1/echo',
                                   data=json.dumps({"key": "value"}),
                                   headers=self.json_header)
         )
         self.assert200(s)
-        print("** r:" + str(r))
+        logging.getLogger("HiveMongoDbTestCase").debug("** r:" + str(r))
 
     def test_b_create_collection(self):
+        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_b_create_collection")
         r, s = self.parse_response(
             self.test_client.post('/api/v1/db/create_collection',
                                   data=json.dumps(
@@ -96,6 +115,7 @@ class HiveMongoDbTestCase(unittest.TestCase):
         # )
         # self.assert200(s)
 
+        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_c_add_collection_data")
         r, s = self.parse_response(
             self.test_client.post('/api/v1/db/col/works',
                                   data=json.dumps(

@@ -5,3 +5,4 @@ venv
 .mongodb-data
 data
 did_user_data
+test_did_user_data

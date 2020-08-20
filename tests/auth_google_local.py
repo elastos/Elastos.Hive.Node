@@ -1,4 +1,5 @@
 import json
+import logging
 
 from google_auth_oauthlib import flow
 
@@ -27,4 +28,4 @@ appflow.run_console()
 appflow.run_local_server()
 credentials = appflow.credentials
 c = credentials_to_dict(credentials)
-print(json.dumps(c))
+logging.debug(json.dumps(c))

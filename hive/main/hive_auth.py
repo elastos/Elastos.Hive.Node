@@ -1,4 +1,6 @@
 import json
+import logging
+
 from flask import request
 from datetime import datetime
 
@@ -131,7 +133,7 @@ class HiveAuth(Entity):
             else:
                 update_nonce_of_did_info(did, app_id, nonce, token, exp)
         except Exception as e:
-            print("Exception in did_auth_challenge::", e)
+            logging.debug(f"Exception in did_auth_challenge:: {e}")
             response_err(500, "Exception in did_auth_challenge:" + e)
             return False
 

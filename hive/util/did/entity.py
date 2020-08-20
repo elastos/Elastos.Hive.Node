@@ -1,3 +1,4 @@
+import logging
 import os
 import pathlib
 from eladid import ffi, lib
@@ -20,7 +21,7 @@ def print_err(fun_name=None):
     err = "Error:: "
     if fun_name:
         err += fun_name + ": "
-    print(err + str(ffi.string(lib.DIDError_GetMessage()), encoding="utf-8"))
+    logging.debug(f"{err + str(ffi.string(lib.DIDError_GetMessage()), encoding='utf-8')}")
 
 
 def new_adapter():
@@ -42,7 +43,7 @@ class Entity:
     def __init__(self, name, mnemonic=None):
         self.name = name
         # self.mnemonic = mnemonic
-        print("Entity name:" + self.name)
+        logging.debug(f"Entity name: {self.name}")
         self.init_did_store()
         self.init_private_identity()
         self.init_did()
@@ -70,7 +71,7 @@ class Entity:
             mnemonic_str = str(ffi.string(mnemonic), encoding="utf-8")
             self.mnemonic = mnemonic_str
             lib.Mnemonic_Free(mnemonic)
-        print("  mnemonic:" + self.mnemonic)
+        logging.debug(f"mnemonic: {self.mnemonic}")
 
     def check_did_and_sync(self, did):
         if lib.DIDStore_ContainsDID(self.store, did) and lib.DIDSotre_ContainsPrivateKeys(self.store, did):
@@ -93,7 +94,7 @@ class Entity:
         return True
 
     def init_did(self):
-        print("init did, please wait ... ...")
+        logging.debug(f"init did, please wait ... ...")
         did = lib.DIDStore_GetDIDByIndex(self.store, 0)
         if not did:
             print_err("DIDStore_GetDIDByIndex")
@@ -113,7 +114,7 @@ class Entity:
             print_err("DIDStore_PublishDID")
 
         self.did_str = self.get_did_string_from_did(self.did)
-        print(self.did_str)
+        logging.debug(self.did_str)
         return
 
     def get_did_string_from_did(self, did):

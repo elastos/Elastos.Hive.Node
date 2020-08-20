@@ -1,4 +1,6 @@
-DID_INFO_DB_NAME = "hive_manage_info"
+from decouple import config
+
+DID_INFO_DB_NAME = config('DID_INFO_DB_NAME', default="hive_manage_info", cast=str)
 
 DID_INFO_REGISTER_COL = "auth_register"
 DID = "did"

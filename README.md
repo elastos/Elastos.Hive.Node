@@ -45,7 +45,13 @@ docker build -t elastos/hive-node .
 ```
 rm -rf .data
 ```
-- Modify the .env file if needed(You may need to modify the value 'MONGO_HOST' to your host IP)
+- Modify the .env file if needed(You may need to modify the value 'MONGO_HOST' and 'MONGO_PORTT' to your host IP)
+```
+# Since the two docker containers run on the same network called "hive", we can directly use their name
+# as the host and the native port
+MONGO_HOST=hive-mongo
+MONGO_PORT=27017
+```
 - Run docker container
 ```
 ./run.sh docker 

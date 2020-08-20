@@ -1,10 +1,18 @@
 FROM python:3.6
+MAINTAINER kpachhai
+
+ENV PYTHONUNBUFFERED 1
+
+RUN apt-get update -y && \
+    apt-get install build-essential libffi-dev -y
 
 ADD requirements.txt /src/
-RUN cd /src && pip install -r requirements.txt
+
+WORKDIR /src
+
+RUN pip install -r requirements.txt
 
 ADD . /src/
-WORKDIR /src
 
 ENV LD_LIBRARY_PATH="/src/hive/util/did/"
 

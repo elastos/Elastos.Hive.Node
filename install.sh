@@ -5,7 +5,7 @@ echo "Install required packages"
 case `uname` in
     Linux )
         sudo apt-get update -y 
-        sudo apt-get install build-essential python3.6 python3.6-dev mongo-tools -y
+        sudo apt-get install build-essential libffi-dev python3.6 python3.6-dev mongo-tools -y
         curl https://rclone.org/install.sh | sudo bash
         PYTHON="python3.6"
         ;;

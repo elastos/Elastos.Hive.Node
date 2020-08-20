@@ -3,6 +3,7 @@
 function start_db () {
     docker container stop hive-mongo || true && docker container rm -f hive-mongo || true
     docker run -d --name hive-mongo                     \
+        --network hive                                  \
         -v ${PWD}/.mongodb-data:/data/db                \
         -p 27020:27017                                  \
         mongo
@@ -29,15 +30,18 @@ function setup_venv () {
 }
 
 function start_docker () {
+    docker network create hive
+
     start_db
 
     echo "Running using docker..."
     docker container stop hive-node || true && docker container rm -f hive-node || true
     docker build -t elastos/hive-node .
-    docker run --name hive-node                     \
-      -v ${PWD}/data:/src/data               \
+    docker run --name hive-node               \
+      --network hive                          \
+      -v ${PWD}/data:/src/data                \
       -v ${PWD}/.env:/src/.env                \
-      -p 5000:5000                                  \
+      -p 5000:5000                            \
       elastos/hive-node
 }
 

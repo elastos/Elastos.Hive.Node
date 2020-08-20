@@ -9,15 +9,17 @@ function start_db () {
 }
 
 function setup_venv () {
-    virtualenv -p `which python3.6` .venv
-    source .venv/bin/activate
-    pip install --upgrade pip
-
     case `uname` in
     Linux )
+        virtualenv -p `which python3.6` .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
         pip install -r requirements.txt
         ;;
     Darwin )
+        virtualenv -p `which python3.7` .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
         pip install --global-option=build_ext --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" -r requirements.txt
         ;;
     *)

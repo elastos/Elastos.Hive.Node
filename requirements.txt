@@ -6,7 +6,6 @@ pymongo==3.11.0
 Flask==1.1.2
 Flask-Script==2.0.6
 Flask-APScheduler==1.11.0
-Flask-RangeRequest==0.0.0
 cffi==1.14.1
 base58==2.0.1
 python-decouple==3.3

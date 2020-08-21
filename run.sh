@@ -53,7 +53,7 @@ function start_direct () {
 
     setup_venv
 
-    LD_LIBRARY_PATH="$PWD/hive/util/did/" gunicorn -b 0.0.0.0:5000 --reload wsgi:application
+    LD_LIBRARY_PATH="$PWD/hive/util/did/" python manage.py runserver
 }
 
 function test () {

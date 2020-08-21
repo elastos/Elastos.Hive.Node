@@ -76,3 +76,11 @@ Run all the tests in order
 ```
 
 # Verify some common APIs
+- Simple API to check whether the API server is running correctly
+```
+curl -XPOST  -H "Content-Type: application/json" -d '{"key":"value"}' http://localhost:5000/api/v1/echo
+```
+should return something like
+```
+{"key":"value"}
+```

@@ -46,6 +46,8 @@ function start_docker () {
 }
 
 function start_direct () {
+    docker network create hive
+
     start_db
 
     echo "Running directly on the machine..."
@@ -57,6 +59,8 @@ function start_direct () {
 }
 
 function test () {
+    docker network create hive
+
     start_db
 
     setup_venv

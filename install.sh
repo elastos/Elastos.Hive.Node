@@ -5,7 +5,7 @@ echo "Install required packages"
 case `uname` in
     Linux )
         sudo apt-get update -y 
-        sudo apt-get install build-essential libffi-dev python3.6 python3.6-dev mongo-tools -y
+        sudo apt-get install build-essential libffi-dev python3.6 python3.6-dev python3-pip mongo-tools -y
         curl https://rclone.org/install.sh | sudo bash
         PYTHON="python3.6"
         ;;
@@ -20,7 +20,7 @@ case `uname` in
     ;;
 esac
 
-pip3 install virtualenv 
+pip3 install virtualenv
 
 type virtualenv >/dev/null 2>&1 || { echo >&2 "No suitable python virtual env tool found, aborting"; exit 1; }
 

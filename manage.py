@@ -1,7 +1,15 @@
+import logging, logging.config, yaml
+
 from flask import request
 from flask_script import Manager, Server
 
 from hive import create_app
+
+logging.config.dictConfig(yaml.load(open('logging.conf'), Loader=yaml.FullLoader))
+logfile = logging.getLogger('file')
+log_console = logging.getLogger('console')
+logfile.debug("Debug FILE")
+log_console.debug("Debug CONSOLE")
 
 app = create_app(config='production')
 

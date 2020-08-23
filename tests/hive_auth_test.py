@@ -51,7 +51,7 @@ class DIDApp(Entity):
         vc = lib.Issuer_CreateCredentialByString(self.issuer, issuerid, credid, types, 1,
                                                  json.dumps(props).encode(), expires, self.storepass)
         vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
-        print(vcJson)
+        logging.debug(f"vcJson: {vcJson}")
         return vc
 
 
@@ -73,7 +73,7 @@ class DApp(Entity):
                                      realm.encode(), 1, vc)
         # print_err()
         vp_json = ffi.string(lib.Presentation_ToJson(vp, True)).decode()
-        print(vp_json)
+        logging.debug(f"vp_json: {vp_json}")
         return vp_json
 
     def create_token(self, vp_json):
@@ -164,6 +164,7 @@ class HiveAuthTestCase(unittest.TestCase):
         vc = self.didapp.issue_auth(self.testapp)
         vp_json = self.testapp.create_presentation(vc, "testapp", "873172f58701a9ee686f0630204fee59")
         auth_token = self.testapp.create_token(vp_json)
+        logging.getLogger("HiveAuthTestCase").debug(f"auth_token: {auth_token}")
 
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/auth',

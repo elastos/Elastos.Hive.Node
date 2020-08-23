@@ -38,6 +38,7 @@ class HiveSync:
 
     def setup_google_drive_rclone(self):
         did, app_id = did_auth()
+        logging.debug(f"did: {did}, app_id: {app_id}")
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
 

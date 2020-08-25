@@ -275,10 +275,10 @@ return:
     Success:
         {
           "_status": "OK",
-          "_type": "file",
-          "_created": 123012.2342,
-          "_updated": 123012.2342,
-          "_size": 230
+          "type": "file",
+          "created": "Wed, 13 May 2020 02:10:37 GMT",
+          "modified": "Wed, 13 May 2020 02:10:37 GMT",
+          "size": 230
         }
     Failure: 
         {

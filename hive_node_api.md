@@ -374,7 +374,7 @@ data:
         "limit": 50,
         "skip": 10,
         "sort": [
-          ("title", -1)
+          "-title"
         ],
         "projection": {
           "title": 1
@@ -388,15 +388,8 @@ return:
           "_id": "5ebb571d5e47c77fe2e4c184",
           "author": "john doe2",
           "title": "Eve for Dummies2",
-          "_updated": "Wed, 13 May 2020 02:10:37 GMT",
-          "_created": "Wed, 13 May 2020 02:10:37 GMT",
-          "_etag": "6458561293d9ce4fcbb03d66df27d59ebc8bd611",
-          "_links": {
-            "self": {
-              "title": "Work",
-              "href": "works/5ebb571d5e47c77fe2e4c184"
-            }
-          }
+          "modified": "Wed, 13 May 2020 02:10:37 GMT",
+          "created": "Wed, 13 May 2020 02:10:37 GMT"
         }
     Failure: 
         {
@@ -424,7 +417,7 @@ data:
         "limit": 50,
         "skip": 10,
         "sort": [
-          ("title", -1)
+          "title"
         ],
         "projection": {
           "title": 1
@@ -440,32 +433,10 @@ return:
               "_id": "5ebb571d5e47c77fe2e4c184",
               "author": "john doe2",
               "title": "Eve for Dummies2",
-              "_updated": "Wed, 13 May 2020 02:10:37 GMT",
-              "_created": "Wed, 13 May 2020 02:10:37 GMT",
-              "_etag": "6458561293d9ce4fcbb03d66df27d59ebc8bd611",
-              "_links": {
-                "self": {
-                  "title": "Work",
-                  "href": "works/5ebb571d5e47c77fe2e4c184"
-                }
-              }
+              "created": "Wed, 13 May 2020 02:10:37 GMT",
+              "modified": "Wed, 13 May 2020 02:10:37 GMT"
             }
-          ],
-          "_links": {
-            "parent": {
-              "title": "home",
-              "href": "/"
-            },
-            "self": {
-              "title": "works",
-              "href": "works"
-            }
-          },
-          "_meta": {
-            "page": 1,
-            "max_results": 25,
-            "total": 1
-          }
+          ]
         }
     Failure: 
         {
@@ -689,17 +660,56 @@ return:
 ```  
 
 ## Scripting
-- Register a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner, while registering scripts using /scripting/set_script endpoint
+
+### Register/Update a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner, while registering scripts using /scripting/set_script endpoint. This will insert/update a row in the collection "subconditions". If the name doesn't exist, it'll create a new row and if it does, it'll update the existing row.
+
+- Create/Update a subcondition to check whether a user belongs in a particular group.
+Note that on the query, the mapping "group_id": "id" represents that the client passes us a parameter called "group_id" and this is not the field name in the database. Rather, the field name on "groups" is actually "id" as represented by the mapping. This is to make it so that if there are multiple parameters with the same values, they can be passed just once thereby reducing duplication.
 ```
 HTTP: POST
-URL: /api/v1/scripting/register_subcondition
+URL: /api/v1/scripting/set_subcondition
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 
     {
-      "name": "works",
+      "name": "user_in_group",
       "condition": {
-        "TODO"
+        "collection": "groups",
+        "query": {
+          "group_id": "id", 
+          "friend_did": "friends"
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+- Create/Update a subcondition to check whether the group was created within the timeframe given on the query
+```
+HTTP: POST
+URL: /api/v1/scripting/set_subcondition
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "group_created_age",
+      "condition": {
+        "collection": "groups",
+        "query": {
+          "group_id": "id", 
+          "group_created": "created"
+        }
       }
     }
 return:
@@ -717,7 +727,9 @@ return:
         }
 ```
 
-- Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/call endpoint to execute one of those scripts and get results/data
+### Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/run_script endpoint to execute one of those scripts and get results/data
+
+- Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction.
 ```
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -725,12 +737,132 @@ Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 
     {
-      "name": "function_name",
-      "sequence": [
-        "TODO"
+      "name": "get_groups",
+      "app_id": "tech.tuum.academy",
+      "exec_sequence": [
+        {
+          "type": "db/find_many",
+          "name": "groups",
+          "query": {
+            "did": "did:elastos:iUhndsxcgijret834Hdasdf31Ld"
+          },
+          "options": {
+            "sort": [
+              "name"
+            ],
+            "projection": {
+              "id": 1,
+              "name": 1
+            }
+          }
+        }
+      ]
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Create/Update a script to get messages for a particular group messaging in an ascending order according to the modified time. This script further skins the first 10 messages from the group and only gets 50 total messages after that point. Only the messages and modified time are returned back to the user. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages with their last modified date are returned back to the client.
+```
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_group_messages",
+      "app_id": "tech.tuum.academy",
+      "exec_sequence": [
+        {
+          "endpoint": "db/find_many",
+          "name": "messages",
+          "query": {
+            "group_id": "4aktrab688db87875fddc6Km"
+          },
+          "options": {
+            "limit": 50,
+            "skip": 10,
+            "sort": [
+              "modified"
+            ],
+            "projection": {
+              "modified": 1,
+              "content": 1
+            }
+          }
+        }
+      ],
+      "condition": "user_in_group"
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Create/Update a script to add a new message to the group messaging and then returns all the messages in the group messaging including the newly added one sorted by their modification time. This script contains a condition with "$and" expression. This means that all the subconditions have to return true before the script is executed. First condition is to check whether the DID user belongs to the group and the second condition is to check whether the group was created withint within the given timeframe(passed with parameter in scripting/run_script)
+```
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "add_group_message",
+      "app_id": "tech.tuum.academy",
+      "exec_sequence": [
+        {
+          "endpoint": "db/insert_one"
+          "name": "messages",
+          "document": {
+            "group_id": "4aktrab688db87875fddc6Km", 
+            "friend_did": "did:elastos:iUhndsxcgijret834Hdasdf31Ld",
+            "content": "New message"
+          },
+          "options": {}
+        },
+        {
+          "endpoint": "db/find_many"
+          "name": "messages",
+          "query": {
+            "group_id": "4aktrab688db87875fddc6Km"
+          },
+          "options": {
+            "sort": [
+              "modified"
+            ],
+            "projection": {
+              "modified": 1,
+              "content": 1
+            }
+          }
+        }
       ]
       "condition": {
-        "TODO"
+        "$and": [
+          "user_in_group",
+          "group_created_age"
+        ]
       }
     }
 return:
@@ -748,23 +880,119 @@ return:
         }
 ```
 
-- Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
+### Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
+
+- Run a script to get all the groups that the DID user belongs to. As defined by the script, it contains no restriction so anyone is able to retrieve all the groups for a DID user
 ```
 HTTP: POST
-URL: /api/v1/scripting/call_script
+URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 
     {
-      "name": "function_name",
-      "params": {
-        "TODO"
-      }
+      "name": "get_groups"
     }
 return:
     Success: 
         {
           "_status": "OK", 
+          "_items": [
+            {
+              "_id": "4aktrab688db87875fddc6Km",
+              "name": "Group 1"
+            },
+            {
+              "_id": "5akttab688db87875nddc6Ka",
+              "name": "Group 2"
+            }
+          ]
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Run a script to get all the group messages for a particular group ID. This has a subcondition that needs to be satisifed first. This subcondition can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
+```
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_group_messages",
+      "params": {
+        "group_id": "4aktrab688db87875fddc6Km",
+        "friend_did": {
+          "$in": ["did:elastos:iUhndsxcgijret834Hdasdf31Ld"]
+        }
+      }
+    }
+return:
+    Success:
+        {
+          "_status": "OK", 
+          "_items": [
+            {
+              "_id": "7akkrab688db87875fddc6Kp",
+              "content": "Old Message 1"
+            },
+            {
+              "_id": "46kttab688db87875nddc6Ky",
+              "content": "Old Message 2"
+            }
+          ]
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Run a script to add a new message to the group messaging for a particular group id. This has two subconditions that needs to be satisifed first. These subconditions can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
+```
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "add_group_message",
+      "params": {
+        "group_id": "4aktrab688db87875fddc6Km",
+        "friend_id": "did:elastos:iUhndsxcgijret834Hdasdf31Ld"
+        "group_created": {
+          "$gte": "Wed, 25 Feb 1987 17:00:00 GMT"
+        }
+      }
+    }
+return:
+    Success:
+        {
+          "_status": "OK", 
+          "_items": [
+            {
+              "_id": "7akkrab688db87875fddc6Kp",
+              "content": "Old Message 1"
+            },
+            {
+              "_id": "46kttab688db87875nddc6Ky",
+              "content": "Old Message 2"
+            },
+            {
+              "_id": "38kttab688db87875nddc6yn",
+              "content": "New message"
+            }
+          ]
         }
     Failure: 
         {

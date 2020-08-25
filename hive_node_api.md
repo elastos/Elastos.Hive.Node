@@ -493,13 +493,22 @@ data:
       "options": {}
     }
 return:
-    {
-      "_status": "OK",
-      "count": 1,
-      "ids": [
-        "5edddab688db87875fddc3a5"
-      ]
-    }
+    Success:
+        {
+          "_status": "OK",
+          "count": 1,
+          "ids": [
+            "5edddab688db87875fddc3a5"
+          ]
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
 ```
 
 - Insert many new documents in a given collection
@@ -524,14 +533,23 @@ data:
       "options": {}
     }
 return:
-    {
-      "_status": "OK",
-      "count": 2,
-      "ids": [
-        "5edddab688db87875fddc3a5",
-        "6eddbab688db12r46Fr036b7"
-      ]
-    }
+    Success:
+        {
+          "_status": "OK",
+          "count": 2,
+          "ids": [
+            "5edddab688db87875fddc3a5",
+            "6eddbab688db12r46Fr036b7"
+          ]
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
 ```
 
 - Update an existing document in a given collection
@@ -551,10 +569,19 @@ data:
       "options": {}
     }
 return:
-    {
-      "_status": "OK",
-      "count": 1
-    }
+    Success:
+        {
+          "_status": "OK",
+          "count": 1
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
 ```
 
 - Update many existing documents in a given collection
@@ -581,10 +608,19 @@ data:
       "options": {}
     }
 return:
-    {
-      "_status": "OK",
-      "count": 2
-    }
+    Success:
+        {
+          "_status": "OK",
+          "count": 2
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
 ```
 
 - Delete an existing document in a given collection
@@ -602,10 +638,19 @@ data:
       "options": {}
     }
 return:
-    {
-      "_status": "OK",
-      "count": 1
-    }
+    Success:
+        {
+          "_status": "OK",
+          "count": 1
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
 ```
 
 - Delete many existing documents in a given collection
@@ -628,10 +673,19 @@ data:
       "options": {}
     }
 return:
-    {
-      "_status": "OK",
-      "count": 2
-    }
+    Success:
+        {
+          "_status": "OK",
+          "count": 2
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
 ```  
 
 ## Scripting

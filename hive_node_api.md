@@ -1,6 +1,14 @@
 # Hive node plus plus api
 
-## Auth of did and app (there will be a new version)
+## Table of Contents
+- [Auth of did and app](#auth-of-did-and-app)
+- [Synchronization](#synchronization)
+- [Vault File](#vault-file)
+- [Database](#database)
+- [Scripting](#scripting)
+
+## Auth of did and app
+NOTE: There will be a new version
 - User auth
 ```
 HTTP: POST

@@ -1,7 +1,7 @@
 # Hive node plus plus api
 
 ## Auth of did and app (there will be a new version)
-1. User auth
+- User auth
 ```
 HTTP: POST
 URL: /api/v1/did/auth
@@ -15,7 +15,7 @@ return:
           "issuer": "elastos_hive_node",
           "token": access_token
         }
-    Failure:
+    Failure: 
         {
           "_status": "ERR",
           "_error": {
@@ -26,7 +26,7 @@ return:
 ```
 
 ## Synchronization
-1. Init synchronization from google drive
+- Init synchronization from google drive
 * If there is a new user auth of hive++, must call this api before any other data operation(mongoDB or file etc)
 ```
 HTTP: POST
@@ -58,138 +58,17 @@ return:
 comments: The input data is google oauth2 token to json, no need to change anything
 ```
 
-## MongoDB operation
-1. Setup mongoDB collection
+## Vault File
+- Create folder
 ```
 HTTP: POST
-URL: /api/v1/db/create_collection
+URL: /api/v1/files/create_folder
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 
-    {
-      "collection": "works",
-      "schema": {
-        "title": {
-          "type": "string"
-        },
-        "author": {
-          "type": "string"
-        }
-      }
-    }
-return:
-    Success: 
-        {
-          "_status": "OK", 
-          "collection": "works"
-        }
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-comments: "collection" is collection name of user's mongoDB. schema definition is in EVE document: [Schema Definition](https://docs.python-eve.org/en/stable/config.html#schema-definition)
-```
-
-2. Use mongoDB collection
-```
-HTTP: POST GET PATCH DELETE
-URL: api/v1/db/col/*
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: defined by eve schema
-return: defined by eve
-comments: If you define a "collection" for mongoDB, You can CURD your collection item in mongoDB.
-```    
-Detailed usage is in EVE document:
-- [Features sub-resources](https://docs.python-eve.org/en/stable/features.html#sub-resources)
-- [Features editing](https://docs.python-eve.org/en/stable/features.html#editing-a-document-patch)
-- [Features soft-delete](https://docs.python-eve.org/en/stable/features.html#soft-delete)
-- [Features filtering](https://docs.python-eve.org/en/stable/features.html#filtering)
-- [Features sorting](https://docs.python-eve.org/en/stable/features.html#sorting)
-- [Features pagination](https://docs.python-eve.org/en/stable/features.html#pagination)
-    
-Example:
-1. Add data to works
-```
-HTTP: POST
-URL: api/v1/db/col/works
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: 
-    {
-      "author": "john doe2", 
-      "title": "Eve for Dummies2"
-    }
-return:
-    {
-      "_updated": "Mon, 08 Jun 2020 06:29:10 GMT",
-      "_created": "Mon, 08 Jun 2020 06:29:10 GMT",
-      "_etag": "b6aa8f9d28a816a22c2d7a130c58255740f0f318",
-      "_id": "5edddab688db87875fddc3a5",
-      "_links": {
-        "self": {
-          "title": "Work",
-          "href": "works/5edddab688db87875fddc3a5"
-        }
-      },
-      "_status": "OK"
-    }
-```
-
-2. Get all data of works
-```
-HTTP: GET
-URL: api/v1/db/col/works
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-return:
-    {
-      "_items": [
-        {
-          "_id": "5ebb571d5e47c77fe2e4c184",
-          "author": "john doe2",
-          "title": "Eve for Dummies2",
-          "_updated": "Wed, 13 May 2020 02:10:37 GMT",
-          "_created": "Wed, 13 May 2020 02:10:37 GMT",
-          "_etag": "6458561293d9ce4fcbb03d66df27d59ebc8bd611",
-          "_links": {
-            "self": {
-              "title": "Work",
-              "href": "works/5ebb571d5e47c77fe2e4c184"
-            }
-          }
-        }
-      ],
-      "_links": {
-        "parent": {
-          "title": "home",
-          "href": "/"
-        },
-        "self": {
-          "title": "works",
-          "href": "works"
-        }
-      },
-      "_meta": {
-        "page": 1,
-        "max_results": 25,
-        "total": 1
-      }
-    }
-```
-
-## File operation
-1. Create folder
-```
-HTTP: POST
-URL: /api/v1/files/creator/folder
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: {name="path/of/folder/name"}
+  {
+    "path": "path/of/folder/to/create"
+  }
 return:
     Success: {"_status":"OK"}
     Failure: 
@@ -202,35 +81,13 @@ return:
         }
 ```
 
-2. Create file
+- Upload file
 ```
 HTTP: POST
-URL: /api/v1/files/creator/file
+URL: /api/v1/files/upload_file
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: {name="path/of/file/name"}
-return:
-    Success:
-        {
-          "_status":"OK",
-          "upload_file_url":"/api/v1/files/uploader/some/url"
-        }
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-3. Upload file
-```
-HTTP: POST
-URL: Create file api return "upload_file_url"
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-data: file data
+data: local file path
+folder_path: "path/of/folder/to/upload/the/file/to"
 return:
     Success: {"_status":"OK"}
     Failure: 
@@ -242,12 +99,20 @@ return:
           }
         }
 ```
+Example Request:
+```
+curl -X POST -F "data=@test.mp3" -F "folder_path=path/of/folder/to/upload/the/file/to" http://localhost:5000/api/v1/files/upload
+```
 
-4. Download file
+- Download file
 ```
 HTTP: GET
-URL: api/v1/files/downloader?name="file.name"
+URL: /api/v1/files/download_file
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+data:
+  {
+    "path": "path/of/file/to/download"
+  }
 return:
     Success: file data
     Failure: 
@@ -261,13 +126,16 @@ return:
 comment: support content range
 ```
 
-5. Delete file
+- Delete file/folder
 ```
 HTTP: POST
-URL: /api/v1/files/deleter/file
+URL: /api/v1/files/delete
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: {"name": "test.png"}
+data: 
+  {
+    "path": "path/of/file-folder/to/delete"
+  }
 return:
     Success: {"_status":"OK"}
     Failure: 
@@ -280,35 +148,16 @@ return:
         }
 ```
 
-6. Delete folder
+- Move file or folder
 ```
 HTTP: POST
-URL: /api/v1/files/deleter/folder
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: {"name": "test.png"}
-return:
-    Success: {"_status":"OK"}
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-7. Move file or folder
-```
-HTTP: POST
-URL: /api/v1/files/mover
+URL: /api/v1/files/move
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 
     {
-      "src_name": "path/of/src/folder/or/file",
-      "dst_name": "path/of/dst/folder/or/file",
+      "src_path": "path/of/src/folder/or/file",
+      "dst_path": "path/of/dst/folder/or/file",
     }
 return:
     Success: {"_status":"OK"}
@@ -319,20 +168,20 @@ return:
             "code": 401,
             "message": "Error message"
           }
-        }    
+        }
 comment: usage like shell command "mv"
 ```
 
-8. Copy file or folder
+- Copy file or folder
 ```
 HTTP: POST
-URL: /api/v1/files/copier
+URL: /api/v1/files/copy
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 
     {
-      "src_name": "path/of/src/folder/or/file",
-      "dst_name": "path/of/dst/folder/or/file",
+      "src_path": "path/of/src/folder/or/file",
+      "dst_path": "path/of/dst/folder/or/file",
     }
 return:
     Success: {"_status":"OK"}
@@ -347,20 +196,22 @@ return:
 comment: usage like shell command "cp"
 ```
 
-9. Get properties of file or folder
+- Get file hash
 ```
 HTTP: GET
-URL: api/v1/files/properties?name="file.or.folder.name"
+URL: /api/v1/files/hash_file
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
+data:
+  {
+    "path": "path/of/file/to/get/hash/of"
+    "type": "sha256"
+  }
 return:
     Success:
         {
           "_status": "OK",
-          "st_ctime": 123012.2342,
-          "st_mtime": 123012.2342,
-          "st_atime": 123012.2342,
-          "st_size": 230
+          "hash": "3a29a81d7b2718a588a5f6f3491b3c57"
         }
     Failure: 
         {
@@ -372,12 +223,17 @@ return:
         }
 ```
 
-10. List folder
+
+- List folder
 ```
 HTTP: GET
-URL: /api/v1/files/list/folder?name="folder.name"
+URL: /api/v1/files/list_folder
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
+data:
+  {
+    "path": "path/of/folder/to/get/the/files-list"
+  }
 return:
     Success:
         {
@@ -398,17 +254,447 @@ return:
         }
 ```
 
-11. Get file hash(MD5)
+- Get stat(properties) of file or folder
 ```
 HTTP: GET
-URL: /api/v1/files/file/hash?name="file.name"
+URL: api/v1/files/stat
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
+data:
+  {
+    "path": "path/of/file/to/get/properties/of"
+  }
 return:
     Success:
         {
           "_status": "OK",
-          "MD5": "3a29a81d7b2718a588a5f6f3491b3c57"
+          "_type": "file",
+          "_created": 123012.2342,
+          "_updated": 123012.2342,
+          "_size": 230
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+## Database
+- Create mongoDB collection
+```
+HTTP: POST
+URL: /api/v1/db/create_collection
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "schema": {
+        "title": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+comments: "collection" is collection name of user's mongoDB. schema definition is in EVE document: [Schema Definition](https://docs.python-eve.org/en/stable/config.html#schema-definition)
+```
+
+- Count documents
+```
+HTTP: POST
+URL: /api/v1/db/count_documents
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "query": {
+        "title": "Eve for Dummies2"
+      },
+      "limit": 50,
+      "skip": 10
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
+          "count": 5
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Find a specific document(findOne)
+```
+HTTP: POST
+URL: /api/v1/db/find_one
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "query": {
+        "title": "Eve for Dummies2"
+      },
+      "limit": 50,
+      "skip": 10,
+      "sort": [
+        ("title", -1)
+      ],
+      "projection": {
+        "title": 1
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
+          "_id": "5ebb571d5e47c77fe2e4c184",
+          "author": "john doe2",
+          "title": "Eve for Dummies2",
+          "_updated": "Wed, 13 May 2020 02:10:37 GMT",
+          "_created": "Wed, 13 May 2020 02:10:37 GMT",
+          "_etag": "6458561293d9ce4fcbb03d66df27d59ebc8bd611",
+          "_links": {
+            "self": {
+              "title": "Work",
+              "href": "works/5ebb571d5e47c77fe2e4c184"
+            }
+          }
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Find all documents(findMany)
+```
+HTTP: POST
+URL: /api/v1/db/find_many
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "query": {
+        "title": "Eve for Dummies2"
+      },
+      "limit": 50,
+      "skip": 10,
+      "sort": [
+        ("title", -1)
+      ],
+      "projection": {
+        "title": 1
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
+          "_items": [
+            {
+              "_id": "5ebb571d5e47c77fe2e4c184",
+              "author": "john doe2",
+              "title": "Eve for Dummies2",
+              "_updated": "Wed, 13 May 2020 02:10:37 GMT",
+              "_created": "Wed, 13 May 2020 02:10:37 GMT",
+              "_etag": "6458561293d9ce4fcbb03d66df27d59ebc8bd611",
+              "_links": {
+                "self": {
+                  "title": "Work",
+                  "href": "works/5ebb571d5e47c77fe2e4c184"
+                }
+              }
+            }
+          ],
+          "_links": {
+            "parent": {
+              "title": "home",
+              "href": "/"
+            },
+            "self": {
+              "title": "works",
+              "href": "works"
+            }
+          },
+          "_meta": {
+            "page": 1,
+            "max_results": 25,
+            "total": 1
+          }
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Insert a new document in a given collection
+```
+HTTP: POST
+URL: /api/v1/db/insert_one
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "document": {
+        "author": "john doe1", 
+        "title": "Eve for Dummies2"
+      }
+    }
+return:
+    {
+      "_status": "OK",
+      "count": 1,
+      "ids": [
+        "5edddab688db87875fddc3a5"
+      ]
+    }
+```
+
+- Insert many new documents in a given collection
+```
+HTTP: POST
+URL: /api/v1/db/insert_many
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "document": [
+        {
+          "author": "john doe1", 
+          "title": "Eve for Dummies1"
+        },
+        {
+          "author": "john doe2", 
+          "title": "Eve for Dummies2"
+        }
+      ]
+    }
+return:
+    {
+      "_status": "OK",
+      "count": 2,
+      "ids": [
+        "5edddab688db87875fddc3a5",
+        "6eddbab688db12r46Fr036b7"
+      ]
+    }
+```
+
+- Update an existing document in a given collection
+```
+HTTP: POST
+URL: /api/v1/db/update_one
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "document": {
+        "_id": "5edddab688db87875fddc3a5",
+        "author": "john doe3", 
+        "title": "Eve for Dummies2"
+      }
+    }
+return:
+    {
+      "_status": "OK",
+      "count": 1
+    }
+```
+
+- Update many existing documents in a given collection
+```
+HTTP: POST
+URL: /api/v1/db/update_many
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "document": [
+        {
+          "_id": "5edddab688db87875fddc3a5",
+          "author": "john doe5", 
+          "title": "Eve for Dummies5"
+        },
+        {
+          "_id": "6eddbab688db12r46Fr036b7",
+          "author": "john doe6", 
+          "title": "Eve for Dummies6"
+        }
+      ]
+    }
+return:
+    {
+      "_status": "OK",
+      "count": 2
+    }
+```
+
+- Delete an existing document in a given collection
+```
+HTTP: POST
+URL: /api/v1/db/delete_one
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "document": {
+        "_id": "5edddab688db87875fddc3a5"
+      }
+    }
+return:
+    {
+      "_status": "OK",
+      "count": 1
+    }
+```
+
+- Delete many existing documents in a given collection
+```
+HTTP: POST
+URL: /api/v1/db/delete_many
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "document": [
+        {
+          "_id": "5edddab688db87875fddc3a5"
+        },
+        {
+          "_id": "6eddbab688db12r46Fr036b7"
+        }
+      ]
+    }
+return:
+    {
+      "_status": "OK",
+      "count": 2
+    }
+```  
+
+
+
+
+## Scripting
+- Register a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner, while registering scripts using /scripting/set_script endpoint
+```
+HTTP: POST
+URL: /api/v1/scripting/register_subcondition
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "works",
+      "condition": {
+        "TODO"
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/call endpoint to execute one of those scripts and get results/data
+```
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "function_name",
+      "sequence": [
+        "TODO"
+      ]
+      "condition": {
+        "TODO"
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
+```
+HTTP: POST
+URL: /api/v1/scripting/call_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "function_name",
+      "params": {
+        "TODO"
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK", 
         }
     Failure: 
         {

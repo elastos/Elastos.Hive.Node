@@ -14,6 +14,7 @@ return:
           "subject": "didauth",
           "issuer": "elastos_hive_node",
           "token": access_token
+          "exp": expiration_date
         }
     Failure:
         {
@@ -33,7 +34,7 @@ HTTP: POST
 URL: /api/v1/sync/setup/google_drive
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "token": "ya29.a0AfH6SMAVaP_gNAdbF25L5hktoPRdV8mBkcra6UaneG2w7ZYSusXevycqvhUrGrQ_FpsBPYYvxq2Sdx13zEwG1-m8I-pSFV05UY52X6wNnVlpxG7hsyBteEdUiiQPDT52zbK5ceQZ4-cpfXSlrplsQ8kZvPYC5nR1yks",
       "refresh_token": "1//06llFKBe-DBkRCgYIARAAGAYSNwF-L9Irfka2E6GP-J9gKBZN5AQS3z19vHOtjHq67p2ezCsJiVUZO-jKMSDKLgkiGfXgmBYimwc",
@@ -47,7 +48,7 @@ data:
     }
 return:
     Success: {"_status":"OK"}
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -65,7 +66,7 @@ HTTP: POST
 URL: /api/v1/db/create_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
       "schema": {
@@ -78,12 +79,12 @@ data:
       }
     }
 return:
-    Success: 
+    Success:
         {
-          "_status": "OK", 
+          "_status": "OK",
           "collection": "works"
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -103,7 +104,7 @@ Content-Type: "application/json"
 data: defined by eve schema
 return: defined by eve
 comments: If you define a "collection" for mongoDB, You can CURD your collection item in mongoDB.
-```    
+```
 Detailed usage is in EVE document:
 - [Features sub-resources](https://docs.python-eve.org/en/stable/features.html#sub-resources)
 - [Features editing](https://docs.python-eve.org/en/stable/features.html#editing-a-document-patch)
@@ -111,7 +112,7 @@ Detailed usage is in EVE document:
 - [Features filtering](https://docs.python-eve.org/en/stable/features.html#filtering)
 - [Features sorting](https://docs.python-eve.org/en/stable/features.html#sorting)
 - [Features pagination](https://docs.python-eve.org/en/stable/features.html#pagination)
-    
+
 Example:
 1. Add data to works
 ```
@@ -119,9 +120,9 @@ HTTP: POST
 URL: api/v1/db/col/works
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
-      "author": "john doe2", 
+      "author": "john doe2",
       "title": "Eve for Dummies2"
     }
 return:
@@ -192,7 +193,7 @@ Content-Type: "application/json"
 data: {name="path/of/folder/name"}
 return:
     Success: {"_status":"OK"}
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -215,7 +216,7 @@ return:
           "_status":"OK",
           "upload_file_url":"/api/v1/files/uploader/some/url"
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -233,7 +234,7 @@ Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 data: file data
 return:
     Success: {"_status":"OK"}
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -250,7 +251,7 @@ URL: api/v1/files/downloader?name="file.name"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 return:
     Success: file data
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -270,7 +271,7 @@ Content-Type: "application/json"
 data: {"name": "test.png"}
 return:
     Success: {"_status":"OK"}
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -289,7 +290,7 @@ Content-Type: "application/json"
 data: {"name": "test.png"}
 return:
     Success: {"_status":"OK"}
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -305,21 +306,21 @@ HTTP: POST
 URL: /api/v1/files/mover
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "src_name": "path/of/src/folder/or/file",
       "dst_name": "path/of/dst/folder/or/file",
     }
 return:
     Success: {"_status":"OK"}
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
             "code": 401,
             "message": "Error message"
           }
-        }    
+        }
 comment: usage like shell command "mv"
 ```
 
@@ -329,14 +330,14 @@ HTTP: POST
 URL: /api/v1/files/copier
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "src_name": "path/of/src/folder/or/file",
       "dst_name": "path/of/dst/folder/or/file",
     }
 return:
     Success: {"_status":"OK"}
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -362,7 +363,7 @@ return:
           "st_atime": 123012.2342,
           "st_size": 230
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -388,7 +389,7 @@ return:
             "test.png"
           ]
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -410,7 +411,7 @@ return:
           "_status": "OK",
           "MD5": "3a29a81d7b2718a588a5f6f3491b3c57"
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {

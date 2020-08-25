@@ -751,7 +751,7 @@ data:
               "name"
             ],
             "projection": {
-              "id": 1,
+              "_id": 1,
               "name": 1
             }
           }
@@ -794,10 +794,10 @@ data:
             "limit": 50,
             "skip": 10,
             "sort": [
-              "modified"
+              "created"
             ],
             "projection": {
-              "modified": 1,
+              "created": 1,
               "content": 1
             }
           }
@@ -832,7 +832,7 @@ data:
       "app_id": "tech.tuum.academy",
       "exec_sequence": [
         {
-          "endpoint": "db/insert_one"
+          "endpoint": "db/insert_one",
           "name": "messages",
           "document": {
             "group_id": "4aktrab688db87875fddc6Km", 
@@ -842,22 +842,22 @@ data:
           "options": {}
         },
         {
-          "endpoint": "db/find_many"
+          "endpoint": "db/find_many",
           "name": "messages",
           "query": {
             "group_id": "4aktrab688db87875fddc6Km"
           },
           "options": {
             "sort": [
-              "modified"
+              "created"
             ],
             "projection": {
-              "modified": 1,
+              "created": 1,
               "content": 1
             }
           }
         }
-      ]
+      ],
       "condition": {
         "$and": [
           "user_in_group",
@@ -899,11 +899,13 @@ return:
           "_items": [
             {
               "_id": "4aktrab688db87875fddc6Km",
-              "name": "Group 1"
+              "name": "Group 1",
+              "created": "Wed, 25 Feb 1987 17:00:00 GMT"
             },
             {
               "_id": "5akttab688db87875nddc6Ka",
-              "name": "Group 2"
+              "name": "Group 2",
+              "created": "Wed, 25 Feb 1987 17:00:00 GMT"
             }
           ]
         }
@@ -939,11 +941,11 @@ return:
           "_status": "OK", 
           "_items": [
             {
-              "_id": "7akkrab688db87875fddc6Kp",
+              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
               "content": "Old Message 1"
             },
             {
-              "_id": "46kttab688db87875nddc6Ky",
+              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
               "content": "Old Message 2"
             }
           ]
@@ -969,7 +971,7 @@ data:
       "name": "add_group_message",
       "params": {
         "group_id": "4aktrab688db87875fddc6Km",
-        "friend_id": "did:elastos:iUhndsxcgijret834Hdasdf31Ld"
+        "friend_id": "did:elastos:iUhndsxcgijret834Hdasdf31Ld",
         "group_created": {
           "$gte": "Wed, 25 Feb 1987 17:00:00 GMT"
         }
@@ -981,15 +983,15 @@ return:
           "_status": "OK", 
           "_items": [
             {
-              "_id": "7akkrab688db87875fddc6Kp",
+              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
               "content": "Old Message 1"
             },
             {
-              "_id": "46kttab688db87875nddc6Ky",
+              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
               "content": "Old Message 2"
             },
             {
-              "_id": "38kttab688db87875nddc6yn",
+              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
               "content": "New message"
             }
           ]

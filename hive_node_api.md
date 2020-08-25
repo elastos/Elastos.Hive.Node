@@ -899,13 +899,11 @@ return:
           "_items": [
             {
               "_id": "4aktrab688db87875fddc6Km",
-              "name": "Group 1",
-              "created": "Wed, 25 Feb 1987 17:00:00 GMT"
+              "name": "Group 1"
             },
             {
               "_id": "5akttab688db87875nddc6Ka",
-              "name": "Group 2",
-              "created": "Wed, 25 Feb 1987 17:00:00 GMT"
+              "name": "Group 2"
             }
           ]
         }

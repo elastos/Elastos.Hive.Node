@@ -231,7 +231,6 @@ return:
         }
 ```
 
-
 - List folder
 ```
 HTTP: GET
@@ -338,8 +337,10 @@ data:
       "query": {
         "title": "Eve for Dummies2"
       },
-      "limit": 50,
-      "skip": 10
+      "options": {
+        "limit": 50,
+        "skip": 10
+      }
     }
 return:
     Success: 
@@ -369,13 +370,15 @@ data:
       "query": {
         "title": "Eve for Dummies2"
       },
-      "limit": 50,
-      "skip": 10,
-      "sort": [
-        ("title", -1)
-      ],
-      "projection": {
-        "title": 1
+      "options": {
+        "limit": 50,
+        "skip": 10,
+        "sort": [
+          ("title", -1)
+        ],
+        "projection": {
+          "title": 1
+        }
       }
     }
 return:
@@ -417,13 +420,15 @@ data:
       "query": {
         "title": "Eve for Dummies2"
       },
-      "limit": 50,
-      "skip": 10,
-      "sort": [
-        ("title", -1)
-      ],
-      "projection": {
-        "title": 1
+      "options": {
+        "limit": 50,
+        "skip": 10,
+        "sort": [
+          ("title", -1)
+        ],
+        "projection": {
+          "title": 1
+        }
       }
     }
 return:
@@ -484,7 +489,8 @@ data:
       "document": {
         "author": "john doe1", 
         "title": "Eve for Dummies2"
-      }
+      },
+      "options": {}
     }
 return:
     {
@@ -514,7 +520,8 @@ data:
           "author": "john doe2", 
           "title": "Eve for Dummies2"
         }
-      ]
+      ],
+      "options": {}
     }
 return:
     {
@@ -540,7 +547,8 @@ data:
         "_id": "5edddab688db87875fddc3a5",
         "author": "john doe3", 
         "title": "Eve for Dummies2"
-      }
+      },
+      "options": {}
     }
 return:
     {
@@ -569,7 +577,8 @@ data:
           "author": "john doe6", 
           "title": "Eve for Dummies6"
         }
-      ]
+      ],
+      "options": {}
     }
 return:
     {
@@ -589,7 +598,8 @@ data:
       "name": "works",
       "document": {
         "_id": "5edddab688db87875fddc3a5"
-      }
+      },
+      "options": {}
     }
 return:
     {
@@ -614,7 +624,8 @@ data:
         {
           "_id": "6eddbab688db12r46Fr036b7"
         }
-      ]
+      ],
+      "options": {}
     }
 return:
     {
@@ -622,9 +633,6 @@ return:
       "count": 2
     }
 ```  
-
-
-
 
 ## Scripting
 - Register a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner, while registering scripts using /scripting/set_script endpoint

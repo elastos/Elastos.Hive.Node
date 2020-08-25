@@ -10,25 +10,25 @@
 ## Auth of did and app
 NOTE: There will be a new version
 - User auth
-```
+```json
 HTTP: POST
 URL: /api/v1/did/auth
 Content-Type: "application/json"
-data: {"jwt":" auth_token}
+data: {"jwt": "auth_token"}
 return:
     Success:
         {
           "_status":"OK",
           "subject": "didauth",
           "issuer": "elastos_hive_node",
-          "token": access_token
+          "token": "access_token"
         }
     Failure: 
         {
           "_status": "ERR",
           "_error": {
             "code": 401,
-            "message": err_message
+            "message": "err_message"
           }
         }
 ```
@@ -36,7 +36,7 @@ return:
 ## Synchronization
 - Init synchronization from google drive
 * If there is a new user auth of hive++, must call this api before any other data operation(mongoDB or file etc)
-```
+```json
 HTTP: POST
 URL: /api/v1/sync/setup/google_drive
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -68,7 +68,7 @@ comments: The input data is google oauth2 token to json, no need to change anyth
 
 ## Vault File
 - Create folder
-```
+```json
 HTTP: POST
 URL: /api/v1/files/create_folder
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -90,7 +90,7 @@ return:
 ```
 
 - Upload file
-```
+```json
 HTTP: POST
 URL: /api/v1/files/upload_file
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -108,12 +108,12 @@ return:
         }
 ```
 Example Request:
-```
+```json
 curl -X POST -F "data=@test.mp3" -F "folder_path=path/of/folder/to/upload/the/file/to" http://localhost:5000/api/v1/files/upload
 ```
 
 - Download file
-```
+```json
 HTTP: GET
 URL: /api/v1/files/download_file
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -135,7 +135,7 @@ comment: support content range
 ```
 
 - Delete file/folder
-```
+```json
 HTTP: POST
 URL: /api/v1/files/delete
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -157,7 +157,7 @@ return:
 ```
 
 - Move file or folder
-```
+```json
 HTTP: POST
 URL: /api/v1/files/move
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -181,7 +181,7 @@ comment: usage like shell command "mv"
 ```
 
 - Copy file or folder
-```
+```json
 HTTP: POST
 URL: /api/v1/files/copy
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -205,7 +205,7 @@ comment: usage like shell command "cp"
 ```
 
 - Get file hash
-```
+```json
 HTTP: GET
 URL: /api/v1/files/hash_file
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -232,7 +232,7 @@ return:
 ```
 
 - List folder
-```
+```json
 HTTP: GET
 URL: /api/v1/files/list_folder
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -262,7 +262,7 @@ return:
 ```
 
 - Get stat(properties) of file or folder
-```
+```json
 HTTP: GET
 URL: api/v1/files/stat
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -292,7 +292,7 @@ return:
 
 ## Database
 - Create mongoDB collection
-```
+```json
 HTTP: POST
 URL: /api/v1/db/create_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -326,7 +326,7 @@ comments: "collection" is collection name of user's mongoDB. schema definition i
 ```
 
 - Count documents
-```
+```json
 HTTP: POST
 URL: /api/v1/db/count_documents
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -359,7 +359,7 @@ return:
 ```
 
 - Find a specific document(findOne)
-```
+```json
 HTTP: POST
 URL: /api/v1/db/find_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -402,7 +402,7 @@ return:
 ```
 
 - Find all documents(findMany)
-```
+```json
 HTTP: POST
 URL: /api/v1/db/find_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -449,7 +449,7 @@ return:
 ```
 
 - Insert a new document in a given collection
-```
+```json
 HTTP: POST
 URL: /api/v1/db/insert_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -483,7 +483,7 @@ return:
 ```
 
 - Insert many new documents in a given collection
-```
+```json
 HTTP: POST
 URL: /api/v1/db/insert_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -524,7 +524,7 @@ return:
 ```
 
 - Update an existing document in a given collection
-```
+```json
 HTTP: POST
 URL: /api/v1/db/update_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -556,7 +556,7 @@ return:
 ```
 
 - Update many existing documents in a given collection
-```
+```json
 HTTP: POST
 URL: /api/v1/db/update_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -595,7 +595,7 @@ return:
 ```
 
 - Delete an existing document in a given collection
-```
+```json
 HTTP: POST
 URL: /api/v1/db/delete_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -625,7 +625,7 @@ return:
 ```
 
 - Delete many existing documents in a given collection
-```
+```json
 HTTP: POST
 URL: /api/v1/db/delete_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -665,7 +665,7 @@ return:
 
 - Create/Update a subcondition to check whether a user belongs in a particular group.
 Note that on the query, the mapping "group_id": "id" represents that the client passes us a parameter called "group_id" and this is not the field name in the database. Rather, the field name on "groups" is actually "id" as represented by the mapping. This is to make it so that if there are multiple parameters with the same values, they can be passed just once thereby reducing duplication.
-```
+```json
 HTTP: POST
 URL: /api/v1/scripting/set_subcondition
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -696,7 +696,7 @@ return:
         }
 ```
 - Create/Update a subcondition to check whether the group was created within the timeframe given on the query
-```
+```json
 HTTP: POST
 URL: /api/v1/scripting/set_subcondition
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -730,7 +730,7 @@ return:
 ### Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/run_script endpoint to execute one of those scripts and get results/data
 
 - Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction.
-```
+```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -774,7 +774,7 @@ return:
 ```
 
 - Create/Update a script to get messages for a particular group messaging in an ascending order according to the modified time. This script further skins the first 10 messages from the group and only gets 50 total messages after that point. Only the messages and modified time are returned back to the user. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages with their last modified date are returned back to the client.
-```
+```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -821,7 +821,7 @@ return:
 ```
 
 - Create/Update a script to add a new message to the group messaging and then returns all the messages in the group messaging including the newly added one sorted by their modification time. This script contains a condition with "$and" expression. This means that all the subconditions have to return true before the script is executed. First condition is to check whether the DID user belongs to the group and the second condition is to check whether the group was created withint within the given timeframe(passed with parameter in scripting/run_script)
-```
+```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -883,7 +883,7 @@ return:
 ### Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
 
 - Run a script to get all the groups that the DID user belongs to. As defined by the script, it contains no restriction so anyone is able to retrieve all the groups for a DID user
-```
+```json
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -918,7 +918,7 @@ return:
 ```
 
 - Run a script to get all the group messages for a particular group ID. This has a subcondition that needs to be satisifed first. This subcondition can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
-```
+```json
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -959,7 +959,7 @@ return:
 ```
 
 - Run a script to add a new message to the group messaging for a particular group id. This has two subconditions that needs to be satisifed first. These subconditions can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
-```
+```json
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"

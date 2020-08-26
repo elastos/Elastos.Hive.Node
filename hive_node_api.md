@@ -664,7 +664,7 @@ return:
 ### Register/Update a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner, while registering scripts using /scripting/set_script endpoint. This will insert/update a row in the collection "subconditions". If the name doesn't exist, it'll create a new row and if it does, it'll update the existing row.
 
 - Create/Update a subcondition to check whether a user belongs in a particular group.
-Note that on the query, the mapping "group_id": "id" represents that the client passes us a parameter called "group_id" and this is not the field name in the database. Rather, the field name on "groups" is actually "id" as represented by the mapping. This is to make it so that if there are multiple parameters with the same values, they can be passed just once thereby reducing duplication.
+Note that on the query, the mapping "group_id": "id" represents that the client passes us a parameter called "group_id" and this is not the field name in the database. Rather, the field name on "groups" is actually "id" as represented by the mapping. This is to make it so that if there are multiple parameters with the same values, they can be passed just once thereby reducing duplication. Note that "$caller_did" is not passed but rather it's the DID of the user who's executing the script. This value will be retrieved automatically on the backend
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_subcondition
@@ -678,7 +678,7 @@ data:
         "collection": "groups",
         "query": {
           "group_id": "id", 
-          "friend_did": "friends"
+          "$caller_did": "friends"
         }
       }
     }
@@ -824,7 +824,7 @@ return:
         }
 ```
 
-- Create/Update a script to add a new message to the group messaging and then returns all the messages in the group messaging including the newly added one sorted by their modification time. This script contains a condition with "$and" expression. This means that all the subconditions have to return true before the script is executed. First condition is to check whether the DID user belongs to the group and the second condition is to check whether the group was created withint within the given timeframe(passed with parameter in scripting/run_script). Note that this may not be as useful in real use case and is only shown as a demo on what can be done by nesting the conditions. The max limit for nested conditions is 5
+- Create/Update a script to add a new message to the group messaging and then returns all the messages in the group messaging including the newly added one sorted by their modification time. This script contains a condition with "$and" expression. This means that all the subconditions have to return true before the script is executed. First condition is to check whether the DID user belongs to the group and the second condition is to check whether the group was created withint within the given timeframe(passed with parameter in scripting/run_script). Note that this may not be as useful in real use case and is only shown as a demo on what can be done by nesting the conditions. The max limit for nested conditions is 5. Note that "$now" is a special value that represents the current date. As the script is saved, we wouldn't want to immediately get the date but rather let backend determine the date at the time of insertion.
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -842,6 +842,7 @@ data:
             "friend_did": "did:elastos:iUhndsxcgijret834Hdasdf31Ld",
             "content": "New message"
           },
+          "created": "$now",
           "options": {}
         },
         {
@@ -946,10 +947,7 @@ data:
     {
       "name": "get_group_messages",
       "params": {
-        "group_id": "4aktrab688db87875fddc6Km",
-        "friend_did": {
-          "$in": ["did:elastos:iUhndsxcgijret834Hdasdf31Ld"]
-        }
+        "group_id": "4aktrab688db87875fddc6Km"
       }
     }
 return:
@@ -988,7 +986,6 @@ data:
       "name": "add_group_message",
       "params": {
         "group_id": "4aktrab688db87875fddc6Km",
-        "friend_id": "did:elastos:iUhndsxcgijret834Hdasdf31Ld",
         "group_created": {
           "$gte": "Wed, 25 Feb 1987 17:00:00 GMT"
         }

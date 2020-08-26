@@ -3,6 +3,7 @@ import logging
 
 from flask import request
 from datetime import datetime
+import time
 
 from hive.util.did.eladid import ffi, lib
 
@@ -48,12 +49,15 @@ class HiveAuth(Entity):
         jwt = body.get('jwt', None)
 
         # check auth token
-        credentialSubject = self.__check_auth_token(jwt)
+        credentialSubject, expTime = self.__check_auth_token(jwt)
         if credentialSubject is None:
             return
 
         # create access token
         exp = int(datetime.now().timestamp()) + DID_CHALLENGE_EXPIRE
+        if exp > expTime:
+            exp = expTime
+
         access_token = self.__create_access_token(credentialSubject, exp)
         if not access_token:
             return response_err(400, "create access token fail!")
@@ -67,13 +71,14 @@ class HiveAuth(Entity):
             "subject": "didauth",
             "issuer": "elastos_hive_node",
             "token": access_token,
+            "exp": exp,
         }
         return response_ok(data)
 
     def __check_auth_token(self, jwt):
         if jwt is None:
             response_err(400, "jwt is null")
-            return None
+            return None, None
 
         jws = lib.JWTParser_Parse(jwt.encode())
         ver = lib.JWS_GetHeader(jws, "version".encode())
@@ -87,12 +92,12 @@ class HiveAuth(Entity):
         ret = lib.Presentation_IsGenuine(vp)
         if not ret:
             response_err(400, "vp isn't genuine")
-            return None
+            return None, None
 
         ret = lib.Presentation_IsValid(vp)
         if not ret:
             response_err(400, "vp isn't valid")
-            return None
+            return None, None
 
         # print(ffi.string(vp_str).decode())
 
@@ -102,9 +107,13 @@ class HiveAuth(Entity):
         userDid = credentialSubject.get("userDid")
         if (vp_issuer != userDid):
             response_err(400, "vp issuer isn't userDid")
-            return None
+            return None, None
 
-        return credentialSubject
+        expirationDate = vc_json.get("expirationDate")
+        timeArray = time.strptime(expirationDate, "%Y-%m-%dT%H:%M:%SZ")
+        expTime = int(time.mktime(timeArray))
+
+        return credentialSubject, expTime
 
     def __create_access_token(self, credentialSubject, exp):
         did_str = self.get_did_string()

@@ -664,7 +664,7 @@ return:
 ### Register/Update a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner, while registering scripts using /scripting/set_script endpoint. This will insert/update a row in the collection "subconditions". If the name doesn't exist, it'll create a new row and if it does, it'll update the existing row.
 
 - Create/Update a subcondition to check whether a user belongs in a particular group.
-Note that on the query, the mapping "group_id": "id" represents that the client passes us a parameter called "group_id" and this is not the field name in the database. Rather, the field name on "groups" is actually "id" as represented by the mapping. This is to make it so that if there are multiple parameters with the same values, they can be passed just once thereby reducing duplication. Note that "$caller_did" is not passed but rather it's the DID of the user who's executing the script. This value will be retrieved automatically on the backend
+Note that on the query, the mapping "group_id": "id" represents that the client passes us a parameter called "group_id" and this is not the field name in the database. Rather, the field name on "groups" is actually "id" as represented by the mapping. This is to make it so that if there are multiple parameters with the same values, they can be passed just once thereby reducing duplication. Note that "*caller_did" is not passed but rather it's the DID of the user who's executing the script. This value will be retrieved automatically on the backend
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_subcondition
@@ -678,7 +678,7 @@ data:
         "collection": "groups",
         "query": {
           "group_id": "id", 
-          "$caller_did": "friends"
+          "*caller_did": "friends"
         }
       }
     }
@@ -743,10 +743,10 @@ data:
       "name": "get_groups",
       "exec_sequence": [
         {
-          "type": "db/find_many",
+          "endpoint": "db/find_many",
           "name": "groups",
           "query": {
-            "did": "did:elastos:iUhndsxcgijret834Hdasdf31Ld"
+            "*caller_did": "did"
           },
           "options": {
             "sort": [
@@ -789,7 +789,7 @@ data:
           "endpoint": "db/find_many",
           "name": "messages",
           "query": {
-            "group_id": "4aktrab688db87875fddc6Km"
+            "group_id": "group_id"
           },
           "options": {
             "limit": 50,
@@ -838,18 +838,18 @@ data:
           "endpoint": "db/insert_one",
           "name": "messages",
           "document": {
-            "group_id": "4aktrab688db87875fddc6Km", 
-            "friend_did": "did:elastos:iUhndsxcgijret834Hdasdf31Ld",
-            "content": "New message"
+            "group_id": "group_id", 
+            "*caller_did": "friend_did",
+            "content": "content",
+            "content_created": "created"
           },
-          "created": "$now",
           "options": {}
         },
         {
           "endpoint": "db/find_many",
           "name": "messages",
           "query": {
-            "group_id": "4aktrab688db87875fddc6Km"
+            "group_id": "group_id"
           },
           "options": {
             "sort": [
@@ -988,7 +988,8 @@ data:
         "group_id": "4aktrab688db87875fddc6Km",
         "group_created": {
           "$gte": "Wed, 25 Feb 1987 17:00:00 GMT"
-        }
+        },
+        "content_created": "Wed, 25 Feb 1987 17:00:00 GMT"
       }
     }
 return:

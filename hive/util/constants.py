@@ -52,11 +52,9 @@ SCRIPTING_SUBCONDITIONS_SCHEMA = {
         "id": "string",
         "name": "string",
         "condition": {
-            "type": "object",
-            "properties": {
-                "collection": "string",
-                "query": "object"
-            }
+            "condition_type": "string",
+            "collection": "string",
+            "query": "object"
         }
     }
 }
@@ -67,11 +65,8 @@ SCRIPTING_SCRIPTS_SCHEMA = {
         "name": "string",
         "exec_sequence": "object",
         "condition": {
-            "type": "object",
-            "properties": {
-                "operation": "string",
-                "name": "string"
-            }
+            "operation": "string",
+            "name": "string"
         }
     }
 }

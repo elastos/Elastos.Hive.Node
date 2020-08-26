@@ -738,7 +738,6 @@ Content-Type: "application/json"
 data: 
     {
       "name": "get_groups",
-      "app_id": "tech.tuum.academy",
       "exec_sequence": [
         {
           "type": "db/find_many",
@@ -782,7 +781,6 @@ Content-Type: "application/json"
 data: 
     {
       "name": "get_group_messages",
-      "app_id": "tech.tuum.academy",
       "exec_sequence": [
         {
           "endpoint": "db/find_many",
@@ -829,7 +827,6 @@ Content-Type: "application/json"
 data: 
     {
       "name": "add_group_message",
-      "app_id": "tech.tuum.academy",
       "exec_sequence": [
         {
           "endpoint": "db/insert_one",

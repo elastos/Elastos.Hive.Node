@@ -674,6 +674,7 @@ data:
     {
       "name": "user_in_group",
       "condition": {
+        "type": "query_has_results",
         "collection": "groups",
         "query": {
           "group_id": "id", 
@@ -695,7 +696,8 @@ return:
           }
         }
 ```
-- Create/Update a subcondition to check whether the group was created within the timeframe given on the query
+
+- Create/Update a subcondition to check whether the group was created within the timeframe given on the query. 
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_subcondition
@@ -705,10 +707,11 @@ data:
     {
       "name": "group_created_age",
       "condition": {
+        "type": "query_has_results",
         "collection": "groups",
         "query": {
-          "group_id": "id", 
-          "group_created": "created"
+          "group_id": "id",
+          "group_created": "created"  
         }
       }
     }
@@ -801,7 +804,10 @@ data:
           }
         }
       ],
-      "condition": "user_in_group"
+      "condition": {
+        "type": "sub",
+        "name": "user_in_group"
+      }
     }
 return:
     Success: 
@@ -818,7 +824,7 @@ return:
         }
 ```
 
-- Create/Update a script to add a new message to the group messaging and then returns all the messages in the group messaging including the newly added one sorted by their modification time. This script contains a condition with "$and" expression. This means that all the subconditions have to return true before the script is executed. First condition is to check whether the DID user belongs to the group and the second condition is to check whether the group was created withint within the given timeframe(passed with parameter in scripting/run_script)
+- Create/Update a script to add a new message to the group messaging and then returns all the messages in the group messaging including the newly added one sorted by their modification time. This script contains a condition with "$and" expression. This means that all the subconditions have to return true before the script is executed. First condition is to check whether the DID user belongs to the group and the second condition is to check whether the group was created withint within the given timeframe(passed with parameter in scripting/run_script). Note that this may not be as useful in real use case and is only shown as a demo on what can be done by nesting the conditions. The max limit for nested conditions is 5
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -856,9 +862,25 @@ data:
         }
       ],
       "condition": {
-        "$and": [
-          "user_in_group",
-          "group_created_age"
+        "type": "and",
+        "conditions": [
+          {
+            "type": "or",
+            "conditions": [
+              {
+                "type": "sub",
+                "name": "user_in_group"
+              },
+              {
+                "type": "sub",
+                "name": "user_in_group"
+              }
+            ]
+          },
+          {
+            "type": "sub",
+            "name": "group_created_age"
+          }
         ]
       }
     }

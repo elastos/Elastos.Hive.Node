@@ -34,3 +34,44 @@ FILE_INFO_FILE_MODIFY_TIME = "file_modify_time"
 DID_AUTH_SUBJECT = "didauth"
 DID_AUTH_REALM = "elastos_hive_node"
 
+SCRIPTING_DID = "did"
+SCRIPTING_APP_ID = "app_id"
+SCRIPTING_NAME = "name"
+SCRIPTING_SUBCONDITION_COLLECTION = "subconditions"
+SCRIPTING_SCRIPT_COLLECTION = "scripts"
+SCRIPTING_CONDITION = "condition"
+SCRIPTING_EXEC_SEQUENCE = "exec_sequence"
+SCRIPTING_EXECUTABLE_FIND_ONE = "db/find_one"
+SCRIPTING_EXECUTABLE_FIND_MANY = "db/find_many"
+SCRIPTING_EXECUTABLE_INSERT_ONE = "db/insert_one"
+SCRIPTING_EXECUTABLE_UPDATE_MANY = "db/update_many"
+SCRIPTING_EXECUTABLE_DELETE_MANY = "db/delete_many"
+SCRIPTING_SUBCONDITIONS_SCHEMA = {
+    "collection": "subconditions",
+    "schema": {
+        "id": "string",
+        "name": "string",
+        "condition": {
+            "type": "object",
+            "properties": {
+                "collection": "string",
+                "query": "object"
+            }
+        }
+    }
+}
+SCRIPTING_SCRIPTS_SCHEMA = {
+    "collection": "scripts",
+    "schema": {
+        "id": "string",
+        "name": "string",
+        "exec_sequence": "object",
+        "condition": {
+            "type": "object",
+            "properties": {
+                "operation": "string",
+                "name": "string"
+            }
+        }
+    }
+}

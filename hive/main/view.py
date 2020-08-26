@@ -4,11 +4,13 @@ from hive.main.hive_file import HiveFile
 from hive.main.hive_mongo import HiveMongo
 from hive.main.hive_auth import HiveAuth
 from hive.main.hive_sync import HiveSync
+from hive.main.hive_scripting import HiveScripting
 
 hive_mongo = HiveMongo()
 hive_file = HiveFile()
 hive_auth = HiveAuth()
 hive_sync = HiveSync()
+hive_scripting = HiveScripting()
 main = Blueprint('main', __name__)
 
 
@@ -17,6 +19,7 @@ def init_app(app):
     hive_mongo.init_app(app)
     hive_file.init_app(app)
     hive_sync.init_app(app)
+    hive_scripting.init_app(app)
     app.register_blueprint(main)
 
 
@@ -105,3 +108,19 @@ def get_file_hash():
 @main.route('/api/v1/sync/setup/google_drive', methods=['POST'])
 def setup_syn_google_drive():
     return hive_sync.setup_google_drive_rclone()
+
+
+# Scripting mechanism
+@main.route('/api/v1/scripting/set_subcondition', methods=['POST'])
+def set_subcondition():
+    return hive_scripting.set_subcondition()
+
+
+@main.route('/api/v1/scripting/set_script', methods=['POST'])
+def set_script():
+    return hive_scripting.set_script()
+
+
+@main.route('/api/v1/scripting/run_script', methods=['POST'])
+def run_script():
+    return hive_scripting.run_script()

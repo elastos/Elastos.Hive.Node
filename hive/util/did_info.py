@@ -34,6 +34,14 @@ def get_all_did_info():
     return infos
 
 
+def delete_did_info(did, app_id):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+    query = {DID: did, APP_ID: app_id}
+    col.delete_many(query)
+
+
 def get_all_did_info_by_did(did):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]

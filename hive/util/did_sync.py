@@ -38,6 +38,14 @@ def update_did_sync_info(did, state, info, sync_time, drive):
     return ret
 
 
+def delete_did_sync_info(did):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_SYNC_INFO_COL]
+    query = {DID: did}
+    col.delete_many(query)
+
+
 def get_did_sync_info(did):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]

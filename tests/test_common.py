@@ -1,102 +1,40 @@
-import json
-import logging
-
 from datetime import datetime
-from hive.util.did.entity import Entity
-from hive.util.did.eladid import ffi, lib
+from time import time
 
-class DIDApp(Entity):
-    issuer = None
+from hive.util.did_info import add_did_info_to_db, delete_did_info, get_did_info_by_token
+from hive.util.did_sync import add_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
+    delete_did_sync_info
 
-    def __init__(self, name, mnemonic=None):
-        Entity.__init__(self, name, mnemonic)
-        self.issuer = lib.Issuer_Create(self.did, ffi.NULL, self.store)
+from hive.settings import DID_CHALLENGE_EXPIRE
 
-    def __del__(self):
-        lib.Issuer_Destroy(self.issuer)
-        # Entity.__del__(self)
-
-    def issue_auth(self, app):
-        types = ffi.new("char*[]", [ffi.new("char[]", "DIDAuthCredential".encode())])
-        props = {
-            'userDid': self.get_did_string(),
-            'appDid': app.get_did_string(),
-            'purpose': 'did:elastos:ieaA5VMWydQmVJtM5daW5hoTQpcuV38mHM',
-            'scope': ['read', 'write']
-        }
-        issuerid = self.did
-        issuerdoc = lib.DIDStore_LoadDID(self.store, self.did)
-        expires = lib.DIDDocument_GetExpires(issuerdoc)
-        credid = lib.DIDURL_NewByDid(issuerid, self.name.encode())
-        vc = lib.Issuer_CreateCredentialByString(self.issuer, issuerid, credid, types, 1,
-                                                 json.dumps(props).encode(), expires, self.storepass)
-        vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
-        logging.debug(vcJson)
-        return vc
+did = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
+app_id = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
+nonce = "c4211de6-e297-11ea-9bab-acde48001122"
+token = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCJ9.eyJpc3MiOiAiZGlkOmVsYXN0b3M6aWpVbkQ0S2VScGVCVUZtY0VEQ2JoeE1USlJ6VVlDUUNaTSIsICJzdWIiOiAiQWNjZXNzQXV0aG9yaXR5IiwgImV4cCI6IDE1OTc4OTYxMDQsICJhY2Nlc3NTdWJqZWN0IjogeyJpZCI6ICJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwgImFwcERpZCI6ICJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwgInB1cnBvc2UiOiAiZGlkOmVsYXN0b3M6aWVhQTVWTVd5ZFFtVkp0TTVkYVc1aG9UUXBjdVYzOG1ITSIsICJzY29wZSI6IFsicmVhZCIsICJ3cml0ZSJdLCAidXNlckRpZCI6ICJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIn19."
+drive = "gdrive_ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
 
 
-# ---------------
-class DApp(Entity):
-    access_token = "123"
+def setup_test_auth_token():
+    delete_did_info(did, app_id)
+    exp = int(datetime.now().timestamp()) + DID_CHALLENGE_EXPIRE
+    add_did_info_to_db(did, app_id, nonce, token, exp)
 
-    def __init__(self, name, mnemonic=None):
-        Entity.__init__(self, name, mnemonic)
 
-    def access_api_by_token(self):
-        return self.access_token
-
-    def set_access_token(self, token):
-        self.access_token = token
-
-    def create_presentation(self, vc, realm, nonce):
-        vp = lib.Presentation_Create(self.did, ffi.NULL, self.store, self.storepass, nonce.encode(),
-                                     realm.encode(), 1, vc)
-        # print_err()
-        vp_json = ffi.string(lib.Presentation_ToJson(vp, True)).decode()
-        logging.debug(vp_json)
-        return vp_json
-
-    def create_token(self, vp_json):
-        doc = lib.DIDStore_LoadDID(self.store, self.did)
-        builder = lib.DIDDocument_GetJwtBuilder(doc)
-        ticks = int(datetime.now().timestamp())
-        iat = ticks
-        nbf = ticks
-        exp = ticks + 10000
-
-        lib.JWTBuilder_SetHeader(builder, "type".encode(), "JWT".encode())
-        lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
-
-        lib.JWTBuilder_SetSubject(builder, "DIDAuthCredential".encode())
-        lib.JWTBuilder_SetAudience(builder, "Hive".encode())
-        lib.JWTBuilder_SetIssuedAt(builder, iat)
-        lib.JWTBuilder_SetExpiration(builder, exp)
-        lib.JWTBuilder_SetNotBefore(builder, nbf)
-        lib.JWTBuilder_SetClaimWithJson(builder, "vp".encode(), vp_json.encode())
-
-        token = ffi.string(lib.JWTBuilder_Compact(builder)).decode()
-        lib.JWTBuilder_Destroy(builder)
-        return token
+def delete_test_auth_token():
+    # delete_did_info(did, app_id)
+    pass
 
 
 def get_auth_token(self):
-    self.didapp = DIDApp("didapp")
-    self.testapp = DApp("testapp")
+    return token
 
-    vc = self.didapp.issue_auth(self.testapp)
-    vp_json = self.testapp.create_presentation(vc, "testapp", "873172f58701a9ee686f0630204fee59")
-    auth_token = self.testapp.create_token(vp_json)
 
-    rt, s = self.parse_response(
-        self.test_client.post('/api/v1/did/auth',
-                              data=json.dumps({
-                                  "jwt": auth_token,
-                              }),
-                              headers=self.json_header)
-    )
-    self.assert200(s)
-    self.assertEqual(rt["_status"], "OK")
-    self.testapp.set_access_token(rt["token"])
+def setup_sync_record():
+    delete_did_sync_info(did)
+    add_did_sync_info(did, time(), drive)
+    update_did_sync_info(did, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, time(), drive)
 
-    logging.debug(f"token: {rt['token']}")
-    return rt["token"]
+
+def delete_sync_record():
+    # delete_did_sync_info(did)
+    pass

@@ -9,26 +9,6 @@ function start_db () {
         mongo
 }
 
-function setup_venv () {
-    case `uname` in
-    Linux )
-        virtualenv -p `which python3.6` .venv
-        source .venv/bin/activate
-        pip install --upgrade pip
-        pip install -r requirements.txt
-        ;;
-    Darwin )
-        virtualenv -p `which python3.7` .venv
-        source .venv/bin/activate
-        pip install --upgrade pip
-        pip install --global-option=build_ext --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" -r requirements.txt
-        ;;
-    *)
-    exit 1
-    ;;
-    esac
-}
-
 function start_docker () {
     docker network create hive
 
@@ -53,8 +33,6 @@ function start_direct () {
     echo "Running directly on the machine..."
     ps -ef | grep gunicorn | awk '{print $2}' | xargs kill -9
 
-    setup_venv
-
     LD_LIBRARY_PATH="$PWD/hive/util/did/" python manage.py runserver
 }
 
@@ -62,8 +40,6 @@ function test () {
     docker network create hive
 
     start_db
-
-    setup_venv
 
     # Run tests
     pytest --disable-pytest-warnings -xs tests/hive_auth_test.py

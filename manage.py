@@ -11,7 +11,7 @@ log_console = logging.getLogger('console')
 logfile.debug("Debug FILE")
 log_console.debug("Debug CONSOLE")
 
-app = create_app(config='production')
+app = create_app()
 
 
 @app.before_request

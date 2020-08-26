@@ -45,7 +45,7 @@ class HiveSyncTestCase(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger("HiveSyncTestCase").info("\n")
-        self.app = create_app('testing')
+        self.app = create_app()
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
         self.content_type = ("Content-Type", "application/json")
@@ -53,7 +53,7 @@ class HiveSyncTestCase(unittest.TestCase):
         self.json_header = [
             self.content_type,
         ]
-        self.auth = None
+        test_common.setup_test_auth_token()
         self.init_auth()
 
     def init_auth(self):
@@ -64,6 +64,7 @@ class HiveSyncTestCase(unittest.TestCase):
         ]
 
     def tearDown(self):
+        test_common.delete_test_auth_token()
         logging.getLogger("HiveSyncTestCase").info("\n")
 
     def init_db(self):

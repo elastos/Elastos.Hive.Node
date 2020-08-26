@@ -4,19 +4,6 @@ DID_SIDECHAIN_URL = config('DID_SIDECHAIN_URL', default="http://api.elastos.io:2
 
 MONGO_HOST = config('MONGO_HOST', default="localhost", cast=str)
 MONGO_PORT = config('MONGO_PORT', default=27020, cast=int)
-MONGO_DBNAME = config('MONGO_DBNAME', default="hivedb", cast=str)
-
-RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
-
-ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
-
-CACHE_CONTROL = 'max-age=20'
-CACHE_EXPIRES = 20
-
-URL_PREFIX = 'api/v1/db/col'
-
-DOMAIN = {
-}
 
 DID_BASE_DIR = config('DID_BASE_DIR', default="./did_user_data", cast=str)
 DID_CHALLENGE_EXPIRE = 15 * 60

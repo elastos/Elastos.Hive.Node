@@ -51,7 +51,7 @@ class HiveAuth(Entity):
         # check auth token
         credentialSubject, expTime = self.__check_auth_token(jwt)
         if credentialSubject is None:
-            return
+            return response_err(400, expTime)
 
         # create access token
         exp = int(datetime.now().timestamp()) + DID_CHALLENGE_EXPIRE
@@ -77,8 +77,7 @@ class HiveAuth(Entity):
 
     def __check_auth_token(self, jwt):
         if jwt is None:
-            response_err(400, "jwt is null")
-            return None, None
+            return None, "jwt is null"
 
         jws = lib.JWTParser_Parse(jwt.encode())
         ver = lib.JWS_GetHeader(jws, "version".encode())
@@ -91,13 +90,11 @@ class HiveAuth(Entity):
 
         ret = lib.Presentation_IsGenuine(vp)
         if not ret:
-            response_err(400, "vp isn't genuine")
-            return None, None
+            return None, "vp isn't genuine"
 
         ret = lib.Presentation_IsValid(vp)
         if not ret:
-            response_err(400, "vp isn't valid")
-            return None, None
+            return None, "vp isn't valid"
 
         # print(ffi.string(vp_str).decode())
 
@@ -106,8 +103,8 @@ class HiveAuth(Entity):
         vp_issuer = vc_json.get("issuer")
         userDid = credentialSubject.get("userDid")
         if (vp_issuer != userDid):
-            response_err(400, "vp issuer isn't userDid")
-            return None, None
+            response_err(400, )
+            return None, "vp issuer isn't userDid"
 
         expirationDate = vc_json.get("expirationDate")
         timeArray = time.strptime(expirationDate, "%Y-%m-%dT%H:%M:%SZ")

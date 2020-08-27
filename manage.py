@@ -1,4 +1,4 @@
-import logging, logging.config, yaml
+import logging.config, yaml
 
 from flask import request
 from flask_script import Manager, Server
@@ -11,7 +11,7 @@ log_console = logging.getLogger('console')
 logfile.debug("Debug FILE")
 log_console.debug("Debug CONSOLE")
 
-app = create_app(config='production')
+app = create_app()
 
 
 @app.before_request

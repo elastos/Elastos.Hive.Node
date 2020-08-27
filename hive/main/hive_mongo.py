@@ -1,75 +1,246 @@
 import json
 
+from bson import ObjectId
 from flask import request
 
-from hive.main.hive_sync import HiveSync
+import pymongo
+from pymongo import MongoClient
+from pymongo.errors import CollectionInvalid
+
 from hive.settings import MONGO_HOST, MONGO_PORT
-from hive.util.auth import did_auth
-from hive.util.constants import DID_RESOURCE_NAME, DID_RESOURCE_SCHEMA, DID, APP_ID
-from hive.util.common import gene_eve_mongo_db_prefix
-from hive.util.did_info import get_all_did_info
-from hive.util.did_mongo_db_resource import find_schema_of_did_resource, add_did_resource_to_db, \
-    get_all_resource_of_did_app_id, \
-    gene_mongo_db_name
+from hive.util.did_info import get_collection
+from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort
 from hive.util.server_response import response_ok, response_err
+from hive.main.interceptor import post_json_param_pre_proc
 
 
-class HiveMongo:
+class HiveMongoDb:
     def __init__(self, app=None):
         self.app = app
 
     def init_app(self, app):
         self.app = app
-        self.init_all_eve_from_db()
-
-    def init_all_eve_from_db(self):
-        infos = get_all_did_info()
-        for info in infos:
-            self.init_eve(info[DID], info[APP_ID])
 
     def create_collection(self):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
-
-        if not HiveSync.is_app_sync_prepared(did, app_id):
-            return response_err(406, "drive is not prepared")
-
-        content = request.get_json(force=True, silent=True)
+        did, app_id, content, response = post_json_param_pre_proc("collection")
         if content is None:
-            return response_err(400, "parameter is not application/json")
-        collection = content.get('collection', None)
-        schema = content.get('schema', None)
-        if (collection is None) or (schema is None):
+            return response
+
+        collection_name = content.get('collection', None)
+        if collection_name is None:
             return response_err(400, "parameter is null")
 
-        settings = {"schema": schema, "mongo_prefix": gene_eve_mongo_db_prefix(did, app_id)}
+        connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+        db_name = gene_mongo_db_name(did, app_id)
+        db = connection[db_name]
+        try:
+            col = db.create_collection(collection_name)
+        except CollectionInvalid:
+            pass
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+        return response_ok()
 
-        schema_db = find_schema_of_did_resource(did, app_id, collection)
-        if schema_db is None:
-            add_did_resource_to_db(did, app_id, collection, json.dumps(schema))
-        else:
-            return response_err(409, "Collection: " + collection + " exist")
+    def delete_collection(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection")
+        if content is None:
+            return response
 
-        with self.app.app_context():
-            self.app.register_resource(collection, settings)
+        collection_name = content.get('collection', None)
+        if collection_name is None:
+            return response_err(400, "parameter is null")
 
-        data = {"collection": collection}
-        return response_ok(data)
+        connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+        db_name = gene_mongo_db_name(did, app_id)
+        db = connection[db_name]
+        try:
+            db.drop_collection(collection_name)
+        except CollectionInvalid:
+            pass
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+        return response_ok()
 
-    def init_eve(self, did, app_id):
-        with self.app.app_context():
-            uri = gene_eve_mongo_db_prefix(did, app_id) + "_URI"
-            if uri not in self.app.config:
-                self.app.config[uri] = "mongodb://%s:%s/%s" % (
-                    MONGO_HOST,
-                    MONGO_PORT,
-                    gene_mongo_db_name(did, app_id)
-                )
-            resource_list = get_all_resource_of_did_app_id(did, app_id)
-            for resource in resource_list:
-                collection = resource[DID_RESOURCE_NAME]
-                schema = resource[DID_RESOURCE_SCHEMA]
-                settings = {"schema": json.loads(schema), "mongo_prefix": gene_eve_mongo_db_prefix(did, app_id)}
-                if collection not in self.app.config["DOMAIN"]:
-                    self.app.register_resource(collection, settings)
+    def insert_one(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection", "document")
+        if content is None:
+            return response
+
+        col = get_collection(did, app_id, content["collection"])
+        options = options_filter(content, ("bypass_document_validation",))
+        try:
+            ret = col.insert_one(content["document"], **options)
+
+            data = {
+                "acknowledged": ret.acknowledged,
+                "inserted_id": str(ret.inserted_id)
+            }
+            return response_ok(data)
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+
+    def insert_many(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection", "document")
+        if content is None:
+            return response
+
+        col = get_collection(did, app_id, content["collection"])
+
+        options = options_filter(content, ("bypass_document_validation", "ordered"))
+
+        try:
+            ret = col.insert_many(content["document"], **options)
+            data = {
+                "acknowledged": ret.acknowledged,
+                "inserted_ids": [str(_id) for _id in ret.inserted_ids]
+            }
+            return response_ok(data)
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+
+    def update_one(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection", "filter", "update")
+        if content is None:
+            return response
+
+        col = get_collection(did, app_id, content["collection"])
+        options = options_filter(content, ("upsert", "bypass_document_validation"))
+
+        try:
+            ret = col.update_one(content["filter"], content["update"], **options)
+            data = {
+                "acknowledged": ret.acknowledged,
+                "matched_count": ret.matched_count,
+                "modified_count": ret.modified_count,
+                "upserted_id": str(ret.upserted_id),
+            }
+            return response_ok(data)
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+
+    def update_many(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection", "filter", "update")
+        if content is None:
+            return response
+
+        col = get_collection(did, app_id, content["collection"])
+        options = options_filter(content, ("upsert", "bypass_document_validation"))
+
+        try:
+            ret = col.update_many(content["filter"], content["update"], **options)
+            data = {
+                "acknowledged": ret.acknowledged,
+                "matched_count": ret.matched_count,
+                "modified_count": ret.modified_count,
+                "upserted_id": str(ret.upserted_id)
+            }
+            return response_ok(data)
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+
+    def delete_one(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection", "filter")
+        if content is None:
+            return response
+
+        col = get_collection(did, app_id, content["collection"])
+        try:
+            ret = col.delete_one(content["filter"])
+            data = {
+                "acknowledged": ret.acknowledged,
+                "deleted_count": ret.deleted_count,
+            }
+            return response_ok(data)
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+
+    def delete_many(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection", "filter")
+        if content is None:
+            return response
+
+        col = get_collection(did, app_id, content["collection"])
+        try:
+            ret = col.delete_many(content["filter"])
+            data = {
+                "acknowledged": ret.acknowledged,
+                "deleted_count": ret.deleted_count,
+            }
+            return response_ok(data)
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+
+    def count_documents(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection", "filter")
+        if content is None:
+            return response
+
+        col = get_collection(did, app_id, content["collection"])
+
+        options = options_filter(content, ("skip", "limit", "maxTimeMS"))
+
+        try:
+            count = col.count_documents(content["filter"], **options)
+            data = {"count": count}
+            return response_ok(data)
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+
+    def find_one(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection")
+        if content is None:
+            return response
+
+        col = get_collection(did, app_id, content["collection"])
+        options = options_filter(content, ("filter",
+                                           "projection",
+                                           "skip",
+                                           "sort",
+                                           "allow_partial_results",
+                                           "return_key",
+                                           "show_record_id",
+                                           "batch_size"))
+        if "sort" in options:
+            sorts = gene_sort(options["sort"])
+            options["sort"] = sorts
+
+        try:
+            result = col.find_one(**options)
+            if ("_id" in result) and (isinstance(result["_id"], ObjectId)):
+                result["_id"] = str(result["_id"])
+            data = {"items": result}
+            return response_ok(data)
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))
+
+    def find_many(self):
+        did, app_id, content, response = post_json_param_pre_proc("collection")
+        if content is None:
+            return response
+
+        col = get_collection(did, app_id, content["collection"])
+
+        options = options_filter(content, ("filter",
+                                           "projection",
+                                           "skip",
+                                           "limit",
+                                           "sort",
+                                           "allow_partial_results",
+                                           "return_key",
+                                           "show_record_id",
+                                           "batch_size"))
+        if "sort" in options:
+            sorts = gene_sort(options["sort"])
+            options["sort"] = sorts
+
+        try:
+            cursor = col.find(**options)
+            arr = list()
+            for c in cursor:
+                if ("_id" in c) and (isinstance(c["_id"], ObjectId)):
+                    c["_id"] = str(c["_id"])
+                arr.append(c)
+            data = {"items": arr}
+            return response_ok(data)
+        except Exception as e:
+            return response_err(500, "Exception:" + str(e))

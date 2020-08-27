@@ -5,6 +5,7 @@ from pymongo import MongoClient
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
     DID_INFO_NONCE_EXPIRE, DID_INFO_TOKEN_EXPIRE
 from hive.settings import MONGO_HOST, MONGO_PORT
+from hive.util.did_mongo_db_resource import gene_mongo_db_name
 
 
 def add_did_info_to_db(did, app_id, nonce, token, expire):
@@ -32,6 +33,14 @@ def get_all_did_info():
     col = db[DID_INFO_REGISTER_COL]
     infos = col.find()
     return infos
+
+
+def delete_did_info(did, app_id):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+    query = {DID: did, APP_ID: app_id}
+    col.delete_many(query)
 
 
 def get_all_did_info_by_did(did):
@@ -82,6 +91,14 @@ def get_did_info_by_token(token):
     query = {DID_INFO_TOKEN: token}
     info = col.find_one(query)
     return info
+
+
+def get_collection(did, app_id, collection):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db_name = gene_mongo_db_name(did, app_id)
+    db = connection[db_name]
+    col = db[collection]
+    return col
 
 
 def create_token():

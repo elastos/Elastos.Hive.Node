@@ -3,12 +3,34 @@ import json
 import subprocess
 from pathlib import Path
 
+import pymongo
 from pymongo import MongoClient
 
 from hive.settings import DID_BASE_DIR, MONGO_HOST, MONGO_PORT
 from hive.util.constants import DID_INFO_DB_NAME, DID_RESOURCE_COL, DID_RESOURCE_NAME, DID_RESOURCE_SCHEMA, \
     DID_RESOURCE_DID, DID_RESOURCE_APP_ID
 from hive.util.common import did_tail_part, create_full_path_dir
+
+
+def options_filter(content, args):
+    ops = dict()
+    if "options" not in content:
+        return ops
+    options = content["options"]
+    for arg in args:
+        if arg in options:
+            ops[arg] = options[arg]
+    return ops
+
+
+def gene_sort(sort_para):
+    sorts = list()
+    for field in sort_para.keys():
+        if "desc" == sort_para[field]:
+            sorts.append((field, pymongo.DESCENDING))
+        else:
+            sorts.append((field, pymongo.ASCENDING))
+    return sorts
 
 
 # settings must be json string

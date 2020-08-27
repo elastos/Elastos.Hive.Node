@@ -58,33 +58,24 @@ return:
         }
 comments: The input data is google oauth2 token to json, no need to change anything
 ```
-
-## MongoDB operation
-1. Setup mongoDB collection
-```
+# Database
+WARNING: Not support mongoDB generate "_id" filter yet
+- Create mongoDB collection
+```json
 HTTP: POST
 URL: /api/v1/db/create_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data:
+data: 
     {
       "collection": "works",
-      "schema": {
-        "title": {
-          "type": "string"
-        },
-        "author": {
-          "type": "string"
-        }
-      }
     }
 return:
-    Success:
+    Success: 
         {
-          "_status": "OK",
-          "collection": "works"
+          "_status": "OK", 
         }
-    Failure:
+    Failure: 
         {
           "_status": "ERR",
           "_error": {
@@ -92,95 +83,442 @@ return:
             "message": "Error message"
           }
         }
-comments: "collection" is collection name of user's mongoDB. schema definition is in EVE document: [Schema Definition](https://docs.python-eve.org/en/stable/config.html#schema-definition)
+comments: "collection" is collection name of user's mongoDB.
 ```
 
-2. Use mongoDB collection
-```
-HTTP: POST GET PATCH DELETE
-URL: api/v1/db/col/*
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: defined by eve schema
-return: defined by eve
-comments: If you define a "collection" for mongoDB, You can CURD your collection item in mongoDB.
-```
-Detailed usage is in EVE document:
-- [Features sub-resources](https://docs.python-eve.org/en/stable/features.html#sub-resources)
-- [Features editing](https://docs.python-eve.org/en/stable/features.html#editing-a-document-patch)
-- [Features soft-delete](https://docs.python-eve.org/en/stable/features.html#soft-delete)
-- [Features filtering](https://docs.python-eve.org/en/stable/features.html#filtering)
-- [Features sorting](https://docs.python-eve.org/en/stable/features.html#sorting)
-- [Features pagination](https://docs.python-eve.org/en/stable/features.html#pagination)
-
-Example:
-1. Add data to works
-```
+- Delete mongoDB collection
+```json
 HTTP: POST
-URL: api/v1/db/col/works
+URL: /api/v1/db/delete_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data:
+data: 
     {
-      "author": "john doe2",
-      "title": "Eve for Dummies2"
+      "collection": "works",
     }
 return:
-    {
-      "_updated": "Mon, 08 Jun 2020 06:29:10 GMT",
-      "_created": "Mon, 08 Jun 2020 06:29:10 GMT",
-      "_etag": "b6aa8f9d28a816a22c2d7a130c58255740f0f318",
-      "_id": "5edddab688db87875fddc3a5",
-      "_links": {
-        "self": {
-          "title": "Work",
-          "href": "works/5edddab688db87875fddc3a5"
-        }
-      },
-      "_status": "OK"
-    }
-```
-
-2. Get all data of works
-```
-HTTP: GET
-URL: api/v1/db/col/works
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-return:
-    {
-      "_items": [
+    Success: 
         {
-          "_id": "5ebb571d5e47c77fe2e4c184",
-          "author": "john doe2",
-          "title": "Eve for Dummies2",
-          "_updated": "Wed, 13 May 2020 02:10:37 GMT",
-          "_created": "Wed, 13 May 2020 02:10:37 GMT",
-          "_etag": "6458561293d9ce4fcbb03d66df27d59ebc8bd611",
-          "_links": {
-            "self": {
-              "title": "Work",
-              "href": "works/5ebb571d5e47c77fe2e4c184"
-            }
+          "_status": "OK", 
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
           }
         }
-      ],
-      "_links": {
-        "parent": {
-          "title": "home",
-          "href": "/"
-        },
-        "self": {
-          "title": "works",
-          "href": "works"
-        }
+comments: "collection" is collection name of user's mongoDB.
+```
+
+- Insert a new document in a given collection
+    * collection: collection name.
+    * document: The document to insert. Must be a mutable mapping type. If the document does not have an _id field one will be added automatically.
+    * options:
+        bypass_document_validation: (optional) If True, allows the write to opt-out of document level validation. Default is False.
+```json
+HTTP: POST
+URL: /api/v1/db/insert_one
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "collection": "works",
+      "document": {
+        "author": "john doe1", 
+        "title": "Eve for Dummies2"
       },
-      "_meta": {
-        "page": 1,
-        "max_results": 25,
-        "total": 1
+      "options": {"bypass_document_validation":false}
+    }
+return:
+    Success:
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "inserted_id": "5edddab688db87875fddc3a5"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+
+- Insert many new documents in a given collection
+    * collection: collection name.
+    * document: The document to insert. Must be a mutable mapping type. If the document does not have an _id field one will be added automatically.
+    * options:
+        * ordered (optional): If True (the default) documents will be inserted on the server serially, in the order provided. If an error occurs all remaining inserts are aborted. If False, documents will be inserted on the server in arbitrary order, possibly in parallel, and all document inserts will be attempted.
+        * bypass_document_validation: (optional) If True, allows the write to opt-out of document level validation. Default is False.
+```json
+HTTP: POST
+URL: /api/v1/db/insert_many
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "collection": "works",
+      "document": [
+        {
+          "author": "john doe1", 
+          "title": "Eve for Dummies1"
+        },
+        {
+          "author": "john doe2", 
+          "title": "Eve for Dummies2"
+        }
+      ],
+      "options": {
+          "bypass_document_validation":false,
+          "ordered":true
       }
     }
+return:
+    Success:
+       {
+        "_status": "OK",
+        "acknowledged": true,
+        "inserted_ids": [
+            "5f4658d122c95b17e72f2d4a",
+            "5f4658d122c95b17e72f2d4b"
+        ]
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Update an existing document in a given collection
+    * collection: collection name.
+    * filter: A query that matches the document to update.
+    * update: The modifications to apply.
+    * options:
+        * upsert (optional): If True, perform an insert if no documents match the filter.
+        * bypass_document_validation: (optional) If True, allows the write to opt-out of document level validation. Default is False. This option is only supported on MongoDB 3.2 and above.
+```json
+HTTP: POST
+URL: /api/v1/db/update_one
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "collection": "works",
+      "filter": {
+        "author": "john doe3",
+      },
+      "update": {"$set": {
+        "author": "john doe3_1", 
+        "title": "Eve for Dummies3_1"
+      }},
+      "options": {
+          "upsert": true,
+          "bypass_document_validation": false
+      }
+    }
+return:
+    Success:
+        {
+            "_status": "OK",
+            "acknowledged": true,
+            "matched_count": 1,
+            "modified_count": 0,
+            "upserted_id": null
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Update many existing documents in a given collection
+    * collection: collection name.
+    * filter: A query that matches the document to update.
+    * update: The modifications to apply.
+    * options:
+        * upsert (optional): If True, perform an insert if no documents match the filter.
+        * bypass_document_validation: (optional) If True, allows the write to opt-out of document level validation. Default is False. This option is only supported on MongoDB 3.2 and above.
+```json
+HTTP: POST
+URL: /api/v1/db/update_many
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "collection": "works",
+      "filter": {
+        "author": "john doe1",
+      },
+      "update": {"$set": {
+        "author": "john doe1_1", 
+        "title": "Eve for Dummies1_1"
+      }},
+      "options": {
+          "upsert": true,
+          "bypass_document_validation": false
+      }
+    }
+return:
+    Success:
+    {
+        "_status": "OK",
+        "acknowledged": true,
+        "matched_count": 10,
+        "modified_count": 10,
+        "upserted_id": null
+    }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Delete an existing document in a given collection
+    * collection: collection name.
+    * filter: A query that matches the document to delete.
+```json
+HTTP: POST
+URL: /api/v1/db/delete_one
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+        "collection": "works",
+        "filter": {
+            "author": "john doe3_1",
+        }
+    }
+
+return:
+    Success:
+    {
+        "_status": "OK",
+        "acknowledged": true,
+        "deleted_count": 1,
+    }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Delete many existing documents in a given collection
+    * collection: collection name.
+    * filter: A query that matches the document to delete.
+```json
+HTTP: POST
+URL: /api/v1/db/delete_many
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+        "collection": "works",
+        "filter": {
+            "author": "john doe1",
+        }
+    }
+return:
+    Success:
+    {
+        "_status": "OK",
+        "acknowledged": true,
+        "deleted_count": 0,
+    }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```  
+
+- Count documents
+    * collection: collection name.
+    * filter: The document of filter
+    * options:
+        * skip (int): The number of matching documents to skip before returning results.
+        * limit (int): The maximum number of documents to count. Must be a positive integer. If not provided, no limit is imposed.
+        * maxTimeMS (int): The maximum amount of time to allow this operation to run, in milliseconds.
+```json
+HTTP: POST
+URL: /api/v1/db/count_documents
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+        "collection": "works",
+        "filter": {
+            "author": "john doe1_1",
+        },
+        "options": {
+            "skip": 0,
+            "limit": 10,
+            "maxTimeMS": 1000000000
+        }
+    }
+return:
+    Success: 
+    {
+        "_status": "OK",
+        "count": 10
+    }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Find a specific document(findOne)
+    * collection: collection name.
+    * options():
+        * filter (optional): a SON object specifying elements which must be present for a document to be included in the result set
+        * projection (optional): a list of field names that should be returned in the result set or a dict specifying the fields to include or exclude. If projection is a list “_id” will always be returned. Use a dict to exclude fields from the result (e.g. projection={‘_id’: False}).
+        * skip (optional): the number of documents to omit (from the start of the result set) when returning the results
+        * sort  (optional): a list of (key, direction) pairs specifying the sort order for this query.
+            ```
+            {'field1': 'asc',
+            'field2': 'desc'}
+            ```
+        * allow_partial_results (optional): if True, mongos will return partial results if some shards are down instead of returning an error.
+        * return_key (optional): If True, return only the index keys in each document.
+        * show_record_id (optional): If True, adds a field $recordId in each document with the storage engine’s internal record identifier.
+        * batch_size (optional): Limits the number of documents returned in a single batch.
+```json
+HTTP: POST
+URL: /api/v1/db/find_one
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+        "collection": "works",
+        "options": {
+            "filter": {
+                "author": "john doe1_1"
+            },
+            "skip": 0,
+            "projection": {‘_id’: false},
+            "sort": {"_id": "desc"},
+            "allow_partial_results": false,
+            "return_key": false,
+            "show_record_id": false,
+            "batch_size": 0
+        }
+    }
+return:
+    Success: 
+        {
+            "_status": "OK",
+            "items": {
+                "author": "john doe1_1",
+                "title": "Eve for Dummies1_1"
+            }
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Find all documents(findMany)
+    * collection: collection name.
+    * options:
+        * filter (optional): a SON object specifying elements which must be present for a document to be included in the result set
+        * projection (optional): a list of field names that should be returned in the result set or a dict specifying the fields to include or exclude. If projection is a list “_id” will always be returned. Use a dict to exclude fields from the result (e.g. projection={‘_id’: False}).
+        * skip (optional): the number of documents to omit (from the start of the result set) when returning the results
+        * limit (optional): the maximum number of results to return. A limit of 0 (the default) is equivalent to setting no limit.
+        * sort  (optional): a list of (key, direction) pairs specifying the sort order for this query.
+            ```
+            {'field1': 'asc',
+            'field2': 'desc'}
+            ```
+        * allow_partial_results (optional): if True, mongos will return partial results if some shards are down instead of returning an error.
+        * return_key (optional): If True, return only the index keys in each document.
+        * show_record_id (optional): If True, adds a field $recordId in each document with the storage engine’s internal record identifier.
+        * batch_size (optional): Limits the number of documents returned in a single batch.
+```json
+HTTP: POST
+URL: /api/v1/db/find_many
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+        "collection": "works",
+        "options": {
+            "filter": {
+                "author": "john doe1_1",
+            },
+            "skip": 0,
+            "limit": 3,
+            "projection": {
+                "_id": false
+            },
+            "sort": {
+                "_id": "desc"
+            },
+            "allow_partial_results": false,
+            "return_key": false,
+            "show_record_id": false,
+            "batch_size": 0
+        }
+    }
+return:
+    Success: 
+        {
+            "_status": "OK",
+            "items": [
+                {
+                    "author": "john doe1_1",
+                    "title": "Eve for Dummies1_1"
+                },
+                {
+                    "author": "john doe1_1",
+                    "title": "Eve for Dummies1_1"
+                },
+                {
+                    "author": "john doe1_1",
+                    "title": "Eve for Dummies1_1"
+                }
+            ]
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
 ```
 
 ## File operation

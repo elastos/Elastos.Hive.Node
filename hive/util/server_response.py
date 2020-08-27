@@ -1,5 +1,8 @@
-from eve import STATUS, STATUS_OK, STATUS_ERR
 from flask import jsonify
+
+STATUS = "_status"
+STATUS_OK = "OK"
+STATUS_ERR = "ERR"
 
 
 def response_ok(data_dic=None):

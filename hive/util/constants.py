@@ -40,33 +40,65 @@ SCRIPTING_NAME = "name"
 SCRIPTING_SUBCONDITION_COLLECTION = "subconditions"
 SCRIPTING_SCRIPT_COLLECTION = "scripts"
 SCRIPTING_CONDITION = "condition"
+SCRIPTING_CONDITION_TYPE = "condition_type"
 SCRIPTING_EXEC_SEQUENCE = "exec_sequence"
 SCRIPTING_EXECUTABLE_FIND_ONE = "db/find_one"
 SCRIPTING_EXECUTABLE_FIND_MANY = "db/find_many"
 SCRIPTING_EXECUTABLE_INSERT_ONE = "db/insert_one"
 SCRIPTING_EXECUTABLE_UPDATE_MANY = "db/update_many"
 SCRIPTING_EXECUTABLE_DELETE_MANY = "db/delete_many"
+SCRIPTING_EXECUTABLE_CALLER_DID = "*caller_did"
 SCRIPTING_SUBCONDITIONS_SCHEMA = {
     "collection": "subconditions",
     "schema": {
-        "id": "string",
-        "name": "string",
+        "id": {
+            "type": "string"
+        },
+        "name": {
+            "type": "string"
+        },
+        "did": {
+            "type": "string"
+        },
+        "app_id": {
+            "type": "string"
+        },
+        "condition_type": {
+            "type": "string"
+        },
         "condition": {
-            "condition_type": "string",
-            "collection": "string",
-            "query": "object"
+            "type": "dict"
         }
     }
 }
 SCRIPTING_SCRIPTS_SCHEMA = {
     "collection": "scripts",
     "schema": {
-        "id": "string",
-        "name": "string",
-        "exec_sequence": "object",
+        "id": {
+            "type": "string"
+        },
+        "name": {
+            "type": "string"
+        },
+        "did": {
+            "type": "string"
+        },
+        "app_id": {
+            "type": "string"
+        },
+        "exec_sequence": {
+            "type": "dict"
+        },
         "condition": {
-            "operation": "string",
-            "name": "string"
+            "type": "dict",
+            "schema": {
+                "operation": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
         }
     }
 }

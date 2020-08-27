@@ -25,15 +25,18 @@ pip3 install virtualenv
 type virtualenv >/dev/null 2>&1 || { echo >&2 "No suitable python virtual env tool found, aborting"; exit 1; }
 
 rm -rf .venv
-virtualenv -p `which $PYTHON` .venv
-source .venv/bin/activate
-pip install --upgrade pip
 
 case `uname` in
     Linux )
+        virtualenv -p `which python3.6` .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
         pip install -r requirements.txt
         ;;
     Darwin )
+        virtualenv -p `which python3.7` .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
         pip install --global-option=build_ext --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" -r requirements.txt
         ;;
     *)

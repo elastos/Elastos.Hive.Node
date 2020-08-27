@@ -21,8 +21,6 @@ def init_app(app):
 
 @main.route('/api/v1/echo', methods=['POST'])
 def echo():
-    # get_json(force=False, silent=False, cache=True)
-    # 获取json失败会直接返回
     content = request.get_json()
     return jsonify(content)
 

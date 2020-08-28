@@ -13,6 +13,17 @@ from hive.util.constants import DID_INFO_DB_NAME, DID_RESOURCE_COL, DID_RESOURCE
 from hive.util.common import did_tail_part, create_full_path_dir
 
 
+def convert_oid(query):
+    new_query = {}
+    for key, value in query.items():
+        if isinstance(value, dict):
+            if "$oid" in value.keys():
+                new_query[key] = ObjectId(value["$oid"])
+        else:
+            new_query[key] = value
+    return new_query
+
+
 def options_filter(content, args):
     ops = dict()
     if "options" not in content:
@@ -20,10 +31,7 @@ def options_filter(content, args):
     options = content["options"]
     for arg in args:
         if arg in options:
-            ops[arg] = options[arg]
-            if arg == "filter" and isinstance(ops[arg], dict):
-                if "_id" in ops[arg].keys():
-                    ops[arg]["_id"] = ObjectId(ops[arg]["_id"])
+            ops[arg] = convert_oid(options[arg])
     return ops
 
 

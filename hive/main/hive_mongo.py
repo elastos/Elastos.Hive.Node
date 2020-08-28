@@ -8,7 +8,7 @@ from pymongo.errors import CollectionInvalid
 from hive.settings import MONGO_HOST, MONGO_PORT
 from hive.util.constants import DATETIME_FORMAT
 from hive.util.did_info import get_collection
-from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort
+from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort, convert_oid
 from hive.util.server_response import response_ok, response_err
 from hive.main.interceptor import post_json_param_pre_proc
 
@@ -21,9 +21,9 @@ class HiveMongoDb:
         self.app = app
 
     def create_collection(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection")
+        if err:
+            return err
 
         collection_name = content.get('collection', None)
         if collection_name is None:
@@ -41,9 +41,9 @@ class HiveMongoDb:
         return response_ok()
 
     def delete_collection(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection")
+        if err:
+            return err
 
         collection_name = content.get('collection', None)
         if collection_name is None:
@@ -61,9 +61,9 @@ class HiveMongoDb:
         return response_ok()
 
     def insert_one(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection", "document")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection", "document")
+        if err:
+            return err
 
         col = get_collection(did, app_id, content["collection"])
         options = options_filter(content, ("bypass_document_validation",))
@@ -81,9 +81,9 @@ class HiveMongoDb:
             return response_err(500, "Exception:" + str(e))
 
     def insert_many(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection", "document")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection", "document")
+        if err:
+            return err
 
         col = get_collection(did, app_id, content["collection"])
 
@@ -103,9 +103,9 @@ class HiveMongoDb:
             return response_err(500, "Exception:" + str(e))
 
     def update_one(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection", "filter", "update")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection", "filter", "update")
+        if err:
+            return err
 
         col = get_collection(did, app_id, content["collection"])
         options = options_filter(content, ("upsert", "bypass_document_validation"))
@@ -127,9 +127,9 @@ class HiveMongoDb:
             return response_err(500, "Exception:" + str(e))
 
     def update_many(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection", "filter", "update")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection", "filter", "update")
+        if err:
+            return err
 
         col = get_collection(did, app_id, content["collection"])
         options = options_filter(content, ("upsert", "bypass_document_validation"))
@@ -151,9 +151,9 @@ class HiveMongoDb:
             return response_err(500, "Exception:" + str(e))
 
     def delete_one(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection", "filter")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
+        if err:
+            return err
 
         col = get_collection(did, app_id, content["collection"])
         try:
@@ -167,9 +167,9 @@ class HiveMongoDb:
             return response_err(500, "Exception:" + str(e))
 
     def delete_many(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection", "filter")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
+        if err:
+            return err
 
         col = get_collection(did, app_id, content["collection"])
         try:
@@ -183,25 +183,25 @@ class HiveMongoDb:
             return response_err(500, "Exception:" + str(e))
 
     def count_documents(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection", "filter")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
+        if err:
+            return err
 
         col = get_collection(did, app_id, content["collection"])
 
         options = options_filter(content, ("skip", "limit", "maxTimeMS"))
 
         try:
-            count = col.count_documents(content["filter"], **options)
+            count = col.count_documents(convert_oid(content["filter"]), **options)
             data = {"count": count}
             return response_ok(data)
         except Exception as e:
             return response_err(500, "Exception:" + str(e))
 
     def find_one(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection")
+        if err:
+            return err
 
         col = get_collection(did, app_id, content["collection"])
         options = options_filter(content, ("filter",
@@ -226,9 +226,9 @@ class HiveMongoDb:
             return response_err(500, "Exception:" + str(e))
 
     def find_many(self):
-        did, app_id, content, response = post_json_param_pre_proc("collection")
-        if response is not None:
-            return response
+        did, app_id, content, err = post_json_param_pre_proc("collection")
+        if err:
+            return err
 
         col = get_collection(did, app_id, content["collection"])
 

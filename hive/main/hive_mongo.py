@@ -22,7 +22,7 @@ class HiveMongoDb:
 
     def create_collection(self):
         did, app_id, content, response = post_json_param_pre_proc("collection")
-        if content is None:
+        if response is not None:
             return response
 
         collection_name = content.get('collection', None)
@@ -42,7 +42,7 @@ class HiveMongoDb:
 
     def delete_collection(self):
         did, app_id, content, response = post_json_param_pre_proc("collection")
-        if content is None:
+        if response is not None:
             return response
 
         collection_name = content.get('collection', None)
@@ -62,7 +62,7 @@ class HiveMongoDb:
 
     def insert_one(self):
         did, app_id, content, response = post_json_param_pre_proc("collection", "document")
-        if content is None:
+        if response is not None:
             return response
 
         col = get_collection(did, app_id, content["collection"])
@@ -82,7 +82,7 @@ class HiveMongoDb:
 
     def insert_many(self):
         did, app_id, content, response = post_json_param_pre_proc("collection", "document")
-        if content is None:
+        if response is not None:
             return response
 
         col = get_collection(did, app_id, content["collection"])
@@ -104,7 +104,7 @@ class HiveMongoDb:
 
     def update_one(self):
         did, app_id, content, response = post_json_param_pre_proc("collection", "filter", "update")
-        if content is None:
+        if response is not None:
             return response
 
         col = get_collection(did, app_id, content["collection"])
@@ -128,7 +128,7 @@ class HiveMongoDb:
 
     def update_many(self):
         did, app_id, content, response = post_json_param_pre_proc("collection", "filter", "update")
-        if content is None:
+        if response is not None:
             return response
 
         col = get_collection(did, app_id, content["collection"])
@@ -152,7 +152,7 @@ class HiveMongoDb:
 
     def delete_one(self):
         did, app_id, content, response = post_json_param_pre_proc("collection", "filter")
-        if content is None:
+        if response is not None:
             return response
 
         col = get_collection(did, app_id, content["collection"])
@@ -168,7 +168,7 @@ class HiveMongoDb:
 
     def delete_many(self):
         did, app_id, content, response = post_json_param_pre_proc("collection", "filter")
-        if content is None:
+        if response is not None:
             return response
 
         col = get_collection(did, app_id, content["collection"])
@@ -184,7 +184,7 @@ class HiveMongoDb:
 
     def count_documents(self):
         did, app_id, content, response = post_json_param_pre_proc("collection", "filter")
-        if content is None:
+        if response is not None:
             return response
 
         col = get_collection(did, app_id, content["collection"])
@@ -200,7 +200,7 @@ class HiveMongoDb:
 
     def find_one(self):
         did, app_id, content, response = post_json_param_pre_proc("collection")
-        if content is None:
+        if response is not None:
             return response
 
         col = get_collection(did, app_id, content["collection"])
@@ -227,7 +227,7 @@ class HiveMongoDb:
 
     def find_many(self):
         did, app_id, content, response = post_json_param_pre_proc("collection")
-        if content is None:
+        if response is not None:
             return response
 
         col = get_collection(did, app_id, content["collection"])

@@ -14,6 +14,7 @@ from hive.util.common import did_tail_part
 from hive.settings import DID_BASE_DIR
 from hive.util.flask_rangerequest import RangeRequest
 from hive.util.server_response import response_err, response_ok
+from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 
 
 class HiveFile:
@@ -47,58 +48,15 @@ class HiveFile:
         else:
             return name
 
-    def create(self, is_file):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
-
-        if not HiveSync.is_app_sync_prepared(did, app_id):
-            return response_err(406, "drive is not prepared")
-
-        content = request.get_json(force=True, silent=True)
-        if content is None:
-            return response_err(400, "parameter is not application/json")
-
-        name = content.get('name', None)
-        if name is None:
-            return response_err(404, "name is null")
-        name = self.filter_path_root(name)
-
-        path = self.get_save_files_path(did, app_id)
-        full_path_name = (path / name).resolve()
-        if is_file:
-            if not self.create_full_path_dir(full_path_name.parent):
-                return response_err(500, "make path dir error")
-            if not full_path_name.exists():
-                full_path_name.touch(exist_ok=True)
-            data = {"upload_file_url": "/api/v1/files/uploader/%s" % urllib.parse.quote_plus(name)}
-            return response_ok(data)
-        else:
-            if not full_path_name.exists():
-                if not self.create_full_path_dir(full_path_name):
-                    return response_err(500, "make folder error")
-            return response_ok()
-
     def move(self, is_copy):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
+        did, app_id, content, response = post_json_param_pre_proc("src_path", "dst_path")
+        if response is not None:
+            return response
 
-        if not HiveSync.is_app_sync_prepared(did, app_id):
-            return response_err(406, "drive is not prepared")
-
-        content = request.get_json(force=True, silent=True)
-        if content is None:
-            return response_err(400, "parameter is not application/json")
-
-        src_name = content.get('src_name', None)
-        if src_name is None:
-            return response_err(404, "src_name is null")
+        src_name = content.get('src_path')
         src_name = self.filter_path_root(src_name)
 
-        dst_name = content.get('dst_name', None)
-        if dst_name is None:
-            return response_err(404, "dst_name is null")
+        dst_name = content.get('dst_path')
         dst_name = self.filter_path_root(dst_name)
 
         path = self.get_save_files_path(did, app_id)
@@ -129,20 +87,23 @@ class HiveFile:
         return response_ok()
 
     def upload_file(self, file_name):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
-
-        if not HiveSync.is_app_sync_prepared(did, app_id):
-            return response_err(406, "drive is not prepared")
+        did, app_id, response = pre_proc()
+        if response is not None:
+            return response
 
         path = self.get_save_files_path(did, app_id)
-        file_full_name = (path / urllib.parse.unquote_plus(file_name)).resolve()
+        full_path_name = (path / file_name).resolve()
 
-        if not (file_full_name.exists() and file_full_name.is_file()):
-            return response_err(404, "file not create first")
+        if not self.create_full_path_dir(full_path_name.parent):
+            return response_err(500, "make path dir error")
 
-        with open(file_full_name, "bw") as f:
+        if not full_path_name.exists():
+            full_path_name.touch(exist_ok=True)
+
+        if full_path_name.is_dir():
+            return response_err(404, "file name is a directory")
+
+        with open(full_path_name, "bw") as f:
             chunk_size = 4096
             while True:
                 chunk = request.stream.read(chunk_size)
@@ -159,10 +120,7 @@ class HiveFile:
             resp.status_code = 401
             return resp
 
-        if not HiveSync.is_app_sync_prepared(did, app_id):
-            return response_err(406, "drive is not prepared")
-
-        filename = request.args.get('name')
+        filename = request.args.get('path')
         if filename is None:
             resp.status_code = 400
             return resp
@@ -190,17 +148,11 @@ class HiveFile:
                             size=size).make_response()
 
     def get_property(self):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
+        did, app_id, content, response = get_pre_proc("path")
+        if response is not None:
+            return response
 
-        if not HiveSync.is_app_sync_prepared(did, app_id):
-            return response_err(406, "drive is not prepared")
-
-        name = request.args.get('name')
-        if name is None:
-            return response_err(404, "name is null")
-
+        name = content['path']
         name = self.filter_path_root(name)
 
         path = self.get_save_files_path(did, app_id)
@@ -210,11 +162,12 @@ class HiveFile:
             return response_err(404, "file not exists")
 
         stat_info = full_path_name.stat()
+
         data = {
-            "st_ctime": stat_info.st_ctime,
-            "st_mtime": stat_info.st_mtime,
-            "st_atime": stat_info.st_atime,
-            "st_size": stat_info.st_size,
+            "type": "file" if full_path_name.is_file() else "folder",
+            "name": name,
+            "size": stat_info.st_size,
+            "last_modify": stat_info.st_mtime,
         }
 
         return response_ok(data)
@@ -224,12 +177,9 @@ class HiveFile:
         if (did is None) or (app_id is None):
             return response_err(401, "auth failed")
 
-        if not HiveSync.is_app_sync_prepared(did, app_id):
-            return response_err(406, "drive is not prepared")
-
         path = self.get_save_files_path(did, app_id)
 
-        name = request.args.get('name')
+        name = request.args.get('path')
         if name is None:
             full_path_name = path
         else:
@@ -244,25 +194,25 @@ class HiveFile:
         except Exception as e:
             return response_ok({"files": []})
 
-        names = list()
-        for name in files:
-            if (full_path_name / name).is_file():
-                names.append(name)
-            elif (full_path_name / name).is_dir():
-                names.append(name + "/")
-        return response_ok({"files": names})
+        file_info_list = list()
+        for file in files:
+            full_file = full_path_name / file
+            stat_info = full_file.stat()
+            file_info = {
+                "type": "file" if full_file.is_file() else "folder",
+                "file": file,
+                "size": stat_info.st_size,
+                "last_modify": stat_info.st_mtime,
+            }
+        return response_ok({"file_info_list": file_info_list})
 
     def file_hash(self):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
+        did, app_id, content, response = get_pre_proc("path")
+        if response is not None:
+            return response
 
-        if not HiveSync.is_app_sync_prepared(did, app_id):
-            return response_err(406, "drive is not prepared")
+        name = content['path']
 
-        name = request.args.get('name')
-        if name is None:
-            return response_err(404, "name is null")
         name = self.filter_path_root(name)
 
         path = self.get_save_files_path(did, app_id)
@@ -272,30 +222,22 @@ class HiveFile:
             return response_err(404, "file not exists")
 
         buf_size = 65536  # lets read stuff in 64kb chunks!
-        md5 = hashlib.md5()
+        sha = hashlib.sha256()
         with full_path_name.open() as f:
             while True:
                 data = f.read(buf_size)
                 if not data:
                     break
-                md5.update(data.encode("utf-8"))
-        data = {"MD5": md5.hexdigest()}
+                sha.update(data.encode("utf-8"))
+        data = {"SHA256": sha.hexdigest()}
         return response_ok(data)
 
     def delete(self):
-        did, app_id = did_auth()
-        if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
+        did, app_id, content, response = post_json_param_pre_proc("path")
+        if response is not None:
+            return response
 
-        if not HiveSync.is_app_sync_prepared(did, app_id):
-            return response_err(406, "drive is not prepared")
-
-        content = request.get_json(force=True, silent=True)
-        if content is None:
-            return response_err(400, "parameter is not application/json")
-        filename = content.get('name', None)
-        if filename is None:
-            return response_err(404, "name is null")
+        filename = content.get('path')
         filename = self.filter_path_root(filename)
 
         path = self.get_save_files_path(did, app_id)

@@ -529,51 +529,10 @@ return:
 ```
 
 ## File Operation
-- Create folder
-```json
-HTTP: POST
-URL: /api/v1/files/creator/folder
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: {name="path/of/folder/name"}
-return:
-    Success: {"_status":"OK"}
-    Failure:
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-- Create file
-```json
-HTTP: POST
-URL: /api/v1/files/creator/file
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: {name="path/of/file/name"}
-return:
-    Success:
-        {
-          "_status":"OK",
-          "upload_file_url":"/api/v1/files/uploader/some/url"
-        }
-    Failure:
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
 - Upload file
 ```json
 HTTP: POST
-URL: Create file api return "upload_file_url"
+URL: /api/v1/files/upload/path_of_file_name
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 data: file data
 return:
@@ -591,7 +550,7 @@ return:
 - Download file
 ```json
 HTTP: GET
-URL: api/v1/files/downloader?name="file.name"
+URL: api/v1/files/download?path="path/of/file/file.name"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 return:
     Success: file data
@@ -606,32 +565,15 @@ return:
 comment: support content range
 ```
 
-- Delete file
-```json
-HTTP: POST
-URL: /api/v1/files/deleter/file
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: {"name": "test.png"}
-return:
-    Success: {"_status":"OK"}
-    Failure:
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
+- Delete file or folder
 ```
 
-- Delete folder
 ```json
 HTTP: POST
-URL: /api/v1/files/deleter/folder
+URL: /api/v1/files/delete
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: {"name": "test.png"}
+data: {"path": "path/of/delete/file/or/folder"}
 return:
     Success: {"_status":"OK"}
     Failure:
@@ -647,13 +589,13 @@ return:
 - Move file or folder
 ```json
 HTTP: POST
-URL: /api/v1/files/mover
+URL: /api/v1/files/move
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data:
     {
-      "src_name": "path/of/src/folder/or/file",
-      "dst_name": "path/of/dst/folder/or/file",
+      "src_path": "path/of/src/folder/or/file",
+      "dst_path": "path/of/dst/folder/or/file",
     }
 return:
     Success: {"_status":"OK"}
@@ -671,13 +613,13 @@ comment: usage like shell command "mv"
 - Copy file or folder
 ```json
 HTTP: POST
-URL: /api/v1/files/copier
+URL: /api/v1/files/copy
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data:
     {
-      "src_name": "path/of/src/folder/or/file",
-      "dst_name": "path/of/dst/folder/or/file",
+      "src_path": "path/of/src/folder/or/file",
+      "dst_path": "path/of/dst/folder/or/file",
     }
 return:
     Success: {"_status":"OK"}
@@ -695,17 +637,17 @@ comment: usage like shell command "cp"
 - Get properties of file or folder
 ```json
 HTTP: GET
-URL: api/v1/files/properties?name="file.or.folder.name"
+URL: api/v1/files/properties?path="file.or.folder.name"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:
     Success:
         {
-          "_status": "OK",
-          "st_ctime": 123012.2342,
-          "st_mtime": 123012.2342,
-          "st_atime": 123012.2342,
-          "st_size": 230
+            "_status": "OK",
+            "type": file/folder,
+            "name": "file_or_folder_name",
+            "size": 230,
+            "last_modify": 123012.2342,
         }
     Failure:
         {
@@ -727,11 +669,20 @@ return:
     Success:
         {
           "_status": "OK",
-          "files": [
-            "folder_name/",
-            "filename",
-            "test.png"
-          ]
+          "file_info_list":[
+            {
+              "type": file/folder,
+              "name": "file_name",
+              "size": 230
+              "last_modify": 123012.2342,
+            },
+            {
+              "type": folder,
+              "name": "folder_name",
+              "size": 230
+              "last_modify": 123012.2342,
+              },
+            ]
         }
     Failure:
         {
@@ -743,374 +694,17 @@ return:
         }
 ```
 
-- Get file hash(MD5)
-```json
+11. Get file hash(SHA256)
+```
 HTTP: GET
-URL: /api/v1/files/file/hash?name="file.name"
+URL: /api/v1/files/file/hash?path="path/of/file/name/"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:
     Success:
         {
           "_status": "OK",
-          "MD5": "3a29a81d7b2718a588a5f6f3491b3c57"
-        }
-    Failure:
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-## Scripting
-
-### Register/Update a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner, while registering scripts using /scripting/set_script endpoint. This will insert/update a row in the collection "subconditions". If the name doesn't exist, it'll create a new row and if it does, it'll update the existing row.
-
-- Create/Update a subcondition to check whether a user belongs in a particular group.
-Note that on the query, the mapping "group_id": "id" represents that the client passes us a parameter called "group_id" and this is not the field name in the database. Rather, the field name on "groups" is actually "id" as represented by the mapping. This is to make it so that if there are multiple parameters with the same values, they can be passed just once thereby reducing duplication. Note that "*caller_did" is not passed but rather it's the DID of the user who's executing the script. This value will be retrieved automatically on the backend
-```json
-HTTP: POST
-URL: /api/v1/scripting/set_subcondition
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: 
-    {
-      "name": "user_in_group",
-      "condition": {
-        "endpoint": "condition/has_results",
-        "collection": "groups",
-        "options": {
-          "filter": {
-            "group_id": "_id", 
-            "*caller_did": "friends"
-          },
-          "skip": 0,
-          "limit": 10,
-          "maxTimeMS": 1000000000
-        }
-      }
-    }
-return:
-    Success: 
-        {
-          "_status": "OK", 
-        }
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-- Create/Update a subcondition to check whether the group was created within the timeframe given on the query. 
-```json
-HTTP: POST
-URL: /api/v1/scripting/set_subcondition
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: 
-    {
-      "name": "group_created_age",
-      "condition": {
-        "endpoint": "condition/has_results",
-        "collection": "groups",
-        "options": {
-          "filter": {
-            "group_id": "_id", 
-            "group_created": "created"
-          }
-        }
-      }
-    }
-return:
-    Success: 
-        {
-          "_status": "OK", 
-        }
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-### Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/run_script endpoint to execute one of those scripts and get results/data
-
-- Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction.
-```json
-HTTP: POST
-URL: /api/v1/scripting/set_script
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: 
-    {
-      "name": "get_groups",
-      "exec_sequence": [
-        {
-          "endpoint": "db/find_many",
-          "collection": "groups",
-          "options": {
-            "filter": {
-              "*caller_did": "friends"
-            },
-            "projection": {
-              "_id": false,
-              "name": true
-            }
-          }
-        }
-      ]
-    }
-return:
-    Success: 
-        {
-          "_status": "OK", 
-        }
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-- Create/Update a script to get messages for a particular group messaging in an ascending order according to the modified time. This script further skins the first 10 messages from the group and only gets 50 total messages after that point. Only the messages and modified time are returned back to the user. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages with their last modified date are returned back to the client.
-```json
-HTTP: POST
-URL: /api/v1/scripting/set_script
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: 
-    {
-      "name": "get_group_messages",
-      "exec_sequence": [
-        {
-          "endpoint": "db/find_many",
-          "collection": "messages",
-          "options": {
-            "filter": {
-              "group_id": "group_id"
-            },
-            "projection": {"_id": false},
-            "limit": 100
-          }
-        }
-      ],
-      "condition": {
-          "operation": "sub",
-          "name": "user_in_group"
-      }
-    }
-return:
-    Success: 
-        {
-          "_status": "OK", 
-        }
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-- Create/Update a script to add a new message to the group messaging and then returns all the messages in the group messaging including the newly added one sorted by their modification time. This script contains a condition with "$and" expression. This means that all the subconditions have to return true before the script is executed. First condition is to check whether the DID user belongs to the group and the second condition is to check whether the group was created withint within the given timeframe(passed with parameter in scripting/run_script). Note that this may not be as useful in real use case and is only shown as a demo on what can be done by nesting the conditions. The max limit for nested conditions is 5. Note that "$now" is a special value that represents the current date. As the script is saved, we wouldn't want to immediately get the date but rather let backend determine the date at the time of insertion.
-```json
-HTTP: POST
-URL: /api/v1/scripting/set_script
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: 
-    {
-      "name": "add_group_message",
-      "exec_sequence": [
-        {
-          "endpoint": "db/insert_one",
-          "collection": "messages",
-          "document": {
-            "group_id": "group_id",
-            "*caller_did": "friend_did",
-            "content": "content",
-            "content_created": "created"
-          },
-          "options": {"bypass_document_validation":false}
-        },
-        {
-          "endpoint": "db/find_one",
-          "collection": "messages",
-          "options": {
-            "filter": {
-              "group_id": "group_id"
-            },
-            "projection": {"_id": false},
-            "sort": {"created": "desc"},
-            "allow_partial_results": false,
-            "return_key": false,
-            "show_record_id": false,
-            "batch_size": 0
-          }
-        }
-      ],
-      "condition": {
-        "type": "and",
-        "conditions": [
-          {
-            "type": "or",
-            "conditions": [
-              {
-                "type": "sub",
-                "name": "user_in_group"
-              },
-              {
-                "type": "sub",
-                "name": "user_in_group"
-              }
-            ]
-          },
-          {
-            "type": "sub",
-            "name": "group_created_age"
-          }
-        ]
-      }
-    } 
-return:
-    Success: 
-        {
-          "_status": "OK", 
-        }
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-### Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
-
-- Run a script to get all the groups that the DID user belongs to. As defined by the script, it contains no restriction so anyone is able to retrieve all the groups for a DID user
-```json
-HTTP: POST
-URL: /api/v1/scripting/run_script
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: 
-    {
-      "name": "get_groups"
-    }
-return:
-    Success: 
-        {
-          "_status": "OK", 
-          "items": [
-            {
-              "name": "Group 1"
-            },
-            {
-              "name": "Group 2"
-            }
-          ]
-        }
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-- Run a script to get all the group messages for a particular group ID. This has a subcondition that needs to be satisifed first. This subcondition can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
-```json
-HTTP: POST
-URL: /api/v1/scripting/run_script
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: 
-    {
-      "name": "get_group_messages",
-      "params": {
-        "group_id": "5f484a24efc1cbf6fc88ffb7"
-      }
-    }
-return:
-    Success:
-        {
-          "_status": "OK", 
-          "_items": [
-            {
-              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
-              "content": "Old Message 1"
-            },
-            {
-              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
-              "content": "Old Message 2"
-            }
-          ]
-        }
-    Failure: 
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-- Run a script to add a new message to the group messaging for a particular group id. This has two subconditions that needs to be satisifed first. These subconditions can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
-```json
-HTTP: POST
-URL: /api/v1/scripting/run_script
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data: 
-    {
-      "name": "add_group_message",
-      "params": {
-        "group_id": "5f484a24efc1cbf6fc88ffb7",
-        "group_created": {
-          "$gte": "2021-08-27 00:00:00"
-        },
-        "content": "New Message",
-        "content_created": "2021-08-27 00:00:00"
-      }
-    }
-return:
-    Success:
-        {
-          "_status": "OK", 
-          "_items": [
-            {
-              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
-              "content": "Old Message 1"
-            },
-            {
-              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
-              "content": "Old Message 2"
-            },
-            {
-              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
-              "content": "New message"
-            }
-          ]
+          "SHA256": "3a29a81d7b2718a588a5f6f3491b3c57"
         }
     Failure: 
         {

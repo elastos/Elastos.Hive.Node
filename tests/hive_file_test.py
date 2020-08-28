@@ -44,19 +44,12 @@ class HiveFileTestCase(unittest.TestCase):
         self.assert200(s)
         if r1["_status"] != "OK":
             return
-        for name in r1["files"]:
-            if name[-1] == '/':
-                self.test_client.post('/api/v1/files/deleter/folder',
-                                      data=json.dumps({
-                                          "name": name
-                                      }),
-                                      headers=self.auth)
-            else:
-                self.test_client.post('/api/v1/files/deleter/file',
-                                      data=json.dumps({
-                                          "name": name
-                                      }),
-                                      headers=self.auth)
+        for info in r1["file_info_list"]:
+            self.test_client.post('/api/v1/files/delete',
+                                  data=json.dumps({
+                                      "path": info["name"]
+                                  }),
+                                  headers=self.auth)
 
     def setUp(self):
         logging.getLogger("HiveFileTestCase").info("\n")
@@ -108,29 +101,12 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(status, 201)
 
     def create_upload_file(self, file_name, data):
-        filename = {"name": file_name}
-
-        r, s = self.parse_response(
-            self.test_client.post('/api/v1/files/creator/file',
-                                  data=json.dumps(filename),
-                                  headers=self.upload_auth)
-        )
-        self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
-        upload_file_url = r["upload_file_url"]
-
-        r1, s = self.parse_response(
-            self.test_client.get('/api/v1/files/properties?name=' + file_name, headers=self.auth)
-        )
-
-        self.assert200(s)
-        self.assertEqual(r1["_status"], "OK")
-
         temp = BytesIO()
         temp.write(data.encode(encoding="utf-8"))
         temp.seek(0)
-        temp.name = 'hello-temp.txt'
+        temp.name = 'temp.txt'
 
+        upload_file_url = "/api/v1/files/upload/" + file_name
         r2, s = self.parse_response(
             self.test_client.post(upload_file_url,
                                   data=temp,
@@ -140,34 +116,12 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r2["_status"], "OK")
 
         r3, s = self.parse_response(
-            self.test_client.get('/api/v1/files/properties?name=' + file_name, headers=self.auth)
+            self.test_client.get('/api/v1/files/properties?path=' + file_name, headers=self.auth)
         )
 
         self.assert200(s)
         self.assertEqual(r3["_status"], "OK")
         logging.getLogger("HiveFileTestCase").debug(json.dumps(r3))
-
-    def test_a_create_folder(self):
-        logging.getLogger("HiveFileTestCase").debug("\nRunning test_a_create_folder")
-        file_name = {
-            "name": "folder1/folder2",
-        }
-
-        rt, s = self.parse_response(
-            self.test_client.post('/api/v1/files/creator/folder',
-                                  data=json.dumps(file_name),
-                                  headers=self.upload_auth)
-        )
-        self.assert200(s)
-        self.assertEqual(rt["_status"], "OK")
-
-        r1, s = self.parse_response(
-            self.test_client.get('/api/v1/files/properties?name=folder1/folder2', headers=self.auth)
-        )
-
-        self.assert200(s)
-        self.assertEqual(r1["_status"], "OK")
-        logging.getLogger("HiveFileTestCase").debug(json.dumps(r1))
 
     def test_b_create_and_upload_file_root(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_b_create_and_upload_file_root")
@@ -189,7 +143,7 @@ class HiveFileTestCase(unittest.TestCase):
     def test_f_download_file(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_f_download_file")
         self.create_upload_file("f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
-        r = self.test_client.get('api/v1/files/downloader?name=f1/f2/f3/test_f3_2.txt', headers=self.auth)
+        r = self.test_client.get('api/v1/files/download?path=f1/f2/f3/test_f3_2.txt', headers=self.auth)
 
         self.assert200(r.status_code)
         logging.getLogger("HiveFileTestCase").debug("data:" + str(r.get_data()))
@@ -199,12 +153,12 @@ class HiveFileTestCase(unittest.TestCase):
         self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1_2!")
 
         move_file = {
-            "src_name": "f1/test_f1.txt",
-            "dst_name": "f1/f2/f3/test_f1.txt",
+            "src_path": "f1/test_f1.txt",
+            "dst_path": "f1/f2/f3/test_f1.txt",
         }
 
         rt, s = self.parse_response(
-            self.test_client.post('/api/v1/files/mover',
+            self.test_client.post('/api/v1/files/move',
                                   data=json.dumps(move_file),
                                   headers=self.upload_auth)
         )
@@ -212,13 +166,13 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(rt["_status"], "OK")
 
         r1, s = self.parse_response(
-            self.test_client.get('/api/v1/files/properties?name=f1/test_f1.txt', headers=self.auth)
+            self.test_client.get('/api/v1/files/properties?path=f1/test_f1.txt', headers=self.auth)
         )
         self.assert200(s)
         self.assertNotEqual(r1["_status"], "OK")
 
         r1, s = self.parse_response(
-            self.test_client.get('/api/v1/files/properties?name=f1/f2/f3/test_f1.txt', headers=self.auth)
+            self.test_client.get('/api/v1/files/properties?path=f1/f2/f3/test_f1.txt', headers=self.auth)
         )
         self.assert200(s)
         self.assertEqual(r1["_status"], "OK")
@@ -230,12 +184,12 @@ class HiveFileTestCase(unittest.TestCase):
         self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1_2.txt", "Hello Temp test fr4_2!")
 
         move_file = {
-            "src_name": "f1/f2/f3/fr4_1",
-            "dst_name": "f1/f2/f3/f4",
+            "src_path": "f1/f2/f3/fr4_1",
+            "dst_path": "f1/f2/f3/f4",
         }
 
         r1, s = self.parse_response(
-            self.test_client.post('/api/v1/files/mover',
+            self.test_client.post('/api/v1/files/move',
                                   data=json.dumps(move_file),
                                   headers=self.upload_auth)
         )
@@ -243,7 +197,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r1["_status"], "OK")
 
         r2, s = self.parse_response(
-            self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3', headers=self.auth)
+            self.test_client.get('/api/v1/files/list/folder?path=f1/f2/f3', headers=self.auth)
         )
 
         self.assert200(s)
@@ -251,7 +205,7 @@ class HiveFileTestCase(unittest.TestCase):
         logging.getLogger("HiveFileTestCase").debug(json.dumps(r2))
 
         r3, s = self.parse_response(
-            self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3/f4', headers=self.auth)
+            self.test_client.get('/api/v1/files/list/folder?path=f1/f2/f3/f4', headers=self.auth)
         )
 
         self.assert200(s)
@@ -263,12 +217,12 @@ class HiveFileTestCase(unittest.TestCase):
         self.create_upload_file("f1/f2/test_f2.txt", "Hello Temp test f2_2!")
 
         move_file = {
-            "src_name": "f1/f2/test_f2.txt",
-            "dst_name": "f1/f2/f3/test_f2.txt",
+            "src_path": "f1/f2/test_f2.txt",
+            "dst_path": "f1/f2/f3/test_f2.txt",
         }
 
         rt, s = self.parse_response(
-            self.test_client.post('/api/v1/files/copier',
+            self.test_client.post('/api/v1/files/copy',
                                   data=json.dumps(move_file),
                                   headers=self.upload_auth)
         )
@@ -276,13 +230,13 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(rt["_status"], "OK")
 
         r1, s = self.parse_response(
-            self.test_client.get('/api/v1/files/properties?name=f1/f2/test_f2.txt', headers=self.auth)
+            self.test_client.get('/api/v1/files/properties?path=f1/f2/test_f2.txt', headers=self.auth)
         )
         self.assert200(s)
         self.assertEqual(r1["_status"], "OK")
 
         r2, s = self.parse_response(
-            self.test_client.get('/api/v1/files/properties?name=f1/f2/f3/test_f2.txt', headers=self.auth)
+            self.test_client.get('/api/v1/files/properties?path=f1/f2/f3/test_f2.txt', headers=self.auth)
         )
         self.assert200(s)
         self.assertEqual(r2["_status"], "OK")
@@ -294,12 +248,12 @@ class HiveFileTestCase(unittest.TestCase):
         self.create_upload_file("f1/f2/f3/fr4_2/test_fr4_2_2.txt", "Hello Temp test fr4_2!")
 
         move_file = {
-            "src_name": "f1/f2/f3/fr4_2",
-            "dst_name": "f1/f2/f3/f4/fr_42",
+            "src_path": "f1/f2/f3/fr4_2",
+            "dst_path": "f1/f2/f3/f4/fr_42",
         }
 
         r1, s = self.parse_response(
-            self.test_client.post('/api/v1/files/copier',
+            self.test_client.post('/api/v1/files/copy',
                                   data=json.dumps(move_file),
                                   headers=self.upload_auth)
         )
@@ -307,7 +261,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.assertEqual(r1["_status"], "OK")
 
         r2, s = self.parse_response(
-            self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3', headers=self.auth)
+            self.test_client.get('/api/v1/files/list/folder?path=f1/f2/f3', headers=self.auth)
         )
 
         self.assert200(s)
@@ -315,7 +269,7 @@ class HiveFileTestCase(unittest.TestCase):
         logging.getLogger("HiveFileTestCase").debug(json.dumps(r2))
 
         r3, s = self.parse_response(
-            self.test_client.get('/api/v1/files/list/folder?name=f1/f2/f3/f4', headers=self.auth)
+            self.test_client.get('/api/v1/files/list/folder?path=f1/f2/f3/f4', headers=self.auth)
         )
 
         self.assert200(s)
@@ -326,7 +280,7 @@ class HiveFileTestCase(unittest.TestCase):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_k_file_hash")
         self.create_upload_file("f1/f2/test_f2_hash.txt", "Hello Temp test f2_hash!")
         r1, s = self.parse_response(
-            self.test_client.get('/api/v1/files/file/hash?name=f1/f2/test_f2_hash.txt', headers=self.auth)
+            self.test_client.get('/api/v1/files/file/hash?path=f1/f2/test_f2_hash.txt', headers=self.auth)
         )
 
         self.assert200(s)
@@ -338,16 +292,16 @@ class HiveFileTestCase(unittest.TestCase):
         self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1!")
         self.create_upload_file("f1/test_f2.txt", "Hello Temp test f1!")
         r, s = self.parse_response(
-            self.test_client.post('/api/v1/files/deleter/file',
+            self.test_client.post('/api/v1/files/delete',
                                   data=json.dumps({
-                                      "name": "f1/test_f1.txt"
+                                      "path": "f1/test_f1.txt"
                                   }),
                                   headers=self.auth)
         )
         self.assert200(s)
 
         r1, s = self.parse_response(
-            self.test_client.get('/api/v1/files/properties?name=f1/test_f1.txt', headers=self.auth)
+            self.test_client.get('/api/v1/files/properties?path=f1/test_f1.txt', headers=self.auth)
         )
         self.assert200(s)
         self.assertNotEqual(r1["_status"], "OK")
@@ -355,9 +309,9 @@ class HiveFileTestCase(unittest.TestCase):
     def test_m_delete_folder(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_m_delete_folder")
         r, s = self.parse_response(
-            self.test_client.post('/api/v1/files/deleter/folder',
+            self.test_client.post('/api/v1/files/delete',
                                   data=json.dumps({
-                                      "name": "f1"
+                                      "path": "f1"
                                   }),
                                   headers=self.auth)
         )

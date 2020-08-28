@@ -1,13 +1,12 @@
-import json
+from datetime import datetime
 
 from bson import ObjectId
-from flask import request
 
-import pymongo
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from hive.settings import MONGO_HOST, MONGO_PORT
+from hive.util.constants import DATETIME_FORMAT
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort
 from hive.util.server_response import response_ok, response_err
@@ -69,6 +68,8 @@ class HiveMongoDb:
         col = get_collection(did, app_id, content["collection"])
         options = options_filter(content, ("bypass_document_validation",))
         try:
+            content["document"]["created"] = datetime.utcnow()
+            content["document"]["modified"] = datetime.utcnow()
             ret = col.insert_one(content["document"], **options)
 
             data = {
@@ -89,6 +90,9 @@ class HiveMongoDb:
         options = options_filter(content, ("bypass_document_validation", "ordered"))
 
         try:
+            for document in content["document"]:
+                document["created"] = datetime.utcnow()
+                document["modified"] = datetime.utcnow()
             ret = col.insert_many(content["document"], **options)
             data = {
                 "acknowledged": ret.acknowledged,
@@ -107,6 +111,10 @@ class HiveMongoDb:
         options = options_filter(content, ("upsert", "bypass_document_validation"))
 
         try:
+            content["update"]["$setOnInsert"] = {
+                "created": datetime.utcnow()
+            }
+            content["filter"]["modified"] = datetime.utcnow()
             ret = col.update_one(content["filter"], content["update"], **options)
             data = {
                 "acknowledged": ret.acknowledged,
@@ -127,6 +135,11 @@ class HiveMongoDb:
         options = options_filter(content, ("upsert", "bypass_document_validation"))
 
         try:
+            for filt in content["filter"]:
+                filt["created"] = datetime.utcnow()
+            content["update"]["$setOnInsert"] = {
+                "created": datetime.utcnow()
+            }
             ret = col.update_many(content["filter"], content["update"], **options)
             data = {
                 "acknowledged": ret.acknowledged,

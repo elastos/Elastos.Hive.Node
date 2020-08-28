@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 
 import pymongo
+from bson import ObjectId
 from pymongo import MongoClient
 
 from hive.settings import DID_BASE_DIR, MONGO_HOST, MONGO_PORT
@@ -20,6 +21,9 @@ def options_filter(content, args):
     for arg in args:
         if arg in options:
             ops[arg] = options[arg]
+            if arg == "filter" and isinstance(ops[arg], dict):
+                if "_id" in ops[arg].keys():
+                    ops[arg]["_id"] = ObjectId(ops[arg]["_id"])
     return ops
 
 

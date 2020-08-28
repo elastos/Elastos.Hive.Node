@@ -1,14 +1,18 @@
 from bson import ObjectId
 from pymongo import MongoClient
 
+from datetime import datetime
+
 from hive.main.interceptor import post_json_param_pre_proc
 from hive.settings import MONGO_HOST, MONGO_PORT
 from hive.util.constants import SCRIPTING_SUBCONDITION_COLLECTION, SCRIPTING_SCRIPT_COLLECTION, \
-    SCRIPTING_EXECUTABLE_FIND_MANY, SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_FIND_ONE
+    SCRIPTING_EXECUTABLE_FIND_MANY, SCRIPTING_EXECUTABLE_FIND_ONE, DATETIME_FORMAT, \
+    SCRIPTING_CONDITION_HAS_RESULTS, SCRIPTING_CONDITION_OP_SUB, SCRIPTING_CONDITION_OP_AND, SCRIPTING_CONDITION_OP_OR, \
+    SCRIPTING_EXECUTABLE_INSERT_ONE
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, \
-    options_filter, gene_sort
-from hive.util.did_scripting import run_executable_find
+    options_filter
+from hive.util.did_scripting import run_executable_find, check_condition, run_executable_insert
 from hive.util.server_response import response_ok, response_err
 
 
@@ -35,8 +39,13 @@ class HiveScripting:
             "name": content.get("name")
         }
         content = {k: v for k, v in content.items() if k != 'name'}
+
+        content["modified"] = datetime.utcnow()
         update = {
-            "$set": content
+            "$set": content,
+            "$setOnInsert": {
+                "created": datetime.utcnow()
+            }
         }
         options = {
             "upsert": True,
@@ -61,11 +70,9 @@ class HiveScripting:
             return err
 
         # Data Validation
-        condition_type = content.get('condition').get('type', None)
-        condition_collection = content.get('condition').get('collection', None)
-        condition_query = content.get('condition').get('query', None)
-        if (condition_type is None) or (condition_collection is None) or (condition_query is None):
-            return response_err(400, "all the parameters for 'condition' are not set")
+        condition_endpoint = content.get('condition').get('endpoint', None)
+        if condition_endpoint is None:
+            return response_err(400, "the parameter 'endpoint' must be set for 'condition'")
 
         # Create collection "subconditions" if it doesn't exist and
         # return response
@@ -100,26 +107,24 @@ class HiveScripting:
 
         # Find the script in the database
         col = get_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
-        content = {
+        content_options = {
             "options": {
-                "filter": content
+                "filter": {k: v for k, v in content.items() if k != 'params'}
             }
         }
-        options = options_filter(content, ("filter",
-                                           "projection",
-                                           "skip",
-                                           "limit",
-                                           "sort",
-                                           "allow_partial_results",
-                                           "return_key",
-                                           "show_record_id",
-                                           "batch_size"))
-        print("options: ", options)
+        options = options_filter(content_options, ("filter",
+                                                   "projection",
+                                                   "skip",
+                                                   "limit",
+                                                   "sort",
+                                                   "allow_partial_results",
+                                                   "return_key",
+                                                   "show_record_id",
+                                                   "batch_size"))
         try:
             script = col.find_one(**options)
             if ("_id" in script) and (isinstance(script["_id"], ObjectId)):
                 script["_id"] = str(script["_id"])
-            print("script: ", script["name"])
         except Exception as e:
             return response_err(500, "Exception:" + str(e))
 
@@ -127,24 +132,43 @@ class HiveScripting:
         params = content.get('params', None)
         condition = script.get("condition")
         if condition:
-            pass
+            # TODO: Verify this key exists in set_script later
+            operation = condition.get('operation')
+            total_passed = [True]
+            if operation == SCRIPTING_CONDITION_OP_AND:
+                for c in condition.get('conditions'):
+                    passed = check_condition(did, app_id, c, params)
+                    if not passed:
+                        total_passed.append(False)
+                        break
+            elif operation == SCRIPTING_CONDITION_OP_OR:
+                for i, c in enumerate(condition.get('conditions')):
+                    passed = check_condition(did, app_id, c, params)
+                    if passed:
+                        total_passed.append(True)
+                        break
+                    else:
+                        if i == len(condition.get('conditions') - 1):
+                            total_passed.append(False)
+            if False in total_passed:
+                return response_err(403, "the conditions were not met to execute this script")
 
         # TODO: Run the executables in order and grab the result from the last executable
         exec_sequence = script.get("exec_sequence")
         data = {}
         for index, executable in enumerate(exec_sequence):
             endpoint = executable.get("endpoint")
-            if index == len(exec_sequence) - 1:
-                if endpoint == SCRIPTING_EXECUTABLE_FIND_MANY:
-                    data, err_message = run_executable_find(did, app_id, executable, params)
-                    if err_message:
-                        return response_err(500, err_message)
-                elif endpoint == SCRIPTING_EXECUTABLE_FIND_ONE:
-                    data, err_message = run_executable_find(did, app_id, executable, params, find_one=True)
-                    if err_message:
-                        return response_err(500, err_message)
-            else:
-                pass
-                # run_script_from_db(did, app_id, db_name, executable, params)
+            if endpoint == SCRIPTING_EXECUTABLE_FIND_MANY:
+                data, err_message = run_executable_find(did, app_id, executable, params)
+                if err_message:
+                    return response_err(500, err_message)
+            elif endpoint == SCRIPTING_EXECUTABLE_FIND_ONE:
+                data, err_message = run_executable_find(did, app_id, executable, params, find_one=True)
+                if err_message:
+                    return response_err(500, err_message)
+            elif endpoint == SCRIPTING_EXECUTABLE_INSERT_ONE:
+                data, err_message = run_executable_insert(did, app_id, executable, params)
+                if err_message:
+                    return response_err(500, err_message)
 
         return response_ok(data)

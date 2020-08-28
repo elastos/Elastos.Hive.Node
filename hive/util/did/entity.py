@@ -109,9 +109,9 @@ class Entity:
                 print_err("check_did_and_new")
                 return
 
-        ret = lib.DIDStore_PublishDID(self.store, self.storepass, self.did, ffi.NULL, False)
-        if ret == -1:
-            print_err("DIDStore_PublishDID")
+        # ret = lib.DIDStore_PublishDID(self.store, self.storepass, self.did, ffi.NULL, False)
+        # if ret == -1:
+        #     print_err("DIDStore_PublishDID")
 
         self.did_str = self.get_did_string_from_did(self.did)
         logging.debug(self.did_str)

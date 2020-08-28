@@ -135,11 +135,10 @@ class HiveMongoDb:
         options = options_filter(content, ("upsert", "bypass_document_validation"))
 
         try:
-            for filt in content["filter"]:
-                filt["created"] = datetime.utcnow()
             content["update"]["$setOnInsert"] = {
                 "created": datetime.utcnow()
             }
+            content["filter"]["modified"] = datetime.utcnow()
             ret = col.update_many(content["filter"], content["update"], **options)
             data = {
                 "acknowledged": ret.acknowledged,

@@ -2,6 +2,8 @@ from decouple import config
 
 DID_INFO_DB_NAME = config('DID_INFO_DB_NAME', default="hive_manage_info", cast=str)
 
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
 DID_INFO_REGISTER_COL = "auth_register"
 DID = "did"
 APP_ID = "app_id"
@@ -34,3 +36,19 @@ FILE_INFO_FILE_MODIFY_TIME = "file_modify_time"
 DID_AUTH_SUBJECT = "didauth"
 DID_AUTH_REALM = "elastos_hive_node"
 
+SCRIPTING_NAME = "name"
+SCRIPTING_SUBCONDITION_COLLECTION = "subconditions"
+SCRIPTING_SCRIPT_COLLECTION = "scripts"
+SCRIPTING_CONDITION = "condition"
+SCRIPTING_CONDITION_TYPE = "condition_type"
+SCRIPTING_EXEC_SEQUENCE = "exec_sequence"
+SCRIPTING_CONDITION_HAS_RESULTS = "condition/has_results"
+SCRIPTING_EXECUTABLE_FIND_ONE = "db/find_one"
+SCRIPTING_EXECUTABLE_FIND_MANY = "db/find_many"
+SCRIPTING_EXECUTABLE_INSERT_ONE = "db/insert_one"
+SCRIPTING_EXECUTABLE_UPDATE_MANY = "db/update_many"
+SCRIPTING_EXECUTABLE_DELETE_MANY = "db/delete_many"
+SCRIPTING_CONDITION_OP_SUB = "sub"
+SCRIPTING_CONDITION_OP_AND = "and"
+SCRIPTING_CONDITION_OP_OR = "or"
+SCRIPTING_EXECUTABLE_CALLER_DID = "*caller_did"

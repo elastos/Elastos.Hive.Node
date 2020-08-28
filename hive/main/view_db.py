@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint
 
 from hive.main.hive_mongo import HiveMongoDb
 

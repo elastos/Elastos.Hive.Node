@@ -40,4 +40,3 @@ case `uname` in
     exit 1
     ;;
 esac
-

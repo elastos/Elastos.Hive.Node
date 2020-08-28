@@ -1,4 +1,4 @@
-import logging, logging.config, yaml
+import logging.config, yaml
 
 from flask import request
 from flask_script import Manager, Server

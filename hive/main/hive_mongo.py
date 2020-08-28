@@ -1,14 +1,14 @@
-import json
+from datetime import datetime
 
 from bson import ObjectId
-from flask import request
 
-import pymongo
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from hive.settings import MONGO_HOST, MONGO_PORT
-from hive.util.did_mongo_db_resource import gene_mongo_db_name
+from hive.util.constants import DATETIME_FORMAT
+from hive.util.did_info import get_collection
+from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort
 from hive.util.server_response import response_ok, response_err
 from hive.main.interceptor import post_json_param_pre_proc
 
@@ -19,23 +19,6 @@ class HiveMongoDb:
 
     def init_app(self, app):
         self.app = app
-
-    def __options_filter(self, content, args):
-        ops = dict()
-        if "options" not in content:
-            return ops
-        options = content["options"]
-        for arg in args:
-            if arg in options:
-                ops[arg] = options[arg]
-        return ops
-
-    def get_collction(self, did, app_id, collection):
-        connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-        db_name = gene_mongo_db_name(did, app_id)
-        db = connection[db_name]
-        col = db[collection]
-        return col
 
     def create_collection(self):
         did, app_id, content, response = post_json_param_pre_proc("collection")
@@ -82,9 +65,11 @@ class HiveMongoDb:
         if content is None:
             return response
 
-        col = self.get_collction(did, app_id, content["collection"])
-        options = self.__options_filter(content, ("bypass_document_validation",))
+        col = get_collection(did, app_id, content["collection"])
+        options = options_filter(content, ("bypass_document_validation",))
         try:
+            content["document"]["created"] = datetime.utcnow()
+            content["document"]["modified"] = datetime.utcnow()
             ret = col.insert_one(content["document"], **options)
 
             data = {
@@ -100,11 +85,14 @@ class HiveMongoDb:
         if content is None:
             return response
 
-        col = self.get_collction(did, app_id, content["collection"])
+        col = get_collection(did, app_id, content["collection"])
 
-        options = self.__options_filter(content, ("bypass_document_validation", "ordered"))
+        options = options_filter(content, ("bypass_document_validation", "ordered"))
 
         try:
+            for document in content["document"]:
+                document["created"] = datetime.utcnow()
+                document["modified"] = datetime.utcnow()
             ret = col.insert_many(content["document"], **options)
             data = {
                 "acknowledged": ret.acknowledged,
@@ -119,10 +107,14 @@ class HiveMongoDb:
         if content is None:
             return response
 
-        col = self.get_collction(did, app_id, content["collection"])
-        options = self.__options_filter(content, ("upsert", "bypass_document_validation"))
+        col = get_collection(did, app_id, content["collection"])
+        options = options_filter(content, ("upsert", "bypass_document_validation"))
 
         try:
+            content["update"]["$setOnInsert"] = {
+                "created": datetime.utcnow()
+            }
+            content["filter"]["modified"] = datetime.utcnow()
             ret = col.update_one(content["filter"], content["update"], **options)
             data = {
                 "acknowledged": ret.acknowledged,
@@ -139,10 +131,14 @@ class HiveMongoDb:
         if content is None:
             return response
 
-        col = self.get_collction(did, app_id, content["collection"])
-        options = self.__options_filter(content, ("upsert", "bypass_document_validation"))
+        col = get_collection(did, app_id, content["collection"])
+        options = options_filter(content, ("upsert", "bypass_document_validation"))
 
         try:
+            content["update"]["$setOnInsert"] = {
+                "created": datetime.utcnow()
+            }
+            content["filter"]["modified"] = datetime.utcnow()
             ret = col.update_many(content["filter"], content["update"], **options)
             data = {
                 "acknowledged": ret.acknowledged,
@@ -159,7 +155,7 @@ class HiveMongoDb:
         if content is None:
             return response
 
-        col = self.get_collction(did, app_id, content["collection"])
+        col = get_collection(did, app_id, content["collection"])
         try:
             ret = col.delete_one(content["filter"])
             data = {
@@ -175,7 +171,7 @@ class HiveMongoDb:
         if content is None:
             return response
 
-        col = self.get_collction(did, app_id, content["collection"])
+        col = get_collection(did, app_id, content["collection"])
         try:
             ret = col.delete_many(content["filter"])
             data = {
@@ -191,9 +187,9 @@ class HiveMongoDb:
         if content is None:
             return response
 
-        col = self.get_collction(did, app_id, content["collection"])
+        col = get_collection(did, app_id, content["collection"])
 
-        options = self.__options_filter(content, ("skip", "limit", "maxTimeMS"))
+        options = options_filter(content, ("skip", "limit", "maxTimeMS"))
 
         try:
             count = col.count_documents(content["filter"], **options)
@@ -202,31 +198,22 @@ class HiveMongoDb:
         except Exception as e:
             return response_err(500, "Exception:" + str(e))
 
-    def __gene_sort(self, sort_para):
-        sorts = list()
-        for field in sort_para.keys():
-            if "desc" == sort_para[field]:
-                sorts.append((field, pymongo.DESCENDING))
-            else:
-                sorts.append((field, pymongo.ASCENDING))
-        return sorts
-
     def find_one(self):
         did, app_id, content, response = post_json_param_pre_proc("collection")
         if content is None:
             return response
 
-        col = self.get_collction(did, app_id, content["collection"])
-        options = self.__options_filter(content, ("filter",
-                                                  "projection",
-                                                  "skip",
-                                                  "sort",
-                                                  "allow_partial_results",
-                                                  "return_key",
-                                                  "show_record_id",
-                                                  "batch_size"))
+        col = get_collection(did, app_id, content["collection"])
+        options = options_filter(content, ("filter",
+                                           "projection",
+                                           "skip",
+                                           "sort",
+                                           "allow_partial_results",
+                                           "return_key",
+                                           "show_record_id",
+                                           "batch_size"))
         if "sort" in options:
-            sorts = self.__gene_sort(options["sort"])
+            sorts = gene_sort(options["sort"])
             options["sort"] = sorts
 
         try:
@@ -243,19 +230,19 @@ class HiveMongoDb:
         if content is None:
             return response
 
-        col = self.get_collction(did, app_id, content["collection"])
+        col = get_collection(did, app_id, content["collection"])
 
-        options = self.__options_filter(content, ("filter",
-                                                  "projection",
-                                                  "skip",
-                                                  "limit",
-                                                  "sort",
-                                                  "allow_partial_results",
-                                                  "return_key",
-                                                  "show_record_id",
-                                                  "batch_size"))
+        options = options_filter(content, ("filter",
+                                           "projection",
+                                           "skip",
+                                           "limit",
+                                           "sort",
+                                           "allow_partial_results",
+                                           "return_key",
+                                           "show_record_id",
+                                           "batch_size"))
         if "sort" in options:
-            sorts = self.__gene_sort(options["sort"])
+            sorts = gene_sort(options["sort"])
             options["sort"] = sorts
 
         try:

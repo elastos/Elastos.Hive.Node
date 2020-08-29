@@ -268,10 +268,10 @@ class HiveMongoDbTestCase(unittest.TestCase):
                                   data=json.dumps(
                                       {
                                           "collection": "works",
+                                          "filter": {
+                                              "author": "john doe1_1",
+                                          },
                                           "options": {
-                                              "filter": {
-                                                  "author": "john doe1_1",
-                                              },
                                               "skip": 0,
                                               "projection": {"_id": False},
                                               "sort": {'_id': 'desc'},
@@ -294,10 +294,10 @@ class HiveMongoDbTestCase(unittest.TestCase):
                                   data=json.dumps(
                                       {
                                           "collection": "works",
+                                          "filter": {
+                                            "author": "john doe1_1"
+                                          },
                                           "options": {
-                                              "filter": {
-                                                  "author": "john doe1_1",
-                                              },
                                               "skip": 0,
                                               "limit": 3,
                                               "projection": {"_id": False},

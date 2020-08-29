@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 
-from hive.main.hive_file import HiveFile
 from hive.main.hive_auth import HiveAuth
 from hive.main.hive_sync import HiveSync
 from hive.main.hive_scripting import HiveScripting
@@ -41,19 +40,3 @@ def did_auth_callback(did_base58, app_id_base58):
 @main.route('/api/v1/sync/setup/google_drive', methods=['POST'])
 def setup_syn_google_drive():
     return h_sync.setup_google_drive_rclone()
-
-
-# Scripting mechanism
-@main.route('/api/v1/scripting/set_subcondition', methods=['POST'])
-def set_subcondition():
-    return h_scripting.set_subcondition()
-
-
-@main.route('/api/v1/scripting/set_script', methods=['POST'])
-def set_script():
-    return h_scripting.set_script()
-
-
-@main.route('/api/v1/scripting/run_script', methods=['POST'])
-def run_script():
-    return h_scripting.run_script()

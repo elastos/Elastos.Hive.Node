@@ -425,10 +425,10 @@ Content-Type: "application/json"
 data: 
     {
         "collection": "works",
+        "filter": {
+          "author": "john doe1_1"
+        },
         "options": {
-            "filter": {
-                "author": "john doe1_1"
-            },
             "skip": 0,
             "projection": {‘_id’: false},
             "sort": {"_id": "desc"},
@@ -481,10 +481,10 @@ Content-Type: "application/json"
 data: 
     {
         "collection": "works",
+        "filter": {
+            "author": "john doe1_1",
+        },
         "options": {
-            "filter": {
-                "author": "john doe1_1",
-            },
             "skip": 0,
             "limit": 3,
             "projection": {
@@ -694,7 +694,7 @@ return:
         }
 ```
 
-11. Get file hash(SHA256)
+- Get file hash(SHA256)
 ```
 HTTP: GET
 URL: /api/v1/files/file/hash?path="path/of/file/name/"
@@ -706,6 +706,328 @@ return:
           "_status": "OK",
           "SHA256": "3a29a81d7b2718a588a5f6f3491b3c57"
         }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+## Scripting
+
+### Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/run_script endpoint to execute one of those scripts and get results/data. The same API is used to insert/update the scripts
+
+- Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction. 
+Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_groups",
+      "executable": {
+        "type": "find",
+        "name": "get_groups",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "*caller_did": "friends"
+          },
+          "options": {
+            "projection": {
+              "_id": false,
+              "name": true
+            }
+          }
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa0a116f409b032c1da0b"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Create/Update a script to get the first 100 messages for a particular group messaging. "_id" is not displays as part of the result. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages are returned back to the client.
+In the executable, there's "group_id": "group_id". The key represents the value that's passed while run_script is called while the value represents the actual field name in the database. Please refer to the run_script example for more info.
+Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_group_messages",
+      "executable": {
+        "type": "find",
+        "name": "find_messages",
+        "body": {
+          "collection": "messages",
+          "filter": {
+            "group_id": "group_id"
+          },
+          "projection": {
+            "_id": false,
+          },
+          "limit": 100
+        }
+      },
+      "condition": {
+        "type": "queryHasResult",
+        "name": "verify_user_permission",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "group_id": "_id",
+            "*caller_did": "friends"
+          }
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa1cf16f409b032c1dad2"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run. 
+Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "add_group_message",
+      "executable": {
+        "type": "aggregated",
+        "name": "add_and_return_message",
+        "body": [
+          {
+            "type": "insert",
+            "name": "add_message_to_end",
+            "body": {
+              "collection": "messages",
+              "document": {
+                "group_id": "group_id",
+                "*caller_did": "friend_did",
+                "content": "content",
+                "content_created": "created"
+              },
+              "options": {"bypass_document_validation": false}
+            }
+          },
+          {
+            "type": "find",
+            "name": "get_last_message",
+            "body": {
+              "collection": "messages",
+              "filter": {
+                "group_id": "group_id"
+              },
+              "options": {
+                "projection": {"_id": false},
+                "sort": {"created": "desc"},
+                "limit": 1
+              }
+            }
+          }
+        ]
+      },
+      "condition": {
+        "type": "and",
+        "name": "verify_user_permission",
+        "body": [
+          {
+            "type": "queryHasResult",
+            "name": "user_in_group",
+            "body": {
+              "collection": "groups",
+              "filter": {
+                "group_id": "_id",
+                "*caller_did": "friends"
+              }
+            }
+          },
+          {
+            "type": "queryHasResult",
+            "name": "user_in_group",
+            "body": {
+              "collection": "groups",
+              "filter": {
+                "group_id": "_id",
+                 "*caller_did": "friends"
+              }
+            }
+          }
+        ]
+      }
+    }
+return:
+    Success: 
+      {
+        "_status": "OK",
+        "acknowledged": true,
+        "matched_count": 0,
+        "modified_count": 0,
+        "upserted_id": "5f4aa2be16f409b032c1daf4"
+      }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+### Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
+
+- Run a script to get all the groups that the DID user belongs to. As defined by the script, it contains no restriction so anyone is able to retrieve all the groups for a DID user
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_groups"
+    }
+return:
+    Success: 
+      {
+        "_status": "OK",
+        "items": [
+          {
+            "name": "Tuum Tech"
+          }
+        ]
+      }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Run a script to get all the group messages for a particular group ID. This has a subcondition that needs to be satisifed first. This subcondition can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_group_messages",
+      "params": {
+        "group_id": {"\$oid": "5f497bb83bd36ab235d82e6a"}
+      }
+    }
+return:
+    Success:
+      {
+        "_status": "OK",
+        "items": [
+          {
+            "content": "Old Message",
+            "created": {
+              "$date": 1630022400000
+            },
+            "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
+            "group_id": {
+              "$oid": "5f497bb83bd36ab235d82e6a"
+            },
+            "modified": {
+              "$date": 1598725803556
+            }
+          }
+        ]
+      }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Run a script to add a new message to the group messaging for a particular group id. This has two subconditions that needs to be satisifed first. These subconditions can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "add_group_message",
+      "params": {
+        "group_id": "5f484a24efc1cbf6fc88ffb7",
+        "group_created": {
+          "$gte": "2021-08-27 00:00:00"
+        },
+        "content": "New Message",
+        "content_created": "2021-08-27 00:00:00"
+      }
+    }
+return:
+    Success:
+      {
+        "_status": "OK",
+        "items": [
+          {
+            "content": "New Message",
+            "created": {
+              "$date": 1630022400000
+            },
+            "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
+            "group_id": {
+              "$oid": "5f497bb83bd36ab235d82e6a"
+            },
+            "modified": {
+              "$date": 1598725803556
+            }
+          }
+        ]
+      }
     Failure: 
         {
           "_status": "ERR",

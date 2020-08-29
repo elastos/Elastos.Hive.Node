@@ -1,14 +1,16 @@
+import json
 from datetime import datetime
 
-from bson import ObjectId
+from bson import ObjectId, json_util
 
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from hive.settings import MONGO_HOST, MONGO_PORT
-from hive.util.constants import DATETIME_FORMAT
 from hive.util.did_info import get_collection
-from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort, convert_oid
+from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort, convert_oid, \
+    populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
+    populate_options_count_documents, query_update_one
 from hive.util.server_response import response_ok, response_err
 from hive.main.interceptor import post_json_param_pre_proc
 
@@ -65,20 +67,14 @@ class HiveMongoDb:
         if err:
             return err
 
-        col = get_collection(did, app_id, content["collection"])
-        options = options_filter(content, ("bypass_document_validation",))
-        try:
-            content["document"]["created"] = datetime.utcnow()
-            content["document"]["modified"] = datetime.utcnow()
-            ret = col.insert_one(content["document"], **options)
+        options = populate_options_insert_one(content)
 
-            data = {
-                "acknowledged": ret.acknowledged,
-                "inserted_id": str(ret.inserted_id)
-            }
-            return response_ok(data)
-        except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+        col = get_collection(did, app_id, content["collection"])
+        data, err_message = query_insert_one(col, content, options)
+        if err_message:
+            return response_err(500, err_message)
+
+        return response_ok(data)
 
     def insert_many(self):
         did, app_id, content, err = post_json_param_pre_proc("collection", "document")
@@ -90,10 +86,13 @@ class HiveMongoDb:
         options = options_filter(content, ("bypass_document_validation", "ordered"))
 
         try:
+            new_document = []
             for document in content["document"]:
                 document["created"] = datetime.utcnow()
                 document["modified"] = datetime.utcnow()
-            ret = col.insert_many(content["document"], **options)
+                new_document.append(convert_oid(document))
+
+            ret = col.insert_many(new_document, **options)
             data = {
                 "acknowledged": ret.acknowledged,
                 "inserted_ids": [str(_id) for _id in ret.inserted_ids]
@@ -107,24 +106,14 @@ class HiveMongoDb:
         if err:
             return err
 
-        col = get_collection(did, app_id, content["collection"])
         options = options_filter(content, ("upsert", "bypass_document_validation"))
 
-        try:
-            content["update"]["$setOnInsert"] = {
-                "created": datetime.utcnow()
-            }
-            content["filter"]["modified"] = datetime.utcnow()
-            ret = col.update_one(content["filter"], content["update"], **options)
-            data = {
-                "acknowledged": ret.acknowledged,
-                "matched_count": ret.matched_count,
-                "modified_count": ret.modified_count,
-                "upserted_id": str(ret.upserted_id),
-            }
-            return response_ok(data)
-        except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+        col = get_collection(did, app_id, content["collection"])
+        data, err_message = query_update_one(col, content, options)
+        if err_message:
+            return response_err(500, err_message)
+
+        return response_ok(data)
 
     def update_many(self):
         did, app_id, content, err = post_json_param_pre_proc("collection", "filter", "update")
@@ -135,11 +124,11 @@ class HiveMongoDb:
         options = options_filter(content, ("upsert", "bypass_document_validation"))
 
         try:
-            content["update"]["$setOnInsert"] = {
-                "created": datetime.utcnow()
-            }
+            update_set_on_insert = content.get('update').get('$setOnInsert', None)
+            if update_set_on_insert:
+                content["update"]["$setOnInsert"]['created'] = datetime.utcnow()
             content["filter"]["modified"] = datetime.utcnow()
-            ret = col.update_many(content["filter"], content["update"], **options)
+            ret = col.update_many(convert_oid(content["filter"]), convert_oid(content["update"]), **options)
             data = {
                 "acknowledged": ret.acknowledged,
                 "matched_count": ret.matched_count,
@@ -157,7 +146,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         try:
-            ret = col.delete_one(content["filter"])
+            ret = col.delete_one(convert_oid(content["filter"]))
             data = {
                 "acknowledged": ret.acknowledged,
                 "deleted_count": ret.deleted_count,
@@ -173,7 +162,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         try:
-            ret = col.delete_many(content["filter"])
+            ret = col.delete_many(convert_oid(content["filter"]))
             data = {
                 "acknowledged": ret.acknowledged,
                 "deleted_count": ret.deleted_count,
@@ -187,25 +176,22 @@ class HiveMongoDb:
         if err:
             return err
 
+        options = populate_options_count_documents(content)
+
         col = get_collection(did, app_id, content["collection"])
+        data, err_message = query_count_documents(col, content, options)
+        if err_message:
+            return response_err(500, err_message)
 
-        options = options_filter(content, ("skip", "limit", "maxTimeMS"))
-
-        try:
-            count = col.count_documents(convert_oid(content["filter"]), **options)
-            data = {"count": count}
-            return response_ok(data)
-        except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+        return response_ok(data)
 
     def find_one(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection")
+        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
         if err:
             return err
 
         col = get_collection(did, app_id, content["collection"])
-        options = options_filter(content, ("filter",
-                                           "projection",
+        options = options_filter(content, ("projection",
                                            "skip",
                                            "sort",
                                            "allow_partial_results",
@@ -217,42 +203,23 @@ class HiveMongoDb:
             options["sort"] = sorts
 
         try:
-            result = col.find_one(**options)
-            if ("_id" in result) and (isinstance(result["_id"], ObjectId)):
-                result["_id"] = str(result["_id"])
-            data = {"items": result}
+            result = col.find_one(convert_oid(content["filter"]), **options)
+            data = {"items": json.loads(json_util.dumps(result))}
             return response_ok(data)
         except Exception as e:
             return response_err(500, "Exception:" + str(e))
 
     def find_many(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection")
+        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
         if err:
             return err
 
-        col = get_collection(did, app_id, content["collection"])
+        options = populate_options_find_many(content)
 
-        options = options_filter(content, ("filter",
-                                           "projection",
-                                           "skip",
-                                           "limit",
-                                           "sort",
-                                           "allow_partial_results",
-                                           "return_key",
-                                           "show_record_id",
-                                           "batch_size"))
-        if "sort" in options:
-            sorts = gene_sort(options["sort"])
-            options["sort"] = sorts
+        col = get_collection(did, app_id, content.get('collection'))
+        data, err_message = query_find_many(col, content, options)
+        if err_message:
+            return response_err(500, err_message)
 
-        try:
-            cursor = col.find(**options)
-            arr = list()
-            for c in cursor:
-                if ("_id" in c) and (isinstance(c["_id"], ObjectId)):
-                    c["_id"] = str(c["_id"])
-                arr.append(c)
-            data = {"items": arr}
-            return response_ok(data)
-        except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+        return response_ok(data)
+

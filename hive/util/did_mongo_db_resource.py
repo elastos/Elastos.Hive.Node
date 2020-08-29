@@ -1,26 +1,34 @@
 import hashlib
 import json
+import logging
 import subprocess
+from datetime import datetime
 from pathlib import Path
 
 import pymongo
-from bson import ObjectId
+from bson import ObjectId, json_util
 from pymongo import MongoClient
 
 from hive.settings import DID_BASE_DIR, MONGO_HOST, MONGO_PORT
 from hive.util.constants import DID_INFO_DB_NAME, DID_RESOURCE_COL, DID_RESOURCE_NAME, DID_RESOURCE_SCHEMA, \
-    DID_RESOURCE_DID, DID_RESOURCE_APP_ID
+    DID_RESOURCE_DID, DID_RESOURCE_APP_ID, DATETIME_FORMAT
 from hive.util.common import did_tail_part, create_full_path_dir
 
 
-def convert_oid(query):
+def convert_oid(query, update=False):
     new_query = {}
     for key, value in query.items():
+        new_query[key] = value
         if isinstance(value, dict):
-            if "$oid" in value.keys():
-                new_query[key] = ObjectId(value["$oid"])
-        else:
-            new_query[key] = value
+            if update:
+                for k, v in value.items():
+                    new_query[key][k] = v
+                    if isinstance(v, dict):
+                        if "$oid" in v.keys():
+                            new_query[key][k] = ObjectId(v["$oid"])
+            else:
+                if "$oid" in value.keys():
+                    new_query[key] = ObjectId(value["$oid"])
     return new_query
 
 
@@ -31,7 +39,7 @@ def options_filter(content, args):
     options = content["options"]
     for arg in args:
         if arg in options:
-            ops[arg] = convert_oid(options[arg])
+            ops[arg] = options[arg]
     return ops
 
 
@@ -57,6 +65,29 @@ def add_did_resource_to_db(did, app_id, resource, schema):
     return i
 
 
+def populate_options_insert_one(content):
+    options = options_filter(content, ("bypass_document_validation",))
+    return options
+
+
+def query_insert_one(col, content, options, created=False):
+    try:
+        if created:
+            content["document"]["created"] = datetime.strptime(content["document"]["created"], DATETIME_FORMAT)
+        else:
+            content["document"]["created"] = datetime.utcnow()
+        content["document"]["modified"] = datetime.utcnow()
+        ret = col.insert_one(convert_oid(content["document"]), **options)
+
+        data = {
+            "acknowledged": ret.acknowledged,
+            "inserted_id": str(ret.inserted_id)
+        }
+        return data, None
+    except Exception as e:
+        return None, f"Exception: method: 'query_insert_one', Err: {str(e)}"
+
+
 def update_schema_of_did_resource(did, app_id, resource, schema):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
@@ -66,6 +97,69 @@ def update_schema_of_did_resource(did, app_id, resource, schema):
     values = {"$set": {DID_RESOURCE_SCHEMA, schema}}
     r = col.update_one(query, values)
     return r
+
+
+def query_update_one(col, content, options):
+    try:
+        update_set_on_insert = content.get('update').get('$setOnInsert', None)
+        if update_set_on_insert:
+            content["update"]["$setOnInsert"]['created'] = datetime.utcnow()
+        else:
+            content["update"]["$setOnInsert"] = {
+                "created": datetime.utcnow()
+            }
+        content["update"]["$set"]["modified"] = datetime.utcnow()
+        ret = col.update_one(convert_oid(content["filter"]), convert_oid(content["update"], update=True), **options)
+        data = {
+            "acknowledged": ret.acknowledged,
+            "matched_count": ret.matched_count,
+            "modified_count": ret.modified_count,
+            "upserted_id": str(ret.upserted_id),
+        }
+        return data, None
+    except Exception as e:
+        return None, f"Exception: method: 'query_update_one', Err: {str(e)}"
+
+
+def populate_options_count_documents(content):
+    options = options_filter(content, ("skip", "limit", "maxTimeMS"))
+    return options
+
+
+def query_count_documents(col, content, options):
+    try:
+        count = col.count_documents(convert_oid(content["filter"]), **options)
+        data = {"count": count}
+        return data, None
+    except Exception as e:
+        return None, f"Exception: method: 'query_count_documents', Err: {str(e)}"
+
+
+def populate_options_find_many(content):
+    options = options_filter(content, ("projection",
+                                       "skip",
+                                       "limit",
+                                       "sort",
+                                       "allow_partial_results",
+                                       "return_key",
+                                       "show_record_id",
+                                       "batch_size"))
+    if "sort" in options:
+        sorts = gene_sort(options["sort"])
+        options["sort"] = sorts
+    return options
+
+
+def query_find_many(col, content, options):
+    try:
+        result = col.find(convert_oid(content["filter"]), **options)
+        arr = list()
+        for c in json.loads(json_util.dumps(result)):
+            arr.append(c)
+        data = {"items": arr}
+        return data, None
+    except Exception as e:
+        return None, f"Exception: method: 'query_find_many', Err: {str(e)}"
 
 
 def find_schema_of_did_resource(did, app_id, resource):

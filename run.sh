@@ -70,6 +70,7 @@ function test () {
     pytest --disable-pytest-warnings -xs tests/hive_sync_test.py
     pytest --disable-pytest-warnings -xs tests/hive_mongo_test.py
     pytest --disable-pytest-warnings -xs tests/hive_file_test.py
+    pytest --disable-pytest-warnings -xs tests/hive_scripting_test.py
 }
 
 case "$1" in

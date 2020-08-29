@@ -24,6 +24,7 @@ def check_condition(did, app_id, condition_body, params):
             query[value] = params[key]
     condition_body["filter"] = query
 
+    print(condition_body)
     col = get_collection(did, app_id, condition_body.get('collection'))
     data, err_message = query_count_documents(col, condition_body, options)
     if err_message:

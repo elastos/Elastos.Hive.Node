@@ -1,22 +1,16 @@
 import copy
-import hashlib
-import json
 import logging
 
 from bson import ObjectId
 from pymongo import MongoClient
 
-from datetime import datetime
-
 from hive.main.interceptor import post_json_param_pre_proc
 from hive.settings import MONGO_HOST, MONGO_PORT
-from hive.util.constants import SCRIPTING_CONDITION_COLLECTION, SCRIPTING_SCRIPT_COLLECTION, \
-    SCRIPTING_EXECUTABLE_TYPE_FIND, DATETIME_FORMAT, \
-    SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR, \
+from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
+    SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED
 from hive.util.did_info import get_collection
-from hive.util.did_mongo_db_resource import gene_mongo_db_name, \
-    options_filter, query_update_one
+from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert
 from hive.util.server_response import response_ok, response_err
 

@@ -14,7 +14,7 @@ from hive.util.constants import SCRIPTING_CONDITION_COLLECTION, SCRIPTING_SCRIPT
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, \
     options_filter, query_update_one
-from hive.util.did_scripting import check_json_param, run_executable_find, check_condition, run_executable_insert
+from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert
 from hive.util.server_response import response_ok, response_err
 
 
@@ -57,6 +57,91 @@ class HiveScripting:
 
         return data, None
 
+    def __condition_validation(self, condition):
+        err_message = check_json_param(condition, "condition", args=["type", "body"])
+        if err_message:
+            return err_message
+        condition_type = condition.get('type')
+        condition_body = condition.get('body')
+        if condition_type == SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS:
+            return None
+        if condition_type in [SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR]:
+            if len(condition_body) == 1:
+                return self.__condition_validation(condition_body[0])
+            else:
+                new_condition = {
+                    "type": condition_type,
+                    "body": condition_body[1:]
+                }
+                return self.__condition_validation(new_condition)
+        else:
+            return f"invalid condition type '{condition_type}"
+
+    def __executable_validation(self, executable):
+        err_message = check_json_param(executable, "executable", args=["type", "body"])
+        if err_message:
+            return err_message
+        executable_type = executable.get('type')
+        executable_body = executable.get('body')
+        if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
+            if len(executable_body) == 1:
+                return self.__executable_validation(executable_body[0])
+            else:
+                new_executable = {
+                    "type": SCRIPTING_EXECUTABLE_TYPE_AGGREGATED,
+                    "body": executable_body[1:]
+                }
+                return self.__executable_validation(new_executable)
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
+            return check_json_param(executable_body, f"{executable.get('name')}", args=["collection", "filter"])
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
+            return check_json_param(executable_body, f"{executable.get('name')}", args=["collection", "document"])
+        else:
+            return f"invalid executable type '{executable_type}"
+        
+    def __condition_execution(self, did, app_id, condition, params):
+        condition_type = condition.get('type')
+        condition_body = condition.get('body')
+        if condition_type == SCRIPTING_CONDITION_TYPE_AND:
+            if len(condition_body) == 1:
+                return self.__condition_execution(did, app_id, condition_body[0], params)
+            else:
+                new_condition = {
+                    "type": SCRIPTING_CONDITION_TYPE_AND,
+                    "body": condition_body[1:]
+                }
+                return self.__condition_execution(did, app_id, condition_body[0], params) and \
+                       self.__condition_execution(did, app_id, new_condition, params)
+        elif condition_type == SCRIPTING_CONDITION_TYPE_OR:
+            if len(condition_body) == 1:
+                return self.__condition_execution(did, app_id, condition_body[0], params)
+            else:
+                new_condition = {
+                    "type": SCRIPTING_CONDITION_TYPE_OR,
+                    "body": condition_body[1:]
+                }
+                return self.__condition_execution(did, app_id, condition_body[0], params) or \
+                       self.__condition_execution(did, app_id, new_condition, params)
+        else:
+            return run_condition(did, app_id, condition_body, params)
+
+    def __executable_execution(self, did, app_id, executable, params):
+        executable_type = executable.get('type')
+        executable_body = executable.get('body')
+        if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
+            if len(executable_body) == 1:
+                return self.__executable_execution(did, app_id, executable_body[0], params)
+            else:
+                new_executable = {
+                    "type": SCRIPTING_EXECUTABLE_TYPE_AGGREGATED,
+                    "body": executable_body[1:]
+                }
+                return self.__executable_execution(did, app_id, new_executable, params)
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
+            return run_executable_find(did, app_id, executable_body, params)
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
+            return run_executable_insert(did, app_id, executable_body, params)
+
     def set_script(self):
         # Request Validation
         did, app_id, content, err = post_json_param_pre_proc("name", "executable")
@@ -64,59 +149,16 @@ class HiveScripting:
             return err
 
         # Data Validation
-        content_executable = content.get('executable')
-        err_message = check_json_param(content_executable, "executable", args=["type", "name", "body"])
+        executable = content.get('executable')
+        err_message = self.__executable_validation(executable)
         if err_message:
-            logging.debug(err_message)
-            return response_err(400, err_message)
-
-        # Executable Validation for type "aggregated"
-        if content_executable.get('type') == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
-            for executable in content_executable.get('body'):
-                err_message = check_json_param(executable, "executable.body", args=["type", "name", "body"])
-                if err_message:
-                    logging.debug(err_message)
-                    return response_err(400, err_message)
-                # Executable Validation for type "find"
-                if executable.get('type') == SCRIPTING_EXECUTABLE_TYPE_FIND:
-                    err_message = check_json_param(executable.get('body'), "executable.body",
-                                                   args=["collection", "filter"])
-                    if err_message:
-                        logging.debug(err_message)
-                        return response_err(400, err_message)
-                # Executable Validation for type "insert"
-                elif executable.get('type') == SCRIPTING_EXECUTABLE_TYPE_INSERT:
-                    err_message = check_json_param(executable.get('body'), "executable.body",
-                                                   args=["collection", "document"])
-                    if err_message:
-                        logging.debug(err_message)
-                        return response_err(400, err_message)
-                else:
-                    logging.debug(err_message)
-                    return response_err(400, f"invalid executable type '{content_executable.get('type')}")
-        # Executable Validation for type "find"
-        elif content_executable.get('type') == SCRIPTING_EXECUTABLE_TYPE_FIND:
-            err_message = check_json_param(content_executable.get('body'), "executable.body",
-                                           args=["collection", "filter"])
-            if err_message:
-                logging.debug(err_message)
-                return response_err(400, err_message)
-        # Executable Validation for type "insert"
-        elif content_executable.get('type') == SCRIPTING_EXECUTABLE_TYPE_INSERT:
-            err_message = check_json_param(content_executable.get('body'), "executable.body",
-                                           args=["collection", "document"])
-            if err_message:
-                logging.debug(err_message)
-                return response_err(400, err_message)
-        else:
-            err_message = f"invalid executable type '{content_executable.get('type')}"
             logging.debug(err_message)
             return response_err(400, err_message)
 
         # Condition Validation
         condition = content.get('condition', None)
         if condition:
-            err_message = check_json_param(condition, "condition", args=["type", "name", "body"])
+            err_message = self.__condition_validation(condition)
             if err_message:
                 logging.debug(err_message)
                 return response_err(400, err_message)
@@ -153,56 +195,16 @@ class HiveScripting:
         params = content.get('params', None)
         condition = script.get("condition")
         if condition:
-            condition_type = condition.get('type')
-            total_passed = [True]
-            if condition_type == SCRIPTING_CONDITION_TYPE_AND:
-                for c in condition.get('body'):
-                    if c.get('type') == SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS:
-                        passed = check_condition(did, app_id, c.get('body'), params)
-                        if not passed:
-                            total_passed.append(False)
-                            break
-            elif condition_type == SCRIPTING_CONDITION_TYPE_OR:
-                for i, c in enumerate(condition.get('body')):
-                    if c.get('type') == SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS:
-                        passed = check_condition(did, app_id, c.get('body'), params)
-                        if passed:
-                            total_passed.append(True)
-                            break
-                        else:
-                            if i == len(c.get('body') - 1):
-                                total_passed.append(False)
-            elif condition_type == SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS:
-                passed = check_condition(did, app_id, condition.get('body'), params)
-                total_passed.append(passed)
-            if False in total_passed:
+            passed = self.__condition_execution(did, app_id, condition, params)
+            if not passed:
                 err_message = f"the conditions were not met to execute this script"
                 logging.debug(err_message)
                 return response_err(403, err_message)
 
-        data = {}
         executable = script.get("executable")
-        if executable.get('type') == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
-            for e in executable.get('body'):
-                if e.get('type') == SCRIPTING_EXECUTABLE_TYPE_FIND:
-                    data, err_message = run_executable_find(did, app_id, e.get('body'), params)
-                    if err_message:
-                        logging.debug(err_message)
-                        return response_err(500, err_message)
-                elif e.get('type') == SCRIPTING_EXECUTABLE_TYPE_INSERT:
-                    data, err_message = run_executable_insert(did, app_id, e.get('body'), params)
-                    if err_message:
-                        logging.debug(err_message)
-                        return response_err(500, err_message)
-        if executable.get('type') == SCRIPTING_EXECUTABLE_TYPE_FIND:
-            data, err_message = run_executable_find(did, app_id, executable.get('body'), params)
-            if err_message:
-                logging.debug(err_message)
-                return response_err(500, err_message)
-        elif executable.get('type') == SCRIPTING_EXECUTABLE_TYPE_INSERT:
-            data, err_message = run_executable_insert(did, app_id, executable.get('body'), params)
-            if err_message:
-                logging.debug(err_message)
-                return response_err(500, err_message)
+        data, err_message = self.__executable_execution(did, app_id, executable, params)
+        if err_message:
+            logging.debug(err_message)
+            return response_err(500, err_message)
 
         return response_ok(data)

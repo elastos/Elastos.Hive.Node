@@ -13,7 +13,7 @@ def check_json_param(content, content_type, args):
     return None
 
 
-def check_condition(did, app_id, condition_body, params):
+def run_condition(did, app_id, condition_body, params):
     options = populate_options_count_documents(condition_body)
 
     query = {}

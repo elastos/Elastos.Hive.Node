@@ -9,26 +9,26 @@
 
 ## Auth of did and app
 - User auth
-```
+```json
 HTTP: POST
 URL: /api/v1/did/auth
 Content-Type: "application/json"
-data: {"jwt":" auth_token}
+data: {"jwt": "auth_token"}
 return:
     Success:
         {
           "_status":"OK",
           "subject": "didauth",
           "issuer": "elastos_hive_node",
-          "token": access_token
-          "exp": expiration_date
+          "token": "access_token",
+          "exp": "expiration_date"
         }
     Failure:
         {
           "_status": "ERR",
           "_error": {
             "code": 401,
-            "message": err_message
+            "message": "err_message"
           }
         }
 ```
@@ -36,7 +36,7 @@ return:
 ## Synchronization
 - Init synchronization from google drive
 * If there is a new user auth of hive++, must call this api before any other data operation(mongoDB or file etc)
-```
+```json
 HTTP: POST
 URL: /api/v1/sync/setup/google_drive
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -430,7 +430,7 @@ data:
         },
         "options": {
             "skip": 0,
-            "projection": {‘_id’: false},
+            "projection": {"_id": false},
             "sort": {"_id": "desc"},
             "allow_partial_results": false,
             "return_key": false,
@@ -580,8 +580,6 @@ comment: support content range
 ```
 
 - Delete file or folder
-```
-
 ```json
 HTTP: POST
 URL: /api/v1/files/delete

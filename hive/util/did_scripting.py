@@ -6,6 +6,8 @@ from hive.util.did_mongo_db_resource import populate_options_find_many, \
 
 
 def check_json_param(content, content_type, args):
+    if content is None:
+        return f"parameter is null for '{content_type}"
     for arg in args:
         data = content.get(arg, None)
         if data is None:

@@ -98,7 +98,7 @@ class HiveScripting:
             return check_json_param(executable_body, f"{executable.get('name')}", args=["collection", "document"])
         else:
             return f"invalid executable type '{executable_type}"
-        
+
     def __condition_execution(self, did, app_id, condition, params):
         condition_type = condition.get('type')
         condition_body = condition.get('body')
@@ -128,15 +128,13 @@ class HiveScripting:
     def __executable_execution(self, did, app_id, executable, params):
         executable_type = executable.get('type')
         executable_body = executable.get('body')
+        print("executable: ", executable)
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
-            if len(executable_body) == 1:
-                return self.__executable_execution(did, app_id, executable_body[0], params)
-            else:
-                new_executable = {
-                    "type": SCRIPTING_EXECUTABLE_TYPE_AGGREGATED,
-                    "body": executable_body[1:]
-                }
-                return self.__executable_execution(did, app_id, new_executable, params)
+            for i, e in enumerate(executable_body):
+                if i == len(executable_body) - 1:
+                    return self.__executable_execution(did, app_id, e, params)
+                else:
+                    self.__executable_execution(did, app_id, e, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
             return run_executable_find(did, app_id, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:

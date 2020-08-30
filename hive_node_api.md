@@ -441,11 +441,17 @@ data:
 return:
     Success: 
         {
-            "_status": "OK",
-            "items": {
-                "author": "john doe1_1",
-                "title": "Eve for Dummies1_1"
+          "_status": "OK",
+          "items": {
+            "author": "john doe1_1",
+            "title": "Eve for Dummies1_1",
+            "created": {
+              "$date": 1630022400000
+            },
+            "modified": {
+              "$date": 1598803861786
             }
+          }
         }
     Failure: 
         {
@@ -502,21 +508,29 @@ data:
 return:
     Success: 
         {
-            "_status": "OK",
-            "items": [
-                {
-                    "author": "john doe1_1",
-                    "title": "Eve for Dummies1_1"
-                },
-                {
-                    "author": "john doe1_1",
-                    "title": "Eve for Dummies1_1"
-                },
-                {
-                    "author": "john doe1_1",
-                    "title": "Eve for Dummies1_1"
-                }
-            ]
+          "_status": "OK",
+          "items": [
+            {
+              "author": "john doe1_1",
+              "title": "Eve for Dummies1_1",
+              "created": {
+                "$date": 1630022400000
+              },
+              "modified": {
+                "$date": 1598803861786
+              }
+            },
+            {
+              "author": "john doe1_2",
+              "title": "Eve for Dummies1_2",
+              "created": {
+                "$date": 1630022400000
+              },
+              "modified": {
+                "$date": 1598803861786
+              }
+            }
+          ]
         }
     Failure: 
         {

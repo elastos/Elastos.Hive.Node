@@ -6,6 +6,11 @@ from flask import appcontext_pushed, g
 from contextlib import contextmanager
 from datetime import datetime
 
+# import os
+# import sys
+# sys.path.append(os.getcwd())
+# sys.path.append(os.getcwd() + "/hive/util/did")
+
 from hive.util.did.entity import Entity
 from hive.util.did.eladid import ffi, lib
 
@@ -37,12 +42,10 @@ class DIDApp(Entity):
         # Entity.__del__(self)
 
     def issue_auth(self, app):
-        types = ffi.new("char*[]", [ffi.new("char[]", "DIDAuthCredential".encode())])
+        type0 = ffi.new("char[]", "DIDAuthCredential".encode())
+        types = ffi.new("char **", type0)
         props = {
-            'userDid': self.get_did_string(),
             'appDid': app.get_did_string(),
-            'purpose': 'did:elastos:ieaA5VMWydQmVJtM5daW5hoTQpcuV38mHM',
-            'scope': ['read', 'write']
         }
         issuerid = self.did
         issuerdoc = lib.DIDStore_LoadDID(self.store, self.did)
@@ -92,7 +95,7 @@ class DApp(Entity):
         lib.JWTBuilder_SetIssuedAt(builder, iat)
         lib.JWTBuilder_SetExpiration(builder, exp)
         lib.JWTBuilder_SetNotBefore(builder, nbf)
-        lib.JWTBuilder_SetClaimWithJson(builder, "vp".encode(), vp_json.encode())
+        lib.JWTBuilder_SetClaimWithJson(builder, "presentation".encode(), vp_json.encode())
 
         token = ffi.string(lib.JWTBuilder_Compact(builder)).decode()
         lib.JWTBuilder_Destroy(builder)
@@ -160,9 +163,23 @@ class HiveAuthTestCase(unittest.TestCase):
         self.assert200(s)
 
     def test_b_auth(self):
-        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_auth")
+        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_access")
+        doc = lib.DID_Resolve(self.testapp.did, False)
+        doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/did/access',
+                                  data=json.dumps({
+                                      "document": doc_str,
+                                  }),
+                                  headers=self.json_header)
+        )
+        self.assert200(s)
+        self.assertEqual(rt["_status"], "OK")
+        nonce = rt["nonce"]
+
+        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_c_auth")
         vc = self.didapp.issue_auth(self.testapp)
-        vp_json = self.testapp.create_presentation(vc, "testapp", "873172f58701a9ee686f0630204fee59")
+        vp_json = self.testapp.create_presentation(vc, "testapp", nonce)
         auth_token = self.testapp.create_token(vp_json)
         logging.getLogger("HiveAuthTestCase").debug(f"auth_token: {auth_token}")
 

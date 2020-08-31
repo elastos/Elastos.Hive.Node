@@ -8,8 +8,31 @@
 - [Scripting](#scripting)
 
 ## Auth of did and app
-- User auth
+- User auth access request
 ```json
+HTTP: POST
+URL: /api/v1/did/access
+Content-Type: "application/json"
+data: {"document":" did_doc}
+return:
+    Success:
+        {
+          "_status":"OK",
+          "nonce": nonce,
+          "issuer": hive_did,
+          "exp": expiration_date
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": err_message
+          }
+        }
+```
+- User auth
+```
 HTTP: POST
 URL: /api/v1/did/auth
 Content-Type: "application/json"
@@ -19,7 +42,7 @@ return:
         {
           "_status":"OK",
           "subject": "didauth",
-          "issuer": "elastos_hive_node",
+          "issuer": hive_did,
           "token": "access_token",
           "exp": "expiration_date"
         }
@@ -74,16 +97,16 @@ HTTP: POST
 URL: /api/v1/db/create_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
     }
 return:
-    Success: 
+    Success:
         {
-          "_status": "OK", 
+          "_status": "OK",
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -100,16 +123,16 @@ HTTP: POST
 URL: /api/v1/db/delete_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
     }
 return:
-    Success: 
+    Success:
         {
-          "_status": "OK", 
+          "_status": "OK",
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -130,11 +153,11 @@ HTTP: POST
 URL: /api/v1/db/insert_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
       "document": {
-        "author": "john doe1", 
+        "author": "john doe1",
         "title": "Eve for Dummies2"
       },
       "options": {"bypass_document_validation":false}
@@ -146,7 +169,7 @@ return:
           "acknowledged": true,
           "inserted_id": "5edddab688db87875fddc3a5"
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -167,16 +190,16 @@ HTTP: POST
 URL: /api/v1/db/insert_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
       "document": [
         {
-          "author": "john doe1", 
+          "author": "john doe1",
           "title": "Eve for Dummies1"
         },
         {
-          "author": "john doe2", 
+          "author": "john doe2",
           "title": "Eve for Dummies2"
         }
       ],
@@ -195,7 +218,7 @@ return:
             "5f4658d122c95b17e72f2d4b"
         ]
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -217,14 +240,14 @@ HTTP: POST
 URL: /api/v1/db/update_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
       "filter": {
         "author": "john doe3",
       },
       "update": {"$set": {
-        "author": "john doe3_1", 
+        "author": "john doe3_1",
         "title": "Eve for Dummies3_1"
       }},
       "options": {
@@ -241,7 +264,7 @@ return:
             "modified_count": 0,
             "upserted_id": null
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -263,14 +286,14 @@ HTTP: POST
 URL: /api/v1/db/update_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
       "filter": {
         "author": "john doe1",
       },
       "update": {"$set": {
-        "author": "john doe1_1", 
+        "author": "john doe1_1",
         "title": "Eve for Dummies1_1"
       }},
       "options": {
@@ -287,7 +310,7 @@ return:
         "modified_count": 10,
         "upserted_id": null
     }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -305,7 +328,7 @@ HTTP: POST
 URL: /api/v1/db/delete_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -320,7 +343,7 @@ return:
         "acknowledged": true,
         "deleted_count": 1,
     }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -338,7 +361,7 @@ HTTP: POST
 URL: /api/v1/db/delete_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -352,7 +375,7 @@ return:
         "acknowledged": true,
         "deleted_count": 0,
     }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -360,7 +383,7 @@ return:
             "message": "Error message"
           }
         }
-```   
+```
 
 - Count documents
     * collection: collection name.
@@ -374,7 +397,7 @@ HTTP: POST
 URL: /api/v1/db/count_documents
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -387,12 +410,12 @@ data:
         }
     }
 return:
-    Success: 
+    Success:
     {
         "_status": "OK",
         "count": 10
     }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -422,7 +445,7 @@ HTTP: POST
 URL: /api/v1/db/find_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -439,7 +462,7 @@ data:
         }
     }
 return:
-    Success: 
+    Success:
         {
           "_status": "OK",
           "items": {
@@ -453,7 +476,7 @@ return:
             }
           }
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -484,7 +507,7 @@ HTTP: POST
 URL: /api/v1/db/find_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -506,7 +529,7 @@ data:
         }
     }
 return:
-    Success: 
+    Success:
         {
           "_status": "OK",
           "items": [
@@ -532,7 +555,7 @@ return:
             }
           ]
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -716,9 +739,12 @@ return:
     Success:
         {
           "_status": "OK",
+<<<<<<< Updated upstream
           "SHA256": "3a29a81d7b2718a588a5f6f3491b3c57"
+=======
+          "MD5": "3a29a81d7b2718a588a5f6f3491b3c57"
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -730,16 +756,97 @@ return:
 
 ## Scripting
 
+### Register/Update a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner, while registering scripts using /scripting/set_script endpoint. This will insert/update a row in the collection "subconditions". If the name doesn't exist, it'll create a new row and if it does, it'll update the existing row.
+
+- Create/Update a subcondition to check whether a user belongs in a particular group.
+Note that on the query, the mapping "group_id": "id" represents that the client passes us a parameter called "group_id" and this is not the field name in the database. Rather, the field name on "groups" is actually "id" as represented by the mapping. This is to make it so that if there are multiple parameters with the same values, they can be passed just once thereby reducing duplication. Note that "*caller_did" is not passed but rather it's the DID of the user who's executing the script. This value will be retrieved automatically on the backend
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_subcondition
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data:
+    {
+      "name": "user_in_group",
+      "condition": {
+        "endpoint": "condition/has_results",
+        "collection": "groups",
+        "options": {
+          "filter": {
+            "group_id": "_id",
+            "*caller_did": "friends"
+          },
+          "skip": 0,
+          "limit": 10,
+          "maxTimeMS": 1000000000
+        }
+      }
+    }
+return:
+    Success:
+        {
+          "_status": "OK",
+>>>>>>> Stashed changes
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+<<<<<<< Updated upstream
+## Scripting
+=======
+- Create/Update a subcondition to check whether the group was created within the timeframe given on the query.
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_subcondition
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data:
+    {
+      "name": "group_created_age",
+      "condition": {
+        "endpoint": "condition/has_results",
+        "collection": "groups",
+        "options": {
+          "filter": {
+            "group_id": "_id",
+            "group_created": "created"
+          }
+        }
+      }
+    }
+return:
+    Success:
+        {
+          "_status": "OK",
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+>>>>>>> Stashed changes
+
 ### Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/run_script endpoint to execute one of those scripts and get results/data. The same API is used to insert/update the scripts
 
-- Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction. 
+- Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction.
 Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "name": "get_groups",
       "executable": {
@@ -760,15 +867,18 @@ data:
       }
     }
 return:
-    Success: 
+    Success:
         {
           "_status": "OK",
+<<<<<<< Updated upstream
           "acknowledged": true,
           "matched_count": 0,
           "modified_count": 0,
           "upserted_id": "5f4aa0a116f409b032c1da0b"
+=======
+>>>>>>> Stashed changes
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -786,7 +896,7 @@ HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "name": "get_group_messages",
       "executable": {
@@ -816,15 +926,18 @@ data:
       }
     }
 return:
-    Success: 
+    Success:
         {
           "_status": "OK",
+<<<<<<< Updated upstream
           "acknowledged": true,
           "matched_count": 0,
           "modified_count": 0,
           "upserted_id": "5f4aa1cf16f409b032c1dad2"
+=======
+>>>>>>> Stashed changes
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -834,14 +947,14 @@ return:
         }
 ```
 
-- Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run. 
+- Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run.
 Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "name": "add_group_message",
       "executable": {
@@ -909,7 +1022,8 @@ data:
       }
     }
 return:
-    Success: 
+<<<<<<< Updated upstream
+    Success:
       {
         "_status": "OK",
         "acknowledged": true,
@@ -917,7 +1031,14 @@ return:
         "modified_count": 0,
         "upserted_id": "5f4aa2be16f409b032c1daf4"
       }
-    Failure: 
+    Failure:
+=======
+    Success:
+        {
+          "_status": "OK",
+        }
+    Failure:
+>>>>>>> Stashed changes
         {
           "_status": "ERR",
           "_error": {
@@ -935,12 +1056,13 @@ HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "name": "get_groups"
     }
 return:
-    Success: 
+<<<<<<< Updated upstream
+    Success:
       {
         "_status": "OK",
         "items": [
@@ -949,7 +1071,22 @@ return:
           }
         ]
       }
-    Failure: 
+    Failure:
+=======
+    Success:
+        {
+          "_status": "OK",
+          "items": [
+            {
+              "name": "Group 1"
+            },
+            {
+              "name": "Group 2"
+            }
+          ]
+        }
+    Failure:
+>>>>>>> Stashed changes
         {
           "_status": "ERR",
           "_error": {
@@ -965,7 +1102,7 @@ HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "name": "get_group_messages",
       "params": {
@@ -974,6 +1111,7 @@ data:
     }
 return:
     Success:
+<<<<<<< Updated upstream
       {
         "_status": "OK",
         "items": [
@@ -981,6 +1119,14 @@ return:
             "content": "Old Message",
             "created": {
               "$date": 1630022400000
+=======
+        {
+          "_status": "OK",
+          "_items": [
+            {
+              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
+              "content": "Old Message 1"
+>>>>>>> Stashed changes
             },
             "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
             "group_id": {
@@ -989,10 +1135,16 @@ return:
             "modified": {
               "$date": 1598725803556
             }
+<<<<<<< Updated upstream
           }
         ]
       }
-    Failure: 
+    Failure:
+=======
+          ]
+        }
+    Failure:
+>>>>>>> Stashed changes
         {
           "_status": "ERR",
           "_error": {
@@ -1008,7 +1160,7 @@ HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "name": "add_group_message",
       "params": {
@@ -1022,6 +1174,7 @@ data:
     }
 return:
     Success:
+<<<<<<< Updated upstream
       {
         "_status": "OK",
         "items": [
@@ -1029,6 +1182,14 @@ return:
             "content": "New Message",
             "created": {
               "$date": 1630022400000
+=======
+        {
+          "_status": "OK",
+          "_items": [
+            {
+              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
+              "content": "Old Message 1"
+>>>>>>> Stashed changes
             },
             "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
             "group_id": {
@@ -1037,10 +1198,16 @@ return:
             "modified": {
               "$date": 1598725803556
             }
+<<<<<<< Updated upstream
           }
         ]
       }
-    Failure: 
+    Failure:
+=======
+          ]
+        }
+    Failure:
+>>>>>>> Stashed changes
         {
           "_status": "ERR",
           "_error": {

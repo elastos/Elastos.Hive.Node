@@ -4,19 +4,23 @@ import logging
 from flask import request
 from datetime import datetime
 import time
+import os
 
 from hive.util.did.eladid import ffi, lib
 
-from hive.util.did_info import add_did_info_to_db, create_nonce, update_nonce_of_did_info, get_did_info_by_did_appid
+from hive.util.did_info import add_did_info_to_db, create_nonce, get_did_info_by_nonce, update_nonce_of_did_info, get_did_info_by_did_appid
 from hive.util.server_response import response_err, response_ok
 from hive.settings import DID_CHALLENGE_EXPIRE
+from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
+    DID_INFO_NONCE_EXPIRE, DID_INFO_TOKEN_EXPIRE
 
-from hive.util.did.entity import Entity
+from hive.util.did.entity import Entity, cache_dir
 
 ACCESS_AUTH_COL = "did_auth"
 APP_DID = "appdid"
 ACCESS_TOKEN = "access_token"
 TOKEN_EXPIRE = "token_expire"
+NONCE_EXPIRE = 5 * 60
 
 
 class HiveAuth(Entity):
@@ -41,6 +45,34 @@ class HiveAuth(Entity):
     def __get_token_from_db(self, iss, appdid):
         return vp_token
 
+    def access_request(self):
+        body = request.get_json(force=True, silent=True)
+        if body is None:
+            return response_err(400, "parameter is not application/json")
+        doc_str = body.get('document', None)
+        doc = lib.DIDDocument_FromJson(doc_str.encode())
+        did= lib.DIDDocument_GetSubject(doc)
+        spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
+        f = open(cache_dir + os.sep + spec_did_str, "w")
+        f.write(doc_str)
+        f.close()
+        did_str = "did:" + ffi.string(lib.DID_GetMethod(did)).decode() +":" + spec_did_str
+
+        # save to db
+        nonce = create_nonce()
+        exp = int(datetime.now().timestamp()) + NONCE_EXPIRE
+        if not self.__save_nonce_to_db(nonce, did_str, exp):
+            return response_err(400, "save to db fail!")
+
+        # response token
+        data = {
+            "nonce": nonce,
+            "issuer": self.get_did_string(),
+            "exp": exp,
+        }
+        return response_ok(data)
+
+
     def request_did_auth(self):
         # get jwt
         body = request.get_json(force=True, silent=True)
@@ -63,13 +95,13 @@ class HiveAuth(Entity):
             return response_err(400, "create access token fail!")
 
         # save to db
-        if not self.__save_to_db(credentialSubject, access_token, exp):
+        if not self.__save_token_to_db(credentialSubject, access_token, exp):
             return response_err(400, "save to db fail!")
 
         # response token
         data = {
             "subject": "didauth",
-            "issuer": "elastos_hive_node",
+            "issuer": self.get_did_string(),
             "token": access_token,
             "exp": exp,
         }
@@ -82,7 +114,7 @@ class HiveAuth(Entity):
         jws = lib.JWTParser_Parse(jwt.encode())
         ver = lib.JWS_GetHeader(jws, "version".encode())
         # iss = JWS_GetClaim(jws, "iss")
-        vp_str = lib.JWS_GetClaimAsJson(jws, "vp".encode())
+        vp_str = lib.JWS_GetClaimAsJson(jws, "presentation".encode())
 
         vp = lib.Presentation_FromJson(vp_str)
         vp_json = json.loads(ffi.string(vp_str).decode())
@@ -98,15 +130,26 @@ class HiveAuth(Entity):
 
         # print(ffi.string(vp_str).decode())
 
-        vc_json = vp_json.get("verifiableCredential")[0]
-        credentialSubject = vc_json.get("credentialSubject")
-        vp_issuer = vc_json.get("issuer")
-        userDid = credentialSubject.get("userDid")
+        vc_json = vp_json["verifiableCredential"][0]
+        nonce = vp_json["proof"]["nonce"]
+        credentialSubject = vc_json["credentialSubject"]
+        vp_issuer = vc_json["issuer"]
+        userDid = credentialSubject["id"]
         if (vp_issuer != userDid):
-            response_err(400, )
             return None, "vp issuer isn't userDid"
 
-        expirationDate = vc_json.get("expirationDate")
+        info = get_did_info_by_nonce(nonce)
+        if info is None:
+            return None, "nonce is error"
+
+        if info[DID] != userDid:
+            return None, "userdid is error"
+
+        if info[DID_INFO_NONCE_EXPIRE] < int(datetime.now().timestamp()):
+            return None, "nonce is expire"
+
+        credentialSubject["nonce"] = nonce
+        expirationDate = vc_json["expirationDate"]
         timeArray = time.strptime(expirationDate, "%Y-%m-%dT%H:%M:%SZ")
         expTime = int(time.mktime(timeArray))
 
@@ -127,20 +170,29 @@ class HiveAuth(Entity):
         lib.JWTBuilder_Destroy(builder)
         return token
 
-    def __save_to_db(self, credentialSubject, token, exp):
-        did = credentialSubject.get("userDid")
-        app_id = credentialSubject.get("appDid")
-        nonce = create_nonce()
-        info = get_did_info_by_did_appid(did, app_id)
+    def __save_nonce_to_db(self, nonce, did, exp):
+        info = get_did_info_by_nonce(nonce)
 
         try:
             if info is None:
-                add_did_info_to_db(did, app_id, nonce, token, exp)
+                add_did_info_to_db(did, "", nonce, "", exp)
             else:
-                update_nonce_of_did_info(did, app_id, nonce, token, exp)
+                update_nonce_of_did_info(did, "", nonce, "", exp)
         except Exception as e:
-            logging.debug(f"Exception in did_auth_challenge:: {e}")
-            response_err(500, "Exception in did_auth_challenge:" + e)
+            logging.debug(f"Exception in __save_nonce_to_db:: {e}")
+            return False
+
+        return True
+
+    def __save_token_to_db(self, credentialSubject, token, exp):
+        did = credentialSubject["id"]
+        app_id = credentialSubject["appDid"]
+        nonce = credentialSubject["nonce"]
+
+        try:
+            update_nonce_of_did_info(did, app_id, nonce, token, exp)
+        except Exception as e:
+            logging.debug(f"Exception in __save_token_to_db:: {e}")
             return False
 
         return True

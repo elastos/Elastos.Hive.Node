@@ -25,7 +25,11 @@ def echo():
     return jsonify(content)
 
 
-# did register
+# did auth
+@main.route('/api/v1/did/access', methods=['POST'])
+def access_request():
+    return h_auth.access_request()
+
 @main.route('/api/v1/did/auth', methods=['POST'])
 def request_did_auth():
     return h_auth.request_did_auth()

@@ -8,6 +8,7 @@ from hive.settings import DID_SIDECHAIN_URL
 resolver = DID_SIDECHAIN_URL.encode()  # 20606
 language = "english".encode()
 idchain_path = str(pathlib.Path("." + os.sep + "data" + os.sep + "idchain").absolute())
+cache_dir = idchain_path + os.sep + ".cache"
 
 
 @ffi.def_extern()
@@ -145,7 +146,6 @@ class Entity:
 
 # ---------------
 def init_did_backend():
-    cache_dir = idchain_path + os.sep + ".cache"
     ret = lib.DIDBackend_InitializeDefault(resolver, cache_dir.encode())
     return ret
 

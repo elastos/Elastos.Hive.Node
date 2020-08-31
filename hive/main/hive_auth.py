@@ -10,7 +10,7 @@ from hive.util.did.eladid import ffi, lib
 
 from hive.util.did_info import add_did_info_to_db, create_nonce, get_did_info_by_nonce, update_nonce_of_did_info, get_did_info_by_did_appid
 from hive.util.server_response import response_err, response_ok
-from hive.settings import DID_CHALLENGE_EXPIRE
+from hive.settings import DID_CHALLENGE_EXPIRE, DID_TOKEN_EXPIRE
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
     DID_INFO_NONCE_EXPIRE, DID_INFO_TOKEN_EXPIRE
 
@@ -19,8 +19,6 @@ from hive.util.did.entity import Entity, cache_dir
 ACCESS_AUTH_COL = "did_auth"
 APP_DID = "appdid"
 ACCESS_TOKEN = "access_token"
-TOKEN_EXPIRE = "token_expire"
-NONCE_EXPIRE = 5 * 60
 
 
 class HiveAuth(Entity):
@@ -60,7 +58,7 @@ class HiveAuth(Entity):
 
         # save to db
         nonce = create_nonce()
-        exp = int(datetime.now().timestamp()) + NONCE_EXPIRE
+        exp = int(datetime.now().timestamp()) + DID_CHALLENGE_EXPIRE
         if not self.__save_nonce_to_db(nonce, did_str, exp):
             return response_err(400, "save to db fail!")
 
@@ -86,7 +84,7 @@ class HiveAuth(Entity):
             return response_err(400, expTime)
 
         # create access token
-        exp = int(datetime.now().timestamp()) + DID_CHALLENGE_EXPIRE
+        exp = int(datetime.now().timestamp()) + DID_TOKEN_EXPIRE
         if exp > expTime:
             exp = expTime
 

@@ -23,6 +23,8 @@ def run_condition(did, app_id, condition_body, params):
         if key == SCRIPTING_EXECUTABLE_CALLER_DID:
             query[value] = {"$in": [did]}
         else:
+            if not params.get(key):
+                return False
             query[value] = params[key]
     condition_body["filter"] = query
 

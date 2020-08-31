@@ -87,11 +87,13 @@ class HiveScripting:
         executable_type = executable.get('type')
         executable_body = executable.get('body')
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
+            if not isinstance(executable_body, list):
+                return f"Invalid parameters passed for executble type '{executable_type}'"
             if len(executable_body) == 1:
                 return self.__executable_validation(executable_body[0])
             else:
                 new_executable = {
-                    "type": SCRIPTING_EXECUTABLE_TYPE_AGGREGATED,
+                    "type": executable_type,
                     "body": executable_body[1:]
                 }
                 return self.__executable_validation(new_executable)
@@ -105,24 +107,17 @@ class HiveScripting:
     def __condition_execution(self, did, app_id, condition, params):
         condition_type = condition.get('type')
         condition_body = condition.get('body')
-        if condition_type == SCRIPTING_CONDITION_TYPE_AND:
+        if condition_type in [SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR]:
             if len(condition_body) == 1:
                 return self.__condition_execution(did, app_id, condition_body[0], params)
-            else:
-                new_condition = {
-                    "type": SCRIPTING_CONDITION_TYPE_AND,
-                    "body": condition_body[1:]
-                }
+            new_condition = {
+                "type": condition_type,
+                "body": condition_body[1:]
+            }
+            if condition_type == SCRIPTING_CONDITION_TYPE_AND:
                 return self.__condition_execution(did, app_id, condition_body[0], params) and \
                        self.__condition_execution(did, app_id, new_condition, params)
-        elif condition_type == SCRIPTING_CONDITION_TYPE_OR:
-            if len(condition_body) == 1:
-                return self.__condition_execution(did, app_id, condition_body[0], params)
-            else:
-                new_condition = {
-                    "type": SCRIPTING_CONDITION_TYPE_OR,
-                    "body": condition_body[1:]
-                }
+            elif condition_type == SCRIPTING_CONDITION_TYPE_OR:
                 return self.__condition_execution(did, app_id, condition_body[0], params) or \
                        self.__condition_execution(did, app_id, new_condition, params)
         else:
@@ -169,7 +164,7 @@ class HiveScripting:
             return response_err(400, err_message)
 
         # Condition Validation
-        condition = content.get('condition', None)
+        condition = content.get('condition')
         if condition:
             err_message = check_json_param(condition, "condition", args=["type", "name", "body"])
             if err_message:
@@ -204,19 +199,17 @@ class HiveScripting:
         # Find the script in the database
         col = get_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
         content_filter = {
-            "name": content["name"]
+            "name": content.get('name')
         }
         try:
             script = col.find_one(content_filter)
-            if ("_id" in script) and (isinstance(script["_id"], ObjectId)):
-                script["_id"] = str(script["_id"])
         except Exception as e:
             err_message = f"could not find script '{content['name']}' in the database. Please register the script " \
                           f"first with set_script' API endpoint. Exception: {str(e)}"
             logging.debug(err_message)
             return response_err(404, err_message)
 
-        params = content.get('params', None)
+        params = content.get('params')
         condition = script.get("condition")
         if condition:
             passed = self.__condition_execution(did, app_id, condition, params)

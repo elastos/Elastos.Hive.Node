@@ -45,22 +45,24 @@ class DIDApp(Entity):
         type0 = ffi.new("char[]", "DIDAuthCredential".encode())
         types = ffi.new("char **", type0)
         props = {
-            'appDid': app.get_did_string(),
+            'appId': app.appId,
         }
         issuerid = self.did
-        issuerdoc = lib.DIDStore_LoadDID(self.store, self.did)
+        issuerdoc = self.doc
         expires = lib.DIDDocument_GetExpires(issuerdoc)
-        credid = lib.DIDURL_NewByDid(issuerid, self.name.encode())
-        vc = lib.Issuer_CreateCredentialByString(self.issuer, issuerid, credid, types, 1,
+        credid = lib.DIDURL_NewByDid(app.did, self.name.encode())
+        vc = lib.Issuer_CreateCredentialByString(self.issuer, app.did, credid, types, 1,
                                                  json.dumps(props).encode(), expires, self.storepass)
         vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
         logging.debug(f"vcJson: {vcJson}")
+        # print(vcJson)
         return vc
 
 
 # ---------------
 class DApp(Entity):
     access_token = "123"
+    appId = "appId"
 
     def __init__(self, name, mnemonic=None):
         Entity.__init__(self, name, mnemonic)
@@ -71,7 +73,7 @@ class DApp(Entity):
     def set_access_token(self, token):
         self.access_token = token
 
-    def create_presentation(self, vc, realm, nonce):
+    def create_presentation(self, vc, nonce, realm):
         vp = lib.Presentation_Create(self.did, ffi.NULL, self.store, self.storepass, nonce.encode(),
                                      realm.encode(), 1, vc)
         # print_err()
@@ -130,9 +132,6 @@ class HiveAuthTestCase(unittest.TestCase):
         ]
         self.auth = None
 
-        self.didapp = DIDApp("didapp")
-        self.testapp = DApp("testapp")
-
     def tearDown(self):
         logging.getLogger("HiveAuthTestCase").info("\n")
 
@@ -163,24 +162,33 @@ class HiveAuthTestCase(unittest.TestCase):
         self.assert200(s)
 
     def test_b_auth(self):
+        didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
+        testapp = DApp("testapp", "amount material swim purse swallow gate pride series cannon patient dentist person")
+
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_access")
-        doc = lib.DID_Resolve(self.testapp.did, False)
+        doc = lib.DID_Resolve(testapp.did, False)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
+        doc = json.loads(doc_str)
         rt, s = self.parse_response(
-            self.test_client.post('/api/v1/did/access',
+            self.test_client.post('/api/v1/did/sign_in',
                                   data=json.dumps({
-                                      "document": doc_str,
+                                      "document": doc,
                                   }),
                                   headers=self.json_header)
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
-        nonce = rt["nonce"]
+        jwt = rt["jwt"]
+        jws = lib.JWTParser_Parse(jwt.encode())
+        aud = ffi.string(lib.JWS_GetAudience(jws)).decode()
+        nonce = ffi.string(lib.JWS_GetClaim(jws, "nonce".encode())).decode()
+        realm = ffi.string(lib.JWS_GetIssuer(jws)).decode()
+        lib.JWS_Destroy(jws)
 
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_c_auth")
-        vc = self.didapp.issue_auth(self.testapp)
-        vp_json = self.testapp.create_presentation(vc, "testapp", nonce)
-        auth_token = self.testapp.create_token(vp_json)
+        vc = didapp.issue_auth(testapp)
+        vp_json = testapp.create_presentation(vc, nonce, realm)
+        auth_token = testapp.create_token(vp_json)
         logging.getLogger("HiveAuthTestCase").debug(f"auth_token: {auth_token}")
 
         rt, s = self.parse_response(
@@ -192,8 +200,16 @@ class HiveAuthTestCase(unittest.TestCase):
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
-        logging.getLogger("HiveAuthTestCase").debug(f"token: {rt['token']}")
-        self.testapp.set_access_token(rt["token"])
+
+        jwt = rt["jwt"]
+        jws = lib.JWTParser_Parse(jwt.encode())
+        aud = ffi.string(lib.JWS_GetAudience(jws)).decode()
+        token = ffi.string(lib.JWS_GetClaim(jws, "token".encode())).decode()
+        issuer = ffi.string(lib.JWS_GetIssuer(jws)).decode()
+        lib.JWS_Destroy(jws)
+
+        logging.getLogger("HiveAuthTestCase").debug(f"token: {token}")
+        testapp.set_access_token(token)
 
 
 if __name__ == '__main__':

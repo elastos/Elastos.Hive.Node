@@ -3,26 +3,34 @@ import uuid
 from pymongo import MongoClient
 
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
-    DID_INFO_NONCE_EXPIRE, DID_INFO_TOKEN_EXPIRE
+    DID_INFO_NONCE_EXPIRE, DID_INFO_TOKEN_EXPIRE, APP_INSTANCE_DID
 from hive.settings import MONGO_HOST, MONGO_PORT
 from hive.util.did_mongo_db_resource import gene_mongo_db_name
 
 
-def add_did_info_to_db(did, app_id, nonce, token, expire):
+def add_did_info_to_db(app_instance_did, nonce, expire):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    did_dic = {DID: did, APP_ID: app_id, DID_INFO_NONCE: nonce, DID_INFO_TOKEN: token, DID_INFO_NONCE_EXPIRE: expire}
+    did_dic = {APP_INSTANCE_DID: app_instance_did, DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRE: expire}
     i = col.insert_one(did_dic)
     return i
 
-
-def update_nonce_of_did_info(did, app_id, nonce, token, expire):
+def update_nonce_of_did_info(app_instance_did, nonce, expire):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {DID: did, APP_ID: app_id}
-    value = {"$set": {DID_INFO_NONCE: nonce, DID_INFO_TOKEN: token, DID_INFO_NONCE_EXPIRE: expire}}
+    query = {DID_INFO_NONCE: nonce}
+    value = {"$set": {APP_INSTANCE_DID: app_instance_did, DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRE: expire}}
+    ret = col.update_one(query, value)
+    return ret
+
+def update_token_of_did_info(did, app_id, app_instance_did, nonce, token, expire):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+    query = {APP_INSTANCE_DID: app_instance_did, DID_INFO_NONCE: nonce}
+    value = {"$set": {DID: did, APP_ID: app_id, DID_INFO_TOKEN: token, DID_INFO_TOKEN_EXPIRE: expire}}
     ret = col.update_one(query, value)
     return ret
 

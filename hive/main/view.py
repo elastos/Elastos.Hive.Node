@@ -26,9 +26,9 @@ def echo():
 
 
 # did auth
-@main.route('/api/v1/did/access', methods=['POST'])
+@main.route('/api/v1/did/sign_in', methods=['POST'])
 def access_request():
-    return h_auth.access_request()
+    return h_auth.sign_in()
 
 @main.route('/api/v1/did/auth', methods=['POST'])
 def request_did_auth():

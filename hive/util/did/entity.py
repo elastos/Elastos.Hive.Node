@@ -36,6 +36,7 @@ class Entity:
     passphrase = "secret".encode()
     storepass = "password".encode()
     store = None
+    doc = None
     did = None
     did_str = None
     name = "Entity"
@@ -43,7 +44,8 @@ class Entity:
 
     def __init__(self, name, mnemonic=None):
         self.name = name
-        # self.mnemonic = mnemonic
+        if not mnemonic is None:
+            self.mnemonic = mnemonic
         logging.debug(f"Entity name: {self.name}")
         self.init_did_store()
         self.init_private_identity()
@@ -110,18 +112,33 @@ class Entity:
                 print_err("check_did_and_new")
                 return
 
+        doc = lib.DID_Resolve(did, True)
+        if not doc:
+            print_err("DID_Resolve")
+            return
+
+        ret = lib.DIDStore_StoreDID(self.store, doc)
+        if ret == -1:
+            print_err("DIDStore_StoreDID")
+            return
+
+        self.doc = lib.DIDStore_LoadDID(self.store, self.did)
+        if not self.doc:
+            print_err("DIDStore_LoadDID")
+            return
+
         # ret = lib.DIDStore_PublishDID(self.store, self.storepass, self.did, ffi.NULL, False)
         # if ret == -1:
         #     print_err("DIDStore_PublishDID")
 
-        self.did_str = self.get_did_string_from_did(self.did)
+        self.did_str = self.get_did_string()
         logging.debug(self.did_str)
         return
 
     def get_did_string_from_did(self, did):
-        didstr = ffi.new("char[" + str(lib.ELA_MAX_DID_LEN) + "]")
-        lib.DID_ToString(did, didstr, lib.ELA_MAX_DID_LEN)
-        return ffi.string(didstr).decode()
+        method = ffi.string(lib.DID_GetMethod(did)).decode()
+        sep_did = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
+        return "did:" + method + ":" + sep_did
 
     def get_did_string(self):
         if self.did_str is None:
@@ -135,7 +152,7 @@ class Entity:
         return self.did
 
     def get_document(self):
-        return lib.DIDStore_LoadDID(self.store, self.did)
+        return self.doc
 
     def get_name(self):
         return self.name
@@ -147,6 +164,8 @@ class Entity:
 # ---------------
 def init_did_backend():
     ret = lib.DIDBackend_InitializeDefault(resolver, cache_dir.encode())
+    #  DIDBackend_SetLocalResolveHandle
+    #  typedef DIDDocument* DIDLocalResovleHandle(DID *did);
     return ret
 
 

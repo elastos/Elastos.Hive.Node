@@ -42,7 +42,7 @@ class DIDApp(Entity):
         # Entity.__del__(self)
 
     def issue_auth(self, app):
-        type0 = ffi.new("char[]", "DIDAuthCredential".encode())
+        type0 = ffi.new("char[]", "AppAuthCredential".encode())
         types = ffi.new("char **", type0)
         props = {
             'appId': app.appId,
@@ -78,27 +78,29 @@ class DApp(Entity):
                                      realm.encode(), 1, vc)
         # print_err()
         vp_json = ffi.string(lib.Presentation_ToJson(vp, True)).decode()
+        # print(vp_json)
         logging.debug(f"vp_json: {vp_json}")
         return vp_json
 
-    def create_token(self, vp_json):
+    def create_token(self, vp_json, hive_did):
         doc = lib.DIDStore_LoadDID(self.store, self.did)
         builder = lib.DIDDocument_GetJwtBuilder(doc)
         ticks = int(datetime.now().timestamp())
         iat = ticks
         nbf = ticks
-        exp = ticks + 10000
+        exp = ticks + 60
 
         lib.JWTBuilder_SetHeader(builder, "type".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
 
-        lib.JWTBuilder_SetSubject(builder, "DIDAuthCredential".encode())
-        lib.JWTBuilder_SetAudience(builder, "Hive".encode())
+        lib.JWTBuilder_SetSubject(builder, "DIDAuthResponse".encode())
+        lib.JWTBuilder_SetAudience(builder, hive_did.encode())
         lib.JWTBuilder_SetIssuedAt(builder, iat)
         lib.JWTBuilder_SetExpiration(builder, exp)
         lib.JWTBuilder_SetNotBefore(builder, nbf)
         lib.JWTBuilder_SetClaimWithJson(builder, "presentation".encode(), vp_json.encode())
 
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
         token = ffi.string(lib.JWTBuilder_Compact(builder)).decode()
         lib.JWTBuilder_Destroy(builder)
         return token
@@ -166,7 +168,7 @@ class HiveAuthTestCase(unittest.TestCase):
         testapp = DApp("testapp", "amount material swim purse swallow gate pride series cannon patient dentist person")
 
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_access")
-        doc = lib.DID_Resolve(testapp.did, False)
+        doc = lib.DIDStore_LoadDID(testapp.store, testapp.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
         doc = json.loads(doc_str)
         rt, s = self.parse_response(
@@ -178,17 +180,18 @@ class HiveAuthTestCase(unittest.TestCase):
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
-        jwt = rt["jwt"]
+        jwt = rt["challenge"]
         jws = lib.JWTParser_Parse(jwt.encode())
         aud = ffi.string(lib.JWS_GetAudience(jws)).decode()
+        self.assertEqual(aud, testapp.did_str)
         nonce = ffi.string(lib.JWS_GetClaim(jws, "nonce".encode())).decode()
-        realm = ffi.string(lib.JWS_GetIssuer(jws)).decode()
+        hive_did = ffi.string(lib.JWS_GetIssuer(jws)).decode()
         lib.JWS_Destroy(jws)
 
-        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_c_auth")
+        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_auth")
         vc = didapp.issue_auth(testapp)
-        vp_json = testapp.create_presentation(vc, nonce, realm)
-        auth_token = testapp.create_token(vp_json)
+        vp_json = testapp.create_presentation(vc, nonce, hive_did)
+        auth_token = testapp.create_token(vp_json, hive_did)
         logging.getLogger("HiveAuthTestCase").debug(f"auth_token: {auth_token}")
 
         rt, s = self.parse_response(
@@ -201,13 +204,13 @@ class HiveAuthTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
 
-        jwt = rt["jwt"]
-        jws = lib.JWTParser_Parse(jwt.encode())
+        token = rt["access_token"]
+        jws = lib.JWTParser_Parse(token.encode())
         aud = ffi.string(lib.JWS_GetAudience(jws)).decode()
-        token = ffi.string(lib.JWS_GetClaim(jws, "token".encode())).decode()
+        self.assertEqual(aud, testapp.did_str)
         issuer = ffi.string(lib.JWS_GetIssuer(jws)).decode()
         lib.JWS_Destroy(jws)
-
+        # print(token)
         logging.getLogger("HiveAuthTestCase").debug(f"token: {token}")
         testapp.set_access_token(token)
 

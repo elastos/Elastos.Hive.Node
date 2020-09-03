@@ -13,9 +13,9 @@ def did_auth():
         token = auth.split(" ")[1]
         info = get_did_info_by_token(token)
         if info is not None:
-            # expire = info[DID_INFO_TOKEN_EXPIRE]
+            # expired = info[DID_INFO_TOKEN_EXPIRED]
             # now = datetime.now().timestamp()
-            # if now > expire:
+            # if now > expired:
             #     return None, None
             return info[DID], info[APP_ID]
         else:

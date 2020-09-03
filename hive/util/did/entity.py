@@ -8,7 +8,7 @@ from hive.settings import DID_SIDECHAIN_URL
 resolver = DID_SIDECHAIN_URL.encode()  # 20606
 language = "english".encode()
 idchain_path = str(pathlib.Path("." + os.sep + "data" + os.sep + "idchain").absolute())
-cache_dir = idchain_path + os.sep + ".cache"
+localdids = idchain_path + os.sep + "localdids"
 
 
 @ffi.def_extern()
@@ -17,6 +17,22 @@ def CreateIdTransactionHandle(adapter, payload, memo):
     # TODO:: need to improve
     return True
 
+@ffi.def_extern()
+def MyDIDLocalResovleHandle(did):
+    spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
+    doc = ffi.NULL
+
+    file_path = localdids + os.sep + spec_did_str
+    is_exist =os.path.exists(file_path)
+    if is_exist:
+        f = open(file_path, "r")
+        try:
+            doc_str = f.read()
+            doc = lib.DIDDocument_FromJson(doc_str.encode())
+        finally:
+            f.close()
+
+    return doc
 
 def print_err(fun_name=None):
     err = "Error:: "
@@ -163,9 +179,16 @@ class Entity:
 
 # ---------------
 def init_did_backend():
+    cache_dir = idchain_path + os.sep + "didcache"
     ret = lib.DIDBackend_InitializeDefault(resolver, cache_dir.encode())
-    #  DIDBackend_SetLocalResolveHandle
-    #  typedef DIDDocument* DIDLocalResovleHandle(DID *did);
+    if ret == -1:
+        print_err("DIDBackend_InitializeDefault")
+
+    is_exist =os.path.exists(localdids)
+    if not is_exist:
+        os.makedirs(localdids)
+    lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)
+
     return ret
 
 

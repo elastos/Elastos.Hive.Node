@@ -11,16 +11,14 @@
 - User auth access request
 ```json
 HTTP: POST
-URL: /api/v1/did/access
+URL: /api/v1/did/sign_in
 Content-Type: "application/json"
-data: {"document":" did_doc}
+data: {"document": did_document}
 return:
     Success:
         {
           "_status":"OK",
-          "nonce": nonce,
-          "issuer": hive_did,
-          "exp": expiration_date
+          "challenge": jwt,
         }
     Failure:
         {
@@ -30,6 +28,7 @@ return:
             "message": err_message
           }
         }
+comments: jwt include "nonce"
 ```
 - User auth
 ```
@@ -41,10 +40,7 @@ return:
     Success:
         {
           "_status":"OK",
-          "subject": "didauth",
-          "issuer": hive_did,
-          "token": "access_token",
-          "exp": "expiration_date"
+          "token": access_token,
         }
     Failure:
         {
@@ -54,6 +50,7 @@ return:
             "message": "err_message"
           }
         }
+comments: access_token is a "token", and it is a jwt too.
 ```
 
 ## Synchronization

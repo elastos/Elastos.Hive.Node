@@ -89,7 +89,6 @@ class HiveScripting:
             return err_message
         executable_type = executable.get('type')
         executable_body = executable.get('body')
-        print("yum: ", executable)
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
             if not isinstance(executable_body, list):
                 return f"Invalid parameters passed for executble type '{executable_type}'"

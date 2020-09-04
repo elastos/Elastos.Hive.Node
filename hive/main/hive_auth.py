@@ -161,7 +161,7 @@ class HiveAuth(Entity):
         if info is None:
             return None, "The nonce is error."
 
-        #check reaml
+        #check realm
         realm = vp_json["proof"]["realm"]
         if realm is None:
             return None, "The realm is none."
@@ -173,6 +173,9 @@ class HiveAuth(Entity):
         vc_json = vp_json["verifiableCredential"][0]
         vc_str = json.dumps(vc_json)
         vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
+        if vc is None:
+            return None, "The credential string is error, unable to rebuild to a credential object."
+
         ret = lib.Credential_IsValid(vc)
         if not ret:
             return None, "The verifiableCredential isn't valid"

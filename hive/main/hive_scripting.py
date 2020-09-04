@@ -164,7 +164,7 @@ class HiveScripting:
             return response_err(400, err_message)
 
         # Condition Validation
-        condition = content.get('condition')
+        condition = content.get('condition', None)
         if condition:
             err_message = check_json_param(condition, "condition", args=["type", "name", "body"])
             if err_message:
@@ -210,7 +210,7 @@ class HiveScripting:
             return response_err(404, err_message)
 
         params = content.get('params')
-        condition = script.get("condition")
+        condition = script.get('condition', None)
         if condition:
             passed = self.__condition_execution(did, app_id, condition, params)
             if not passed:

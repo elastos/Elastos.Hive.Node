@@ -911,7 +911,7 @@ data:
         }
       },
       "condition": {
-        "type": "queryHasResult",
+        "type": "queryHasResults",
         "name": "verify_user_permission",
         "body": {
           "collection": "groups",
@@ -994,7 +994,7 @@ data:
         "name": "verify_user_permission",
         "body": [
           {
-            "type": "queryHasResult",
+            "type": "queryHasResults",
             "name": "user_in_group",
             "body": {
               "collection": "groups",
@@ -1005,7 +1005,7 @@ data:
             }
           },
           {
-            "type": "queryHasResult",
+            "type": "queryHasResults",
             "name": "user_in_group",
             "body": {
               "collection": "groups",

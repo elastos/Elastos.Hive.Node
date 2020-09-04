@@ -42,10 +42,10 @@ class DIDApp(Entity):
         # Entity.__del__(self)
 
     def issue_auth(self, app):
-        type0 = ffi.new("char[]", "AppAuthCredential".encode())
+        type0 = ffi.new("char[]", "AppIdCredential".encode())
         types = ffi.new("char **", type0)
         props = {
-            'appId': app.appId,
+            'appDid': app.appId,
         }
         issuerid = self.did
         issuerdoc = self.doc

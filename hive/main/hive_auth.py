@@ -25,7 +25,11 @@ ACCESS_TOKEN = "access_token"
 class HiveAuth(Entity):
     access_token = None
 
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
+        self.mnemonic = config.getDIDValue("mnemonic")
+        self.passphrase = config.getDIDValue("passphrase").encode()
+        self.storepass = config.getDIDValue("storepass").encode()
         Entity.__init__(self, "hive.auth")
 
     def init_app(self, app):
@@ -126,26 +130,31 @@ class HiveAuth(Entity):
 
     def __check_auth_token(self, jwt):
         if jwt is None:
-            return None, "jwt is null"
+            return None, "The jwt is none."
 
         #check jwt token
         jws = lib.JWTParser_Parse(jwt.encode())
         vp_str = lib.JWS_GetClaimAsJson(jws, "presentation".encode())
+        if vp_str is None:
+            return None, "The jwt's presentation is none."
 
         vp = lib.Presentation_FromJson(vp_str)
+        if vp is None:
+            return None, "The presentation string is error, unable to rebuild to a presentation object."
+
         vp_json = json.loads(ffi.string(vp_str).decode())
         lib.JWS_Destroy(jws)
 
         #check vp
         ret = lib.Presentation_IsValid(vp)
         if not ret:
-            return None, "The vp isn't valid"
+            return None, "The presentation isn't valid"
         # print(ffi.string(vp_str).decode())
 
         #check nonce
         nonce = vp_json["proof"]["nonce"]
         if nonce is None:
-            return None, "The nonce is none"
+            return None, "The nonce is none."
 
         #check did:nonce from db
         info = get_did_info_by_nonce(nonce)
@@ -166,7 +175,7 @@ class HiveAuth(Entity):
         vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
         ret = lib.Credential_IsValid(vc)
         if not ret:
-            return None, "The vc isn't valid"
+            return None, "The verifiableCredential isn't valid"
 
         credentialSubject = vc_json["credentialSubject"]
         instance_did = credentialSubject["id"]
@@ -187,7 +196,7 @@ class HiveAuth(Entity):
 
     def __create_access_token(self, credentialSubject, exp):
         user_did = credentialSubject["userDid"]
-        app_id = credentialSubject["appId"]
+        app_id = credentialSubject["appDid"]
         app_instance_did = credentialSubject["id"]
 
         did_str = self.get_did_string()
@@ -223,7 +232,7 @@ class HiveAuth(Entity):
 
     def __save_token_to_db(self, credentialSubject, token, exp):
         user_did = credentialSubject["userDid"]
-        app_id = credentialSubject["appId"]
+        app_id = credentialSubject["appDid"]
         nonce = credentialSubject["nonce"]
         app_instance_did = credentialSubject["id"]
 

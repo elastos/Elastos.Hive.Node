@@ -1,10 +1,12 @@
 from flask import Blueprint, request, jsonify
 
+from hive.main.hive_config import HiveConfig
 from hive.main.hive_auth import HiveAuth
 from hive.main.hive_sync import HiveSync
 from hive.main.hive_scripting import HiveScripting
 
-h_auth = HiveAuth()
+h_cfg = HiveConfig()
+h_auth = HiveAuth(h_cfg)
 h_sync = HiveSync()
 h_scripting = HiveScripting()
 

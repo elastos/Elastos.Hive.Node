@@ -54,9 +54,9 @@ class Entity:
     store = None
     doc = None
     did = None
+    mnemonic = None
     did_str = None
     name = "Entity"
-    mnemonic = "advance duty suspect finish space matter squeeze elephant twenty over stick shield"
 
     def __init__(self, name, mnemonic=None):
         self.name = name

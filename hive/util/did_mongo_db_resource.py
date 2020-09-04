@@ -1,6 +1,5 @@
 import hashlib
 import json
-import logging
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -99,6 +98,11 @@ def update_schema_of_did_resource(did, app_id, resource, schema):
     return r
 
 
+def populate_options_update_one(content):
+    options = options_filter(content, ("upsert", "bypass_document_validation"))
+    return options
+
+
 def query_update_one(col, content, options):
     try:
         update_set_on_insert = content.get('update').get('$setOnInsert', None)
@@ -160,6 +164,18 @@ def query_find_many(col, content, options):
         return data, None
     except Exception as e:
         return None, f"Exception: method: 'query_find_many', Err: {str(e)}"
+
+
+def query_delete_one(col, content):
+    try:
+        result = col.delete_one(convert_oid(content["filter"]))
+        data = {
+            "acknowledged": result.acknowledged,
+            "deleted_count": result.deleted_count,
+        }
+        return data, None
+    except Exception as e:
+        return None, f"Exception: method: 'query_delete_one', Err: {str(e)}"
 
 
 def find_schema_of_did_resource(did, app_id, resource):

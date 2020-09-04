@@ -753,97 +753,16 @@ return:
 
 ## Scripting
 
-### Register/Update a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner, while registering scripts using /scripting/set_script endpoint. This will insert/update a row in the collection "subconditions". If the name doesn't exist, it'll create a new row and if it does, it'll update the existing row.
-
-- Create/Update a subcondition to check whether a user belongs in a particular group.
-Note that on the query, the mapping "group_id": "id" represents that the client passes us a parameter called "group_id" and this is not the field name in the database. Rather, the field name on "groups" is actually "id" as represented by the mapping. This is to make it so that if there are multiple parameters with the same values, they can be passed just once thereby reducing duplication. Note that "*caller_did" is not passed but rather it's the DID of the user who's executing the script. This value will be retrieved automatically on the backend
-```json
-HTTP: POST
-URL: /api/v1/scripting/set_subcondition
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data:
-    {
-      "name": "user_in_group",
-      "condition": {
-        "endpoint": "condition/has_results",
-        "collection": "groups",
-        "options": {
-          "filter": {
-            "group_id": "_id",
-            "*caller_did": "friends"
-          },
-          "skip": 0,
-          "limit": 10,
-          "maxTimeMS": 1000000000
-        }
-      }
-    }
-return:
-    Success:
-        {
-          "_status": "OK",
->>>>>>> Stashed changes
-        }
-    Failure:
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
-
-<<<<<<< Updated upstream
-## Scripting
-=======
-- Create/Update a subcondition to check whether the group was created within the timeframe given on the query.
-```json
-HTTP: POST
-URL: /api/v1/scripting/set_subcondition
-Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-Content-Type: "application/json"
-data:
-    {
-      "name": "group_created_age",
-      "condition": {
-        "endpoint": "condition/has_results",
-        "collection": "groups",
-        "options": {
-          "filter": {
-            "group_id": "_id",
-            "group_created": "created"
-          }
-        }
-      }
-    }
-return:
-    Success:
-        {
-          "_status": "OK",
-        }
-    Failure:
-        {
-          "_status": "ERR",
-          "_error": {
-            "code": 401,
-            "message": "Error message"
-          }
-        }
-```
->>>>>>> Stashed changes
-
 ### Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/run_script endpoint to execute one of those scripts and get results/data. The same API is used to insert/update the scripts
 
-- Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction.
+- Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction. 
 Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data:
+data: 
     {
       "name": "get_groups",
       "executable": {
@@ -864,18 +783,15 @@ data:
       }
     }
 return:
-    Success:
+    Success: 
         {
           "_status": "OK",
-<<<<<<< Updated upstream
           "acknowledged": true,
           "matched_count": 0,
           "modified_count": 0,
           "upserted_id": "5f4aa0a116f409b032c1da0b"
-=======
->>>>>>> Stashed changes
         }
-    Failure:
+    Failure: 
         {
           "_status": "ERR",
           "_error": {
@@ -893,7 +809,7 @@ HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data:
+data: 
     {
       "name": "get_group_messages",
       "executable": {
@@ -911,7 +827,7 @@ data:
         }
       },
       "condition": {
-        "type": "queryHasResults",
+        "type": "queryHasResult",
         "name": "verify_user_permission",
         "body": {
           "collection": "groups",
@@ -923,18 +839,15 @@ data:
       }
     }
 return:
-    Success:
+    Success: 
         {
           "_status": "OK",
-<<<<<<< Updated upstream
           "acknowledged": true,
           "matched_count": 0,
           "modified_count": 0,
           "upserted_id": "5f4aa1cf16f409b032c1dad2"
-=======
->>>>>>> Stashed changes
         }
-    Failure:
+    Failure: 
         {
           "_status": "ERR",
           "_error": {
@@ -944,14 +857,14 @@ return:
         }
 ```
 
-- Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run.
+- Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run. 
 Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data:
+data: 
     {
       "name": "add_group_message",
       "executable": {
@@ -994,7 +907,7 @@ data:
         "name": "verify_user_permission",
         "body": [
           {
-            "type": "queryHasResults",
+            "type": "queryHasResult",
             "name": "user_in_group",
             "body": {
               "collection": "groups",
@@ -1005,7 +918,7 @@ data:
             }
           },
           {
-            "type": "queryHasResults",
+            "type": "queryHasResult",
             "name": "user_in_group",
             "body": {
               "collection": "groups",
@@ -1019,23 +932,96 @@ data:
       }
     }
 return:
-<<<<<<< Updated upstream
-    Success:
-      {
-        "_status": "OK",
-        "acknowledged": true,
-        "matched_count": 0,
-        "modified_count": 0,
-        "upserted_id": "5f4aa2be16f409b032c1daf4"
-      }
-    Failure:
-=======
-    Success:
+    Success: 
         {
           "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
         }
-    Failure:
->>>>>>> Stashed changes
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Create/Update a script(just for demoing delete and update query)
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "update_group_message_and_delete",
+      "executable": {
+        "type": "aggregated",
+        "name": "update_and_delete",
+        "body": [
+          {
+            "type": "update",
+            "name": "update_and_return",
+            "body": {
+              "collection": "messages",
+              "filter": {
+                "group_id": "group_id",
+                "*caller_did": "friend_did",
+                "old_content": "content"
+              },
+              "update": {
+                "\$set": {
+                  "group_id": "group_id",
+                  "*caller_did": "friend_did",
+                  "new_content": "content"
+                }
+              },
+              "options": {
+                "upsert": true,
+                "bypass_document_validation": false
+              }
+            }
+          },
+          {
+            "type": "delete",
+            "name": "delete_and_return",
+            "body": {
+              "collection": "messages",
+              "filter": {
+                "group_id": "group_id",
+                "*caller_did": "friend_did",
+                "content": "content"
+              }
+            }
+          }
+        ]
+      },
+      "condition": {
+        "type": "queryHasResults",
+        "name": "verify_user_permission",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "group_id": "_id",
+            "*caller_did": "friends"
+          }
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
+        }
+    Failure: 
         {
           "_status": "ERR",
           "_error": {
@@ -1053,13 +1039,12 @@ HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data:
+data: 
     {
       "name": "get_groups"
     }
 return:
-<<<<<<< Updated upstream
-    Success:
+    Success: 
       {
         "_status": "OK",
         "items": [
@@ -1068,22 +1053,7 @@ return:
           }
         ]
       }
-    Failure:
-=======
-    Success:
-        {
-          "_status": "OK",
-          "items": [
-            {
-              "name": "Group 1"
-            },
-            {
-              "name": "Group 2"
-            }
-          ]
-        }
-    Failure:
->>>>>>> Stashed changes
+    Failure: 
         {
           "_status": "ERR",
           "_error": {
@@ -1099,7 +1069,7 @@ HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data:
+data: 
     {
       "name": "get_group_messages",
       "params": {
@@ -1108,7 +1078,6 @@ data:
     }
 return:
     Success:
-<<<<<<< Updated upstream
       {
         "_status": "OK",
         "items": [
@@ -1116,14 +1085,6 @@ return:
             "content": "Old Message",
             "created": {
               "$date": 1630022400000
-=======
-        {
-          "_status": "OK",
-          "_items": [
-            {
-              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
-              "content": "Old Message 1"
->>>>>>> Stashed changes
             },
             "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
             "group_id": {
@@ -1132,16 +1093,10 @@ return:
             "modified": {
               "$date": 1598725803556
             }
-<<<<<<< Updated upstream
           }
         ]
       }
-    Failure:
-=======
-          ]
-        }
-    Failure:
->>>>>>> Stashed changes
+    Failure: 
         {
           "_status": "ERR",
           "_error": {
@@ -1157,7 +1112,7 @@ HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data:
+data: 
     {
       "name": "add_group_message",
       "params": {
@@ -1171,7 +1126,6 @@ data:
     }
 return:
     Success:
-<<<<<<< Updated upstream
       {
         "_status": "OK",
         "items": [
@@ -1179,14 +1133,6 @@ return:
             "content": "New Message",
             "created": {
               "$date": 1630022400000
-=======
-        {
-          "_status": "OK",
-          "_items": [
-            {
-              "created": "Wed, 25 Feb 1987 17:00:00 GMT",
-              "content": "Old Message 1"
->>>>>>> Stashed changes
             },
             "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
             "group_id": {
@@ -1195,16 +1141,10 @@ return:
             "modified": {
               "$date": 1598725803556
             }
-<<<<<<< Updated upstream
           }
         ]
       }
-    Failure:
-=======
-          ]
-        }
-    Failure:
->>>>>>> Stashed changes
+    Failure: 
         {
           "_status": "ERR",
           "_error": {

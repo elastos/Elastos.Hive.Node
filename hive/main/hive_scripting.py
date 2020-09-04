@@ -1,17 +1,18 @@
 import copy
 import logging
 
-from bson import ObjectId
 from pymongo import MongoClient
 
 from hive.main.interceptor import post_json_param_pre_proc
 from hive.settings import MONGO_HOST, MONGO_PORT
 from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR, \
-    SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED
+    SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, \
+    SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE
 from hive.util.did_info import get_collection
-from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one
-from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert
+from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one, populate_options_update_one
+from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
+    run_executable_update, run_executable_delete
 from hive.util.server_response import response_ok, response_err
 
 
@@ -41,12 +42,14 @@ class HiveScripting:
             },
             "update": {
                 "$set": {k: v for k, v in content.items() if k != 'name'}
+            },
+            "options": {
+                "upsert": True,
+                "bypass_document_validation": False
             }
         }
-        options = {
-            "upsert": True,
-            "bypass_document_validation": False
-        }
+
+        options = populate_options_update_one(new_content)
 
         data, err_message = query_update_one(col, new_content, options)
         if err_message:
@@ -86,6 +89,7 @@ class HiveScripting:
             return err_message
         executable_type = executable.get('type')
         executable_body = executable.get('body')
+        print("yum: ", executable)
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
             if not isinstance(executable_body, list):
                 return f"Invalid parameters passed for executble type '{executable_type}'"
@@ -97,10 +101,22 @@ class HiveScripting:
                     "body": executable_body[1:]
                 }
                 return self.__executable_validation(new_executable)
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
+        elif executable_type in [SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_EXECUTABLE_TYPE_DELETE]:
             return check_json_param(executable_body, f"{executable.get('name')}", args=["collection", "filter"])
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
             return check_json_param(executable_body, f"{executable.get('name')}", args=["collection", "document"])
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
+            err_message = check_json_param(executable_body, f"{executable.get('name')}",
+                                           args=["collection", "filter", "update"])
+            if err_message:
+                return err_message
+            # We need to make sure to put extra quotation around "$set" or mongo update is going to fail because
+            # it's going to try to validate it
+            update_set = executable_body.get('update').get("$set", None)
+            if update_set:
+                executable_body["update"]["'$set'"] = update_set
+                executable_body['update'].pop("$set", None)
+            return None
         else:
             return f"invalid executable type '{executable_type}"
 
@@ -136,6 +152,12 @@ class HiveScripting:
             return run_executable_find(did, app_id, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
             return run_executable_insert(did, app_id, executable_body, params)
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
+            return run_executable_update(did, app_id, executable_body, params)
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
+            return run_executable_delete(did, app_id, executable_body, params)
+        else:
+            None, f"invalid executable type '{executable_type}"
 
     def __count_nested_condition(self, condition):
         content = copy.deepcopy(condition)

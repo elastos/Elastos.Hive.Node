@@ -7,12 +7,19 @@ from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, AP
 from hive.settings import MONGO_HOST, MONGO_PORT
 from hive.util.did_mongo_db_resource import gene_mongo_db_name
 
-
-def add_did_info_to_db(app_instance_did, nonce, expired):
+def add_did_nonce_to_db(app_instance_did, nonce, expired):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     did_dic = {APP_INSTANCE_DID: app_instance_did, DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRED: expired}
+    i = col.insert_one(did_dic)
+    return i
+
+def add_did_info_to_db(did, app_id, nonce, token, expire):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+    did_dic = {DID: did, APP_ID: app_id, DID_INFO_NONCE: nonce, DID_INFO_TOKEN: token, DID_INFO_NONCE_EXPIRED: expire}
     i = col.insert_one(did_dic)
     return i
 

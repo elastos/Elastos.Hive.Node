@@ -8,7 +8,7 @@ import os
 
 from hive.util.did.eladid import ffi, lib
 
-from hive.util.did_info import add_did_info_to_db, create_nonce, get_did_info_by_nonce, update_nonce_of_did_info, \
+from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, update_nonce_of_did_info, \
     get_did_info_by_did_appid, update_token_of_did_info
 from hive.util.server_response import response_err, response_ok
 from hive.settings import AUTH_CHALLENGE_EXPIRED, ACCESS_TOKEN_EXPIRED
@@ -224,7 +224,7 @@ class HiveAuth(Entity):
 
         try:
             if info is None:
-                add_did_info_to_db(app_instance_did, nonce, exp)
+                add_did_nonce_to_db(app_instance_did, nonce, exp)
             else:
                 update_nonce_of_did_info(app_instance_did, nonce, exp)
         except Exception as e:

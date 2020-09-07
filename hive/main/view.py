@@ -1,10 +1,12 @@
 from flask import Blueprint, request, jsonify
 
+from hive.main.hive_config import HiveConfig
 from hive.main.hive_auth import HiveAuth
 from hive.main.hive_sync import HiveSync
 from hive.main.hive_scripting import HiveScripting
 
-h_auth = HiveAuth()
+h_cfg = HiveConfig()
+h_auth = HiveAuth(h_cfg)
 h_sync = HiveSync()
 h_scripting = HiveScripting()
 
@@ -25,7 +27,11 @@ def echo():
     return jsonify(content)
 
 
-# did register
+# did auth
+@main.route('/api/v1/did/sign_in', methods=['POST'])
+def access_request():
+    return h_auth.sign_in()
+
 @main.route('/api/v1/did/auth', methods=['POST'])
 def request_did_auth():
     return h_auth.request_did_auth()

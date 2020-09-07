@@ -8,6 +8,7 @@ from hive.settings import DID_SIDECHAIN_URL
 resolver = DID_SIDECHAIN_URL.encode()  # 20606
 language = "english".encode()
 idchain_path = str(pathlib.Path("." + os.sep + "data" + os.sep + "idchain").absolute())
+localdids = idchain_path + os.sep + "localdids"
 
 
 @ffi.def_extern()
@@ -16,6 +17,22 @@ def CreateIdTransactionHandle(adapter, payload, memo):
     # TODO:: need to improve
     return True
 
+@ffi.def_extern()
+def MyDIDLocalResovleHandle(did):
+    spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
+    doc = ffi.NULL
+
+    file_path = localdids + os.sep + spec_did_str
+    is_exist =os.path.exists(file_path)
+    if is_exist:
+        f = open(file_path, "r")
+        try:
+            doc_str = f.read()
+            doc = lib.DIDDocument_FromJson(doc_str.encode())
+        finally:
+            f.close()
+
+    return doc
 
 def print_err(fun_name=None):
     err = "Error:: "
@@ -35,14 +52,16 @@ class Entity:
     passphrase = "secret".encode()
     storepass = "password".encode()
     store = None
+    doc = None
     did = None
+    mnemonic = None
     did_str = None
     name = "Entity"
-    mnemonic = "advance duty suspect finish space matter squeeze elephant twenty over stick shield"
 
     def __init__(self, name, mnemonic=None):
         self.name = name
-        # self.mnemonic = mnemonic
+        if not mnemonic is None:
+            self.mnemonic = mnemonic
         logging.debug(f"Entity name: {self.name}")
         self.init_did_store()
         self.init_private_identity()
@@ -109,18 +128,33 @@ class Entity:
                 print_err("check_did_and_new")
                 return
 
+        doc = lib.DID_Resolve(did, True)
+        if not doc:
+            print_err("DID_Resolve")
+            return
+
+        ret = lib.DIDStore_StoreDID(self.store, doc)
+        if ret == -1:
+            print_err("DIDStore_StoreDID")
+            return
+
+        self.doc = lib.DIDStore_LoadDID(self.store, self.did)
+        if not self.doc:
+            print_err("DIDStore_LoadDID")
+            return
+
         # ret = lib.DIDStore_PublishDID(self.store, self.storepass, self.did, ffi.NULL, False)
         # if ret == -1:
         #     print_err("DIDStore_PublishDID")
 
-        self.did_str = self.get_did_string_from_did(self.did)
+        self.did_str = self.get_did_string()
         logging.debug(self.did_str)
         return
 
     def get_did_string_from_did(self, did):
-        didstr = ffi.new("char[" + str(lib.ELA_MAX_DID_LEN) + "]")
-        lib.DID_ToString(did, didstr, lib.ELA_MAX_DID_LEN)
-        return ffi.string(didstr).decode()
+        method = ffi.string(lib.DID_GetMethod(did)).decode()
+        sep_did = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
+        return "did:" + method + ":" + sep_did
 
     def get_did_string(self):
         if self.did_str is None:
@@ -134,7 +168,7 @@ class Entity:
         return self.did
 
     def get_document(self):
-        return lib.DIDStore_LoadDID(self.store, self.did)
+        return self.doc
 
     def get_name(self):
         return self.name
@@ -145,8 +179,16 @@ class Entity:
 
 # ---------------
 def init_did_backend():
-    cache_dir = idchain_path + os.sep + ".cache"
+    cache_dir = idchain_path + os.sep + "didcache"
     ret = lib.DIDBackend_InitializeDefault(resolver, cache_dir.encode())
+    if ret == -1:
+        print_err("DIDBackend_InitializeDefault")
+
+    is_exist =os.path.exists(localdids)
+    if not is_exist:
+        os.makedirs(localdids)
+    lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)
+
     return ret
 
 

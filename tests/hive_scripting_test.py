@@ -122,7 +122,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                               }
                                           },
                                           "condition": {
-                                              "type": "queryHasResult",
+                                              "type": "queryHasResults",
                                               "name": "verify_user_permission",
                                               "body": {
                                                   "collection": "test_group",
@@ -161,7 +161,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                               "name": "verify_user_permission",
                                               "body": [
                                                   {
-                                                      "type": "queryHasResult",
+                                                      "type": "queryHasResults",
                                                       "name": "user_in_group",
                                                       "body": {
                                                           "collection": "test_group",
@@ -172,7 +172,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                                       }
                                                   },
                                                   {
-                                                      "type": "queryHasResult",
+                                                      "type": "queryHasResults",
                                                       "name": "user_in_group",
                                                       "body": {
                                                           "collection": "test_group",

@@ -5,7 +5,7 @@ from hive.util.did_info import add_did_info_to_db, delete_did_info, get_did_info
 from hive.util.did_sync import add_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
     delete_did_sync_info
 
-from hive.settings import DID_CHALLENGE_EXPIRE
+from hive.settings import AUTH_CHALLENGE_EXPIRED
 
 did = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
 app_id = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
@@ -16,7 +16,7 @@ drive = "gdrive_ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
 
 def setup_test_auth_token():
     delete_did_info(did, app_id)
-    exp = int(datetime.now().timestamp()) + DID_CHALLENGE_EXPIRE
+    exp = int(datetime.now().timestamp()) + AUTH_CHALLENGE_EXPIRED
     add_did_info_to_db(did, app_id, nonce, token, exp)
 
 

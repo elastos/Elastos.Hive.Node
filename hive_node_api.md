@@ -8,8 +8,30 @@
 - [Scripting](#scripting)
 
 ## Auth of did and app
-- User auth
+- User auth access request
 ```json
+HTTP: POST
+URL: /api/v1/did/sign_in
+Content-Type: "application/json"
+data: {"document": did_document}
+return:
+    Success:
+        {
+          "_status":"OK",
+          "challenge": jwt,
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": err_message
+          }
+        }
+comments: jwt include "nonce"
+```
+- User auth
+```
 HTTP: POST
 URL: /api/v1/did/auth
 Content-Type: "application/json"
@@ -18,10 +40,7 @@ return:
     Success:
         {
           "_status":"OK",
-          "subject": "didauth",
-          "issuer": "elastos_hive_node",
-          "token": "access_token",
-          "exp": "expiration_date"
+          "token": access_token,
         }
     Failure:
         {
@@ -31,6 +50,7 @@ return:
             "message": "err_message"
           }
         }
+comments: access_token is a "token", and it is a jwt too.
 ```
 
 ## Synchronization
@@ -74,16 +94,16 @@ HTTP: POST
 URL: /api/v1/db/create_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
     }
 return:
-    Success: 
+    Success:
         {
-          "_status": "OK", 
+          "_status": "OK",
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -100,16 +120,16 @@ HTTP: POST
 URL: /api/v1/db/delete_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
     }
 return:
-    Success: 
+    Success:
         {
-          "_status": "OK", 
+          "_status": "OK",
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -130,11 +150,11 @@ HTTP: POST
 URL: /api/v1/db/insert_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
       "document": {
-        "author": "john doe1", 
+        "author": "john doe1",
         "title": "Eve for Dummies2"
       },
       "options": {"bypass_document_validation":false}
@@ -146,7 +166,7 @@ return:
           "acknowledged": true,
           "inserted_id": "5edddab688db87875fddc3a5"
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -167,16 +187,16 @@ HTTP: POST
 URL: /api/v1/db/insert_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
       "document": [
         {
-          "author": "john doe1", 
+          "author": "john doe1",
           "title": "Eve for Dummies1"
         },
         {
-          "author": "john doe2", 
+          "author": "john doe2",
           "title": "Eve for Dummies2"
         }
       ],
@@ -195,7 +215,7 @@ return:
             "5f4658d122c95b17e72f2d4b"
         ]
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -217,14 +237,14 @@ HTTP: POST
 URL: /api/v1/db/update_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
       "filter": {
         "author": "john doe3",
       },
       "update": {"$set": {
-        "author": "john doe3_1", 
+        "author": "john doe3_1",
         "title": "Eve for Dummies3_1"
       }},
       "options": {
@@ -241,7 +261,7 @@ return:
             "modified_count": 0,
             "upserted_id": null
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -263,14 +283,14 @@ HTTP: POST
 URL: /api/v1/db/update_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
       "collection": "works",
       "filter": {
         "author": "john doe1",
       },
       "update": {"$set": {
-        "author": "john doe1_1", 
+        "author": "john doe1_1",
         "title": "Eve for Dummies1_1"
       }},
       "options": {
@@ -287,7 +307,7 @@ return:
         "modified_count": 10,
         "upserted_id": null
     }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -305,7 +325,7 @@ HTTP: POST
 URL: /api/v1/db/delete_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -320,7 +340,7 @@ return:
         "acknowledged": true,
         "deleted_count": 1,
     }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -338,7 +358,7 @@ HTTP: POST
 URL: /api/v1/db/delete_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -352,7 +372,7 @@ return:
         "acknowledged": true,
         "deleted_count": 0,
     }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -360,7 +380,7 @@ return:
             "message": "Error message"
           }
         }
-```   
+```
 
 - Count documents
     * collection: collection name.
@@ -374,7 +394,7 @@ HTTP: POST
 URL: /api/v1/db/count_documents
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -387,12 +407,12 @@ data:
         }
     }
 return:
-    Success: 
+    Success:
     {
         "_status": "OK",
         "count": 10
     }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -422,7 +442,7 @@ HTTP: POST
 URL: /api/v1/db/find_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -439,7 +459,7 @@ data:
         }
     }
 return:
-    Success: 
+    Success:
         {
           "_status": "OK",
           "items": {
@@ -453,7 +473,7 @@ return:
             }
           }
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -484,7 +504,7 @@ HTTP: POST
 URL: /api/v1/db/find_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
-data: 
+data:
     {
         "collection": "works",
         "filter": {
@@ -506,7 +526,7 @@ data:
         }
     }
 return:
-    Success: 
+    Success:
         {
           "_status": "OK",
           "items": [
@@ -532,7 +552,7 @@ return:
             }
           ]
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -716,9 +736,12 @@ return:
     Success:
         {
           "_status": "OK",
+<<<<<<< Updated upstream
           "SHA256": "3a29a81d7b2718a588a5f6f3491b3c57"
+=======
+          "MD5": "3a29a81d7b2718a588a5f6f3491b3c57"
         }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -910,13 +933,94 @@ data:
     }
 return:
     Success: 
-      {
-        "_status": "OK",
-        "acknowledged": true,
-        "matched_count": 0,
-        "modified_count": 0,
-        "upserted_id": "5f4aa2be16f409b032c1daf4"
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Create/Update a script(just for demoing delete and update query)
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "update_group_message_and_delete",
+      "executable": {
+        "type": "aggregated",
+        "name": "update_and_delete",
+        "body": [
+          {
+            "type": "update",
+            "name": "update_and_return",
+            "body": {
+              "collection": "messages",
+              "filter": {
+                "group_id": "group_id",
+                "*caller_did": "friend_did",
+                "old_content": "content"
+              },
+              "update": {
+                "\$set": {
+                  "group_id": "group_id",
+                  "*caller_did": "friend_did",
+                  "new_content": "content"
+                }
+              },
+              "options": {
+                "upsert": true,
+                "bypass_document_validation": false
+              }
+            }
+          },
+          {
+            "type": "delete",
+            "name": "delete_and_return",
+            "body": {
+              "collection": "messages",
+              "filter": {
+                "group_id": "group_id",
+                "*caller_did": "friend_did",
+                "content": "content"
+              }
+            }
+          }
+        ]
+      },
+      "condition": {
+        "type": "queryHasResults",
+        "name": "verify_user_permission",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "group_id": "_id",
+            "*caller_did": "friends"
+          }
+        }
       }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
+        }
     Failure: 
         {
           "_status": "ERR",

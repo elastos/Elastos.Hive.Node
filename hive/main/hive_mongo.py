@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from bson import ObjectId, json_util
+from bson import json_util
 
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
@@ -10,7 +10,7 @@ from hive.settings import MONGO_HOST, MONGO_PORT
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort, convert_oid, \
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
-    populate_options_count_documents, query_update_one
+    populate_options_count_documents, query_update_one, populate_options_update_one, query_delete_one
 from hive.util.server_response import response_ok, response_err
 from hive.main.interceptor import post_json_param_pre_proc
 
@@ -106,7 +106,7 @@ class HiveMongoDb:
         if err:
             return err
 
-        options = options_filter(content, ("upsert", "bypass_document_validation"))
+        options = populate_options_update_one(content)
 
         col = get_collection(did, app_id, content["collection"])
         data, err_message = query_update_one(col, content, options)
@@ -145,15 +145,11 @@ class HiveMongoDb:
             return err
 
         col = get_collection(did, app_id, content["collection"])
-        try:
-            ret = col.delete_one(convert_oid(content["filter"]))
-            data = {
-                "acknowledged": ret.acknowledged,
-                "deleted_count": ret.deleted_count,
-            }
-            return response_ok(data)
-        except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+        data, err_message = query_delete_one(col, content)
+        if err_message:
+            return response_err(500, err_message)
+
+        return response_ok(data)
 
     def delete_many(self):
         did, app_id, content, err = post_json_param_pre_proc("collection", "filter")

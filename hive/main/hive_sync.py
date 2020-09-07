@@ -32,9 +32,18 @@ class HiveSync:
 
     def init_app(self, app):
         self.app = app
-        if not scheduler.running:
-            scheduler.init_app(app)
-            scheduler.start()
+        # if not scheduler.running:
+        #     scheduler.init_app(app)
+        #     scheduler.start()
+
+    def copy_drive_to_vault(self):
+        pass
+
+    def copy_vault_to_drive(self):
+        pass
+
+    def get_sync_state(self):
+        pass
 
     def setup_google_drive_rclone(self):
         did, app_id = did_auth()
@@ -246,7 +255,7 @@ token = %s
         return drive_name
 
 
-@scheduler.task(trigger='interval', id='syn_job', hours=1)
+# @scheduler.task(trigger='interval', id='syn_job', hours=1)
 def syn_job():
     logging.debug(f"rclone syncing start: {str(datetime.now())}")
     HiveSync.syn_all_drive()

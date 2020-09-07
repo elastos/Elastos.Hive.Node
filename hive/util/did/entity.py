@@ -3,12 +3,14 @@ import os
 import pathlib
 from eladid import ffi, lib
 
-from hive.settings import DID_SIDECHAIN_URL
-
+from hive.settings import DID_SIDECHAIN_URL, DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA_PATH
 resolver = DID_SIDECHAIN_URL.encode()  # 20606
 language = "english".encode()
-idchain_path = str(pathlib.Path("." + os.sep + "data" + os.sep + "idchain").absolute())
-localdids = idchain_path + os.sep + "localdids"
+
+did_data_path = HIVE_DATA_PATH + os.sep + "did" + os.sep
+localdids = did_data_path + "localdids"
+store_path = did_data_path + "store"
+cache_path = did_data_path + "cache"
 
 
 @ffi.def_extern()
@@ -71,7 +73,6 @@ class Entity:
         pass
 
     def init_did_store(self):
-        store_path = idchain_path + os.sep + self.name + os.sep + ".store"
         self.store = lib.DIDStore_Open(store_path.encode(), adapter)
         return self.store
 
@@ -179,8 +180,7 @@ class Entity:
 
 # ---------------
 def init_did_backend():
-    cache_dir = idchain_path + os.sep + "didcache"
-    ret = lib.DIDBackend_InitializeDefault(resolver, cache_dir.encode())
+    ret = lib.DIDBackend_InitializeDefault(resolver, cache_path.encode())
     if ret == -1:
         print_err("DIDBackend_InitializeDefault")
 

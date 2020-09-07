@@ -2,6 +2,11 @@ from decouple import config
 
 DID_SIDECHAIN_URL = config('DID_SIDECHAIN_URL', default="http://api.elastos.io:21606", cast=str)
 
+DID_MNEMONIC = config('DID_MNEMONIC', default="advance duty suspect finish space matter squeeze elephant twenty over stick shield", cast=str)
+DID_PASSPHRASE = config('DID_PASSPHRASE', default="secret", cast=str)
+DID_STOREPASS = config('DID_STOREPASS', default="password", cast=str)
+HIVE_DATA_PATH = config('HIVE_DATA_PATH', default="./data", cast=str)
+
 MONGO_HOST = config('MONGO_HOST', default="localhost", cast=str)
 MONGO_PORT = config('MONGO_PORT', default=27020, cast=int)
 

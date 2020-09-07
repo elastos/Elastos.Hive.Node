@@ -15,6 +15,8 @@ from hive.settings import AUTH_CHALLENGE_EXPIRED, ACCESS_TOKEN_EXPIRED
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
     DID_INFO_NONCE_EXPIRED, DID_INFO_TOKEN_EXPIRED, APP_INSTANCE_DID
 
+from hive.settings import DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA_PATH
+
 from hive.util.did.entity import Entity, localdids
 
 ACCESS_AUTH_COL = "did_auth"
@@ -25,11 +27,10 @@ ACCESS_TOKEN = "access_token"
 class HiveAuth(Entity):
     access_token = None
 
-    def __init__(self, config):
-        self.config = config
-        self.mnemonic = config.getDIDValue("mnemonic")
-        self.passphrase = config.getDIDValue("passphrase").encode()
-        self.storepass = config.getDIDValue("storepass").encode()
+    def __init__(self):
+        self.mnemonic = DID_MNEMONIC
+        self.passphrase = DID_PASSPHRASE.encode()
+        self.storepass = DID_STOREPASS.encode()
         Entity.__init__(self, "hive.auth")
 
     def init_app(self, app):

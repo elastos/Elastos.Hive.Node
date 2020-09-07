@@ -6,7 +6,7 @@ from hive.util.server_response import response_err
 def pre_proc():
     did, app_id = did_auth()
     if (did is None) or (app_id is None):
-        return did, app_id, None, response_err(401, "auth failed")
+        return did, app_id, response_err(401, "auth failed")
 
     return did, app_id, None
 

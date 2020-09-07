@@ -11,10 +11,9 @@ from time import time
 from flask import Blueprint, request, jsonify
 from flask_apscheduler import APScheduler
 
-from hive.main import view
 from hive.util.auth import did_auth
 from hive.util.common import did_tail_part, create_full_path_dir
-from hive.settings import DID_BASE_DIR, RCLONE_CONFIG_FILE
+from hive.settings import VAULTS_BASE_DIR, RCLONE_CONFIG_FILE
 from hive.util.constants import DID_SYNC_INFO_STATE, DID, DID_SYNC_INFO_DRIVE, APP_ID, DID_SYNC_INFO_TIME, \
     DID_SYNC_INFO_MSG
 from hive.util.did_info import get_all_did_info_by_did
@@ -92,7 +91,7 @@ class HiveSync:
 
     @staticmethod
     def get_did_sync_path(did):
-        path = pathlib.Path(DID_BASE_DIR)
+        path = pathlib.Path(VAULTS_BASE_DIR)
         if path.is_absolute():
             path = path / did_tail_part(did)
         else:
@@ -135,7 +134,6 @@ class HiveSync:
         did_info_list = get_all_did_info_by_did(info[DID])
         for did_info in did_info_list:
             import_mongo_db(did_info[DID], did_info[APP_ID])
-            view.hive_mongo.init_eve(did_info[DID], did_info[APP_ID])
 
         update_did_sync_info(info[DID], DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, time(),
                              info[DID_SYNC_INFO_DRIVE])
@@ -160,7 +158,7 @@ class HiveSync:
                 HiveSync.prepare_did_sync_data(info[DID])
                 did_folder = HiveSync.get_did_sync_path(info[DID])
                 line = 'rclone sync %s %s:elastos_hive_node_data' % (did_folder.as_posix(), info[DID_SYNC_INFO_DRIVE])
-                subprocess.call(line, shell=True)
+                # subprocess.call(line, shell=True)
                 update_did_sync_info(info[DID], DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, time(),
                                      info[DID_SYNC_INFO_DRIVE])
 

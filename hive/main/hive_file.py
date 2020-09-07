@@ -11,7 +11,7 @@ from flask import request, Response
 from hive.main.hive_sync import HiveSync
 from hive.util.auth import did_auth
 from hive.util.common import did_tail_part
-from hive.settings import DID_BASE_DIR
+from hive.settings import VAULTS_BASE_DIR
 from hive.util.flask_rangerequest import RangeRequest
 from hive.util.server_response import response_err, response_ok
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
@@ -27,7 +27,7 @@ class HiveFile:
         self.app.config['MAX_CONTENT_PATH'] = 10000000
 
     def get_save_files_path(self, did, app_id):
-        path = Path(DID_BASE_DIR)
+        path = Path(VAULTS_BASE_DIR)
         if path.is_absolute():
             path = path / did_tail_part(did) / app_id / "files"
         else:

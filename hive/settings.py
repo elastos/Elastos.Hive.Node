@@ -5,7 +5,7 @@ DID_SIDECHAIN_URL = config('DID_SIDECHAIN_URL', default="http://api.elastos.io:2
 MONGO_HOST = config('MONGO_HOST', default="localhost", cast=str)
 MONGO_PORT = config('MONGO_PORT', default=27020, cast=int)
 
-DID_BASE_DIR = config('DID_BASE_DIR', default="./did_user_data", cast=str)
+VAULTS_BASE_DIR = config('DID_BASE_DIR', default="./did_user_data", cast=str)
 AUTH_CHALLENGE_EXPIRED = 3 * 60
 ACCESS_TOKEN_EXPIRED = 30 * 24 * 60 * 60
 RCLONE_CONFIG_FILE = config('RCLONE_CONFIG_FILE', default="/.config/rclone/rclone.conf", cast=str)

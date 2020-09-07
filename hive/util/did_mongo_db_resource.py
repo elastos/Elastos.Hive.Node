@@ -8,7 +8,7 @@ import pymongo
 from bson import ObjectId, json_util
 from pymongo import MongoClient
 
-from hive.settings import DID_BASE_DIR, MONGO_HOST, MONGO_PORT
+from hive.settings import VAULTS_BASE_DIR, MONGO_HOST, MONGO_PORT
 from hive.util.constants import DID_INFO_DB_NAME, DID_RESOURCE_COL, DID_RESOURCE_NAME, DID_RESOURCE_SCHEMA, \
     DID_RESOURCE_DID, DID_RESOURCE_APP_ID, DATETIME_FORMAT
 from hive.util.common import did_tail_part, create_full_path_dir
@@ -215,7 +215,7 @@ def gene_mongo_db_name(did, app_id):
 
 
 def get_save_mongo_db_path(did, app_id):
-    path = Path(DID_BASE_DIR)
+    path = Path(VAULTS_BASE_DIR)
     if path.is_absolute():
         path = path / did_tail_part(did) / app_id / "mongo_db"
     else:

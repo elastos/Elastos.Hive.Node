@@ -135,6 +135,9 @@ class HiveAuth(Entity):
 
         #check jwt token
         jws = lib.JWTParser_Parse(jwt.encode())
+        if not jwt:
+            return None, "The jwt is error."
+
         vp_str = lib.JWS_GetClaimAsJson(jws, "presentation".encode())
         if vp_str is None:
             return None, "The jwt's presentation is none."

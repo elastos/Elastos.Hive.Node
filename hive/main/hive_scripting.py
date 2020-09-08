@@ -222,11 +222,17 @@ class HiveScripting:
         content_filter = {
             "name": content.get('name')
         }
+
+        err_message = f"could not find script '{content['name']}' in the database. Please register the script " \
+                      f"first with set_script' API endpoint"
         try:
             script = col.find_one(content_filter)
         except Exception as e:
-            err_message = f"could not find script '{content['name']}' in the database. Please register the script " \
-                          f"first with set_script' API endpoint. Exception: {str(e)}"
+            err_message = f"{err_message}. Exception: {str(e)}"
+            logging.debug(err_message)
+            return response_err(404, err_message)
+
+        if not script:
             logging.debug(err_message)
             return response_err(404, err_message)
 

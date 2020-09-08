@@ -156,7 +156,10 @@ def populate_options_find_many(content):
 
 def query_find_many(col, content, options):
     try:
-        result = col.find(convert_oid(content["filter"]), **options)
+        if "filter" in content:
+            result = col.find(convert_oid(content["filter"]), **options)
+        else:
+            result = col.find(**options)
         arr = list()
         for c in json.loads(json_util.dumps(result)):
             arr.append(c)

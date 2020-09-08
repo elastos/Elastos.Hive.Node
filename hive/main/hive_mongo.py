@@ -182,7 +182,7 @@ class HiveMongoDb:
         return response_ok(data)
 
     def find_one(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
+        did, app_id, content, err = post_json_param_pre_proc("collection")
         if err:
             return err
 
@@ -199,14 +199,18 @@ class HiveMongoDb:
             options["sort"] = sorts
 
         try:
-            result = col.find_one(convert_oid(content["filter"]), **options)
+            if "filter" in content:
+                result = col.find_one(convert_oid(content["filter"]), **options)
+            else:
+                result = col.find_one(**options)
+
             data = {"items": json.loads(json_util.dumps(result))}
             return response_ok(data)
         except Exception as e:
             return response_err(500, "Exception:" + str(e))
 
     def find_many(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
+        did, app_id, content, err = post_json_param_pre_proc("collection")
         if err:
             return err
 

@@ -269,8 +269,31 @@ class HiveMongoDbTestCase(unittest.TestCase):
                                       {
                                           "collection": "works",
                                           "filter": {
-                                              "author": "john doe1_1",
+                                              "author": "john doe2",
                                           },
+                                          "options": {
+                                              "skip": 0,
+                                              "projection": {"_id": False},
+                                              "sort": {'_id': 'desc'},
+                                              "allow_partial_results": False,
+                                              "return_key": False,
+                                              "show_record_id": False,
+                                              "batch_size": 0
+                                          }
+                                      }
+                                  ),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+    def test_9_1_find_one_null_filter(self):
+        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_9_1_find_one_null_filter")
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/db/find_one',
+                                  data=json.dumps(
+                                      {
+                                          "collection": "works",
                                           "options": {
                                               "skip": 0,
                                               "projection": {"_id": False},
@@ -295,8 +318,32 @@ class HiveMongoDbTestCase(unittest.TestCase):
                                       {
                                           "collection": "works",
                                           "filter": {
-                                            "author": "john doe1_1"
+                                            "author": "john doe1"
                                           },
+                                          "options": {
+                                              "skip": 0,
+                                              "limit": 3,
+                                              "projection": {"_id": False},
+                                              "sort": {"_id": "desc"},
+                                              "allow_partial_results": False,
+                                              "return_key": False,
+                                              "show_record_id": False,
+                                              "batch_size": 0
+                                          }
+                                      }
+                                  ),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+    def test_10_find_many_none_filter(self):
+        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_10_find_many_none_filter")
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/db/find_many',
+                                  data=json.dumps(
+                                      {
+                                          "collection": "works",
                                           "options": {
                                               "skip": 0,
                                               "limit": 3,

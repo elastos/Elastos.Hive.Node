@@ -100,10 +100,12 @@ class HiveScripting:
                     "body": executable_body[1:]
                 }
                 return self.__executable_validation(new_executable)
-        elif executable_type in [SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_EXECUTABLE_TYPE_DELETE]:
-            return check_json_param(executable_body, f"{executable.get('name')}", args=["collection", "filter"])
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
+            return check_json_param(executable_body, f"{executable.get('name')}", args=["collection"])
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
             return check_json_param(executable_body, f"{executable.get('name')}", args=["collection", "document"])
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
+            return check_json_param(executable_body, f"{executable.get('name')}", args=["collection", "filter"])
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
             err_message = check_json_param(executable_body, f"{executable.get('name')}",
                                            args=["collection", "filter", "update"])

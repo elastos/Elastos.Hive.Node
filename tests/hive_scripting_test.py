@@ -93,7 +93,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                               "body": {
                                                   "collection": "groups",
                                                   "filter": {
-                                                      "*caller_did": "friends"
+                                                      "friends": "$caller_did"
                                                   }
                                               }
                                           }
@@ -117,7 +117,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                               "body": {
                                                   "collection": "test_group",
                                                   "filter": {
-                                                      "*caller_did": "friends"
+                                                      "friends": "$caller_did"
                                                   }
                                               }
                                           },
@@ -127,8 +127,8 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                               "body": {
                                                   "collection": "test_group",
                                                   "filter": {
-                                                      "group_id": "_id",
-                                                      "*caller_did": "friends"
+                                                      "_id": "$params.group_id",
+                                                      "friends": "$caller_did"
                                                   }
                                               }
                                           }
@@ -152,7 +152,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                               "body": {
                                                   "collection": "test_group",
                                                   "filter": {
-                                                      "*caller_did": "friends"
+                                                      "friends": "$caller_did"
                                                   }
                                               }
                                           },
@@ -166,8 +166,8 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                                       "body": {
                                                           "collection": "test_group",
                                                           "filter": {
-                                                              "group_id": "_id",
-                                                              "*caller_did": "friends"
+                                                              "_id": "$params.group_id",
+                                                              "friends": "$caller_did"
                                                           }
                                                       }
                                                   },
@@ -177,8 +177,8 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                                       "body": {
                                                           "collection": "test_group",
                                                           "filter": {
-                                                              "group_id": "_id",
-                                                              "*caller_did": "friends"
+                                                              "_id": "$params.group_id",
+                                                              "friends": "$caller_did"
                                                           }
                                                       }
                                                   }

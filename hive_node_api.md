@@ -756,7 +756,7 @@ return:
 ### Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/run_script endpoint to execute one of those scripts and get results/data. The same API is used to insert/update the scripts
 
 - Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction. 
-Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
+Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -771,7 +771,7 @@ data:
         "body": {
           "collection": "groups",
           "filter": {
-            "*caller_did": "friends"
+            "friends": "$caller_did"
           },
           "options": {
             "projection": {
@@ -801,9 +801,8 @@ return:
         }
 ```
 
-- Create/Update a script to get the first 100 messages for a particular group messaging. "_id" is not displays as part of the result. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages are returned back to the client.
-In the executable, there's "group_id": "group_id". The key represents the value that's passed while run_script is called while the value represents the actual field name in the database. Please refer to the run_script example for more info.
-Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
+- Create/Update a script to get the first 100 messages for a particular group messaging. "_id" is not displayed as part of the result. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages are returned back to the client.
+Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -818,7 +817,7 @@ data:
         "body": {
           "collection": "messages",
           "filter": {
-            "group_id": "group_id"
+            "group_id": "$params.group_id"
           },
           "projection": {
             "_id": false,
@@ -832,8 +831,8 @@ data:
         "body": {
           "collection": "groups",
           "filter": {
-            "group_id": "_id",
-            "*caller_did": "friends"
+            "_id": "$params.group_id",
+            "friends": "$caller_did"
           }
         }
       }
@@ -858,7 +857,7 @@ return:
 ```
 
 - Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run. 
-Note: "*caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
+Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -877,10 +876,10 @@ data:
             "body": {
               "collection": "messages",
               "document": {
-                "group_id": "group_id",
-                "*caller_did": "friend_did",
-                "content": "content",
-                "content_created": "created"
+                "group_id": "$params.group_id",
+                "friend_did": "$caller_did",
+                "content": "$params.content",
+                "created": "$params.content_created"
               },
               "options": {"bypass_document_validation": false}
             }
@@ -891,7 +890,7 @@ data:
             "body": {
               "collection": "messages",
               "filter": {
-                "group_id": "group_id"
+                "group_id": "$params.group_id"
               },
               "options": {
                 "projection": {"_id": false},
@@ -912,8 +911,8 @@ data:
             "body": {
               "collection": "groups",
               "filter": {
-                "group_id": "_id",
-                "*caller_did": "friends"
+                "_id": "$params.group_id",
+                "friends": "$caller_did"
               }
             }
           },
@@ -923,8 +922,8 @@ data:
             "body": {
               "collection": "groups",
               "filter": {
-                "group_id": "_id",
-                 "*caller_did": "friends"
+                "_id": "$params.group_id",
+                "friends": "$caller_did"
               }
             }
           }
@@ -969,15 +968,15 @@ data:
             "body": {
               "collection": "messages",
               "filter": {
-                "group_id": "group_id",
-                "*caller_did": "friend_did",
-                "old_content": "content"
+                "group_id": "$params.group_id",
+                "friend_did": "$caller_did",
+                "content": "$params.old_content"
               },
               "update": {
-                "\$set": {
-                  "group_id": "group_id",
-                  "*caller_did": "friend_did",
-                  "new_content": "content"
+                "$set": {
+                  "group_id": "$params.group_id",
+                  "friend_did": "$caller_did",
+                  "content": "$params.new_content"
                 }
               },
               "options": {
@@ -992,9 +991,9 @@ data:
             "body": {
               "collection": "messages",
               "filter": {
-                "group_id": "group_id",
-                "*caller_did": "friend_did",
-                "content": "content"
+                "group_id": "$params.group_id",
+                "friend_did": "$caller_did",
+                "content": "$params.content"
               }
             }
           }
@@ -1006,8 +1005,8 @@ data:
         "body": {
           "collection": "groups",
           "filter": {
-            "group_id": "_id",
-            "*caller_did": "friends"
+            "_id": "$params.group_id",
+            "friends": "$caller_did"
           }
         }
       }
@@ -1073,7 +1072,7 @@ data:
     {
       "name": "get_group_messages",
       "params": {
-        "group_id": {"\$oid": "5f497bb83bd36ab235d82e6a"}
+        "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"}
       }
     }
 return:
@@ -1116,7 +1115,7 @@ data:
     {
       "name": "add_group_message",
       "params": {
-        "group_id": "5f484a24efc1cbf6fc88ffb7",
+        "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"},
         "group_created": {
           "$gte": "2021-08-27 00:00:00"
         },

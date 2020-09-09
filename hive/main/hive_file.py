@@ -102,14 +102,16 @@ class HiveFile:
 
         if full_path_name.is_dir():
             return response_err(404, "file name is a directory")
-
-        with open(full_path_name, "bw") as f:
-            chunk_size = 4096
-            while True:
-                chunk = request.stream.read(chunk_size)
-                if len(chunk) == 0:
-                    break
-                f.write(chunk)
+        try:
+            with open(full_path_name, "bw") as f:
+                chunk_size = 4096
+                while True:
+                    chunk = request.stream.read(chunk_size)
+                    if len(chunk) == 0:
+                        break
+                    f.write(chunk)
+        except Exception as e:
+            return response_err(500, "Exception:"+str(e))
 
         return response_ok()
 

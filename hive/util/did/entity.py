@@ -3,11 +3,11 @@ import os
 import pathlib
 from eladid import ffi, lib
 
-from hive.settings import DID_SIDECHAIN_URL, DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA_PATH
+from hive.settings import DID_SIDECHAIN_URL, DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA
 resolver = DID_SIDECHAIN_URL.encode()  # 20606
 language = "english".encode()
 
-did_data_path = HIVE_DATA_PATH + os.sep + "did" + os.sep
+did_data_path = HIVE_DATA + os.sep + "did" + os.sep
 localdids = did_data_path + "localdids"
 store_path = did_data_path + "store"
 cache_path = did_data_path + "cache"

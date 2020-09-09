@@ -3,8 +3,8 @@ import os
 import pathlib
 from eladid import ffi, lib
 
-from hive.settings import DID_SIDECHAIN_URL, DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA
-resolver = DID_SIDECHAIN_URL.encode()  # 20606
+from hive.settings import DID_RESOLVER, DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA
+resolver = DID_RESOLVER.encode()  # 20606
 language = "english".encode()
 
 did_data_path = HIVE_DATA + os.sep + "did" + os.sep

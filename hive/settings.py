@@ -17,7 +17,7 @@ else:
     env_config = config
     logging.debug("Autoconfig")
 
-DID_SIDECHAIN_URL = env_config('DID_SIDECHAIN_URL', default="http://api.elastos.io:21606", cast=str)
+DID_RESOLVER = env_config('DID_RESOLVER', default="http://api.elastos.io:21606", cast=str)
 
 DID_MNEMONIC = env_config('DID_MNEMONIC',
                           default="advance duty suspect finish space matter squeeze elephant twenty over stick shield",

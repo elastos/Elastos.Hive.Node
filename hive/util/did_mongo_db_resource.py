@@ -112,7 +112,8 @@ def query_update_one(col, content, options):
             content["update"]["$setOnInsert"] = {
                 "created": datetime.utcnow()
             }
-        content["update"]["$set"]["modified"] = datetime.utcnow()
+        if "$set" in content["update"]:
+            content["update"]["$set"]["modified"] = datetime.utcnow()
         ret = col.update_one(convert_oid(content["filter"]), convert_oid(content["update"], update=True), **options)
         data = {
             "acknowledged": ret.acknowledged,

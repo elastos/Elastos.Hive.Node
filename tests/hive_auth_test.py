@@ -103,6 +103,7 @@ class DApp(Entity):
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
         token = ffi.string(lib.JWTBuilder_Compact(builder)).decode()
         lib.JWTBuilder_Destroy(builder)
+        # print(token)
         return token
 
 
@@ -167,9 +168,11 @@ class HiveAuthTestCase(unittest.TestCase):
         didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
         testapp = DApp("testapp", "amount material swim purse swallow gate pride series cannon patient dentist person")
 
+        #sign_in
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_access")
         doc = lib.DIDStore_LoadDID(testapp.store, testapp.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
+        # print(doc_str)
         doc = json.loads(doc_str)
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/sign_in',
@@ -183,11 +186,12 @@ class HiveAuthTestCase(unittest.TestCase):
         jwt = rt["challenge"]
         jws = lib.JWTParser_Parse(jwt.encode())
         aud = ffi.string(lib.JWS_GetAudience(jws)).decode()
-        self.assertEqual(aud, testapp.did_str)
+        self.assertEqual(aud, testapp.get_did_string())
         nonce = ffi.string(lib.JWS_GetClaim(jws, "nonce".encode())).decode()
         hive_did = ffi.string(lib.JWS_GetIssuer(jws)).decode()
         lib.JWS_Destroy(jws)
 
+        #auth
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_auth")
         vc = didapp.issue_auth(testapp)
         vp_json = testapp.create_presentation(vc, nonce, hive_did)
@@ -207,12 +211,24 @@ class HiveAuthTestCase(unittest.TestCase):
         token = rt["access_token"]
         jws = lib.JWTParser_Parse(token.encode())
         aud = ffi.string(lib.JWS_GetAudience(jws)).decode()
-        self.assertEqual(aud, testapp.did_str)
+        self.assertEqual(aud, testapp.get_did_string())
         issuer = ffi.string(lib.JWS_GetIssuer(jws)).decode()
         lib.JWS_Destroy(jws)
-        # print(token)
+        print(token)
         logging.getLogger("HiveAuthTestCase").debug(f"token: {token}")
         testapp.set_access_token(token)
+
+        #auth_check
+        self.json_header = [
+            ("Authorization", "token " + token),
+            self.content_type,
+        ]
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/did/check_token',
+                                  headers=self.json_header)
+        )
+        self.assert200(s)
+        self.assertEqual(rt["_status"], "OK")
 
 
 if __name__ == '__main__':

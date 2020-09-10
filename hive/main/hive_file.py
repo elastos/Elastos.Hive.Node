@@ -225,12 +225,12 @@ class HiveFile:
 
         buf_size = 65536  # lets read stuff in 64kb chunks!
         sha = hashlib.sha256()
-        with full_path_name.open() as f:
+        with full_path_name.open('rb') as f:
             while True:
                 data = f.read(buf_size)
                 if not data:
                     break
-                sha.update(data.encode("utf-8"))
+                sha.update(data)
         data = {"SHA256": sha.hexdigest()}
         return response_ok(data)
 

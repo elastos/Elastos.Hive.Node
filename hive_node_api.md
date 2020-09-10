@@ -694,7 +694,7 @@ return:
 - List folder
 ```json
 HTTP: GET
-URL: /api/v1/files/list/folder?name="folder.name"
+URL: /api/v1/files/list/folder?path="folder.name"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:

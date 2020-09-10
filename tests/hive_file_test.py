@@ -47,7 +47,7 @@ class HiveFileTestCase(unittest.TestCase):
         for info in r1["file_info_list"]:
             self.test_client.post('/api/v1/files/delete',
                                   data=json.dumps({
-                                      "path": info["name"]
+                                      "path": info["file"]
                                   }),
                                   headers=self.auth)
 
@@ -182,6 +182,10 @@ class HiveFileTestCase(unittest.TestCase):
         self.create_upload_file("f1/f2/f3/f4/test_f4.txt", "Hello Temp test f1_2!")
         self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1.txt", "Hello Temp test fr4_1!")
         self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1_2.txt", "Hello Temp test fr4_2!")
+
+        r2, s = self.parse_response(
+            self.test_client.get('/api/v1/files/list/folder?path=f1/f2/f3', headers=self.auth)
+        )
 
         move_file = {
             "src_path": "f1/f2/f3/fr4_1",

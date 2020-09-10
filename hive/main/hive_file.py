@@ -206,6 +206,8 @@ class HiveFile:
                 "size": stat_info.st_size,
                 "last_modify": stat_info.st_mtime,
             }
+            file_info_list.append(file_info)
+
         return response_ok({"file_info_list": file_info_list})
 
     def file_hash(self):

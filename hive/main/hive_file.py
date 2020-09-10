@@ -202,7 +202,7 @@ class HiveFile:
             stat_info = full_file.stat()
             file_info = {
                 "type": "file" if full_file.is_file() else "folder",
-                "file": file,
+                "name": file,
                 "size": stat_info.st_size,
                 "last_modify": stat_info.st_mtime,
             }

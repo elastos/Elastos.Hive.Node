@@ -47,7 +47,7 @@ class HiveFileTestCase(unittest.TestCase):
         for info in r1["file_info_list"]:
             self.test_client.post('/api/v1/files/delete',
                                   data=json.dumps({
-                                      "path": info["file"]
+                                      "path": info["name"]
                                   }),
                                   headers=self.auth)
 

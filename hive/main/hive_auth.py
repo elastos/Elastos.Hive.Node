@@ -17,20 +17,21 @@ from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, AP
 
 from hive.settings import DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA
 
-from hive.util.did.entity import Entity, localdids
+from hive.util.did.entity import Entity
+from hive.util.did.did_init import localdids
+from hive.util.auth import did_auth
 
 ACCESS_AUTH_COL = "did_auth"
 APP_DID = "appdid"
 ACCESS_TOKEN = "access_token"
-
 
 class HiveAuth(Entity):
     access_token = None
 
     def __init__(self):
         self.mnemonic = DID_MNEMONIC
-        self.passphrase = DID_PASSPHRASE.encode()
-        self.storepass = DID_STOREPASS.encode()
+        self.passphrase = DID_PASSPHRASE
+        self.storepass = DID_STOREPASS
         Entity.__init__(self, "hive.auth")
 
     def init_app(self, app):
@@ -250,3 +251,49 @@ class HiveAuth(Entity):
             return False
 
         return True
+
+    def check_access_token(self):
+        auth = request.headers.get("Authorization")
+        if auth is None:
+            return response_err(400, "Can't find the Authorization!")
+
+        if not auth.strip().lower().startswith(("token", "bearer")):
+            return response_err(400, "Can't find the token!")
+
+        token = auth.split(" ")[1]
+        if token is None:
+            return response_err(400, "The token is None!")
+
+        did, appid = self.get_info_from_token(token)
+        if (did is None) or (appid is None):
+            return response_err(400, "Then access token is invalid!")
+        return response_ok()
+
+    def get_info_from_token(self, access_token):
+        jws = lib.JWTParser_Parse(access_token.encode())
+        if not jws:
+            return None, None
+
+        issuer = lib.JWS_GetIssuer(jws)
+        if not issuer:
+            return None, None
+
+        issuer = ffi.string(issuer).decode()
+        if issuer != self.get_did_string():
+            return None, None
+
+        expired =  lib.JWS_GetExpiration(jws)
+        now = (int)(datetime.now().timestamp())
+        if now > expired:
+            return None, None
+
+        did = lib.JWS_GetClaim(jws, "userDid".encode())
+        if not did is None:
+            did = ffi.string(did).decode()
+        appid = lib.JWS_GetClaim(jws, "appId".encode())
+        if not appid is None:
+            appid = ffi.string(appid).decode()
+
+        return did, appid
+
+

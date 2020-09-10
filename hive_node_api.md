@@ -727,7 +727,7 @@ return:
 ```
 
 - Get file hash(SHA256)
-```
+```json
 HTTP: GET
 URL: /api/v1/files/file/hash?path="path/of/file/name/"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -736,10 +736,7 @@ return:
     Success:
         {
           "_status": "OK",
-<<<<<<< Updated upstream
-          "SHA256": "3a29a81d7b2718a588a5f6f3491b3c57"
-=======
-          "MD5": "3a29a81d7b2718a588a5f6f3491b3c57"
+          "SHA256": "3a29a81d7b2718a588a5f6f3491b3c578a5f6f3491b3c578a5f6f3491b3c578a5f6f3491b3c57"
         }
     Failure:
         {

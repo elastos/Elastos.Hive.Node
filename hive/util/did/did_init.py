@@ -61,8 +61,9 @@ def init_private_identity(store, mnemonic, storepass, passphrase):
 
     if mnemonic is None:
         mnemonic = lib.Mnemonic_Generate(language)
-    lib.DIDStore_InitPrivateIdentity(store, storepass, mnemonic, passphrase, language, False)
-
+    ret = lib.DIDStore_InitPrivateIdentity(store, storepass, mnemonic, passphrase, language, False)
+    if ret == -1:
+        print_err("DIDStore_InitPrivateIdentity")
 
 def get_did(store):
     did = lib.DIDStore_GetDIDByIndex(store, 0)

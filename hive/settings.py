@@ -22,7 +22,7 @@ DID_RESOLVER = env_config('DID_RESOLVER', default="http://api.elastos.io:21606",
 DID_MNEMONIC = env_config('DID_MNEMONIC',
                           default="advance duty suspect finish space matter squeeze elephant twenty over stick shield",
                           cast=str)
-DID_PASSPHRASE = env_config('DID_PASSPHRASE', default="secret", cast=str)
+DID_PASSPHRASE = env_config('DID_PASSPHRASE', default="", cast=str)
 DID_STOREPASS = env_config('DID_STOREPASS', default="password", cast=str)
 HIVE_DATA = env_config('HIVE_DATA', default="./data", cast=str)
 VAULTS_BASE_DIR = HIVE_DATA + "/vaults"

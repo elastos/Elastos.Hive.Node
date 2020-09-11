@@ -15,13 +15,13 @@ def add_did_nonce_to_db(app_instance_did, nonce, expired):
     i = col.insert_one(did_dic)
     return i
 
-def add_did_info_to_db(did, app_id, nonce, token, expire):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[DID_INFO_REGISTER_COL]
-    did_dic = {DID: did, APP_ID: app_id, DID_INFO_NONCE: nonce, DID_INFO_TOKEN: token, DID_INFO_NONCE_EXPIRED: expire}
-    i = col.insert_one(did_dic)
-    return i
+# def add_did_info_to_db(did, app_id, nonce, token, expire):
+#     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+#     db = connection[DID_INFO_DB_NAME]
+#     col = db[DID_INFO_REGISTER_COL]
+#     did_dic = {DID: did, APP_ID: app_id, DID_INFO_NONCE: nonce, DID_INFO_TOKEN: token, DID_INFO_NONCE_EXPIRED: expire}
+#     i = col.insert_one(did_dic)
+#     return i
 
 def update_nonce_of_did_info(app_instance_did, nonce, expired):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
@@ -76,13 +76,13 @@ def get_did_info_by_nonce(nonce):
     return info
 
 
-def get_did_info_by_did_appid(did, app_id):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[DID_INFO_REGISTER_COL]
-    query = {DID: did, APP_ID: app_id}
-    info = col.find_one(query)
-    return info
+# def get_did_info_by_did_appid(did, app_id):
+#     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+#     db = connection[DID_INFO_DB_NAME]
+#     col = db[DID_INFO_REGISTER_COL]
+#     query = {DID: did, APP_ID: app_id}
+#     info = col.find_one(query)
+#     return info
 
 
 def save_token_to_db(did, app_id, token, expired):

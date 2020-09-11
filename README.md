@@ -14,10 +14,15 @@ cd Elastos.NET.Hive.Node;
 ```
 
 # Set up
-- Copy example environment file
+- Copy example environment file to /etc/hive/.env or in your project directory.
 ```
 cp .env.example .env
 ```
+-  If you want change the ".env" file to other directory, you should export the file path in "$HIVE_CONFIG"
+```
+export $HIVE_CONFIG="/etc/hive/.env"
+```
+
 - Modify .env file with your own values. Please note that "172.17.0.1" means "localhost" but lets us access it from inside 
 docker container as well as it's a docker dedicated localhost IP
 - [OPTIONAL]: If you want to remove previous mongodb data and start fresh, remove the mongodb directory

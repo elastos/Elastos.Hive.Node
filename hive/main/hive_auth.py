@@ -9,7 +9,7 @@ import os
 from hive.util.did.eladid import ffi, lib
 
 from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, update_nonce_of_did_info, \
-    get_did_info_by_did_appid, update_token_of_did_info
+        update_token_of_did_info
 from hive.util.server_response import response_err, response_ok
 from hive.settings import AUTH_CHALLENGE_EXPIRED, ACCESS_TOKEN_EXPIRED
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
@@ -60,10 +60,12 @@ class HiveAuth(Entity):
 
         doc_str = json.dumps(body.get('document', None))
         doc = lib.DIDDocument_FromJson(doc_str.encode())
-        if (doc is None) or (not lib.DIDDocument_IsValid(doc)):
+        if (not doc) or (not lib.DIDDocument_IsValid(doc)):
             return response_err(400, "Thd did document is vaild")
 
         did = lib.DIDDocument_GetSubject(doc)
+        if not did:
+            return response_err(400, "Thd did document is vaild, can't get did.")
 
         spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
         f = open(localdids + os.sep + spec_did_str, "w")
@@ -81,6 +83,9 @@ class HiveAuth(Entity):
 
         # response token
         builder = lib.DIDDocument_GetJwtBuilder(self.doc)
+        if not builder:
+            return response_err(500, "Can't get jwt builder.")
+
         lib.JWTBuilder_SetHeader(builder, "type".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
 
@@ -90,7 +95,11 @@ class HiveAuth(Entity):
         lib.JWTBuilder_SetExpiration(builder, exp)
 
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
-        token = ffi.string(lib.JWTBuilder_Compact(builder)).decode()
+        token = lib.JWTBuilder_Compact(builder)
+        if not token:
+            return response_err(500, "Compact builder to a token is fail.")
+
+        token = ffi.string(token).decode()
         # print(token)
         lib.JWTBuilder_Destroy(builder)
         data = {
@@ -116,9 +125,9 @@ class HiveAuth(Entity):
         if exp > expTime:
             exp = expTime
 
-        access_token = self.__create_access_token(credentialSubject, exp)
-        if not access_token:
-            return response_err(400, "create access token fail!")
+        access_token, err = self.__create_access_token(credentialSubject, exp)
+        if not err is None:
+            return response_err(500, err)
 
         # save to db
         if not self.__save_token_to_db(credentialSubject, access_token, exp):
@@ -140,11 +149,11 @@ class HiveAuth(Entity):
             return None, "The jwt is error."
 
         vp_str = lib.JWS_GetClaimAsJson(jws, "presentation".encode())
-        if vp_str is None:
+        if not vp_str:
             return None, "The jwt's presentation is none."
 
         vp = lib.Presentation_FromJson(vp_str)
-        if vp is None:
+        if not vp:
             return None, "The presentation string is error, unable to rebuild to a presentation object."
 
         vp_json = json.loads(ffi.string(vp_str).decode())
@@ -178,7 +187,7 @@ class HiveAuth(Entity):
         vc_json = vp_json["verifiableCredential"][0]
         vc_str = json.dumps(vc_json)
         vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
-        if vc is None:
+        if not vc:
             return None, "The credential string is error, unable to rebuild to a credential object."
 
         ret = lib.Credential_IsValid(vc)
@@ -190,7 +199,8 @@ class HiveAuth(Entity):
         if info[APP_INSTANCE_DID] != instance_did:
             return None, "The app instance did is error."
 
-        if info[DID_INFO_NONCE_EXPIRED] < int(datetime.now().timestamp()):
+        expired = info[DID_INFO_NONCE_EXPIRED] < int(datetime.now().timestamp())
+        if expired:
             #TODO::delete it
             return None, "The nonce is expired"
 
@@ -207,9 +217,14 @@ class HiveAuth(Entity):
         app_id = credentialSubject["appDid"]
         app_instance_did = credentialSubject["id"]
 
-        did_str = self.get_did_string()
         doc = lib.DIDStore_LoadDID(self.store, self.did)
+        if not doc:
+            return None, "The doc can't load from did."
+
         builder = lib.DIDDocument_GetJwtBuilder(doc)
+        if not builder:
+            return None, "Can't get jwt builder."
+
         lib.JWTBuilder_SetHeader(builder, "typ".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
 
@@ -220,9 +235,13 @@ class HiveAuth(Entity):
         lib.JWTBuilder_SetClaim(builder, "appId".encode(), app_id.encode())
         lib.JWTBuilder_SetClaim(builder, "appInstanceDid".encode(), app_instance_did.encode())
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
-        token = ffi.string(lib.JWTBuilder_Compact(builder)).decode()
+        token = lib.JWTBuilder_Compact(builder)
+        if not token:
+            return None, "Compact builder to a token is fail."
+
+        token = ffi.string(token).decode()
         lib.JWTBuilder_Destroy(builder)
-        return token
+        return token, None
 
     def __save_nonce_to_db(self, nonce, app_instance_did, exp):
         info = get_did_info_by_nonce(nonce)
@@ -252,48 +271,73 @@ class HiveAuth(Entity):
 
         return True
 
+
+    def check_token(self):
+        info, err = self.check_access_token()
+        if info is None:
+            return response_err(400, err)
+        else:
+            return response_ok()
+
     def check_access_token(self):
         auth = request.headers.get("Authorization")
         if auth is None:
-            return response_err(400, "Can't find the Authorization!")
+            return None, "Can't find the Authorization!"
 
         if not auth.strip().lower().startswith(("token", "bearer")):
-            return response_err(400, "Can't find the token!")
+            return None, "Can't find the token!"
 
-        token = auth.split(" ")[1]
-        if token is None:
-            return response_err(400, "The token is None!")
+        auth_splits = auth.split(" ")
+        if len(auth_splits) < 2:
+            return None, "Can't find the token!"
 
-        did, appid = self.get_info_from_token(token)
-        if (did is None) or (appid is None):
-            return response_err(400, "Then access token is invalid!")
-        return response_ok()
+        access_token = auth_splits[1]
+        if access_token == "":
+            return None, "The token is None!"
+
+        return self.get_info_from_token(access_token)
 
     def get_info_from_token(self, access_token):
+        if access_token is None:
+            return None, "Then access token is none!"
+
+        token_splits = access_token.split(".")
+        if token_splits is None:
+            return None, "Then access token is invalid!"
+
+        if (len(token_splits) != 3) or token_splits[2] == "":
+            return None, "Then access token is invalid!"
+
         jws = lib.JWTParser_Parse(access_token.encode())
         if not jws:
-            return None, None
+            return None, "Then access token is invalid!"
 
         issuer = lib.JWS_GetIssuer(jws)
         if not issuer:
-            return None, None
+            return None, "Then issuer is null!"
 
         issuer = ffi.string(issuer).decode()
         if issuer != self.get_did_string():
-            return None, None
+            return None, "Then issuer is invalid!"
 
         expired =  lib.JWS_GetExpiration(jws)
         now = (int)(datetime.now().timestamp())
         if now > expired:
-            return None, None
+            return None, "Then token is expired!"
 
         did = lib.JWS_GetClaim(jws, "userDid".encode())
-        if not did is None:
-            did = ffi.string(did).decode()
-        appid = lib.JWS_GetClaim(jws, "appId".encode())
-        if not appid is None:
-            appid = ffi.string(appid).decode()
+        if not did:
+            return None, "Then user did is none!"
 
-        return did, appid
+
+        appid = lib.JWS_GetClaim(jws, "appId".encode())
+        if not appid:
+            return None, "Then app id is none!"
+
+        info = {}
+        info[DID] = ffi.string(did).decode()
+        info[APP_ID] = ffi.string(appid).decode()
+
+        return info, None
 
 

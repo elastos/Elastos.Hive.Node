@@ -35,7 +35,7 @@ def request_did_auth():
 
 @main.route('/api/v1/did/check_token', methods=['POST'])
 def check_token():
-    return h_auth.check_access_token()
+    return h_auth.check_token()
 
 @main.route('/api/v1/did/<did_base58>/<app_id_base58>/callback', methods=['POST'])
 def did_auth_callback(did_base58, app_id_base58):

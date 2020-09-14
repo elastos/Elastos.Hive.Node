@@ -22,6 +22,8 @@ class Entity:
             self.mnemonic = mnemonic
         self.store, self.did, self.doc = init_did(self.mnemonic, self.passphrase, self.storepass, self.name)
         self.storepass = self.storepass.encode()
+        self.did_str = self.get_did_string()
+        # print(self.did_str)
 
     def __del__(self):
         pass

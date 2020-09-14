@@ -1,6 +1,10 @@
-from flask import request
+from flask import request, jsonify
 from hive.util.auth import did_auth
 from hive.util.server_response import response_err
+
+
+def init_app(app):
+    app.register_error_handler(500, handle_exception_500)
 
 
 def pre_proc():
@@ -42,3 +46,7 @@ def get_pre_proc(*args):
             content[arg] = data
 
     return did, app_id, content, None
+
+
+def handle_exception_500(e):
+    return response_err(500, "Exception:" + str(e))

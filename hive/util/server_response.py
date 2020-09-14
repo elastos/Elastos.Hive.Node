@@ -15,4 +15,4 @@ def response_ok(data_dic=None):
 def response_err(code, msg):
     ret = {STATUS: STATUS_ERR}
     ret.update({"_error": {"code": code, "message": msg}})
-    return jsonify(ret)
+    return jsonify(ret), code

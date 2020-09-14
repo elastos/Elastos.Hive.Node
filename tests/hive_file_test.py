@@ -41,7 +41,6 @@ class HiveFileTestCase(unittest.TestCase):
         r1, s = self.parse_response(
             self.test_client.get('/api/v1/files/list/folder', headers=self.auth)
         )
-        self.assert200(s)
         if r1["_status"] != "OK":
             return
         for info in r1["file_info_list"]:
@@ -168,7 +167,6 @@ class HiveFileTestCase(unittest.TestCase):
         r1, s = self.parse_response(
             self.test_client.get('/api/v1/files/properties?path=f1/test_f1.txt', headers=self.auth)
         )
-        self.assert200(s)
         self.assertNotEqual(r1["_status"], "OK")
 
         r1, s = self.parse_response(
@@ -307,7 +305,6 @@ class HiveFileTestCase(unittest.TestCase):
         r1, s = self.parse_response(
             self.test_client.get('/api/v1/files/properties?path=f1/test_f1.txt', headers=self.auth)
         )
-        self.assert200(s)
         self.assertNotEqual(r1["_status"], "OK")
 
     def test_m_delete_folder(self):

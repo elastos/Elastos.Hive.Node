@@ -49,19 +49,28 @@ def print_err(fun_name=None):
         err += fun_name + ": "
     logging.debug(f"{err + str(ffi.string(lib.DIDError_GetMessage()), encoding='utf-8')}")
 
-def init_did_store():
-    store = lib.DIDStore_Open(store_path.encode(), adapter)
+def init_did_store(name):
+    store_dir = store_path + os.sep + name
+    store = lib.DIDStore_Open(store_dir.encode(), adapter)
     return store
+
+def export_current_mnemonic(store, storepass):
+    mnemonic_str = ffi.new("char[" + str(lib.ELA_MAX_MNEMONIC_LEN + 1) + "]")
+    lib.DIDStore_ExportMnemonic(store, storepass, mnemonic_str, lib.ELA_MAX_MNEMONIC_LEN + 1)
+    return ffi.string(mnemonic_str).decode()
 
 def init_private_identity(store, mnemonic, storepass, passphrase):
     ret = lib.DIDStore_ContainsPrivateIdentity(store)
     # Check the store whether contains the root private identity.
     if ret:
-        return  # Already exists
+        cur_mnemonic = export_current_mnemonic(store, storepass)
+        if cur_mnemonic == mnemonic:
+            return  # Already exists
 
+    mnemonic = mnemonic.encode()
     if mnemonic is None:
         mnemonic = lib.Mnemonic_Generate(language)
-    ret = lib.DIDStore_InitPrivateIdentity(store, storepass, mnemonic, passphrase, language, False)
+    ret = lib.DIDStore_InitPrivateIdentity(store, storepass, mnemonic, passphrase, language, True)
     if ret == -1:
         print_err("DIDStore_InitPrivateIdentity")
 
@@ -122,10 +131,9 @@ def sync_did(store, did, storepass, name):
     return True
 
 def init_did(mnemonic, passphrase, storepass, name):
-    mnemonic = mnemonic.encode()
     passphrase = passphrase.encode()
     storepass = storepass.encode()
-    store = init_did_store()
+    store = init_did_store(name)
     if not store:
         print_err("init_did_store")
         return None, None, None

@@ -1,5 +1,4 @@
 import copy
-import logging
 
 from pymongo import MongoClient
 
@@ -13,12 +12,13 @@ from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one, populate_options_update_one
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
     run_executable_update, run_executable_delete
-from hive.util.server_response import response_ok, response_err
+from hive.util.server_response import ServerResponse
 
 
 class HiveScripting:
     def __init__(self, app=None):
         self.app = app
+        self.response = ServerResponse("HiveScripting")
 
     def init_app(self, app):
         self.app = app
@@ -175,7 +175,7 @@ class HiveScripting:
 
     def set_script(self):
         # Request Validation
-        did, app_id, content, err = post_json_param_pre_proc("name", "executable")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "name", "executable")
         if err:
             return err
 
@@ -183,39 +183,34 @@ class HiveScripting:
         executable = content.get('executable')
         err_message = self.__executable_validation(executable)
         if err_message:
-            logging.debug(err_message)
-            return response_err(400, err_message)
+            return self.response.response_err(400, err_message)
 
         # Condition Validation
         condition = content.get('condition', None)
         if condition:
             err_message = check_json_param(condition, "condition", args=["type", "name", "body"])
             if err_message:
-                logging.debug(err_message)
-                return response_err(400, err_message)
+                return self.response.response_err(400, err_message)
             nested_count = self.__count_nested_condition(condition)
             for count in nested_count.values():
                 if count >= 5:
                     err_message = "conditions cannot be nested more than 5 times"
-                    logging.debug(err_message)
-                    return response_err(400, err_message)
+                    return self.response.response_err(400, err_message)
             is_valid = self.__condition_validation(condition)
             if not is_valid:
                 err_message = "some of the parameters are not set for 'condition'"
-                logging.debug(err_message)
-                return response_err(400, err_message)
+                return self.response.response_err(400, err_message)
 
         # Create collection "scripts" if it doesn't exist and
         # create/update script in the database
         data, err_message = self.__upsert_script_to_db(did, app_id, content)
         if err_message:
-            logging.debug(err_message)
-            return response_err(500, err_message)
-        return response_ok(data)
+            return self.response.response_err(500, err_message)
+        return self.response.response_ok(data)
 
     def run_script(self):
         # Request Validation
-        did, app_id, content, err = post_json_param_pre_proc("name")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "name")
         if err:
             return err
 
@@ -231,12 +226,10 @@ class HiveScripting:
             script = col.find_one(content_filter)
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
-            logging.debug(err_message)
-            return response_err(404, err_message)
+            return self.response.response_err(404, err_message)
 
         if not script:
-            logging.debug(err_message)
-            return response_err(404, err_message)
+            return self.response.response_err(404, err_message)
 
         params = content.get('params')
         condition = script.get('condition', None)
@@ -244,13 +237,11 @@ class HiveScripting:
             passed = self.__condition_execution(did, app_id, condition, params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
-                logging.debug(err_message)
-                return response_err(403, err_message)
+                return self.response.response_err(403, err_message)
 
         executable = script.get("executable")
         data, err_message = self.__executable_execution(did, app_id, executable, params)
         if err_message:
-            logging.debug(err_message)
-            return response_err(500, err_message)
+            return self.response.response_err(500, err_message)
 
-        return response_ok(data)
+        return self.response.response_ok(data)

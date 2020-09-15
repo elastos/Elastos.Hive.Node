@@ -11,25 +11,26 @@ from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort, convert_oid, \
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
     populate_options_count_documents, query_update_one, populate_options_update_one, query_delete_one
-from hive.util.server_response import response_ok, response_err
+from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc
 
 
 class HiveMongoDb:
     def __init__(self, app=None):
         self.app = app
+        self.response = ServerResponse("HiveMongoDb")
 
     def init_app(self, app):
         self.app = app
 
     def create_collection(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection")
         if err:
             return err
 
         collection_name = content.get('collection', None)
         if collection_name is None:
-            return response_err(400, "parameter is null")
+            return self.response.self.response.response_err(400, "parameter is null", "HiveMongoDb.create_collection")
 
         connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
         db_name = gene_mongo_db_name(did, app_id)
@@ -39,17 +40,17 @@ class HiveMongoDb:
         except CollectionInvalid:
             pass
         except Exception as e:
-            return response_err(500, "Exception:" + str(e))
-        return response_ok()
+            return self.response.response_err(500, "Exception:" + str(e))
+        return self.response.response_ok()
 
     def delete_collection(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection")
         if err:
             return err
 
         collection_name = content.get('collection', None)
         if collection_name is None:
-            return response_err(400, "parameter is null")
+            return self.response.response_err(400, "parameter is null")
 
         connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
         db_name = gene_mongo_db_name(did, app_id)
@@ -59,11 +60,11 @@ class HiveMongoDb:
         except CollectionInvalid:
             pass
         except Exception as e:
-            return response_err(500, "Exception:" + str(e))
-        return response_ok()
+            return self.response.response_err(500, "Exception:" + str(e))
+        return self.response.response_ok()
 
     def insert_one(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection", "document")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "document")
         if err:
             return err
 
@@ -72,12 +73,12 @@ class HiveMongoDb:
         col = get_collection(did, app_id, content["collection"])
         data, err_message = query_insert_one(col, content, options)
         if err_message:
-            return response_err(500, err_message)
+            return self.response.response_err(500, err_message)
 
-        return response_ok(data)
+        return self.response.response_ok(data)
 
     def insert_many(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection", "document")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "document")
         if err:
             return err
 
@@ -97,12 +98,12 @@ class HiveMongoDb:
                 "acknowledged": ret.acknowledged,
                 "inserted_ids": [str(_id) for _id in ret.inserted_ids]
             }
-            return response_ok(data)
+            return self.response.response_ok(data)
         except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+            return self.response.response_err(500, "Exception:" + str(e))
 
     def update_one(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection", "filter", "update")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter", "update")
         if err:
             return err
 
@@ -111,12 +112,12 @@ class HiveMongoDb:
         col = get_collection(did, app_id, content["collection"])
         data, err_message = query_update_one(col, content, options)
         if err_message:
-            return response_err(500, err_message)
+            return self.response.response_err(500, err_message)
 
-        return response_ok(data)
+        return self.response.response_ok(data)
 
     def update_many(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection", "filter", "update")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter", "update")
         if err:
             return err
 
@@ -135,24 +136,24 @@ class HiveMongoDb:
                 "modified_count": ret.modified_count,
                 "upserted_id": str(ret.upserted_id)
             }
-            return response_ok(data)
+            return self.response.response_ok(data)
         except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+            return self.response.response_err(500, "Exception:" + str(e))
 
     def delete_one(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter")
         if err:
             return err
 
         col = get_collection(did, app_id, content["collection"])
         data, err_message = query_delete_one(col, content)
         if err_message:
-            return response_err(500, err_message)
+            return self.response.response_err(500, err_message)
 
-        return response_ok(data)
+        return self.response.response_ok(data)
 
     def delete_many(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter")
         if err:
             return err
 
@@ -163,12 +164,12 @@ class HiveMongoDb:
                 "acknowledged": ret.acknowledged,
                 "deleted_count": ret.deleted_count,
             }
-            return response_ok(data)
+            return self.response.response_ok(data)
         except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+            return self.response.response_err(500, "Exception:" + str(e))
 
     def count_documents(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection", "filter")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter")
         if err:
             return err
 
@@ -177,12 +178,12 @@ class HiveMongoDb:
         col = get_collection(did, app_id, content["collection"])
         data, err_message = query_count_documents(col, content, options)
         if err_message:
-            return response_err(500, err_message)
+            return self.response.response_err(500, err_message)
 
-        return response_ok(data)
+        return self.response.response_ok(data)
 
     def find_one(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection")
         if err:
             return err
 
@@ -205,12 +206,12 @@ class HiveMongoDb:
                 result = col.find_one(**options)
 
             data = {"items": json.loads(json_util.dumps(result))}
-            return response_ok(data)
+            return self.response.response_ok(data)
         except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+            return self.response.response_err(500, "Exception:" + str(e))
 
     def find_many(self):
-        did, app_id, content, err = post_json_param_pre_proc("collection")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection")
         if err:
             return err
 
@@ -219,7 +220,6 @@ class HiveMongoDb:
         col = get_collection(did, app_id, content.get('collection'))
         data, err_message = query_find_many(col, content, options)
         if err_message:
-            return response_err(500, err_message)
+            return self.response.response_err(500, err_message)
 
-        return response_ok(data)
-
+        return self.response.response_ok(data)

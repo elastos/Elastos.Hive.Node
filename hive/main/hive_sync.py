@@ -21,13 +21,14 @@ from hive.util.did_mongo_db_resource import import_mongo_db, export_mongo_db
 from hive.util.did_sync import get_did_sync_info, DATA_SYNC_STATE_RUNNING, add_did_sync_info, get_all_did_sync_info, \
     DATA_SYNC_STATE_NONE, DATA_SYNC_STATE_INIT, DATA_SYNC_MSG_INIT_SYNC, update_did_sync_info, \
     DATA_SYNC_MSG_INIT_MONGODB, DATA_SYNC_MSG_SUCCESS, DATA_SYNC_MSG_SYNCING
-from hive.util.server_response import response_err, response_ok
+from hive.util.server_response import ServerResponse
 
 scheduler = APScheduler()
 
 class HiveSync:
     def __init__(self, app=None):
         self.app = app
+        self.response = ServerResponse("HiveSync")
 
     def init_app(self, app):
         self.app = app
@@ -48,11 +49,11 @@ class HiveSync:
         did, app_id = did_auth()
         logging.debug(f"did: {did}, app_id: {app_id}")
         if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
+            return self.response.response_err(401, "auth failed")
 
         content = request.get_json(force=True, silent=True)
         if content is None:
-            return response_err(400, "parameter is not application/json")
+            return self.response.response_err(400, "parameter is not application/json")
         access_token = content.get('token', None)
         refresh_token = content.get('refresh_token', None)
         expiry = content.get('expiry', None)
@@ -82,7 +83,7 @@ class HiveSync:
 
         _thread.start_new_thread(HiveSync.sync_did_data, (did,))
 
-        return response_ok()
+        return self.response.response_ok()
 
     @staticmethod
     def gene_did_google_drive_name(did):

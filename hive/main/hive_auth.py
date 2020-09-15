@@ -38,19 +38,6 @@ class HiveAuth(Entity):
     def init_app(self, app):
         self.app = app
 
-    def __is_did(self, did_str):
-        did = lib.DID_FromString(did_str.encode())
-        if did is None:
-            return False
-        doc = lib.DID_Resolve(did, True)
-        if doc is None:
-            return False
-        else:
-            return True
-
-    def __get_token_from_db(self, iss, appdid):
-        return vp_token
-
     def sign_in(self):
         body = request.get_json(force=True, silent=True)
         if body is None:

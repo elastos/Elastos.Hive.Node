@@ -22,15 +22,25 @@ class Entity:
             self.mnemonic = mnemonic
         self.store, self.did, self.doc = init_did(self.mnemonic, self.passphrase, self.storepass, self.name)
         self.storepass = self.storepass.encode()
-        self.did_str = self.get_did_string()
+        if not self.did:
+            self.did_str = self.get_did_string()
         # print(self.did_str)
 
     def __del__(self):
         pass
 
     def get_did_string_from_did(self, did):
-        method = ffi.string(lib.DID_GetMethod(did)).decode()
-        sep_did = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
+        if not did:
+            return None
+
+        method = lib.DID_GetMethod(did)
+        if not method:
+            return None
+        method = ffi.string(method).decode()
+        sep_did = lib.DID_GetMethodSpecificId(did)
+        if not sep_did:
+            return None
+        sep_did = ffi.string(sep_did).decode()
         return "did:" + method + ":" + sep_did
 
     def get_did_string(self):

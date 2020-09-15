@@ -13,13 +13,14 @@ from hive.util.auth import did_auth
 from hive.util.common import did_tail_part
 from hive.settings import VAULTS_BASE_DIR
 from hive.util.flask_rangerequest import RangeRequest
-from hive.util.server_response import response_err, response_ok
+from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 
 
 class HiveFile:
     def __init__(self, app=None):
         self.app = app
+        self.response = ServerResponse("HiveSync")
 
     def init_app(self, app):
         self.app = app
@@ -49,7 +50,7 @@ class HiveFile:
             return name
 
     def move(self, is_copy):
-        did, app_id, content, response = post_json_param_pre_proc("src_path", "dst_path")
+        did, app_id, content, response = post_json_param_pre_proc(self.response, "src_path", "dst_path")
         if response is not None:
             return response
 
@@ -64,15 +65,15 @@ class HiveFile:
         dst_full_path_name = (path / dst_name).resolve()
 
         if not src_full_path_name.exists():
-            return response_err(404, "src_name not exists")
+            return self.response.response_err(404, "src_name not exists")
 
         if dst_full_path_name.exists() and dst_full_path_name.is_file():
-            return response_err(409, "dst_name file exists")
+            return self.response.response_err(409, "dst_name file exists")
 
         dst_parent_folder = dst_full_path_name.parent
         if not dst_parent_folder.exists():
             if not self.create_full_path_dir(dst_parent_folder):
-                return response_err(500, "make dst parent path dir error")
+                return self.response.response_err(500, "make dst parent path dir error")
         try:
             if is_copy:
                 if src_full_path_name.is_file():
@@ -82,12 +83,12 @@ class HiveFile:
             else:
                 shutil.move(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
         except Exception as e:
-            return response_err(500, "Exception:" + str(e))
+            return self.response.response_err(500, "Exception:" + str(e))
 
-        return response_ok()
+        return self.response.response_ok()
 
     def upload_file(self, file_name):
-        did, app_id, response = pre_proc()
+        did, app_id, response = pre_proc(self)
         if response is not None:
             return response
 
@@ -95,13 +96,13 @@ class HiveFile:
         full_path_name = (path / file_name).resolve()
 
         if not self.create_full_path_dir(full_path_name.parent):
-            return response_err(500, "make path dir error")
+            return self.response.response_err(500, "make path dir error")
 
         if not full_path_name.exists():
             full_path_name.touch(exist_ok=True)
 
         if full_path_name.is_dir():
-            return response_err(404, "file name is a directory")
+            return self.response.response_err(404, "file name is a directory")
         try:
             with open(full_path_name, "bw") as f:
                 chunk_size = 4096
@@ -111,9 +112,9 @@ class HiveFile:
                         break
                     f.write(chunk)
         except Exception as e:
-            return response_err(500, "Exception:"+str(e))
+            return self.response.response_err(500, "Exception:"+str(e))
 
-        return response_ok()
+        return self.response.response_ok()
 
     def download_file(self):
         resp = Response()
@@ -150,7 +151,7 @@ class HiveFile:
                             size=size).make_response()
 
     def get_property(self):
-        did, app_id, content, response = get_pre_proc("path")
+        did, app_id, content, response = get_pre_proc(self.response, "path")
         if response is not None:
             return response
 
@@ -161,7 +162,7 @@ class HiveFile:
         full_path_name = (path / name).resolve()
 
         if not full_path_name.exists():
-            return response_err(404, "file not exists")
+            return self.response.response_err(404, "file not exists")
 
         stat_info = full_path_name.stat()
 
@@ -172,12 +173,12 @@ class HiveFile:
             "last_modify": stat_info.st_mtime,
         }
 
-        return response_ok(data)
+        return self.response.response_ok(data)
 
     def list_files(self):
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
-            return response_err(401, "auth failed")
+            return self.response.response_err(401, "auth failed")
 
         path = self.get_save_files_path(did, app_id)
 
@@ -189,12 +190,12 @@ class HiveFile:
             full_path_name = (path / name).resolve()
 
         if not (full_path_name.exists() and full_path_name.is_dir()):
-            return response_err(404, "folder not exists")
+            return self.response.response_err(404, "folder not exists")
 
         try:
             files = os.listdir(full_path_name.as_posix())
         except Exception as e:
-            return response_ok({"files": []})
+            return self.response.response_ok({"files": []})
 
         file_info_list = list()
         for file in files:
@@ -208,10 +209,10 @@ class HiveFile:
             }
             file_info_list.append(file_info)
 
-        return response_ok({"file_info_list": file_info_list})
+        return self.response.response_ok({"file_info_list": file_info_list})
 
     def file_hash(self):
-        did, app_id, content, response = get_pre_proc("path")
+        did, app_id, content, response = get_pre_proc(self.response, "path")
         if response is not None:
             return response
 
@@ -223,7 +224,7 @@ class HiveFile:
         full_path_name = (path / name).resolve()
 
         if not full_path_name.exists() or (not full_path_name.is_file()):
-            return response_err(404, "file not exists")
+            return self.response.response_err(404, "file not exists")
 
         buf_size = 65536  # lets read stuff in 64kb chunks!
         sha = hashlib.sha256()
@@ -234,10 +235,10 @@ class HiveFile:
                     break
                 sha.update(data)
         data = {"SHA256": sha.hexdigest()}
-        return response_ok(data)
+        return self.response.response_ok(data)
 
     def delete(self):
-        did, app_id, content, response = post_json_param_pre_proc("path")
+        did, app_id, content, response = post_json_param_pre_proc(self.response, "path")
         if response is not None:
             return response
 
@@ -252,4 +253,4 @@ class HiveFile:
             else:
                 file_full_name.unlink()
 
-        return response_ok()
+        return self.response.response_ok()

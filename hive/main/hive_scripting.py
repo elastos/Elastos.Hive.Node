@@ -141,25 +141,33 @@ class HiveScripting:
         else:
             return run_condition(did, app_id, target_did, condition_body, params)
 
-    def __executable_execution(self, did, app_id, target_did, executable, params):
+    def __executable_execution(self, did, app_id, target_did, executable, params, output={}, output_key=None, capture_output=False):
         executable_type = executable.get('type')
         executable_body = executable.get('body')
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
+            err_message = None
             for i, e in enumerate(executable_body):
-                if i == len(executable_body) - 1:
-                    return self.__executable_execution(did, app_id, target_did, e, params)
-                else:
-                    self.__executable_execution(did, app_id, target_did, e, params)
+                self.__executable_execution(did, app_id, target_did, e, params, output, e.get('name'), e.get('output', False))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
-            return run_executable_find(did, app_id, target_did, executable_body, params)
+            data, err_message = run_executable_find(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
-            return run_executable_insert(did, app_id, target_did, executable_body, params)
+            data, err_message = run_executable_insert(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
-            return run_executable_update(did, app_id, target_did, executable_body, params)
+            data, err_message = run_executable_update(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
-            return run_executable_delete(did, app_id, target_did, executable_body, params)
+            data, err_message = run_executable_delete(did, app_id, target_did, executable_body, params)
         else:
-            None, f"invalid executable type '{executable_type}"
+            data, err_message = None, f"invalid executable type '{executable_type}"
+        if not output_key:
+            output_key = executable.get('name')
+        if not capture_output:
+            capture_output = executable.get('output', False)
+        if err_message:
+            output[output_key] = err_message
+        else:
+            if capture_output:
+                output[output_key] = data
+        return output
 
     def __count_nested_condition(self, condition):
         content = copy.deepcopy(condition)
@@ -249,8 +257,7 @@ class HiveScripting:
                 return self.response.response_err(403, err_message)
 
         executable = script.get("executable")
-        data, err_message = self.__executable_execution(caller_did, caller_app_id, target_did, executable, params)
-        if err_message:
-            return self.response.response_err(500, err_message)
+        output = {}
+        data = self.__executable_execution(caller_did, caller_app_id, target_did, executable, params, output=output)
 
         return self.response.response_ok(data)

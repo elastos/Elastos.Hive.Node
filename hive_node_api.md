@@ -1047,11 +1047,13 @@ return:
     Success: 
       {
         "_status": "OK",
-        "items": [
-          {
-            "name": "Tuum Tech"
-          }
-        ]
+        "get_groups": {
+          "items": [
+            {
+              "name": "Tuum Tech"
+            }
+          ]
+        }
       }
     Failure: 
         {
@@ -1084,21 +1086,23 @@ return:
     Success:
       {
         "_status": "OK",
-        "items": [
-          {
-            "content": "Old Message",
-            "created": {
-              "$date": 1630022400000
-            },
-            "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
-            "group_id": {
-              "$oid": "5f497bb83bd36ab235d82e6a"
-            },
-            "modified": {
-              "$date": 1598725803556
+        "find_messages": {
+          "items": [
+            {
+              "content": "Old Message",
+              "created": {
+                "$date": 1630022400000
+              },
+              "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
+              "group_id": {
+                "$oid": "5f497bb83bd36ab235d82e6a"
+              },
+              "modified": {
+                "$date": 1598725803556
+              }
             }
-          }
-        ]
+          ]
+        }
       }
     Failure: 
         {
@@ -1132,21 +1136,23 @@ return:
     Success:
       {
         "_status": "OK",
-        "items": [
-          {
-            "content": "New Message",
-            "created": {
-              "$date": 1630022400000
-            },
-            "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
-            "group_id": {
-              "$oid": "5f497bb83bd36ab235d82e6a"
-            },
-            "modified": {
-              "$date": 1598725803556
+        "get_last_message": {
+          "items": [
+            {
+              "content": "New Message",
+              "created": {
+                "$date": 1630022400000
+              },
+              "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
+              "group_id": {
+                "$oid": "5f497bb83bd36ab235d82e6a"
+              },
+              "modified": {
+                "$date": 1598725803556
+              }
             }
-          }
-        ]
+          ]
+        }
       }
     Failure: 
         {

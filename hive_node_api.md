@@ -754,7 +754,7 @@ return:
 ### Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/run_script endpoint to execute one of those scripts and get results/data. The same API is used to insert/update the scripts
 
 - Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction. 
-Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
+Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend. You may or may not add the param "output" as part of the executable whether to capture the output of each executable.
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -766,6 +766,7 @@ data:
       "executable": {
         "type": "find",
         "name": "get_groups",
+        "output": true,
         "body": {
           "collection": "groups",
           "filter": {
@@ -800,7 +801,7 @@ return:
 ```
 
 - Create/Update a script to get the first 100 messages for a particular group messaging. "_id" is not displayed as part of the result. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages are returned back to the client.
-Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script
+Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script. You may or may not add the param "output" as part of the executable whether to capture the output of each executable.
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -812,6 +813,7 @@ data:
       "executable": {
         "type": "find",
         "name": "find_messages",
+        "output": true,
         "body": {
           "collection": "messages",
           "filter": {
@@ -855,7 +857,7 @@ return:
 ```
 
 - Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run. 
-Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script
+Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script. You may or may not add the param "output" as part of the executable whether to capture the output of each executable.
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -885,6 +887,7 @@ data:
           {
             "type": "find",
             "name": "get_last_message",
+            "output": true,
             "body": {
               "collection": "messages",
               "filter": {

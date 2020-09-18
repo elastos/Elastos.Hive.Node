@@ -172,7 +172,7 @@ class HiveAuthTestCase(unittest.TestCase):
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_access")
         doc = lib.DIDStore_LoadDID(testapp.store, testapp.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
-        # print(doc_str)
+        print(doc_str)
         doc = json.loads(doc_str)
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/sign_in',
@@ -184,18 +184,22 @@ class HiveAuthTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
         jwt = rt["challenge"]
-        jws = lib.JWTParser_Parse(jwt.encode())
-        aud = ffi.string(lib.JWS_GetAudience(jws)).decode()
+        # print(jwt)
+        jws = lib.DefaultJWSParser_Parse(jwt.encode())
+        # if not jws:
+        #     print(ffi.string(lib.DIDError_GetMessage()).decode())
+        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
         self.assertEqual(aud, testapp.get_did_string())
-        nonce = ffi.string(lib.JWS_GetClaim(jws, "nonce".encode())).decode()
-        hive_did = ffi.string(lib.JWS_GetIssuer(jws)).decode()
-        lib.JWS_Destroy(jws)
+        nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()
+        hive_did = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+        lib.JWT_Destroy(jws)
 
         #auth
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_auth")
         vc = didapp.issue_auth(testapp)
         vp_json = testapp.create_presentation(vc, nonce, hive_did)
         auth_token = testapp.create_token(vp_json, hive_did)
+        # print(auth_token)
         logging.getLogger("HiveAuthTestCase").debug(f"auth_token: {auth_token}")
 
         rt, s = self.parse_response(
@@ -209,12 +213,12 @@ class HiveAuthTestCase(unittest.TestCase):
         self.assertEqual(rt["_status"], "OK")
 
         token = rt["access_token"]
-        jws = lib.JWTParser_Parse(token.encode())
-        aud = ffi.string(lib.JWS_GetAudience(jws)).decode()
+        jws = lib.DefaultJWSParser_Parse(token.encode())
+        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
         self.assertEqual(aud, testapp.get_did_string())
-        issuer = ffi.string(lib.JWS_GetIssuer(jws)).decode()
-        lib.JWS_Destroy(jws)
-        print(token)
+        issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+        lib.JWT_Destroy(jws)
+        # print(token)
         logging.getLogger("HiveAuthTestCase").debug(f"token: {token}")
         testapp.set_access_token(token)
 

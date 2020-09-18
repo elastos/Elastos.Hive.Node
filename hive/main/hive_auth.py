@@ -132,11 +132,11 @@ class HiveAuth(Entity):
             return None, "The jwt is none."
 
         #check jwt token
-        jws = lib.JWTParser_Parse(jwt.encode())
+        jws = lib.DefaultJWSParser_Parse(jwt.encode())
         if not jwt:
-            return None, "The jwt is error."
+            return None, ffi.string(lib.DIDError_GetMessage()).decode()
 
-        vp_str = lib.JWS_GetClaimAsJson(jws, "presentation".encode())
+        vp_str = lib.JWT_GetClaimAsJson(jws, "presentation".encode())
         if not vp_str:
             return None, "The jwt's presentation is none."
 
@@ -145,7 +145,7 @@ class HiveAuth(Entity):
             return None, "The presentation string is error, unable to rebuild to a presentation object."
 
         vp_json = json.loads(ffi.string(vp_str).decode())
-        lib.JWS_Destroy(jws)
+        lib.JWT_Destroy(jws)
 
         #check vp
         ret = lib.Presentation_IsValid(vp)
@@ -296,11 +296,11 @@ class HiveAuth(Entity):
         if (len(token_splits) != 3) or token_splits[2] == "":
             return None, "Then access token is invalid!"
 
-        jws = lib.JWTParser_Parse(access_token.encode())
+        jws = lib.DefaultJWSParser_Parse(access_token.encode())
         if not jws:
-            return None, "Then access token is invalid!"
+            return None, ffi.string(lib.DIDError_GetMessage()).decode()
 
-        issuer = lib.JWS_GetIssuer(jws)
+        issuer = lib.JWT_GetIssuer(jws)
         if not issuer:
             return None, "Then issuer is null!"
 
@@ -308,17 +308,17 @@ class HiveAuth(Entity):
         if issuer != self.get_did_string():
             return None, "Then issuer is invalid!"
 
-        expired =  lib.JWS_GetExpiration(jws)
+        expired =  lib.JWT_GetExpiration(jws)
         now = (int)(datetime.now().timestamp())
         if now > expired:
             return None, "Then token is expired!"
 
-        did = lib.JWS_GetClaim(jws, "userDid".encode())
+        did = lib.JWT_GetClaim(jws, "userDid".encode())
         if not did:
             return None, "Then user did is none!"
 
 
-        appid = lib.JWS_GetClaim(jws, "appId".encode())
+        appid = lib.JWT_GetClaim(jws, "appId".encode())
         if not appid:
             return None, "Then app id is none!"
 

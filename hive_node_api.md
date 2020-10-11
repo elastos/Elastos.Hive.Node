@@ -1031,6 +1031,117 @@ return:
         }
 ```
 
+- Download a file(just for demoing fileDownload executable query). 
+NOTE: The download works a bit different compared to other types of executable queries because you can either download something or get output as json but cannot do both. If you have set "output" to true for any of the "fileDownload" type in the list of executables, that will always take precedence so it'll ignore other "output" flags set on any other executable. 
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "download_picture",
+      "executable": {
+        "type": "fileDownload",
+        "name": "download_file",
+        "output": true,
+        "body": {
+          "path": "$params.path"
+        }
+      },
+      "condition": {
+        "type": "queryHasResults",
+        "name": "user_in_group",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "_id": "$params.group_id",
+            "friends": "$caller_did"
+          }
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Get properties or a hash of a file(just for demoing purposes) 
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_file_info",
+      "executable": {
+        "type": "aggregated",
+        "name": "file_properties_and_hash",
+        "body": [
+          {
+            "type": "fileProperties",
+            "name": "file_properties",
+            "output": true,
+            "body": {
+              "path": "$params.path"
+            }
+          },
+          {
+            "type": "fileHash",
+            "name": "file_hash",
+            "output": true,
+            "body": {
+              "path": "$params.path"
+            }
+          }
+        ]
+      },
+      "condition": {
+        "type": "queryHasResults",
+        "name": "user_in_group",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "_id": "$params.group_id",
+            "friends": "$caller_did"
+          }
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
 ### Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
 
 - Run a script to get all the groups that the DID user belongs to. As defined by the script, it contains no restriction so anyone is able to retrieve all the groups for a DID user
@@ -1162,6 +1273,101 @@ return:
             "message": "Error message"
           }
         }
+```
+
+- Run a script to upload a file
+NOTE: The upload works a bit differently compared to other types of executable queries because you will need to pass the json data as "metaddata" as a multipart-form data along with the actual file passed as "data" form field
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+data: file data
+metadata: the json parameters
+    Example Request: 
+      curl -XPOST -F data=@run.sh http://localhost:5000/api/v1/scripting/run_script -H "Authorization: token $token" -H "Content-Type: multipart/form-data" -F "metadata=
+      {
+        \"name\": \"upload_picture\",
+        \"params\": {
+          \"group_id\": {\"\$oid\": \"5f84cbadc889d24b8013f0c6\"},
+          \"path\": \"run.sh\"
+        }
+      }"
+return:
+    Success: {"_status":"OK"}
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Run a script to download a file
+NOTE: The download works a bit differently compared to other types of executable queries because you can either download something or get output as json but cannot do both. If you have set "output" to true for any of the "fileDownload" type in the list of executables, that will always take precedence so it'll ignore other "output" flags set on any other executable
+You will also need to add an additional flag "--output"(if you're using curl) followed by the name you want to give the downloaded file
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "download_picture",
+      "params": {
+        "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"},
+        "path": "kiran.jpg"
+      }
+    }
+return:
+    Success: file data
+    Failure:
+      {
+        "_status": "ERR",
+        "_error": {
+          "code": 401,
+          "message": "Error message"
+        }
+      }
+```
+
+- Run a script to get properties and hash of a file
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_file_info",
+      "params": {
+        "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"},
+        "path": "kiran.jpg"
+      }
+    }
+return:
+    Success: 
+      {
+        "_status": "OK",
+        "file_hash": {
+          "SHA256": "b032e73f4d677a82e932ba106b295365079d123973832c0fc1e06d3900e1fd84"
+        },
+        "file_properties": {
+          "last_modify": 1602446791.5942733,
+          "name": "kiran.jpg",
+          "size": 78731,
+          "type": "file"
+        }
+      }
+    Failure:
+      {
+        "_status": "ERR",
+        "_error": {
+          "code": 401,
+          "message": "Error message"
+        }
+      }
 ```
 
 ## vault-service-payment
@@ -1376,5 +1582,3 @@ return:
           }
         }
 ```
-
-

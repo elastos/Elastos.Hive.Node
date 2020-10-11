@@ -7,11 +7,13 @@ from hive.settings import MONGO_HOST, MONGO_PORT
 from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, \
-    SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE
+    SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_DOWNLOAD, \
+    SCRIPTING_EXECUTABLE_TYPE_UPLOAD
+from hive.util.did_file_info import query_upload, query_download
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one, populate_options_update_one
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
-    run_executable_update, run_executable_delete
+    run_executable_update, run_executable_delete, run_executable_download
 from hive.util.server_response import ServerResponse
 
 
@@ -118,6 +120,8 @@ class HiveScripting:
                 executable_body["update"]["'$set'"] = update_set
                 executable_body['update'].pop("$set", None)
             return None
+        elif executable_type in [SCRIPTING_EXECUTABLE_TYPE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_DOWNLOAD]:
+            return check_json_param(executable_body, f"{executable.get('name')}", args=["path"])
         else:
             return f"invalid executable type '{executable_type}"
 
@@ -157,6 +161,10 @@ class HiveScripting:
             return run_executable_update(did, app_id, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
             return run_executable_delete(did, app_id, executable_body, params)
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPLOAD:
+            return {}, None
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DOWNLOAD:
+            return run_executable_download(did, app_id, executable_body, params)
         else:
             None, f"invalid executable type '{executable_type}"
 

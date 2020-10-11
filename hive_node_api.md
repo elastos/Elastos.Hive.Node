@@ -585,7 +585,7 @@ return:
 - Download file
 ```json
 HTTP: GET
-URL: api/v1/files/download?path="path/of/file/file.name"
+URL: /api/v1/files/download?path="path/of/file/file.name"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 return:
     Success: file data

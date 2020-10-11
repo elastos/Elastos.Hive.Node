@@ -1,5 +1,5 @@
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS
-from hive.util.did_file_info import query_upload, query_download
+from hive.util.did_file_info import query_download, query_properties, query_hash
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
@@ -143,7 +143,7 @@ def run_executable_delete(did, app_id, target_did, executable_body, params):
     return data, None
 
 
-def run_executable_download(did, app_id, executable_body, params):
+def run_executable_file_download(did, app_id, executable_body, params):
     executable_body_path = executable_body.get("path", "")
     file_name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -151,7 +151,32 @@ def run_executable_download(did, app_id, executable_body, params):
         file_name = params[v]
 
     data, status_code = query_download(did, app_id, file_name)
-    print(data)
     if status_code != 200:
-        return None, f"Exception: Could not download file"
+        return None, f"Exception: Status={status_code} Error='Could not download file'"
+    return data, None
+
+
+def run_executable_file_properties(did, app_id, executable_body, params):
+    executable_body_path = executable_body.get("path", "")
+    name = ""
+    if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+        v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+        name = params[v]
+
+    data, err = query_properties(did, app_id, name)
+    if err:
+        return None, f"Exception: Status={err['status_code']} Error='{err['description']}'"
+    return data, None
+
+
+def run_executable_file_hash(did, app_id, executable_body, params):
+    executable_body_path = executable_body.get("path", "")
+    name = ""
+    if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+        v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+        name = params[v]
+
+    data, err = query_hash(did, app_id, name)
+    if err:
+        return None, f"Exception: Status={err['status_code']} Error='{err['description']}'"
     return data, None

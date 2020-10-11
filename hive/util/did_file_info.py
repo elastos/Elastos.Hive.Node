@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from datetime import datetime
 
@@ -30,36 +31,6 @@ def filter_path_root(name):
         return name
 
 
-def query_upload(did, app_id, file_name):
-    err = (None, None)
-
-    path = get_save_files_path(did, app_id)
-    full_path_name = (path / file_name).resolve()
-
-    if not create_full_path_dir(full_path_name.parent):
-        err[0], err[1] = 500, "make path dir error"
-        return err
-
-    if not full_path_name.exists():
-        full_path_name.touch(exist_ok=True)
-
-    if full_path_name.is_dir():
-        err[0], err[1] = 404, "file name is a directory"
-        return err
-    try:
-        with open(full_path_name, "bw") as f:
-            chunk_size = 4096
-            while True:
-                chunk = request.stream.read(chunk_size)
-                if len(chunk) == 0:
-                    break
-                f.write(chunk)
-        return None
-    except Exception as e:
-        err[0], err[1] = 500, f"Exception: method: 'query_upload', Err: {str(e)}"
-        return err
-
-
 def query_download(did, app_id, file_name):
     if file_name is None:
         return None, 400
@@ -83,6 +54,51 @@ def query_download(did, app_id, file_name):
                         etag=etag,
                         last_modified=last_modified,
                         size=size).make_response(), 200
+
+
+def query_properties(did, app_id, name):
+    data, err = {}, {}
+
+    name = filter_path_root(name)
+    path = get_save_files_path(did, app_id)
+    full_path_name = (path / name).resolve()
+
+    if not full_path_name.exists():
+        err["status_code"], err["description"] = 404, "file not exists"
+        return data, err
+
+    stat_info = full_path_name.stat()
+
+    data = {
+        "type": "file" if full_path_name.is_file() else "folder",
+        "name": name,
+        "size": stat_info.st_size,
+        "last_modify": stat_info.st_mtime,
+    }
+    return data, err
+
+
+def query_hash(did, app_id, name):
+    data, err = {}, {}
+
+    name = filter_path_root(name)
+    path = get_save_files_path(did, app_id)
+    full_path_name = (path / name).resolve()
+
+    if not full_path_name.exists() or (not full_path_name.is_file()):
+        err["status_code"], err["description"] = 404, "file not exists"
+        return data, err
+
+    buf_size = 65536  # lets read stuff in 64kb chunks!
+    sha = hashlib.sha256()
+    with full_path_name.open('rb') as f:
+        while True:
+            data = f.read(buf_size)
+            if not data:
+                break
+            sha.update(data)
+    data = {"SHA256": sha.hexdigest()}
+    return data, err
 
 
 def add_file_info(did, app_id, name, info_dic):

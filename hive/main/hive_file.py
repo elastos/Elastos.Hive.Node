@@ -13,7 +13,7 @@ from hive.util.auth import did_auth
 from hive.util.common import create_full_path_dir
 from hive.settings import VAULTS_BASE_DIR
 from hive.util.did_file_info import get_save_files_path, filter_path_root, query_download, \
-    query_properties
+    query_properties, query_hash
 from hive.util.flask_rangerequest import RangeRequest
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
@@ -165,7 +165,9 @@ class HiveFile:
             return response
 
         name = content['path']
-
+        data, err = query_hash(did, app_id, name)
+        if err:
+            return self.response.response_err(err["status_code"], err["description"])
 
         return self.response.response_ok(data)
 

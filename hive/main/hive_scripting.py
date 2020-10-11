@@ -9,7 +9,7 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, \
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
-    SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH
+    SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_DOWNLOADABLE
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one, populate_options_update_one
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
@@ -121,8 +121,13 @@ class HiveScripting:
                 executable_body["update"]["'$set'"] = update_set
                 executable_body['update'].pop("$set", None)
             return None
-        elif executable_type in [SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES,
-                                 SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
+            executable_name = executable.get('name')
+            # We need to make sure that the script's name is not "_download" as it's a reserved field
+            if executable_name == SCRIPTING_EXECUTABLE_DOWNLOADABLE:
+                return f"invalid executable name '{executable_name}'. This name is reserved. Please use a different name"
+            return check_json_param(executable_body, f"{executable_name}", args=["path"])
+        elif executable_type in [SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
             return check_json_param(executable_body, f"{executable.get('name')}", args=["path"])
         else:
             return f"invalid executable type '{executable_type}'"
@@ -152,6 +157,9 @@ class HiveScripting:
         if not output_key:
             output_key = executable.get('name')
 
+        if not capture_output:
+            capture_output = executable.get('output', False)
+
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
             err_message = None
             for i, e in enumerate(executable_body):
@@ -166,7 +174,8 @@ class HiveScripting:
             data, err_message = run_executable_delete(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
             data, err_message = run_executable_file_download(did, app_id, target_did, executable_body, params)
-            output["download_file"] = output_key
+            if capture_output:
+                output[SCRIPTING_EXECUTABLE_DOWNLOADABLE] = output_key
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES:
             data, err_message = run_executable_file_properties(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_HASH:
@@ -174,8 +183,6 @@ class HiveScripting:
         else:
             data, err_message = None, f"invalid executable type '{executable_type}'"
 
-        if not capture_output:
-            capture_output = executable.get('output', False)
         if err_message:
             output[output_key] = err_message
         else:
@@ -274,7 +281,7 @@ class HiveScripting:
         output = {}
         data = self.__executable_execution(caller_did, caller_app_id, target_did, executable, params, output=output)
 
-        download_file = output.get("download_file", None)
+        download_file = output.get(SCRIPTING_EXECUTABLE_DOWNLOADABLE, None)
         if download_file:
             data = output.get(download_file)
             return data

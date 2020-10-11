@@ -1,4 +1,5 @@
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS
+from hive.util.did_file_info import query_upload, query_download
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
@@ -20,7 +21,7 @@ def run_condition(did, app_id, condition_body, params):
     for key, value in condition_body.get('filter').items():
         if value == SCRIPTING_EXECUTABLE_CALLER_DID:
             query[key] = {"$in": [did]}
-        elif f"{SCRIPTING_EXECUTABLE_PARAMS}." in value:
+        elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
             v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
             query[key] = params[v]
         else:
@@ -46,7 +47,7 @@ def run_executable_find(did, app_id, executable_body, params):
         for key, value in executable_body.get('filter').items():
             if value == SCRIPTING_EXECUTABLE_CALLER_DID:
                 query[key] = {"$in": [did]}
-            elif f"{SCRIPTING_EXECUTABLE_PARAMS}." in value:
+            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
                 v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
                 query[key] = params[v]
             else:
@@ -72,7 +73,7 @@ def run_executable_insert(did, app_id, executable_body, params):
         else:
             if key == "created":
                 created = True
-            if f"{SCRIPTING_EXECUTABLE_PARAMS}." in value:
+            if value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
                 v = params[value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")]
             else:
                 v = value
@@ -94,7 +95,7 @@ def run_executable_update(did, app_id, executable_body, params):
     for key, value in executable_body.get('filter').items():
         if value == SCRIPTING_EXECUTABLE_CALLER_DID:
             filter_query[key] = did
-        elif f"{SCRIPTING_EXECUTABLE_PARAMS}." in value:
+        elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
             v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
             filter_query[key] = params[v]
         else:
@@ -104,7 +105,7 @@ def run_executable_update(did, app_id, executable_body, params):
     for key, value in executable_body.get('update').get("'$set'").items():
         if value == SCRIPTING_EXECUTABLE_CALLER_DID:
             update_set_query[key] = did
-        elif f"{SCRIPTING_EXECUTABLE_PARAMS}." in value:
+        elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
             v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
             update_set_query[key] = params[v]
         else:
@@ -127,7 +128,7 @@ def run_executable_delete(did, app_id, executable_body, params):
     for key, value in executable_body.get('filter').items():
         if value == SCRIPTING_EXECUTABLE_CALLER_DID:
             query[key] = {"$in": [did]}
-        elif f"{SCRIPTING_EXECUTABLE_PARAMS}." in value:
+        elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
             v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
             query[key] = params[v]
         else:
@@ -139,4 +140,18 @@ def run_executable_delete(did, app_id, executable_body, params):
     if err_message:
         return None, err_message
 
+    return data, None
+
+
+def run_executable_download(did, app_id, executable_body, params):
+    executable_body_path = executable_body.get("path", "")
+    file_name = ""
+    if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+        v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+        file_name = params[v]
+
+    data, status_code = query_download(did, app_id, file_name)
+    print(data)
+    if status_code != 200:
+        return None, f"Exception: Could not download file"
     return data, None

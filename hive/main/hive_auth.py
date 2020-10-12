@@ -133,7 +133,7 @@ class HiveAuth(Entity):
 
         #check jwt token
         jws = lib.DefaultJWSParser_Parse(jwt.encode())
-        if not jwt:
+        if not jws:
             return None, ffi.string(lib.DIDError_GetMessage()).decode()
 
         vp_str = lib.JWT_GetClaimAsJson(jws, "presentation".encode())

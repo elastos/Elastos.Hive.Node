@@ -1,4 +1,5 @@
 import hashlib
+import json
 import logging
 import os
 import urllib.parse
@@ -13,7 +14,7 @@ from hive.util.auth import did_auth
 from hive.util.common import create_full_path_dir
 from hive.settings import VAULTS_BASE_DIR
 from hive.util.did_file_info import get_save_files_path, filter_path_root, query_download, \
-    query_properties, query_hash
+    query_properties, query_hash, query_upload
 from hive.util.flask_rangerequest import RangeRequest
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
@@ -72,27 +73,9 @@ class HiveFile:
         if response is not None:
             return response
 
-        path = get_save_files_path(did, app_id)
-        full_path_name = (path / file_name).resolve()
-
-        if not create_full_path_dir(full_path_name.parent):
-            return self.response.response_err(500, "make path dir error")
-
-        if not full_path_name.exists():
-            full_path_name.touch(exist_ok=True)
-
-        if full_path_name.is_dir():
-            return self.response.response_err(404, "file name is a directory")
-        try:
-            with open(full_path_name, "bw") as f:
-                chunk_size = 4096
-                while True:
-                    chunk = request.stream.read(chunk_size)
-                    if len(chunk) == 0:
-                        break
-                    f.write(chunk)
-        except Exception as e:
-            return self.response.response_err(500, "Exception:"+str(e))
+        err = query_upload(did, app_id, file_name)
+        if err:
+            return self.response.response_err(err["status_code"], err["description"])
 
         return self.response.response_ok()
 

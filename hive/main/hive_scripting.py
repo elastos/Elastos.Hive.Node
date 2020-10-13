@@ -1,20 +1,22 @@
 import copy
-import logging
+import json
 
+from flask import request
 from pymongo import MongoClient
 
-from hive.main.interceptor import post_json_param_pre_proc
+from hive.main.interceptor import post_json_param_pre_proc, pre_proc
 from hive.settings import MONGO_HOST, MONGO_PORT
 from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, \
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
-    SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_DOWNLOADABLE
+    SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_DOWNLOADABLE, \
+    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one, populate_options_update_one
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
-    run_executable_file_hash
+    run_executable_file_hash, run_executable_file_upload
 from hive.util.server_response import ServerResponse
 
 
@@ -127,7 +129,8 @@ class HiveScripting:
             if executable_name == SCRIPTING_EXECUTABLE_DOWNLOADABLE:
                 return f"invalid executable name '{executable_name}'. This name is reserved. Please use a different name"
             return check_json_param(executable_body, f"{executable_name}", args=["path"])
-        elif executable_type in [SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
+        elif executable_type in [SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES,
+                                 SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
             return check_json_param(executable_body, f"{executable.get('name')}", args=["path"])
         else:
             return f"invalid executable type '{executable_type}'"
@@ -172,6 +175,10 @@ class HiveScripting:
             data, err_message = run_executable_update(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
             data, err_message = run_executable_delete(did, app_id, target_did, executable_body, params)
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD:
+            data, err_message = {}, None
+            if capture_output:
+                data, err_message = run_executable_file_upload(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
             data, err_message = run_executable_file_download(did, app_id, target_did, executable_body, params)
             if capture_output:
@@ -239,10 +246,28 @@ class HiveScripting:
         return self.response.response_ok(data)
 
     def run_script(self):
-        # Request the Caller DID and Caller App Validation
-        caller_did, caller_app_id, content, err = post_json_param_pre_proc(self.response, "name")
-        if err:
-            return err
+        content = {}
+        # Sometimes, the script may be uploading a file so we need to handle the multi-form data first
+        try:
+            metadata = request.form.get('metadata', {})
+            if metadata:
+                content = json.loads(metadata)
+                if content:
+                    did, app_id, response = pre_proc(self)
+                    if response is not None:
+                        return response
+                    valid_content = check_json_param(content, content.get("name", ""), args=["name", "params"])
+                    if valid_content:
+                        err_message = "Exception: parameter is not valid"
+                        return self.response.response_err(400, err_message)
+        except ValueError as e:
+            pass
+
+        if not content:
+            # Request the Caller DID and Caller App Validation
+            caller_did, caller_app_id, content, err = post_json_param_pre_proc(self.response, "name")
+            if err:
+                return err
 
         target_did, target_app_did = caller_did, caller_app_id
         # Request the Target DID and Target App Validation if present
@@ -269,7 +294,7 @@ class HiveScripting:
         if not script:
             return self.response.response_err(404, err_message)
 
-        params = content.get('params')
+        params = content.get('params', None)
         condition = script.get('condition', None)
         if condition:
             passed = self.__condition_execution(caller_did, caller_app_id, target_did, condition, params)

@@ -31,6 +31,36 @@ def filter_path_root(name):
         return name
 
 
+def query_upload(did, app_id, file_name):
+    err = {}
+
+    path = get_save_files_path(did, app_id)
+    full_path_name = (path / file_name).resolve()
+
+    if not create_full_path_dir(full_path_name.parent):
+        err["status_code"], err["description"] = 500, "make path dir error"
+        return err
+
+    if not full_path_name.exists():
+        full_path_name.touch(exist_ok=True)
+
+    if full_path_name.is_dir():
+        err["status_code"], err["description"] = 404, "file name is a directory"
+        return err
+    try:
+        with open(full_path_name, "bw") as f:
+            chunk_size = 4096
+            while True:
+                chunk = request.stream.read(chunk_size)
+                if len(chunk) == 0:
+                    break
+                f.write(chunk)
+    except Exception as e:
+        err["status_code"], err["description"] = 500, f"Exception: {str(e)}"
+        return err
+    return err
+
+
 def query_download(did, app_id, file_name):
     if file_name is None:
         return None, 400

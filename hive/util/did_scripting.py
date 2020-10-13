@@ -1,5 +1,5 @@
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS
-from hive.util.did_file_info import query_download, query_properties, query_hash
+from hive.util.did_file_info import query_download, query_properties, query_hash, query_upload
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
@@ -23,6 +23,8 @@ def run_condition(did, app_id, target_did, condition_body, params):
             query[key] = {"$in": [did]}
         elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
             v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+            if not (params and params.get(v, None)):
+                return False
             query[key] = params[v]
         else:
             query[key] = value
@@ -49,6 +51,8 @@ def run_executable_find(did, app_id, target_did, executable_body, params):
                 query[key] = {"$in": [did]}
             elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
                 v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                if not (params and params.get(v, None)):
+                    return None, "Exception: Parameter is not set"
                 query[key] = params[v]
             else:
                 query[key] = value
@@ -74,7 +78,10 @@ def run_executable_insert(did, app_id, target_did, executable_body, params):
             if key == "created":
                 created = True
             if value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                v = params[value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")]
+                k = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                if not (params and params.get(k, None)):
+                    return None, "Exception: Parameter is not set"
+                v = params[k]
             else:
                 v = value
             query[key] = v
@@ -97,6 +104,8 @@ def run_executable_update(did, app_id, target_did, executable_body, params):
             filter_query[key] = did
         elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
             v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+            if not (params and params.get(v, None)):
+                return None, "Exception: Parameter is not set"
             filter_query[key] = params[v]
         else:
             filter_query[key] = value
@@ -107,6 +116,8 @@ def run_executable_update(did, app_id, target_did, executable_body, params):
             update_set_query[key] = did
         elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
             v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+            if not (params and params.get(v, None)):
+                return None, "Exception: Parameter is not set"
             update_set_query[key] = params[v]
         else:
             update_set_query[key] = value
@@ -130,6 +141,8 @@ def run_executable_delete(did, app_id, target_did, executable_body, params):
             query[key] = {"$in": [did]}
         elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
             v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+            if not (params and params.get(v, None)):
+                return None, "Exception: Parameter is not set"
             query[key] = params[v]
         else:
             query[key] = value
@@ -143,16 +156,38 @@ def run_executable_delete(did, app_id, target_did, executable_body, params):
     return data, None
 
 
+def run_executable_file_upload(did, app_id, executable_body, params):
+    executable_body_path = executable_body.get("path", "")
+    file_name = ""
+    if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+        v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+        if not (params and params.get(v, None)):
+            return None, "Exception: Parameter is not set"
+        file_name = params[v]
+
+    err = query_upload(did, app_id, file_name)
+    if err:
+        return None, f"Exception: Could not upload file. Status={err['status_code']} Error='{err['description']}'"
+    data = {
+        "upload": "Successful",
+        "path": file_name,
+        "vault_endpoint": f"/api/v1/files/download?path={file_name}"
+    }
+    return data, None
+
+
 def run_executable_file_download(did, app_id, executable_body, params):
     executable_body_path = executable_body.get("path", "")
     file_name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+        if not (params and params.get(v, None)):
+            return None, "Exception: Parameter is not set"
         file_name = params[v]
 
     data, status_code = query_download(did, app_id, file_name)
     if status_code != 200:
-        return None, f"Exception: Status={status_code} Error='Could not download file'"
+        return None, f"Exception: Could not download file. Status={status_code}"
     return data, None
 
 
@@ -161,11 +196,13 @@ def run_executable_file_properties(did, app_id, executable_body, params):
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+        if not (params and params.get(v, None)):
+            return None, "Exception: Parameter is not set"
         name = params[v]
 
     data, err = query_properties(did, app_id, name)
     if err:
-        return None, f"Exception: Status={err['status_code']} Error='{err['description']}'"
+        return None, f"Exception: Could not get properties of file. Status={err['status_code']} Error='{err['description']}'"
     return data, None
 
 
@@ -174,9 +211,11 @@ def run_executable_file_hash(did, app_id, executable_body, params):
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+        if not (params and params.get(v, None)):
+            return None, "Exception: Parameter is not set"
         name = params[v]
 
     data, err = query_hash(did, app_id, name)
     if err:
-        return None, f"Exception: Status={err['status_code']} Error='{err['description']}'"
+        return None, f"Exception: Could not get hash of file. Status={err['status_code']} Error='{err['description']}'"
     return data, None

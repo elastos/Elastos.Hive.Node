@@ -49,6 +49,10 @@ def print_err(fun_name=None):
         err += fun_name + ": "
     logging.debug(f"{err + str(ffi.string(lib.DIDError_GetMessage()), encoding='utf-8')}")
 
+def get_error_message():
+    return str(ffi.string(lib.DIDError_GetMessage()), encoding='utf-8')
+
+
 def init_did_store(name):
     if name is None:
         return ffi.NULL
@@ -146,33 +150,27 @@ def sync_did(store, did, storepass, name):
     return True
 
 def init_did(mnemonic, passphrase, storepass, name):
-    if (mnemonic is None) or (passphrase is None) or (storepass is None) or (name is None):
-        return None, None, None
+    assert(mnemonic is not None)
+    assert(passphrase is not None)
+    assert(storepass is not None)
+    assert(name is not None)
 
     passphrase = passphrase.encode()
     storepass = storepass.encode()
     store = init_did_store(name)
-    if not store:
-        print_err("init_did_store")
-        return None, None, None
+    assert store, get_error_message()
 
     init_private_identity(store, mnemonic, storepass, passphrase)
     did = get_did(store)
-    if not did:
-        print_err("get_did")
-        return None, None, None
+    assert did, get_error_message()
 
     doc = load_did(store, did)
     if not doc:
         ret = sync_did(store, did, storepass, name)
-        if ret:
-            doc = load_did(store, did)
-            if not doc:
-                print_err("load_did")
-                return None, None, None
-        else:
-            print_err("load_did")
-            return None, None, None
+        assert ret, get_error_message()
+        doc = load_did(store, did)
+        assert doc, get_error_message()
+
     return store, did, doc
 
 def init_did_backend():

@@ -1031,8 +1031,56 @@ return:
         }
 ```
 
-- Download a file(just for demoing fileDownload executable query). 
-NOTE: The download works a bit different compared to other types of executable queries because you can either download something or get output as json but cannot do both. If you have set "output" to true for any of the "fileDownload" type in the list of executables, that will always take precedence so it'll ignore other "output" flags set on any other executable. 
+- Upload a file(just for demoing fileUpload executable query). 
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "upload_picture",
+      "executable": {
+        "type": "fileUpload",
+        "name": "upload_file",
+        "output": true,
+        "body": {
+          "path": "$params.path"
+        }
+      },
+      "condition": {
+        "type": "queryHasResults",
+        "name": "user_in_group",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "_id": "$params.group_id",
+            "friends": "$caller_did"
+          }
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+
+- Download a file(just for demoing fileDownload executable query)
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script

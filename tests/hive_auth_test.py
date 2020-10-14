@@ -232,20 +232,22 @@ class HiveAuthTestCase(unittest.TestCase):
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
+        return token
 
     def test_b_auth(self):
         didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
         testapp = DApp("testapp", "appid", "amount material swim purse swallow gate pride series cannon patient dentist person")
         self.__test_auth_common(didapp, testapp)
 
-    # def test_c_auth(self):
-    #     didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
-    #     testapp1 = DApp("testapp1", "appid1", "amount material swim purse swallow gate pride series cannon patient dentist person")
-    #     testapp2 = DApp("testapp2", "appid2", "chimney limit involve fine absent topic catch chalk goat era suit leisure", "")
-    #     # testapp3 = DApp("testapp3", "appid3", "license mango cluster candy payment prefer video rice desert pact february rabbit")
-    #     self.__test_auth_common(didapp, testapp1)
-    #     self.__test_auth_common(didapp, testapp2)
-    #     # self.__test_auth_common(didapp, testapp3)
+    def test_c_auth(self):
+        didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
+        testapp1 = DApp("testapp1", "appid1", "amount material swim purse swallow gate pride series cannon patient dentist person")
+        testapp2 = DApp("testapp2", "appid2", "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+        # testapp3 = DApp("testapp3", "appid3", "license mango cluster candy payment prefer video rice desert pact february rabbit")
+        self.__test_auth_common(didapp, testapp1)
+        token = self.__test_auth_common(didapp, testapp2)
+        print("output token:", token)
+        # self.__test_auth_common(didapp, testapp3)
 
 
 if __name__ == '__main__':

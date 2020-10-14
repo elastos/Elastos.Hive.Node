@@ -64,8 +64,10 @@ class DApp(Entity):
     access_token = "123"
     appId = "appId"
 
-    def __init__(self, name, mnemonic=None):
-        Entity.__init__(self, name, mnemonic)
+    def __init__(self, name, appId=None, mnemonic=None, passphrase=None):
+        if (appId is not None):
+            self.appId = appId
+        Entity.__init__(self, name, mnemonic, passphrase)
 
     def access_api_by_token(self):
         return self.access_token
@@ -164,10 +166,7 @@ class HiveAuthTestCase(unittest.TestCase):
         logging.getLogger("HiveAuthTestCase").debug(f"r:{r}")
         self.assert200(s)
 
-    def test_b_auth(self):
-        didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
-        testapp = DApp("testapp", "amount material swim purse swallow gate pride series cannon patient dentist person")
-
+    def __test_auth_common(self, didapp, testapp):
         #sign_in
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_access")
         doc = lib.DIDStore_LoadDID(testapp.store, testapp.did)
@@ -176,10 +175,10 @@ class HiveAuthTestCase(unittest.TestCase):
         doc = json.loads(doc_str)
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/sign_in',
-                                  data=json.dumps({
-                                      "document": doc,
-                                  }),
-                                  headers=self.json_header)
+                                    data=json.dumps({
+                                        "document": doc,
+                                    }),
+                                    headers=self.json_header)
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
@@ -204,10 +203,10 @@ class HiveAuthTestCase(unittest.TestCase):
 
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/auth',
-                                  data=json.dumps({
-                                      "jwt": auth_token,
-                                  }),
-                                  headers=self.json_header)
+                                    data=json.dumps({
+                                        "jwt": auth_token,
+                                    }),
+                                    headers=self.json_header)
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
@@ -229,10 +228,24 @@ class HiveAuthTestCase(unittest.TestCase):
         ]
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/check_token',
-                                  headers=self.json_header)
+                                    headers=self.json_header)
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
+
+    def test_b_auth(self):
+        didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
+        testapp = DApp("testapp", "appid", "amount material swim purse swallow gate pride series cannon patient dentist person")
+        self.__test_auth_common(didapp, testapp)
+
+    # def test_c_auth(self):
+    #     didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
+    #     testapp1 = DApp("testapp1", "appid1", "amount material swim purse swallow gate pride series cannon patient dentist person")
+    #     testapp2 = DApp("testapp2", "appid2", "chimney limit involve fine absent topic catch chalk goat era suit leisure", "")
+    #     # testapp3 = DApp("testapp3", "appid3", "license mango cluster candy payment prefer video rice desert pact february rabbit")
+    #     self.__test_auth_common(didapp, testapp1)
+    #     self.__test_auth_common(didapp, testapp2)
+    #     # self.__test_auth_common(didapp, testapp3)
 
 
 if __name__ == '__main__':

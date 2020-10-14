@@ -156,7 +156,7 @@ def run_executable_delete(did, app_id, target_did, executable_body, params):
     return data, None
 
 
-def run_executable_file_upload(did, app_id, executable_body, params):
+def run_executable_file_upload(did, app_id, target_did, executable_body, params):
     executable_body_path = executable_body.get("path", "")
     file_name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -165,7 +165,7 @@ def run_executable_file_upload(did, app_id, executable_body, params):
             return None, "Exception: Parameter is not set"
         file_name = params[v]
 
-    err = query_upload(did, app_id, file_name)
+    err = query_upload(target_did, app_id, file_name)
     if err:
         return None, f"Exception: Could not upload file. Status={err['status_code']} Error='{err['description']}'"
     data = {
@@ -176,7 +176,7 @@ def run_executable_file_upload(did, app_id, executable_body, params):
     return data, None
 
 
-def run_executable_file_download(did, app_id, executable_body, params):
+def run_executable_file_download(did, app_id, target_did, executable_body, params):
     executable_body_path = executable_body.get("path", "")
     file_name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -185,13 +185,13 @@ def run_executable_file_download(did, app_id, executable_body, params):
             return None, "Exception: Parameter is not set"
         file_name = params[v]
 
-    data, status_code = query_download(did, app_id, file_name)
+    data, status_code = query_download(target_did, app_id, file_name)
     if status_code != 200:
         return None, f"Exception: Could not download file. Status={status_code}"
     return data, None
 
 
-def run_executable_file_properties(did, app_id, executable_body, params):
+def run_executable_file_properties(did, app_id, target_did, executable_body, params):
     executable_body_path = executable_body.get("path", "")
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -200,13 +200,13 @@ def run_executable_file_properties(did, app_id, executable_body, params):
             return None, "Exception: Parameter is not set"
         name = params[v]
 
-    data, err = query_properties(did, app_id, name)
+    data, err = query_properties(target_did, app_id, name)
     if err:
         return None, f"Exception: Could not get properties of file. Status={err['status_code']} Error='{err['description']}'"
     return data, None
 
 
-def run_executable_file_hash(did, app_id, executable_body, params):
+def run_executable_file_hash(did, app_id, target_did, executable_body, params):
     executable_body_path = executable_body.get("path", "")
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -215,7 +215,7 @@ def run_executable_file_hash(did, app_id, executable_body, params):
             return None, "Exception: Parameter is not set"
         name = params[v]
 
-    data, err = query_hash(did, app_id, name)
+    data, err = query_hash(target_did, app_id, name)
     if err:
         return None, f"Exception: Could not get hash of file. Status={err['status_code']} Error='{err['description']}'"
     return data, None

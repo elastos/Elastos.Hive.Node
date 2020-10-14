@@ -253,7 +253,7 @@ class HiveScripting:
             if metadata:
                 content = json.loads(metadata)
                 if content:
-                    did, app_id, response = pre_proc(self)
+                    caller_did, caller_app_id, response = pre_proc(self)
                     if response is not None:
                         return response
                     valid_content = check_json_param(content, content.get("name", ""), args=["name", "params"])

@@ -15,7 +15,7 @@ def check_json_param(content, content_type, args):
     return None
 
 
-def run_condition(did, app_id, condition_body, params):
+def run_condition(did, app_id, target_did, condition_body, params):
     query = {}
     for key, value in condition_body.get('filter').items():
         if value == SCRIPTING_EXECUTABLE_CALLER_DID:
@@ -29,7 +29,7 @@ def run_condition(did, app_id, condition_body, params):
 
     options = populate_options_count_documents(condition_body)
 
-    col = get_collection(did, app_id, condition_body.get('collection'))
+    col = get_collection(target_did, app_id, condition_body.get('collection'))
     data, err_message = query_count_documents(col, condition_body, options)
     if err_message:
         return False
@@ -39,7 +39,7 @@ def run_condition(did, app_id, condition_body, params):
     return True
 
 
-def run_executable_find(did, app_id, executable_body, params):
+def run_executable_find(did, app_id, target_did, executable_body, params):
     query = {}
     executable_body_filter = executable_body.get('filter', None)
     if executable_body_filter:
@@ -55,7 +55,7 @@ def run_executable_find(did, app_id, executable_body, params):
 
     options = populate_options_find_many(executable_body)
 
-    col = get_collection(did, app_id, executable_body.get('collection'))
+    col = get_collection(target_did, app_id, executable_body.get('collection'))
     data, err_message = query_find_many(col, executable_body, options)
     if err_message:
         return None, err_message
@@ -63,7 +63,7 @@ def run_executable_find(did, app_id, executable_body, params):
     return data, None
 
 
-def run_executable_insert(did, app_id, executable_body, params):
+def run_executable_insert(did, app_id, target_did, executable_body, params):
     created = False
     query = {}
     for key, value in executable_body.get('document').items():
@@ -81,7 +81,7 @@ def run_executable_insert(did, app_id, executable_body, params):
 
     options = populate_options_insert_one(executable_body)
 
-    col = get_collection(did, app_id, executable_body.get('collection'))
+    col = get_collection(target_did, app_id, executable_body.get('collection'))
     data, err_message = query_insert_one(col, executable_body, options, created=created)
     if err_message:
         return None, err_message
@@ -89,7 +89,7 @@ def run_executable_insert(did, app_id, executable_body, params):
     return data, None
 
 
-def run_executable_update(did, app_id, executable_body, params):
+def run_executable_update(did, app_id, target_did, executable_body, params):
     filter_query = {}
     for key, value in executable_body.get('filter').items():
         if value == SCRIPTING_EXECUTABLE_CALLER_DID:
@@ -114,7 +114,7 @@ def run_executable_update(did, app_id, executable_body, params):
 
     options = populate_options_update_one(executable_body)
 
-    col = get_collection(did, app_id, executable_body.get('collection'))
+    col = get_collection(target_did, app_id, executable_body.get('collection'))
     data, err_message = query_update_one(col, executable_body, options)
     if err_message:
         return None, err_message
@@ -122,7 +122,7 @@ def run_executable_update(did, app_id, executable_body, params):
     return data, None
 
 
-def run_executable_delete(did, app_id, executable_body, params):
+def run_executable_delete(did, app_id, target_did, executable_body, params):
     query = {}
     for key, value in executable_body.get('filter').items():
         if value == SCRIPTING_EXECUTABLE_CALLER_DID:
@@ -134,7 +134,7 @@ def run_executable_delete(did, app_id, executable_body, params):
             query[key] = value
     executable_body["filter"] = query
 
-    col = get_collection(did, app_id, executable_body.get('collection'))
+    col = get_collection(target_did, app_id, executable_body.get('collection'))
     data, err_message = query_delete_one(col, executable_body)
     if err_message:
         return None, err_message

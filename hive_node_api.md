@@ -1061,6 +1061,7 @@ return:
 ```
 
 - Run a script to get all the group messages for a particular group ID. This has a subcondition that needs to be satisifed first. This subcondition can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
+NOTE: We can use the field "context" along with its inner value "target_did" to tell hive which did user to use when accessing vault. This is necessary when user1 wants to call user2's vault
 ```json
 HTTP: POST
 URL: /api/v1/scripting/run_script
@@ -1069,6 +1070,9 @@ Content-Type: "application/json"
 data: 
     {
       "name": "get_group_messages",
+      "context": {
+        "target_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"
+      },
       "params": {
         "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"}
       }

@@ -174,6 +174,10 @@ def init_did(mnemonic, passphrase, storepass, name):
     return store, did, doc
 
 def init_did_backend():
+    print("Initializing the [Auth] module")
+    print("    DID Resolver: " + DID_RESOLVER)
+    print("    DID Mnemonic: " + DID_MNEMONIC)
+
     ret = lib.DIDBackend_InitializeDefault(resolver, cache_path.encode())
     if ret == -1:
         print_err("DIDBackend_InitializeDefault")

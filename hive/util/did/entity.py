@@ -16,10 +16,12 @@ class Entity:
     did_str = None
     name = "Entity"
 
-    def __init__(self, name, mnemonic=None):
+    def __init__(self, name, mnemonic=None, passphrase=None):
         self.name = name
         if not mnemonic is None:
             self.mnemonic = mnemonic
+        if not passphrase is None:
+            self.passphrase = passphrase
         self.store, self.did, self.doc = init_did(self.mnemonic, self.passphrase, self.storepass, self.name)
         self.storepass = self.storepass.encode()
         if not self.did:

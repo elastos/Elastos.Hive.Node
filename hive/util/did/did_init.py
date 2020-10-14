@@ -70,7 +70,7 @@ def export_current_mnemonic(store, storepass):
     return ffi.string(mnemonic_str).decode()
 
 def init_private_identity(store, mnemonic, storepass, passphrase):
-    if (not store) or (not storepass) or (not mnemonic) or (not passphrase):
+    if (not store) or (not storepass) or (mnemonic is None):
         return
 
     ret = lib.DIDStore_ContainsPrivateIdentity(store)
@@ -81,7 +81,7 @@ def init_private_identity(store, mnemonic, storepass, passphrase):
             return  # Already exists
 
     mnemonic = mnemonic.encode()
-    if mnemonic is None:
+    if not mnemonic:
         mnemonic = lib.Mnemonic_Generate(language)
     ret = lib.DIDStore_InitPrivateIdentity(store, storepass, mnemonic, passphrase, language, True)
     if ret == -1:

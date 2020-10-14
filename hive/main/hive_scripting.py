@@ -1,4 +1,5 @@
 import copy
+import logging
 
 from pymongo import MongoClient
 
@@ -121,42 +122,42 @@ class HiveScripting:
         else:
             return f"invalid executable type '{executable_type}"
 
-    def __condition_execution(self, did, app_id, condition, params):
+    def __condition_execution(self, did, app_id, target_did, condition, params):
         condition_type = condition.get('type')
         condition_body = condition.get('body')
         if condition_type in [SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR]:
             if len(condition_body) == 1:
-                return self.__condition_execution(did, app_id, condition_body[0], params)
+                return self.__condition_execution(did, app_id, target_did, condition_body[0], params)
             new_condition = {
                 "type": condition_type,
                 "body": condition_body[1:]
             }
             if condition_type == SCRIPTING_CONDITION_TYPE_AND:
-                return self.__condition_execution(did, app_id, condition_body[0], params) and \
-                       self.__condition_execution(did, app_id, new_condition, params)
+                return self.__condition_execution(did, app_id, target_did, condition_body[0], params) and \
+                       self.__condition_execution(did, app_id, target_did, new_condition, params)
             elif condition_type == SCRIPTING_CONDITION_TYPE_OR:
-                return self.__condition_execution(did, app_id, condition_body[0], params) or \
-                       self.__condition_execution(did, app_id, new_condition, params)
+                return self.__condition_execution(did, app_id, target_did, condition_body[0], params) or \
+                       self.__condition_execution(did, app_id, target_did, new_condition, params)
         else:
-            return run_condition(did, app_id, condition_body, params)
+            return run_condition(did, app_id, target_did, condition_body, params)
 
-    def __executable_execution(self, did, app_id, executable, params):
+    def __executable_execution(self, did, app_id, target_did, executable, params):
         executable_type = executable.get('type')
         executable_body = executable.get('body')
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
             for i, e in enumerate(executable_body):
                 if i == len(executable_body) - 1:
-                    return self.__executable_execution(did, app_id, e, params)
+                    return self.__executable_execution(did, app_id, target_did, e, params)
                 else:
-                    self.__executable_execution(did, app_id, e, params)
+                    self.__executable_execution(did, app_id, target_did, e, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
-            return run_executable_find(did, app_id, executable_body, params)
+            return run_executable_find(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
-            return run_executable_insert(did, app_id, executable_body, params)
+            return run_executable_insert(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
-            return run_executable_update(did, app_id, executable_body, params)
+            return run_executable_update(did, app_id, target_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
-            return run_executable_delete(did, app_id, executable_body, params)
+            return run_executable_delete(did, app_id, target_did, executable_body, params)
         else:
             None, f"invalid executable type '{executable_type}"
 
@@ -209,13 +210,21 @@ class HiveScripting:
         return self.response.response_ok(data)
 
     def run_script(self):
-        # Request Validation
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "name")
+        # Request the Caller DID and Caller App Validation
+        caller_did, caller_app_id, content, err = post_json_param_pre_proc(self.response, "name")
         if err:
             return err
 
+        target_did, target_app_did = caller_did, caller_app_id
+        # Request the Target DID and Target App Validation if present
+        context = content.get('context', {})
+        if context:
+            target_did = context.get('target_did', caller_did)
+            # Uncomment when anonymous app_did is allowed
+            #target_app_did = context.get('target_app_did', app_id)
+
         # Find the script in the database
-        col = get_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
+        col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
         content_filter = {
             "name": content.get('name')
         }
@@ -234,13 +243,13 @@ class HiveScripting:
         params = content.get('params')
         condition = script.get('condition', None)
         if condition:
-            passed = self.__condition_execution(did, app_id, condition, params)
+            passed = self.__condition_execution(caller_did, caller_app_id, target_did, condition, params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
                 return self.response.response_err(403, err_message)
 
         executable = script.get("executable")
-        data, err_message = self.__executable_execution(did, app_id, executable, params)
+        data, err_message = self.__executable_execution(caller_did, caller_app_id, target_did, executable, params)
         if err_message:
             return self.response.response_err(500, err_message)
 

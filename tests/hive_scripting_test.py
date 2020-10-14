@@ -238,11 +238,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
     def test_4_1_run_other_user_script_without_condition(self):
         logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_1_run_other_user_script_without_condition")
 
-        # todo fill token by auth test case test_c_auth token like testapp2
-        token = ""
-        if token is "":
-            return
-
+        token = test_common.get_auth_token2(self)
         auth = [
             ("Authorization", "token " + token),
             self.content_type,
@@ -252,7 +248,10 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
             self.test_client.post('/api/v1/scripting/run_script',
                                   data=json.dumps(
                                       {
-                                          "name": "script_no_condition"
+                                          "name": "script_no_condition",
+                                          "context": {
+                                              "target_did": test_common.did
+                                          }
                                       }
                                   ),
                                   headers=auth)

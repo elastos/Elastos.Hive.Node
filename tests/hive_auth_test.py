@@ -15,6 +15,7 @@ from hive.util.did.entity import Entity
 from hive.util.did.eladid import ffi, lib
 
 from hive import create_app
+from tests import test_common
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -62,7 +63,7 @@ class DIDApp(Entity):
 # ---------------
 class DApp(Entity):
     access_token = "123"
-    appId = "appId"
+    appId = test_common.app_id
 
     def __init__(self, name, appId=None, mnemonic=None, passphrase=None):
         if (appId is not None):
@@ -163,22 +164,21 @@ class HiveAuthTestCase(unittest.TestCase):
                                   data=json.dumps({"key": "value"}),
                                   headers=self.json_header)
         )
-        logging.getLogger("HiveAuthTestCase").debug(f"r:{r}")
+        logging.getLogger("HiveAuthTestCase").debug(f"\nr:{r}")
         self.assert200(s)
 
     def __test_auth_common(self, didapp, testapp):
-        #sign_in
-        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_access")
+        # sign_in
         doc = lib.DIDStore_LoadDID(testapp.store, testapp.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
-        print(doc_str)
+        logging.getLogger("HiveAuthTestCase").debug(f"\ndoc_str: {doc_str}")
         doc = json.loads(doc_str)
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/sign_in',
-                                    data=json.dumps({
-                                        "document": doc,
-                                    }),
-                                    headers=self.json_header)
+                                  data=json.dumps({
+                                      "document": doc,
+                                  }),
+                                  headers=self.json_header)
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
@@ -193,20 +193,19 @@ class HiveAuthTestCase(unittest.TestCase):
         hive_did = ffi.string(lib.JWT_GetIssuer(jws)).decode()
         lib.JWT_Destroy(jws)
 
-        #auth
-        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_auth")
+        # auth
         vc = didapp.issue_auth(testapp)
         vp_json = testapp.create_presentation(vc, nonce, hive_did)
         auth_token = testapp.create_token(vp_json, hive_did)
         # print(auth_token)
-        logging.getLogger("HiveAuthTestCase").debug(f"auth_token: {auth_token}")
+        logging.getLogger("HiveAuthTestCase").debug(f"\nauth_token: {auth_token}")
 
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/auth',
-                                    data=json.dumps({
-                                        "jwt": auth_token,
-                                    }),
-                                    headers=self.json_header)
+                                  data=json.dumps({
+                                      "jwt": auth_token,
+                                  }),
+                                  headers=self.json_header)
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
@@ -218,35 +217,40 @@ class HiveAuthTestCase(unittest.TestCase):
         issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
         lib.JWT_Destroy(jws)
         # print(token)
-        logging.getLogger("HiveAuthTestCase").debug(f"token: {token}")
+        logging.getLogger("HiveAuthTestCase").debug(f"\ntoken: {token}")
         testapp.set_access_token(token)
 
-        #auth_check
+        # auth_check
         self.json_header = [
             ("Authorization", "token " + token),
             self.content_type,
         ]
         rt, s = self.parse_response(
             self.test_client.post('/api/v1/did/check_token',
-                                    headers=self.json_header)
+                                  headers=self.json_header)
         )
         self.assert200(s)
         self.assertEqual(rt["_status"], "OK")
         return token
 
     def test_b_auth(self):
+        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_auth")
+
         didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
-        testapp = DApp("testapp", "appid", "amount material swim purse swallow gate pride series cannon patient dentist person")
+        testapp = DApp("testapp", test_common.app_id,
+                       "amount material swim purse swallow gate pride series cannon patient dentist person")
         self.__test_auth_common(didapp, testapp)
 
     def test_c_auth(self):
+        logging.getLogger("HiveAuthTestCase").debug("\nRunning test_c_auth")
         didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
-        testapp1 = DApp("testapp1", "appid1", "amount material swim purse swallow gate pride series cannon patient dentist person")
-        testapp2 = DApp("testapp2", "appid2", "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+        testapp1 = DApp("testapp1", test_common.app_id, "amount material swim purse swallow gate pride series cannon patient dentist person")
+        testapp2 = DApp("testapp2", "appid2",
+                        "chimney limit involve fine absent topic catch chalk goat era suit leisure")
         # testapp3 = DApp("testapp3", "appid3", "license mango cluster candy payment prefer video rice desert pact february rabbit")
         self.__test_auth_common(didapp, testapp1)
         token = self.__test_auth_common(didapp, testapp2)
-        print("output token:", token)
+        logging.getLogger("HiveAuthTestCase").debug(f"\ntoken: {token}")
         # self.__test_auth_common(didapp, testapp3)
 
 

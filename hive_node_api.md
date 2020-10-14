@@ -6,6 +6,7 @@
 - [Vault File](#vault-file)
 - [Database](#database)
 - [Scripting](#scripting)
+- [Payment](#vault-service-payment)
 
 ## Auth of did and app
 - User auth access request
@@ -1149,3 +1150,218 @@ return:
           }
         }
 ```
+
+## vault-service-payment
+- Get vault service package payment info
+```json
+HTTP: GET
+URL: api/v1/payment/vault_package_info
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+return:
+    Success:
+        {
+            "_status": "OK",
+            "vaultPackages": [
+                {
+                    "name": "Trial",
+                    "freeDays": 10, // Number of days during which a new user can try this provider for free. Could be 0
+                    "maxStorage": 10,// Max 10 Mbps of network use
+                    "//maxNetworkSpeed": 1,
+                    "deleteIfUnpaidAfterDays": 10,
+                    "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
+                },
+                { 
+                    "name": "Rookie",
+                    "maxStorage": 500, // Max 500 Mb storage size
+                    //"maxNetworkSpeed": 1, // Max 1 Mbps of network use
+                    "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
+                    "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
+                    "pricing": [
+                        {
+                            "type": "1 week",
+                            "amount": 0.3, 
+                            "currency": "ELA"
+                        },
+                        {
+                            "type": "1 month",
+                            "amount": 1,
+                            "currency": "ELA"
+                        },
+                        {
+                            "type": "3 months",
+                            "amount": 2.5,
+                            "currency": "ELA"
+                        },
+                        {
+                            "type": "12 months",
+                            "amount": 9.5,
+                            "currency": "ELA"
+                        }
+                    ]
+                },
+                { 
+                    "name": "Advanced",
+                    "maxStorage": 2000, // Max 500 Mb storage size
+                    //"maxNetworkSpeed": 5, // Max 1 Mbps of network use
+                    "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
+                    "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
+                    "pricing": [
+                        {
+                            "type": "1 month",
+                            "amount": 2,
+                            "currency": "ELA"
+                        },
+                        {
+                            "type": "3 months",
+                            "amount": 5.5,
+                            "currency": "ELA"
+                        },
+                        {
+                            "type": "12 months",
+                            "amount": 21.0,
+                            "currency": "ELA"
+                        },
+                    ]
+                }
+            ],
+            "paymentSettings": {
+                "receivingELAAddress": "0xabcdef"
+            }
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Create vault service package order
+```json
+HTTP: POST
+URL: /api/v1/payment/create_vault_package_order
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "package_name": "Rookie",
+      "package_type": "1 week",
+    }
+return:
+    Success:
+      {
+        "_status": "OK",
+        "create_time": 1602236316,//utc time of start pay, to judge txid
+        "order_id": "39275039"
+      }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Pay vault service package order
+```json
+HTTP: POST
+URL: /api/v1/payment/pay_vault_package_order
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "order_id": "39275039",
+      "pay_txids": [
+        "0xablcddd",
+        "0xablcdef"
+      ]
+    }
+return:
+    Success:
+      {
+        "_status": "OK",
+      }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Get order info of vault service purchase
+```json
+HTTP: GET
+URL: api/v1/payment/vault_package_order?orderid=39275039
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+return:
+    Success:
+        {
+            "_status": "OK",
+            "order_info":
+            { 
+                "order_id":"39275039", 
+                "name": "Rookie",
+                "maxStorage": 500, // Max 500 Mb storage size
+                "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
+                "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
+                "type": "1 month",
+                "amount": 1,
+                "currency": "ELA",
+                "creat_time": 1602236316,
+                "pay_txids": [
+                    "0xablcddd",
+                    "0xablcdef"
+                ]
+                "state": "wait_tx",//wait_pay, wait_tx, failed, success
+            }
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Get user vault service info 
+```json
+HTTP: GET
+URL: api/v1/service/vault
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+return:
+    Success:
+        {
+            "_status": "OK",
+            "vault_service_info":
+            { 
+                "maxStorage": 500, // Max 500 Mb storage size
+                "start_time": 1602236316,
+                "end_time": 1604914928,
+                "delete_time": 1613727728,
+                "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
+                "state": "running",//running, expire
+            }
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+

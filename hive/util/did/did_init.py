@@ -178,6 +178,8 @@ def init_did_backend():
     print("    DID Resolver: " + DID_RESOLVER)
     print("    DID Mnemonic: " + DID_MNEMONIC)
 
+    assert DID_RESOLVER == "http://api.elastos.io:20606" or DID_RESOLVER == "http://api.elastos.io:21606", "resolver is invalid!"
+
     ret = lib.DIDBackend_InitializeDefault(resolver, cache_path.encode())
     if ret == -1:
         print_err("DIDBackend_InitializeDefault")

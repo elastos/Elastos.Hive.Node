@@ -95,7 +95,7 @@ class HiveSyncTestCase(unittest.TestCase):
 
     def test_b_init_sync(self):
         logging.getLogger("HiveSyncTestCase").debug("\nRunning test_b_init_sync")
-        did = test_common.did
+        did = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
         drive = HiveSync.gene_did_google_drive_name(did)
         add_did_sync_info(did, time(), drive)
         did_folder = HiveSync.get_did_sync_path(did)
@@ -106,7 +106,7 @@ class HiveSyncTestCase(unittest.TestCase):
 
     def test_c_sync(self):
         logging.getLogger("HiveSyncTestCase").debug("\nRunning test_c_sync")
-        did = test_common.did
+        did = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
         drive = HiveSync.gene_did_google_drive_name(did)
         update_did_sync_info(did, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, time(), drive)
         info = get_did_sync_info(did)

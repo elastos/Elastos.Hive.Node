@@ -585,7 +585,7 @@ return:
 - Download file
 ```json
 HTTP: GET
-URL: api/v1/files/download?path="path/of/file/file.name"
+URL: /api/v1/files/download?path="path/of/file/file.name"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 return:
     Success: file data
@@ -754,7 +754,7 @@ return:
 ### Register a new script for a given app. This lets the vault owner register a script on his vault for a given app. The script is built on the client side, then serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can use /scripting/run_script endpoint to execute one of those scripts and get results/data. The same API is used to insert/update the scripts
 
 - Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction. 
-Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend
+Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend. You may or may not add the param "output" as part of the executable whether to capture the output of each executable.
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -766,6 +766,7 @@ data:
       "executable": {
         "type": "find",
         "name": "get_groups",
+        "output": true,
         "body": {
           "collection": "groups",
           "filter": {
@@ -800,7 +801,7 @@ return:
 ```
 
 - Create/Update a script to get the first 100 messages for a particular group messaging. "_id" is not displayed as part of the result. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages are returned back to the client.
-Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script
+Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script. You may or may not add the param "output" as part of the executable whether to capture the output of each executable.
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -812,6 +813,7 @@ data:
       "executable": {
         "type": "find",
         "name": "find_messages",
+        "output": true,
         "body": {
           "collection": "messages",
           "filter": {
@@ -855,7 +857,7 @@ return:
 ```
 
 - Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run. 
-Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script
+Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script. You may or may not add the param "output" as part of the executable whether to capture the output of each executable.
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -885,6 +887,7 @@ data:
           {
             "type": "find",
             "name": "get_last_message",
+            "output": true,
             "body": {
               "collection": "messages",
               "filter": {
@@ -1028,6 +1031,165 @@ return:
         }
 ```
 
+- Upload a file(just for demoing fileUpload executable query). 
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "upload_picture",
+      "executable": {
+        "type": "fileUpload",
+        "name": "upload_file",
+        "output": true,
+        "body": {
+          "path": "$params.path"
+        }
+      },
+      "condition": {
+        "type": "queryHasResults",
+        "name": "user_in_group",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "_id": "$params.group_id",
+            "friends": "$caller_did"
+          }
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+
+- Download a file(just for demoing fileDownload executable query)
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "download_picture",
+      "executable": {
+        "type": "fileDownload",
+        "name": "download_file",
+        "output": true,
+        "body": {
+          "path": "$params.path"
+        }
+      },
+      "condition": {
+        "type": "queryHasResults",
+        "name": "user_in_group",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "_id": "$params.group_id",
+            "friends": "$caller_did"
+          }
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Get properties or a hash of a file(just for demoing purposes) 
+```json
+HTTP: POST
+URL: /api/v1/scripting/set_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_file_info",
+      "executable": {
+        "type": "aggregated",
+        "name": "file_properties_and_hash",
+        "body": [
+          {
+            "type": "fileProperties",
+            "name": "file_properties",
+            "output": true,
+            "body": {
+              "path": "$params.path"
+            }
+          },
+          {
+            "type": "fileHash",
+            "name": "file_hash",
+            "output": true,
+            "body": {
+              "path": "$params.path"
+            }
+          }
+        ]
+      },
+      "condition": {
+        "type": "queryHasResults",
+        "name": "user_in_group",
+        "body": {
+          "collection": "groups",
+          "filter": {
+            "_id": "$params.group_id",
+            "friends": "$caller_did"
+          }
+        }
+      }
+    }
+return:
+    Success: 
+        {
+          "_status": "OK",
+          "acknowledged": true,
+          "matched_count": 0,
+          "modified_count": 0,
+          "upserted_id": "5f4aa2be16f409b032c1daf4"
+        }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
 ### Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
 
 - Run a script to get all the groups that the DID user belongs to. As defined by the script, it contains no restriction so anyone is able to retrieve all the groups for a DID user
@@ -1044,11 +1206,13 @@ return:
     Success: 
       {
         "_status": "OK",
-        "items": [
-          {
-            "name": "Tuum Tech"
-          }
-        ]
+        "get_groups": {
+          "items": [
+            {
+              "name": "Tuum Tech"
+            }
+          ]
+        }
       }
     Failure: 
         {
@@ -1081,21 +1245,23 @@ return:
     Success:
       {
         "_status": "OK",
-        "items": [
-          {
-            "content": "Old Message",
-            "created": {
-              "$date": 1630022400000
-            },
-            "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
-            "group_id": {
-              "$oid": "5f497bb83bd36ab235d82e6a"
-            },
-            "modified": {
-              "$date": 1598725803556
+        "find_messages": {
+          "items": [
+            {
+              "content": "Old Message",
+              "created": {
+                "$date": 1630022400000
+              },
+              "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
+              "group_id": {
+                "$oid": "5f497bb83bd36ab235d82e6a"
+              },
+              "modified": {
+                "$date": 1598725803556
+              }
             }
-          }
-        ]
+          ]
+        }
       }
     Failure: 
         {
@@ -1129,21 +1295,23 @@ return:
     Success:
       {
         "_status": "OK",
-        "items": [
-          {
-            "content": "New Message",
-            "created": {
-              "$date": 1630022400000
-            },
-            "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
-            "group_id": {
-              "$oid": "5f497bb83bd36ab235d82e6a"
-            },
-            "modified": {
-              "$date": 1598725803556
+        "get_last_message": {
+          "items": [
+            {
+              "content": "New Message",
+              "created": {
+                "$date": 1630022400000
+              },
+              "friend_did": "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM",
+              "group_id": {
+                "$oid": "5f497bb83bd36ab235d82e6a"
+              },
+              "modified": {
+                "$date": 1598725803556
+              }
             }
-          }
-        ]
+          ]
+        }
       }
     Failure: 
         {
@@ -1153,6 +1321,101 @@ return:
             "message": "Error message"
           }
         }
+```
+
+- Run a script to upload a file
+NOTE: The upload works a bit differently compared to other types of executable queries because you will need to pass the json data as "metaddata" as a multipart-form data along with the actual file passed as "data" form field
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+data: file data
+metadata: the json parameters
+    Example Request: 
+      curl -XPOST -F data=@run.sh http://localhost:5000/api/v1/scripting/run_script -H "Authorization: token $token" -H "Content-Type: multipart/form-data" -F "metadata=
+      {
+        \"name\": \"upload_picture\",
+        \"params\": {
+          \"group_id\": {\"\$oid\": \"5f84cbadc889d24b8013f0c6\"},
+          \"path\": \"run.sh\"
+        }
+      }"
+return:
+    Success: {"_status":"OK"}
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Run a script to download a file
+NOTE: The download works a bit differently compared to other types of executable queries because you can either download something or get output as json but cannot do both. If you have set "output" to true for any of the "fileDownload" type in the list of executables, that will always take precedence so it'll ignore other "output" flags set on any other executable
+You will also need to add an additional flag "--output"(if you're using curl) followed by the name you want to give the downloaded file
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "download_picture",
+      "params": {
+        "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"},
+        "path": "kiran.jpg"
+      }
+    }
+return:
+    Success: file data
+    Failure:
+      {
+        "_status": "ERR",
+        "_error": {
+          "code": 401,
+          "message": "Error message"
+        }
+      }
+```
+
+- Run a script to get properties and hash of a file
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "get_file_info",
+      "params": {
+        "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"},
+        "path": "kiran.jpg"
+      }
+    }
+return:
+    Success: 
+      {
+        "_status": "OK",
+        "file_hash": {
+          "SHA256": "b032e73f4d677a82e932ba106b295365079d123973832c0fc1e06d3900e1fd84"
+        },
+        "file_properties": {
+          "last_modify": 1602446791.5942733,
+          "name": "kiran.jpg",
+          "size": 78731,
+          "type": "file"
+        }
+      }
+    Failure:
+      {
+        "_status": "ERR",
+        "_error": {
+          "code": 401,
+          "message": "Error message"
+        }
+      }
 ```
 
 ## vault-service-payment
@@ -1367,5 +1630,3 @@ return:
           }
         }
 ```
-
-

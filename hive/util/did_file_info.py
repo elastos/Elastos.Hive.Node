@@ -6,7 +6,13 @@ from bson import ObjectId
 from flask import request
 from pymongo import MongoClient
 
+from streaming_form_data import StreamingFormDataParser
+from streaming_form_data.targets import ValueTarget, FileTarget, NullTarget
+
 from pathlib import Path
+
+from werkzeug.utils import secure_filename
+
 from hive.util.common import did_tail_part, create_full_path_dir
 
 from hive.util.constants import DID_INFO_DB_NAME, FILE_INFO_COL, FILE_INFO_BELONG_DID, FILE_INFO_BELONG_APP_ID, \
@@ -31,7 +37,7 @@ def filter_path_root(name):
         return name
 
 
-def query_upload(did, app_id, file_name):
+def query_upload_get_filepath(did, app_id, file_name):
     err = {}
 
     path = get_save_files_path(did, app_id)
@@ -39,26 +45,16 @@ def query_upload(did, app_id, file_name):
 
     if not create_full_path_dir(full_path_name.parent):
         err["status_code"], err["description"] = 500, "make path dir error"
-        return err
+        return full_path_name, err
 
     if not full_path_name.exists():
         full_path_name.touch(exist_ok=True)
 
     if full_path_name.is_dir():
         err["status_code"], err["description"] = 404, "file name is a directory"
-        return err
-    try:
-        with open(full_path_name, "bw") as f:
-            chunk_size = 4096
-            while True:
-                chunk = request.stream.read(chunk_size)
-                if len(chunk) == 0:
-                    break
-                f.write(chunk)
-    except Exception as e:
-        err["status_code"], err["description"] = 500, f"Exception: {str(e)}"
-        return err
-    return err
+        return full_path_name, err
+
+    return full_path_name, err
 
 
 def query_download(did, app_id, file_name):

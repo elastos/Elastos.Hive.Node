@@ -1,5 +1,7 @@
+from flask import request
+
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS
-from hive.util.did_file_info import query_download, query_properties, query_hash, query_upload
+from hive.util.did_file_info import query_download, query_properties, query_hash, query_upload_get_filepath
 from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
@@ -165,9 +167,14 @@ def run_executable_file_upload(did, app_id, target_did, executable_body, params)
             return None, "Exception: Parameter is not set"
         file_name = params[v]
 
-    err = query_upload(target_did, app_id, file_name)
+    full_path_name, err = query_upload_get_filepath(target_did, app_id, file_name)
     if err:
         return None, f"Exception: Could not upload file. Status={err['status_code']} Error='{err['description']}'"
+    try:
+        uploaded_file = request.files['data']
+        uploaded_file.save(full_path_name)
+    except Exception as e:
+        return None, f"Exception: Could not upload file. Error: {str(e)}"
     data = {
         "upload": "Successful",
         "path": file_name,

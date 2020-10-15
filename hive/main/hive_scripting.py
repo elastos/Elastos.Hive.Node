@@ -253,7 +253,7 @@ class HiveScripting:
             if metadata:
                 content = json.loads(metadata)
                 if content:
-                    caller_did, caller_app_id, response = pre_proc(self)
+                    caller_did, caller_app_did, response = pre_proc(self)
                     if response is not None:
                         return response
                     valid_content = check_json_param(content, content.get("name", ""), args=["name", "params"])
@@ -265,17 +265,16 @@ class HiveScripting:
 
         if not content:
             # Request the Caller DID and Caller App Validation
-            caller_did, caller_app_id, content, err = post_json_param_pre_proc(self.response, "name")
+            caller_did, caller_app_did, content, err = post_json_param_pre_proc(self.response, "name")
             if err:
                 return err
 
-        target_did, target_app_did = caller_did, caller_app_id
+        target_did, target_app_did = caller_did, caller_app_did
         # Request the Target DID and Target App Validation if present
         context = content.get('context', {})
         if context:
             target_did = context.get('target_did', caller_did)
-            # Uncomment when anonymous app_did is allowed
-            #target_app_did = context.get('target_app_did', app_id)
+            target_app_did = context.get('target_app_did', caller_app_did)
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -297,14 +296,14 @@ class HiveScripting:
         params = content.get('params', None)
         condition = script.get('condition', None)
         if condition:
-            passed = self.__condition_execution(caller_did, caller_app_id, target_did, condition, params)
+            passed = self.__condition_execution(caller_did, caller_app_did, target_did, condition, params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
                 return self.response.response_err(403, err_message)
 
         executable = script.get("executable")
         output = {}
-        data = self.__executable_execution(caller_did, caller_app_id, target_did, executable, params, output=output)
+        data = self.__executable_execution(caller_did, caller_app_did, target_did, executable, params, output=output)
 
         download_file = output.get(SCRIPTING_EXECUTABLE_DOWNLOADABLE, None)
         if download_file:

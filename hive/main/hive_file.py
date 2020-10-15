@@ -14,7 +14,7 @@ from hive.util.auth import did_auth
 from hive.util.common import create_full_path_dir
 from hive.settings import VAULTS_BASE_DIR
 from hive.util.did_file_info import get_save_files_path, filter_path_root, query_download, \
-    query_properties, query_hash, query_upload
+    query_properties, query_hash, query_upload_get_filepath
 from hive.util.flask_rangerequest import RangeRequest
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
@@ -29,6 +29,7 @@ class HiveFile:
         self.app = app
         self.app.config['UPLOAD_FOLDER'] = "./temp_file"
         self.app.config['MAX_CONTENT_PATH'] = 10000000
+        self.app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
     def move(self, is_copy):
         did, app_id, content, response = post_json_param_pre_proc(self.response, "src_path", "dst_path")
@@ -73,9 +74,19 @@ class HiveFile:
         if response is not None:
             return response
 
-        err = query_upload(did, app_id, file_name)
+        full_path_name, err = query_upload_get_filepath(did, app_id, file_name)
         if err:
             return self.response.response_err(err["status_code"], err["description"])
+        try:
+            with open(full_path_name, "bw") as f:
+                chunk_size = 4096
+                while True:
+                    chunk = request.stream.read(chunk_size)
+                    if len(chunk) == 0:
+                        break
+                    f.write(chunk)
+        except Exception as e:
+            return self.response.response_err(500, f"Exception: {str(e)}")
 
         return self.response.response_ok()
 

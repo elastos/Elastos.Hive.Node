@@ -5,6 +5,7 @@ from hive.util.did_sync import add_did_sync_info, update_did_sync_info, DATA_SYN
     delete_did_sync_info
 
 from hive.settings import AUTH_CHALLENGE_EXPIRED
+from main.scheduler import scheduler_stop
 
 did = "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"
 did2 = "did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP"
@@ -27,20 +28,17 @@ def delete_test_auth_token():
     pass
 
 
+def get_auth_did(self):
+    return did
+
+
+def get_auth_app_did(self):
+    return app_id
+
+
 def get_auth_token(self):
     return token
 
 
 def get_auth_token2(self):
     return token2
-
-
-def setup_sync_record():
-    delete_did_sync_info(did)
-    add_did_sync_info(did, time(), drive)
-    update_did_sync_info(did, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, time(), drive)
-
-
-def delete_sync_record():
-    # delete_did_sync_info(did)
-    pass

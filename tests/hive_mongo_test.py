@@ -38,7 +38,7 @@ class HiveMongoDbTestCase(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger("HiveMongoDbTestCase").info("\n")
-        self.app = create_app()
+        self.app = create_app(True)
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
         self.content_type = ("Content-Type", "application/json")
@@ -47,7 +47,6 @@ class HiveMongoDbTestCase(unittest.TestCase):
             self.content_type,
         ]
         test_common.setup_test_auth_token()
-        test_common.setup_sync_record()
         self.init_auth()
 
     def init_auth(self):
@@ -59,7 +58,6 @@ class HiveMongoDbTestCase(unittest.TestCase):
 
     def tearDown(self):
         test_common.delete_test_auth_token()
-        test_common.delete_sync_record()
         logging.getLogger("HiveMongoDbTestCase").info("\n")
 
     def init_db(self):

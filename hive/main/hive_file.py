@@ -23,7 +23,7 @@ from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_pr
 class HiveFile:
     def __init__(self, app=None):
         self.app = app
-        self.response = ServerResponse("HiveSync")
+        self.response = ServerResponse("HiveFile")
 
     def init_app(self, app):
         self.app = app

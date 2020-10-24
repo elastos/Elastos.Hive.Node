@@ -45,7 +45,7 @@ class HiveSyncTestCase(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger("HiveSyncTestCase").info("\n")
-        self.app = create_app()
+        self.app = create_app(True)
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
         self.content_type = ("Content-Type", "application/json")

@@ -6,7 +6,6 @@ from hive.main.hive_scripting import HiveScripting
 
 h_auth = HiveAuth()
 h_sync = HiveSync()
-h_scripting = HiveScripting()
 
 main = Blueprint('main', __name__)
 
@@ -14,7 +13,6 @@ main = Blueprint('main', __name__)
 def init_app(app):
     h_auth.init_app(app)
     h_sync.init_app(app)
-    h_scripting.init_app(app)
     app.register_blueprint(main)
 
 

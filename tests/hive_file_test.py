@@ -52,7 +52,7 @@ class HiveFileTestCase(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger("HiveFileTestCase").info("\n")
-        self.app = create_app()
+        self.app = create_app(True)
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
         self.content_type = ("Content-Type", "application/json")
@@ -62,7 +62,6 @@ class HiveFileTestCase(unittest.TestCase):
             self.content_type,
         ]
         test_common.setup_test_auth_token()
-        test_common.setup_sync_record()
         self.init_auth()
         self.clear_all_test_files()
 
@@ -80,7 +79,6 @@ class HiveFileTestCase(unittest.TestCase):
     def tearDown(self):
         logging.getLogger("HiveFileTestCase").info("\n")
         test_common.delete_test_auth_token()
-        test_common.delete_sync_record()
         self.clear_all_test_files()
 
     def init_db(self):

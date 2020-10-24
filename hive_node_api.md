@@ -1430,15 +1430,13 @@ return:
     Success:
         {
             "_status": "OK",
+            "Trial":{
+                "freeDays": 10,
+                "maxStorage": 10,
+                "deleteIfUnpaidAfterDays": 10,
+                "canReadIfUnpaid": true
+            },
             "vaultPackages": [
-                {
-                    "name": "Trial",
-                    "freeDays": 10, // Number of days during which a new user can try this provider for free. Could be 0
-                    "maxStorage": 10,// Max 10 Mbps of network use
-                    "//maxNetworkSpeed": 1,
-                    "deleteIfUnpaidAfterDays": 10,
-                    "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
-                },
                 { 
                     "name": "Rookie",
                     "maxStorage": 500, // Max 500 Mb storage size
@@ -1447,23 +1445,27 @@ return:
                     "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
                     "pricing": [
                         {
-                            "type": "1 week",
-                            "amount": 0.3, 
+                            "price_name": "1 week",
+                            "amount": 0.3,
+                            "serviceDays": 7,
                             "currency": "ELA"
                         },
                         {
-                            "type": "1 month",
+                            "price_name": "1 month",
                             "amount": 1,
+                            "serviceDays": 30,
                             "currency": "ELA"
                         },
                         {
-                            "type": "3 months",
+                            "price_name": "3 months",
                             "amount": 2.5,
+                            "serviceDays": 90,
                             "currency": "ELA"
                         },
                         {
-                            "type": "12 months",
+                            "price_name": "12 months",
                             "amount": 9.5,
+                            "serviceDays": 365,
                             "currency": "ELA"
                         }
                     ]
@@ -1476,20 +1478,23 @@ return:
                     "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
                     "pricing": [
                         {
-                            "type": "1 month",
+                            "price_name": "1 month",
                             "amount": 2,
+                            "serviceDays": 30,
                             "currency": "ELA"
                         },
                         {
-                            "type": "3 months",
+                            "price_name": "3 months",
                             "amount": 5.5,
+                            "serviceDays": 90,
                             "currency": "ELA"
                         },
                         {
-                            "type": "12 months",
+                            "price_name": "12 months",
                             "amount": 21.0,
+                            "serviceDays": 365,
                             "currency": "ELA"
-                        },
+                        }
                     ]
                 }
             ],
@@ -1498,6 +1503,27 @@ return:
             }
         }
     Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- start vault service free trial
+```json
+HTTP: POST
+URL: /api/v1/payment/free_trial
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+return:
+    Success:
+      {
+        "_status": "OK",
+      }
+    Failure: 
         {
           "_status": "ERR",
           "_error": {
@@ -1516,14 +1542,13 @@ Content-Type: "application/json"
 data: 
     {
       "package_name": "Rookie",
-      "package_type": "1 week",
+      "price_name": "1 week",
     }
 return:
     Success:
       {
         "_status": "OK",
-        "create_time": 1602236316,//utc time of start pay, to judge txid
-        "order_id": "39275039"
+        "order_id": "5f910273dc81b7a0b3f585fc"
       }
     Failure: 
         {
@@ -1543,7 +1568,7 @@ Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 
     {
-      "order_id": "39275039",
+      "order_id": "5f910273dc81b7a0b3f585fc",
       "pay_txids": [
         "0xablcddd",
         "0xablcdef"
@@ -1567,7 +1592,7 @@ return:
 - Get order info of vault service purchase
 ```json
 HTTP: GET
-URL: api/v1/payment/vault_package_order?orderid=39275039
+URL: api/v1/payment/vault_package_order?order_id=5f910273dc81b7a0b3f585fc
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:
@@ -1576,21 +1601,72 @@ return:
             "_status": "OK",
             "order_info":
             { 
-                "order_id":"39275039", 
-                "name": "Rookie",
-                "maxStorage": 500, // Max 500 Mb storage size
-                "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
-                "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
-                "type": "1 month",
-                "amount": 1,
-                "currency": "ELA",
-                "creat_time": 1602236316,
+                "order_id":"5f910273dc81b7a0b3f585fc", 
+                "did":"did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP",
+                "app_id":"appid",
+                "package_info":{
+                    "name": "Rookie",
+                    "maxStorage": 500, // Max 500 Mb storage size
+                    "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
+                    "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
+                    "price_name": "1 month",
+                    "amount": 1,
+                    "serviceDays": 30,
+                    "currency": "ELA",
+                },
                 "pay_txids": [
                     "0xablcddd",
                     "0xablcdef"
-                ]
-                "state": "wait_tx",//wait_pay, wait_tx, failed, success
+                ],
+                "state": "wait_tx",//wait_pay, wait_tx, wait_pay_timeout, wait_tx_timeout, failed, success
+                "creat_time": 1602236316,
+                "finish_time": 1602236366
             }
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Get user order info list of vault service purchase
+```json
+HTTP: GET
+URL: api/v1/payment/vault_package_order_list
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+return:
+    Success:
+        {
+            "_status": "OK",
+            "order_info_list":[
+                { 
+                    "order_id":"5f910273dc81b7a0b3f585fc", 
+                    "did":"did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP",
+                    "app_id":"appid",
+                    "package_info":{
+                        "name": "Rookie",
+                        "maxStorage": 500, // Max 500 Mb storage size
+                        "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
+                        "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
+                        "price_name": "1 month",
+                        "amount": 1,
+                        "serviceDays": 30,
+                        "currency": "ELA",
+                    },
+                    "pay_txids": [
+                        "0xablcddd",
+                        "0xablcdef"
+                    ],
+                    "state": "wait_tx",//wait_pay, wait_tx, wait_pay_timeout, wait_tx_timeout, failed, success 
+                    "creat_time": 1602236316,
+                    "finish_time": 1602236366
+                }
+            ]
         }
     Failure:
         {
@@ -1614,11 +1690,11 @@ return:
             "_status": "OK",
             "vault_service_info":
             { 
-                "maxStorage": 500, // Max 500 Mb storage size
+                "max_storage": 500, // Max 500 Mb storage size
                 "start_time": 1602236316,
                 "end_time": 1604914928,
                 "delete_time": 1613727728,
-                "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
+                "can_read_if_unpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
                 "state": "running",//running, expire
             }
         }

@@ -18,6 +18,7 @@ else:
     logging.debug("Autoconfig")
 
 DID_RESOLVER = env_config('DID_RESOLVER', default="http://api.elastos.io:21606", cast=str)
+ELA_RESOLVER = env_config('ELA_RESOLVER', default="http://api.elastos.io:21606", cast=str)
 
 DID_MNEMONIC = env_config('DID_MNEMONIC',
                           default="advance duty suspect finish space matter squeeze elephant twenty over stick shield",
@@ -31,6 +32,7 @@ MONGO_HOST = env_config('MONGO_HOST', default="localhost", cast=str)
 MONGO_PORT = env_config('MONGO_PORT', default=27020, cast=int)
 
 RCLONE_CONFIG_FILE = env_config('RCLONE_CONFIG_FILE', default="/.config/rclone/rclone.conf", cast=str)
+HIVE_PAYMENT_CONFIG = env_config('HIVE_PAYMENT_CONFIG', default="./payment_config.json", cast=str)
 
 AUTH_CHALLENGE_EXPIRED = 3 * 60
 ACCESS_TOKEN_EXPIRED = 30 * 24 * 60 * 60

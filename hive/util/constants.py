@@ -2,6 +2,9 @@ from decouple import config
 
 DID_INFO_DB_NAME = config('DID_INFO_DB_NAME', default="hive_manage_info", cast=str)
 
+VAULT_WRITE_READ = "vault_write_read"
+VAULT_READ = "vault_read"
+
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 DID_INFO_REGISTER_COL = "auth_register"
@@ -18,12 +21,6 @@ DID_SYNC_INFO_STATE = "state"
 DID_SYNC_INFO_MSG = "msg"
 DID_SYNC_INFO_TIME = "time"
 DID_SYNC_INFO_DRIVE = "drive"
-
-DID_RESOURCE_COL = "user_db_col_schema"
-DID_RESOURCE_DID = "did"
-DID_RESOURCE_APP_ID = "app_id"
-DID_RESOURCE_NAME = "name"
-DID_RESOURCE_SCHEMA = "schema"
 
 FILE_INFO_COL = "file_data"
 FILE_INFO_BELONG_DID = "belong_did"
@@ -60,6 +57,26 @@ SCRIPTING_EXECUTABLE_TYPE_FILE_HASH = "fileHash"
 SCRIPTING_EXECUTABLE_CALLER_DID = "$caller_did"
 SCRIPTING_EXECUTABLE_CALLER_APP_DID = "$caller_app_did"
 SCRIPTING_EXECUTABLE_PARAMS = "$params"
-
 SCRIPTING_EXECUTABLE_DOWNLOADABLE = "_downloadable"
 # scripting end
+
+# other
+VAULT_ORDER_COL = "vault_orders"
+VAULT_ORDER_DID = "did"
+VAULT_ORDER_APP_ID = "app_id"
+VAULT_ORDER_PACKAGE_INFO = "package_info"
+VAULT_ORDER_TXIDS = "pay_txids"
+VAULT_ORDER_STATE = "state"
+VAULT_ORDER_CREATE_TIME = "creat_time"
+VAULT_ORDER_MODIFY_TIME = "modify_time"
+
+VAULT_SERVICE_COL = "vault_service"
+VAULT_SERVICE_DID = "did"
+VAULT_SERVICE_APP_ID = "app_id"
+VAULT_SERVICE_MAX_STORAGE = "max_storage"
+VAULT_SERVICE_START_TIME = "start_time"
+VAULT_SERVICE_END_TIME = "end_time"
+VAULT_SERVICE_DELETE_TIME = "delete_time"
+VAULT_SERVICE_EXPIRE_READ = "can_read_if_unpaid"
+VAULT_SERVICE_STATE = "state"
+

@@ -3,13 +3,8 @@ import json
 import logging
 import os
 import pathlib
-import re
 import subprocess
-from datetime import datetime
 from time import time
-
-from flask import Blueprint, request, jsonify
-from flask_apscheduler import APScheduler
 
 from hive.util.auth import did_auth
 from hive.util.common import did_tail_part, create_full_path_dir
@@ -23,7 +18,6 @@ from hive.util.did_sync import get_did_sync_info, DATA_SYNC_STATE_RUNNING, add_d
     DATA_SYNC_MSG_INIT_MONGODB, DATA_SYNC_MSG_SUCCESS, DATA_SYNC_MSG_SYNCING
 from hive.util.server_response import ServerResponse
 
-scheduler = APScheduler()
 
 class HiveSync:
     def __init__(self, app=None):
@@ -32,9 +26,6 @@ class HiveSync:
 
     def init_app(self, app):
         self.app = app
-        # if not scheduler.running:
-        #     scheduler.init_app(app)
-        #     scheduler.start()
 
     def copy_drive_to_vault(self):
         pass
@@ -47,7 +38,7 @@ class HiveSync:
 
     def setup_google_drive_rclone(self):
         did, app_id = did_auth()
-        logging.debug(f"did: {did}, app_id: {app_id}")
+        logging.getLogger("HiveSync").debug(f"did: {did}, app_id: {app_id}")
         if (did is None) or (app_id is None):
             return self.response.response_err(401, "auth failed")
 
@@ -173,7 +164,7 @@ class HiveSync:
     def is_google_drive_exist(did):
         config_file = HiveSync.find_rclone_config()
         if not config_file.exists():
-            logging.debug(f"Error: rclone config file do not exist")
+            logging.getLogger("HiveSync").debug(f"Error: rclone config file do not exist")
             return False
 
         drive = "[gdrive_%s]" % did_tail_part(did)
@@ -203,7 +194,7 @@ token = %s
 
         config_file = HiveSync.find_rclone_config()
         if not config_file.exists():
-            logging.debug(f"Error: rclone config file do not exist")
+            logging.getLogger("HiveSync").debug(f"Error: rclone config file do not exist")
             return
         file_data = ""
         content_replace = False
@@ -232,7 +223,7 @@ token = %s
 
         config_file = HiveSync.find_rclone_config()
         if not config_file.exists():
-            logging.debug(f"Error: rclone config file do not exist")
+            logging.getLogger("HiveSync").debug(f"Error: rclone config file do not exist")
             return
 
         with open(config_file, 'a') as h_file:
@@ -252,10 +243,3 @@ token = %s
             print(lines)
             h_file.writelines(lines)
         return drive_name
-
-
-# @scheduler.task(trigger='interval', id='syn_job', hours=1)
-def syn_job():
-    logging.debug(f"rclone syncing start: {str(datetime.now())}")
-    HiveSync.syn_all_drive()
-    logging.debug(f"rclone syncing end: {str(datetime.now())}")

@@ -1,0 +1,165 @@
+import json
+import logging
+
+from bson import ObjectId
+from pymongo import MongoClient
+from datetime import datetime
+import requests
+
+from util.payment.payment_config import PaymentConfig
+
+from settings import MONGO_HOST, MONGO_PORT, ELA_RESOLVER
+from util.constants import *
+from util.payment.vault_service_manage import setup_vault_service
+
+VAULT_ORDER_STATE_WAIT_PAY = "wait_pay"
+VAULT_ORDER_STATE_WAIT_TX = "wait_tx"
+VAULT_ORDER_STATE_WAIT_PAY_TIMEOUT = "wait_pay_timeout"
+VAULT_ORDER_STATE_WAIT_TX_TIMEOUT = "wait_tx_timeout"
+VAULT_ORDER_STATE_FAILED = "failed"
+VAULT_ORDER_STATE_SUCCESS = "success"
+
+logger = logging.getLogger("vault_order")
+
+
+def create_order_info(did, app_id, package_info):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_ORDER_COL]
+
+    order_dic = {VAULT_ORDER_DID: did,
+                 VAULT_ORDER_APP_ID: app_id,
+                 VAULT_ORDER_PACKAGE_INFO: package_info,
+                 VAULT_ORDER_TXIDS: [],
+                 VAULT_ORDER_STATE: VAULT_ORDER_STATE_WAIT_PAY,
+                 VAULT_ORDER_CREATE_TIME: datetime.utcnow().timestamp(),
+                 VAULT_ORDER_MODIFY_TIME: datetime.utcnow().timestamp()
+                 }
+    ret = col.insert_one(order_dic)
+    order_id = ret.inserted_id
+    return order_id
+
+
+def find_txid(txid):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_ORDER_COL]
+    query = {"VAULT_ORDER_TXIDS": txid}
+    ret = col.find(query)
+    return ret
+
+
+def update_order_info(_id, info_dic):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_ORDER_COL]
+    query = {"_id": _id}
+    info_dic[VAULT_ORDER_MODIFY_TIME] = datetime.utcnow().timestamp()
+    value = {"$set": info_dic}
+    ret = col.update_one(query, value)
+    return ret
+
+
+def get_order_info_by_id(_id):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_ORDER_COL]
+    query = {"_id": _id}
+    info = col.find_one(query)
+    return info
+
+
+def get_order_info_list(did, app_id):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_ORDER_COL]
+    query = {VAULT_ORDER_DID: did, VAULT_ORDER_APP_ID: app_id}
+    info_list = col.find(query)
+    return info_list
+
+
+def get_tx_info(tx, target_address):
+    param = {
+        "method": "getrawtransaction",
+        "params": [tx, True]
+    }
+    try:
+        r = requests.post(ELA_RESOLVER, json=param, headers={"Content-Type": "application/json"})
+    except Exception as e:
+        logger.error("get_tx_info exception, tx:" + tx + " address:" + target_address)
+        return None, None
+
+    if r.status_code != 200:
+        logger.error("get_tx_info, tx:" + tx + " address:" + target_address + "error code:" + str(r.status_code))
+        return None, None
+    else:
+        ret = r.json()
+        if not ret['error']:
+            block_time = ret['result']['time']
+            out_list = ret['result']["vout"]
+            for out in out_list:
+                value = float(out['value'])
+                address = out['address']
+                if target_address == address:
+                    return value, block_time
+
+        return None, None
+
+
+def deal_order_tx(info):
+    address = PaymentConfig.get_payment_address()
+    amount = info[VAULT_ORDER_PACKAGE_INFO]["amount"]
+    create_time = info[VAULT_ORDER_CREATE_TIME]
+
+    for tx in info[VAULT_ORDER_TXIDS]:
+        value, block_time = get_tx_info(tx, address)
+        if value:
+            amount -= value
+            if create_time > block_time:
+                logger.error(
+                    "deal_order_tx failed. tx:" + tx + " block_time:" + str(block_time) + " creat_time" + str(create_time))
+                info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_FAILED
+                update_order_info(info["_id"], info)
+                return info[VAULT_ORDER_STATE]
+
+    if amount < 0.001:
+        info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_SUCCESS
+    else:
+        modify_time = info[VAULT_ORDER_MODIFY_TIME]
+        now = datetime.utcnow().timestamp()
+        if (now - modify_time) > (PaymentConfig.get_tx_timeout() * 60):
+            info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_WAIT_TX_TIMEOUT
+
+    update_order_info(info["_id"], info)
+    return info[VAULT_ORDER_STATE]
+
+
+def check_pay_order_timeout_job():
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_ORDER_COL]
+    query = {VAULT_ORDER_STATE: VAULT_ORDER_STATE_WAIT_PAY}
+    info_list = col.find(query)
+    now = datetime.utcnow().timestamp()
+    for info in info_list:
+        create_time = info[VAULT_ORDER_CREATE_TIME]
+        if (now - create_time) > (PaymentConfig.get_payment_timeout() * 60):
+            info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_WAIT_PAY_TIMEOUT
+            update_order_info(info["_id"], info)
+
+
+def check_wait_order_tx_job():
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_ORDER_COL]
+    query = {VAULT_ORDER_STATE: VAULT_ORDER_STATE_WAIT_TX}
+    info_list = col.find(query)
+    for info in info_list:
+        state = deal_order_tx(info)
+        if state == VAULT_ORDER_STATE_SUCCESS:
+            setup_vault_service(info[VAULT_ORDER_DID],
+                                info[VAULT_ORDER_APP_ID],
+                                info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
+                                info[VAULT_ORDER_PACKAGE_INFO]["deleteIfUnpaidAfterDays"],
+                                info[VAULT_ORDER_PACKAGE_INFO]["canReadIfUnpaid"],
+                                info[VAULT_ORDER_PACKAGE_INFO]["serviceDays"])

@@ -9,9 +9,9 @@ from bson import ObjectId, json_util
 from pymongo import MongoClient
 
 from hive.settings import VAULTS_BASE_DIR, MONGO_HOST, MONGO_PORT
-from hive.util.constants import DID_INFO_DB_NAME, DID_RESOURCE_COL, DID_RESOURCE_NAME, DID_RESOURCE_SCHEMA, \
-    DID_RESOURCE_DID, DID_RESOURCE_APP_ID, DATETIME_FORMAT
+from hive.util.constants import DATETIME_FORMAT
 from hive.util.common import did_tail_part, create_full_path_dir
+from settings import MONGO_HOST, MONGO_PORT
 
 
 def convert_oid(query, update=False):
@@ -54,18 +54,6 @@ def gene_sort(sort_para):
     return sorts
 
 
-# settings must be json string
-def add_did_resource_to_db(did, app_id, resource, schema):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[DID_RESOURCE_COL]
-
-    did_dic = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id, DID_RESOURCE_NAME: resource,
-               DID_RESOURCE_SCHEMA: schema}
-    i = col.insert_one(did_dic)
-    return i
-
-
 def populate_options_insert_one(content):
     options = options_filter(content, ("bypass_document_validation",))
     return options
@@ -87,17 +75,6 @@ def query_insert_one(col, content, options, created=False):
         return data, None
     except Exception as e:
         return None, f"Exception: method: 'query_insert_one', Err: {str(e)}"
-
-
-def update_schema_of_did_resource(did, app_id, resource, schema):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[DID_RESOURCE_COL]
-
-    query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id, DID_RESOURCE_NAME: resource}
-    values = {"$set": {DID_RESOURCE_SCHEMA, schema}}
-    r = col.update_one(query, values)
-    return r
 
 
 def populate_options_update_one(content):
@@ -184,40 +161,24 @@ def query_delete_one(col, content):
         return None, f"Exception: method: 'query_delete_one', Err: {str(e)}"
 
 
-def find_schema_of_did_resource(did, app_id, resource):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[DID_RESOURCE_COL]
-    query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id, DID_RESOURCE_NAME: resource}
-    data = col.find_one(query)
-    if data is None:
-        return None
-    else:
-        return data[DID_RESOURCE_SCHEMA]
-
-
-def get_all_resource_of_did_app_id(did, app_id):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[DID_RESOURCE_COL]
-    query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id}
-    resource_list = col.find(query)
-    return resource_list
-
-
-def delete_did_resource_from_db(did, app_id, resource):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[DID_RESOURCE_COL]
-    query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id, DID_RESOURCE_NAME: resource}
-    data = col.delete_one(query)
-    return data
-
-
 def gene_mongo_db_name(did, app_id):
     md5 = hashlib.md5()
     md5.update((did + "_" + app_id).encode("utf-8"))
     return "hive_user_db_" + str(md5.hexdigest())
+
+
+def get_collection(did, app_id, collection):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db_name = gene_mongo_db_name(did, app_id)
+    db = connection[db_name]
+    col = db[collection]
+    return col
+
+
+def delete_mongo_database(did, app_id):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db_name = gene_mongo_db_name(did, app_id)
+    connection.drop_database(db_name)
 
 
 def get_save_mongo_db_path(did, app_id):
@@ -235,15 +196,15 @@ def export_mongo_db(did, app_id):
         if not create_full_path_dir(save_path):
             return False
 
-    query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id}
-    # 1. export collection schema data
-    line1 = "mongoexport -h %s --port %s  --db=%s --collection=%s -q '%s' -o %s" % (MONGO_HOST,
-                                                                                    MONGO_PORT,
-                                                                                    DID_INFO_DB_NAME,
-                                                                                    DID_RESOURCE_COL,
-                                                                                    json.dumps(query),
-                                                                                    save_path / DID_RESOURCE_COL)
-    subprocess.call(line1, shell=True)
+    # query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id}
+    # # 1. export collection schema data
+    # line1 = "mongoexport -h %s --port %s  --db=%s --collection=%s -q '%s' -o %s" % (MONGO_HOST,
+    #                                                                                 MONGO_PORT,
+    #                                                                                 DID_INFO_DB_NAME,
+    #                                                                                 DID_RESOURCE_COL,
+    #                                                                                 json.dumps(query),
+    #                                                                                 save_path / DID_RESOURCE_COL)
+    # subprocess.call(line1, shell=True)
 
     # 2. dump user data db
     db_name = gene_mongo_db_name(did, app_id)
@@ -258,13 +219,13 @@ def import_mongo_db(did, app_id):
         return False
 
     # 1. import collection schema data
-    line1 = "mongoimport -h %s --port %s  --db=%s --collection=%s --upsert %s" % (MONGO_HOST,
-                                                                                  MONGO_PORT,
-                                                                                  DID_INFO_DB_NAME,
-                                                                                  DID_RESOURCE_COL,
-                                                                                  path / DID_RESOURCE_COL)
-
-    subprocess.call(line1, shell=True)
+    # line1 = "mongoimport -h %s --port %s  --db=%s --collection=%s --upsert %s" % (MONGO_HOST,
+    #                                                                               MONGO_PORT,
+    #                                                                               DID_INFO_DB_NAME,
+    #                                                                               DID_RESOURCE_COL,
+    #                                                                               path / DID_RESOURCE_COL)
+    #
+    # subprocess.call(line1, shell=True)
     # 2. restore user data db
     db_name = gene_mongo_db_name(did, app_id)
     save_path = path / db_name

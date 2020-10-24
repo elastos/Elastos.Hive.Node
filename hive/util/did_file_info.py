@@ -129,8 +129,8 @@ def add_file_info(did, app_id, name, info_dic):
     base_dic = {FILE_INFO_BELONG_DID: did,
                 FILE_INFO_BELONG_APP_ID: app_id,
                 FILE_INFO_FILE_NAME: name,
-                FILE_INFO_FILE_CREATE_TIME: datetime.now().timestamp(),
-                FILE_INFO_FILE_MODIFY_TIME: datetime.now().timestamp()
+                FILE_INFO_FILE_CREATE_TIME: datetime.utcnow().timestamp(),
+                FILE_INFO_FILE_MODIFY_TIME: datetime.utcnow().timestamp()
                 }
 
     did_dic = dict(base_dic, **info_dic)
@@ -143,7 +143,7 @@ def update_file_size(did, app_id, name, size):
     db = connection[DID_INFO_DB_NAME]
     col = db[FILE_INFO_COL]
     query = {FILE_INFO_BELONG_DID: did, FILE_INFO_BELONG_APP_ID: app_id, FILE_INFO_FILE_NAME: name}
-    value = {"$set": {FILE_INFO_FILE_SIZE: size, FILE_INFO_FILE_MODIFY_TIME: datetime.now().timestamp()}}
+    value = {"$set": {FILE_INFO_FILE_SIZE: size, FILE_INFO_FILE_MODIFY_TIME: datetime.utcnow().timestamp()}}
     ret = col.update_one(query, value)
     return ret
 
@@ -153,7 +153,7 @@ def update_file_info(did, app_id, name, info_dic):
     db = connection[DID_INFO_DB_NAME]
     col = db[FILE_INFO_COL]
     query = {FILE_INFO_BELONG_DID: did, FILE_INFO_BELONG_APP_ID: app_id, FILE_INFO_FILE_NAME: name}
-    info_dic[FILE_INFO_FILE_MODIFY_TIME] = datetime.now().timestamp()
+    info_dic[FILE_INFO_FILE_MODIFY_TIME] = datetime.utcnow().timestamp()
     value = {"$set": info_dic}
     ret = col.update_one(query, value)
     return ret

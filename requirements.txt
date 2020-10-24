@@ -11,3 +11,4 @@ base58==2.0.1
 python-decouple==3.3
 PyYAML==5.3.1
 pytest==6.0.1
+requests==2.24.0

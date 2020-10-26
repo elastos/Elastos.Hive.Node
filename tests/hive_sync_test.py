@@ -57,7 +57,7 @@ class HiveSyncTestCase(unittest.TestCase):
         self.init_auth()
 
     def init_auth(self):
-        token = test_common.get_auth_token(self)
+        token = test_common.get_auth_token()
         self.auth = [
             ("Authorization", "token " + token),
             self.content_type,

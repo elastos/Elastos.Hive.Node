@@ -1,7 +1,5 @@
 import logging
 
-from util.constants import VAULT_ORDER_TXIDS, VAULT_ORDER_STATE
-from util.payment.payment_config import PaymentConfig
 from util.payment.vault_order import *
 from util.payment.vault_service_manage import get_vault_service
 from util.server_response import ServerResponse

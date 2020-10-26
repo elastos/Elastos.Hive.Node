@@ -7,6 +7,7 @@ from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from hive.settings import MONGO_HOST, MONGO_PORT
+from util.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
 from util.did_mongo_db_resource import get_collection
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort, convert_oid, \
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
@@ -24,7 +25,7 @@ class HiveMongoDb:
         self.app = app
 
     def create_collection(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_WR)
         if err:
             return err
 
@@ -42,7 +43,7 @@ class HiveMongoDb:
         return self.response.response_ok()
 
     def delete_collection(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_WR)
         if err:
             return err
 
@@ -62,7 +63,8 @@ class HiveMongoDb:
         return self.response.response_ok()
 
     def insert_one(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "document")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "document",
+                                                             access_vault=VAULT_ACCESS_WR)
         if err:
             return err
 
@@ -76,7 +78,9 @@ class HiveMongoDb:
         return self.response.response_ok(data)
 
     def insert_many(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "document")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "document",
+                                                             access_vault=VAULT_ACCESS_WR)
+
         if err:
             return err
 
@@ -101,7 +105,8 @@ class HiveMongoDb:
             return self.response.response_err(500, "Exception:" + str(e))
 
     def update_one(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter", "update")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter", "update",
+                                                             access_vault=VAULT_ACCESS_WR)
         if err:
             return err
 
@@ -115,7 +120,8 @@ class HiveMongoDb:
         return self.response.response_ok(data)
 
     def update_many(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter", "update")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter", "update",
+                                                             access_vault=VAULT_ACCESS_WR)
         if err:
             return err
 
@@ -139,7 +145,8 @@ class HiveMongoDb:
             return self.response.response_err(500, "Exception:" + str(e))
 
     def delete_one(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
+                                                             access_vault=VAULT_ACCESS_WR)
         if err:
             return err
 
@@ -151,7 +158,8 @@ class HiveMongoDb:
         return self.response.response_ok(data)
 
     def delete_many(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
+                                                             access_vault=VAULT_ACCESS_WR)
         if err:
             return err
 
@@ -167,7 +175,8 @@ class HiveMongoDb:
             return self.response.response_err(500, "Exception:" + str(e))
 
     def count_documents(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
+                                                             access_vault=VAULT_ACCESS_R)
         if err:
             return err
 
@@ -181,7 +190,7 @@ class HiveMongoDb:
         return self.response.response_ok(data)
 
     def find_one(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_R)
         if err:
             return err
 
@@ -209,7 +218,7 @@ class HiveMongoDb:
             return self.response.response_err(500, "Exception:" + str(e))
 
     def find_many(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_R)
         if err:
             return err
 

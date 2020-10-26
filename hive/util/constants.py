@@ -2,8 +2,8 @@ from decouple import config
 
 DID_INFO_DB_NAME = config('DID_INFO_DB_NAME', default="hive_manage_info", cast=str)
 
-VAULT_WRITE_READ = "vault_write_read"
-VAULT_READ = "vault_read"
+VAULT_ACCESS_WR = "vault_write_read"
+VAULT_ACCESS_R = "vault_read"
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 

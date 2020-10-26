@@ -49,10 +49,13 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         ]
         test_common.setup_test_auth_token()
         self.init_auth()
+        self.did = test_common.get_auth_did()
+        self.app_id = test_common.get_auth_app_did()
+        test_common.setup_test_vault(self.did, self.app_id)
         self.init_collection_for_test()
 
     def init_auth(self):
-        token = test_common.get_auth_token(self)
+        token = test_common.get_auth_token()
         self.auth = [
             ("Authorization", "token " + token),
             self.content_type,
@@ -236,7 +239,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
     def test_4_1_run_other_user_script_without_condition(self):
         logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_1_run_other_user_script_without_condition")
 
-        token = test_common.get_auth_token2(self)
+        token = test_common.get_auth_token2()
         auth = [
             ("Authorization", "token " + token),
             self.content_type,

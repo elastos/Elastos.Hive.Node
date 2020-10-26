@@ -9,7 +9,7 @@ from settings import MONGO_HOST, MONGO_PORT, VAULTS_BASE_DIR
 from util.common import did_tail_part
 from util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_APP_ID, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_DELETE_TIME, \
-    VAULT_SERVICE_EXPIRE_READ, VAULT_SERVICE_STATE
+    VAULT_SERVICE_EXPIRE_READ, VAULT_SERVICE_STATE, VAULT_ACCESS_WR, VAULT_ACCESS_R
 from util.did_mongo_db_resource import delete_mongo_database
 
 VAULT_SERVICE_STATE_RUNNING = "running"
@@ -53,6 +53,8 @@ def get_vault_service(did, app_id):
 
 def can_write_read(did, app_id):
     info = get_vault_service(did, app_id)
+    if not info:
+        return False
     if info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_RUNNING:
         return True
     else:
@@ -61,10 +63,27 @@ def can_write_read(did, app_id):
 
 def can_read(did, app_id):
     info = get_vault_service(did, app_id)
+    if not info:
+        return False
     if info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_RUNNING:
         return True
     elif (info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_EXPIRE) and (info[VAULT_SERVICE_EXPIRE_READ]):
         return True
+    else:
+        return False
+
+
+def can_access_vault(did, app_id, access_vault):
+    if access_vault == VAULT_ACCESS_WR:
+        if can_write_read(did, app_id):
+            return True
+        else:
+            return False
+    elif access_vault == VAULT_ACCESS_R:
+        if can_read(did, app_id):
+            return True
+        else:
+            return False
     else:
         return False
 
@@ -103,7 +122,7 @@ def get_dir_size(path):
 def less_than_max_storage(did, app_id):
     info = get_vault_service(did, app_id)
     vault_path = get_vault_path(did, app_id)
-    file_size_mb = get_dir_size(vault_path.as_posix())/(1000*1000)
+    file_size_mb = get_dir_size(vault_path.as_posix()) / (1000 * 1000)
     return file_size_mb <= info[VAULT_SERVICE_MAX_STORAGE]
 
 

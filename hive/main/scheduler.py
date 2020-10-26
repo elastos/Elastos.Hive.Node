@@ -29,7 +29,7 @@ def scheduler_pause():
     scheduler.pause()
 
 
-@scheduler.task(trigger='interval', id='syn_job', hours=1)
+# @scheduler.task(trigger='interval', id='syn_job', hours=1)
 def sync_job():
     logging.getLogger("Hive scheduler").debug(f"rclone syncing start: {str(datetime.utcnow())}")
     HiveSync.syn_all_drive()

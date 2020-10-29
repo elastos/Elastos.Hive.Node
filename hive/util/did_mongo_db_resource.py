@@ -44,11 +44,23 @@ def options_filter(content, args):
 
 def gene_sort(sort_para):
     sorts = list()
-    for field in sort_para.keys():
-        if "desc" == sort_para[field]:
-            sorts.append((field, pymongo.DESCENDING))
-        else:
-            sorts.append((field, pymongo.ASCENDING))
+    if isinstance(sort_para, list):
+        for sort in sort_para:
+            for field in sort.keys():
+                if "desc" == sort[field]:
+                    sorts.append((field, pymongo.DESCENDING))
+                elif "asc" == sort[field]:
+                    sorts.append((field, pymongo.ASCENDING))
+                else:
+                    sorts.append((field, sort[field]))
+    elif isinstance(sort_para, dict):
+        for field in sort_para.keys():
+            if "desc" == sort_para[field]:
+                sorts.append((field, pymongo.DESCENDING))
+            elif "asc" == sort_para[field]:
+                sorts.append((field, pymongo.ASCENDING))
+            else:
+                sorts.append((field, sort_para[field]))
     return sorts
 
 

@@ -1,11 +1,7 @@
 from decouple import config
 
+# constants of db start
 DID_INFO_DB_NAME = config('DID_INFO_DB_NAME', default="hive_manage_info", cast=str)
-
-VAULT_ACCESS_WR = "vault_write_read"
-VAULT_ACCESS_R = "vault_read"
-
-DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 DID_INFO_REGISTER_COL = "auth_register"
 DID = "did"
@@ -22,17 +18,27 @@ DID_SYNC_INFO_MSG = "msg"
 DID_SYNC_INFO_TIME = "time"
 DID_SYNC_INFO_DRIVE = "drive"
 
-FILE_INFO_COL = "file_data"
-FILE_INFO_BELONG_DID = "belong_did"
-FILE_INFO_BELONG_APP_ID = "belong_app_id"
-FILE_INFO_FILE_NAME = "file_name"
-FILE_INFO_FILE_SIZE = "file_size"
-FILE_INFO_FILE_CREATE_TIME = "file_create_time"
-FILE_INFO_FILE_MODIFY_TIME = "file_modify_time"
-# db of file_info end
+VAULT_ORDER_COL = "vault_orders"
+VAULT_ORDER_DID = "did"
+VAULT_ORDER_APP_ID = "app_id"
+VAULT_ORDER_PACKAGE_INFO = "package_info"
+VAULT_ORDER_TXIDS = "pay_txids"
+VAULT_ORDER_STATE = "state"
+VAULT_ORDER_CREATE_TIME = "creat_time"
+VAULT_ORDER_MODIFY_TIME = "modify_time"
 
-DID_AUTH_SUBJECT = "didauth"
-DID_AUTH_REALM = "elastos_hive_node"
+VAULT_SERVICE_COL = "vault_service"
+VAULT_SERVICE_DID = "did"
+VAULT_SERVICE_MAX_STORAGE = "max_storage"
+VAULT_SERVICE_FILE_USE_STORAGE = "file_use_storage"
+VAULT_SERVICE_DB_USE_STORAGE = "db_use_storage"
+VAULT_SERVICE_MODIFY_TIME = "modify_time"
+VAULT_SERVICE_START_TIME = "start_time"
+VAULT_SERVICE_END_TIME = "end_time"
+VAULT_SERVICE_DELETE_TIME = "delete_time"
+VAULT_SERVICE_EXPIRE_READ = "can_read_if_unpaid"
+VAULT_SERVICE_STATE = "state"
+# constants of db end
 
 # scripting begin
 SCRIPTING_NAME = "name"
@@ -61,22 +67,14 @@ SCRIPTING_EXECUTABLE_DOWNLOADABLE = "_downloadable"
 # scripting end
 
 # other
-VAULT_ORDER_COL = "vault_orders"
-VAULT_ORDER_DID = "did"
-VAULT_ORDER_APP_ID = "app_id"
-VAULT_ORDER_PACKAGE_INFO = "package_info"
-VAULT_ORDER_TXIDS = "pay_txids"
-VAULT_ORDER_STATE = "state"
-VAULT_ORDER_CREATE_TIME = "creat_time"
-VAULT_ORDER_MODIFY_TIME = "modify_time"
+VAULT_ACCESS_WR = "vault_write_read"
+VAULT_ACCESS_R = "vault_read"
 
-VAULT_SERVICE_COL = "vault_service"
-VAULT_SERVICE_DID = "did"
-VAULT_SERVICE_APP_ID = "app_id"
-VAULT_SERVICE_MAX_STORAGE = "max_storage"
-VAULT_SERVICE_START_TIME = "start_time"
-VAULT_SERVICE_END_TIME = "end_time"
-VAULT_SERVICE_DELETE_TIME = "delete_time"
-VAULT_SERVICE_EXPIRE_READ = "can_read_if_unpaid"
-VAULT_SERVICE_STATE = "state"
+VAULT_STORAGE_DB = "vault_db"
+VAULT_STORAGE_FILE = "vault_file"
+
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+DID_AUTH_SUBJECT = "didauth"
+DID_AUTH_REALM = "elastos_hive_node"
 

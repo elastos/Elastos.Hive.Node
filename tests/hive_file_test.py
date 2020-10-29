@@ -65,7 +65,7 @@ class HiveFileTestCase(unittest.TestCase):
         self.init_auth()
         self.did = test_common.get_auth_did()
         self.app_id = test_common.get_auth_app_did()
-        test_common.setup_test_vault(self.did, self.app_id)
+        test_common.setup_test_vault(self.did)
         self.clear_all_test_files()
 
     def init_auth(self):

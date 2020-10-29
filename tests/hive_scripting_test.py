@@ -51,7 +51,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         self.init_auth()
         self.did = test_common.get_auth_did()
         self.app_id = test_common.get_auth_app_did()
-        test_common.setup_test_vault(self.did, self.app_id)
+        test_common.setup_test_vault(self.did)
         self.init_collection_for_test()
 
     def init_auth(self):

@@ -1,17 +1,12 @@
 import hashlib
+import os
 from datetime import datetime
-
-from bson import ObjectId
-from pymongo import MongoClient
 
 from pathlib import Path
 
-
 from hive.util.common import did_tail_part, create_full_path_dir
 
-from hive.util.constants import DID_INFO_DB_NAME, FILE_INFO_COL, FILE_INFO_BELONG_DID, FILE_INFO_BELONG_APP_ID, \
-    FILE_INFO_FILE_NAME, FILE_INFO_FILE_SIZE, FILE_INFO_FILE_CREATE_TIME, FILE_INFO_FILE_MODIFY_TIME
-from hive.settings import MONGO_HOST, MONGO_PORT, VAULTS_BASE_DIR
+from hive.settings import VAULTS_BASE_DIR
 from hive.util.flask_rangerequest import RangeRequest
 
 
@@ -121,66 +116,18 @@ def query_hash(did, app_id, name):
     return data, err
 
 
-def add_file_info(did, app_id, name, info_dic):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[FILE_INFO_COL]
-
-    base_dic = {FILE_INFO_BELONG_DID: did,
-                FILE_INFO_BELONG_APP_ID: app_id,
-                FILE_INFO_FILE_NAME: name,
-                FILE_INFO_FILE_CREATE_TIME: datetime.utcnow().timestamp(),
-                FILE_INFO_FILE_MODIFY_TIME: datetime.utcnow().timestamp()
-                }
-
-    did_dic = dict(base_dic, **info_dic)
-    i = col.insert_one(did_dic)
-    return i
+def get_dir_size(path, total_size):
+    path = os.path.abspath(path)
+    file_list = os.listdir(path)
+    for i in file_list:
+        i_path = os.path.join(path, i)
+        if os.path.isfile(i_path):
+            total_size += os.path.getsize(i_path)
+        else:
+            try:
+                get_dir_size(i_path, total_size)
+            except RecursionError:
+                print('Err too much for get_file_size')
+    return total_size
 
 
-def update_file_size(did, app_id, name, size):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[FILE_INFO_COL]
-    query = {FILE_INFO_BELONG_DID: did, FILE_INFO_BELONG_APP_ID: app_id, FILE_INFO_FILE_NAME: name}
-    value = {"$set": {FILE_INFO_FILE_SIZE: size, FILE_INFO_FILE_MODIFY_TIME: datetime.utcnow().timestamp()}}
-    ret = col.update_one(query, value)
-    return ret
-
-
-def update_file_info(did, app_id, name, info_dic):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[FILE_INFO_COL]
-    query = {FILE_INFO_BELONG_DID: did, FILE_INFO_BELONG_APP_ID: app_id, FILE_INFO_FILE_NAME: name}
-    info_dic[FILE_INFO_FILE_MODIFY_TIME] = datetime.utcnow().timestamp()
-    value = {"$set": info_dic}
-    ret = col.update_one(query, value)
-    return ret
-
-
-def remove_file_info(did, app_id, name):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[FILE_INFO_COL]
-    query = {FILE_INFO_BELONG_DID: did, FILE_INFO_BELONG_APP_ID: app_id, FILE_INFO_FILE_NAME: name}
-    ret = col.delete_one(query)
-    return ret
-
-
-def get_file_info(did, app_id, name):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[FILE_INFO_COL]
-    query = {FILE_INFO_BELONG_DID: did, FILE_INFO_BELONG_APP_ID: app_id, FILE_INFO_FILE_NAME: name}
-    info = col.find_one(query)
-    return info
-
-
-def get_file_info_by_id(file_id):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[FILE_INFO_COL]
-    query = {"_id": ObjectId(file_id)}
-    info = col.find_one(query)
-    return info

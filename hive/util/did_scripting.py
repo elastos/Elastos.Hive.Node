@@ -3,10 +3,32 @@ from flask import request
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS, \
     SCRIPTING_EXECUTABLE_CALLER_APP_DID
 from hive.util.did_file_info import query_download, query_properties, query_hash, query_upload_get_filepath
-from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
-    query_count_documents, populate_options_update_one, query_update_one, query_delete_one
+    query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection
+
+
+def massage_keys_with_dollar_signs(d):
+    for key, value in d.items():
+        if key[0] == "$" and key not in [SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_CALLER_APP_DID,
+                                         SCRIPTING_EXECUTABLE_PARAMS]:
+            d[key.replace("$", "'$'")] = d.pop(key)
+        if type(value) is dict:
+            massage_keys_with_dollar_signs(value)
+        elif type(value) is list:
+            for item in value:
+                massage_keys_with_dollar_signs(item)
+
+
+def unmassage_keys_with_dollar_signs(d):
+    for key, value in d.items():
+        if key[0:3] == "'$'":
+            d[key.replace("'$'", "$")] = d.pop(key)
+        if type(value) is dict:
+            unmassage_keys_with_dollar_signs(value)
+        elif type(value) is list:
+            for item in value:
+                unmassage_keys_with_dollar_signs(item)
 
 
 def massage_keys_with_dollar_signs(d):

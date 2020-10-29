@@ -67,15 +67,18 @@ def check_json_param(content, content_type, args):
 def run_condition(did, app_did, target_did, target_app_did, condition_body, params):
     query = {}
     for key, value in condition_body.get('filter').items():
-        if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-            query[key] = {"$in": [did]}
-        elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-            query[key] = {"$in": [app_did]}
-        elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-            v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-            if not (params and params.get(v, None)):
-                return False
-            query[key] = params[v]
+        if isinstance(value, str):
+            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
+                query[key] = {"$in": [did]}
+            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+                query[key] = {"$in": [app_did]}
+            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                if not (params and params.get(v, None)):
+                    return False
+                query[key] = params[v]
+            else:
+                query[key] = value
         else:
             query[key] = value
     condition_body["filter"] = query
@@ -97,15 +100,18 @@ def run_executable_find(did, app_did, target_did, target_app_did, executable_bod
     executable_body_filter = executable_body.get('filter', None)
     if executable_body_filter:
         for key, value in executable_body.get('filter').items():
-            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-                query[key] = {"$in": [did]}
-            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-                query[key] = {"$in": [app_did]}
-            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                if not (params and params.get(v, None)):
-                    return None, "Exception: Parameter is not set"
-                query[key] = params[v]
+            if isinstance(value, str):
+                if value == SCRIPTING_EXECUTABLE_CALLER_DID:
+                    query[key] = {"$in": [did]}
+                elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+                    query[key] = {"$in": [app_did]}
+                elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+                    v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                    if not (params and params.get(v, None)):
+                        return None, "Exception: Parameter is not set"
+                    query[key] = params[v]
+                else:
+                    query[key] = value
             else:
                 query[key] = value
         executable_body["filter"] = query
@@ -124,21 +130,24 @@ def run_executable_insert(did, app_did, target_did, target_app_did, executable_b
     created = False
     query = {}
     for key, value in executable_body.get('document').items():
-        if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-            query[key] = did
-        elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-            query[key] = app_did
-        else:
-            if key == "created":
-                created = True
-            if value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                k = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                if not (params and params.get(k, None)):
-                    return None, "Exception: Parameter is not set"
-                v = params[k]
+        if isinstance(value, str):
+            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
+                query[key] = did
+            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+                query[key] = app_did
             else:
-                v = value
-            query[key] = v
+                if key == "created":
+                    created = True
+                if value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+                    k = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                    if not (params and params.get(k, None)):
+                        return None, "Exception: Parameter is not set"
+                    v = params[k]
+                else:
+                    v = value
+                query[key] = v
+        else:
+            query[key] = value
     executable_body['document'] = query
 
     options = populate_options_insert_one(executable_body)
@@ -154,29 +163,35 @@ def run_executable_insert(did, app_did, target_did, target_app_did, executable_b
 def run_executable_update(did, app_did, target_did, target_app_did, executable_body, params):
     filter_query = {}
     for key, value in executable_body.get('filter').items():
-        if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-            filter_query[key] = did
-        elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-            filter_query[key] = app_did
-        elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-            v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-            if not (params and params.get(v, None)):
-                return None, "Exception: Parameter is not set"
-            filter_query[key] = params[v]
+        if isinstance(value, str):
+            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
+                filter_query[key] = did
+            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+                filter_query[key] = app_did
+            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                if not (params and params.get(v, None)):
+                    return None, "Exception: Parameter is not set"
+                filter_query[key] = params[v]
+            else:
+                filter_query[key] = value
         else:
             filter_query[key] = value
     executable_body['filter'] = filter_query
     update_set_query = {}
     for key, value in executable_body.get('update').get('$set').items():
-        if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-            update_set_query[key] = did
-        elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-            update_set_query[key] = app_did
-        elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-            v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-            if not (params and params.get(v, None)):
-                return None, "Exception: Parameter is not set"
-            update_set_query[key] = params[v]
+        if isinstance(value, str):
+            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
+                update_set_query[key] = did
+            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+                update_set_query[key] = app_did
+            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                if not (params and params.get(v, None)):
+                    return None, "Exception: Parameter is not set"
+                update_set_query[key] = params[v]
+            else:
+                update_set_query[key] = value
         else:
             update_set_query[key] = value
     executable_body['update']['$set'] = update_set_query
@@ -194,15 +209,18 @@ def run_executable_update(did, app_did, target_did, target_app_did, executable_b
 def run_executable_delete(did, app_did, target_did, target_app_did, executable_body, params):
     query = {}
     for key, value in executable_body.get('filter').items():
-        if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-            query[key] = {"$in": [did]}
-        elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-            query[key] = {"$in": [app_did]}
-        elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-            v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-            if not (params and params.get(v, None)):
-                return None, "Exception: Parameter is not set"
-            query[key] = params[v]
+        if isinstance(value, str):
+            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
+                query[key] = {"$in": [did]}
+            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+                query[key] = {"$in": [app_did]}
+            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                if not (params and params.get(v, None)):
+                    return None, "Exception: Parameter is not set"
+                query[key] = params[v]
+            else:
+                query[key] = value
         else:
             query[key] = value
     executable_body["filter"] = query

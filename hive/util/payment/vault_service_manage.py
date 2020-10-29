@@ -119,7 +119,7 @@ def proc_delete_vault_job():
     now = datetime.utcnow().timestamp()
     for service in info_list:
         if now > service[VAULT_SERVICE_DELETE_TIME]:
-            delete_mongo_database(service[VAULT_SERVICE_DID])
+            delete_db_storage(service[VAULT_SERVICE_DID])
             delete_user_vault(service[VAULT_SERVICE_DID])
             query_id = {"_id": service["_id"]}
             value = {"$set": {VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_DELETE,
@@ -159,6 +159,12 @@ def count_db_storage_size(did):
     for did_info in did_info_list:
         total_size += get_mongo_database_size(did_info[DID], did_info[APP_ID])
     return total_size
+
+
+def delete_db_storage(did):
+    did_info_list = get_all_did_info_by_did(did)
+    for did_info in did_info_list:
+        delete_mongo_database(did_info[DID], did_info[APP_ID])
 
 
 def count_vault_storage_job():

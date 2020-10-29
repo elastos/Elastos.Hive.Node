@@ -1338,7 +1338,7 @@ metadata: the json parameters
         \"name\": \"upload_picture\",
         \"params\": {
           \"group_id\": {\"\$oid\": \"5f84cbadc889d24b8013f0c6\"},
-          \"path\": \"run.sh\"
+          \"path\": \"run.sh_bak\"
         }
       }"
 return:

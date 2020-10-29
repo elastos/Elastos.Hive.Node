@@ -1,17 +1,13 @@
-import json
 import sys
 import unittest
-import logging
-from io import BytesIO
 
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
 
 from hive import create_app
 from tests import test_common
-from util.did_mongo_db_resource import get_mongo_database_size
-from util.payment.vault_order import *
-from util.payment.vault_service_manage import *
+from hive.util.payment.vault_order import *
+from hive.util.payment.vault_service_manage import *
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -95,7 +91,7 @@ class HivePaymentTestCase(unittest.TestCase):
         self.test_order_id = str(ret.inserted_id)
 
     def change_service_time(self, start_time, end_time, delete_time):
-        info = get_vault_service(self.did, self.app_id)
+        info = get_vault_service(self.did)
         if not info:
             ret = setup_vault_service(self.did, 100, 1, True, 1)
             _id = ret.upserted_id
@@ -210,12 +206,12 @@ class HivePaymentTestCase(unittest.TestCase):
         proc_delete_vault_job()
         self.assertFalse(can_read(self.did))
 
-    def test_6_service_storage(self):
+    def test_7_service_storage(self):
         test_common.setup_test_vault(self.did)
         count_vault_storage_job()
         self.assertTrue(less_than_max_storage(self.did))
-        inc_file_use_storage_byte(self.did, VAULT_STORAGE_FILE, 50000000)
-        inc_file_use_storage_byte(self.did, VAULT_STORAGE_DB, 50000000)
+        inc_file_use_storage_byte(self.did, VAULT_STORAGE_FILE, 51000000)
+        inc_file_use_storage_byte(self.did, VAULT_STORAGE_DB, 51000000)
         self.assertFalse(less_than_max_storage(self.did))
         inc_file_use_storage_byte(self.did, VAULT_STORAGE_FILE, -20000000)
         inc_file_use_storage_byte(self.did, VAULT_STORAGE_DB, -20000000)

@@ -116,9 +116,13 @@ def query_hash(did, app_id, name):
     return data, err
 
 
-def get_dir_size(path, total_size):
-    path = os.path.abspath(path)
-    file_list = os.listdir(path)
+def get_dir_size(input_path, total_size):
+    path = Path(input_path)
+    path.resolve()
+    if not path.exists():
+        return 0.0
+
+    file_list = os.listdir(path.as_posix())
     for i in file_list:
         i_path = os.path.join(path, i)
         if os.path.isfile(i_path):

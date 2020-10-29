@@ -1,7 +1,7 @@
 import json
 import logging
 
-from settings import HIVE_PAYMENT_CONFIG
+from hive.settings import HIVE_PAYMENT_CONFIG
 
 
 class PaymentConfig:

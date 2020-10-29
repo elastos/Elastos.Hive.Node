@@ -1691,6 +1691,9 @@ return:
             "vault_service_info":
             { 
                 "max_storage": 500, // Max 500 Mb storage size
+                "file_use_storage": 100, // user have used 100 Mb in file storage size
+                "db_use_storage": 50, // user have used 100 Mb in db storage size
+                "modify_time": 1602236316,
                 "start_time": 1602236316,
                 "end_time": 1604914928,
                 "delete_time": 1613727728,

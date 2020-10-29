@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from hive.util.auth import did_auth
 from hive.util.server_response import ServerResponse
-from util.payment.vault_service_manage import can_access_vault
+from hive.util.payment.vault_service_manage import can_access_vault
 
 
 def init_app(app):
@@ -19,7 +19,7 @@ def pre_proc(response, access_vault=None):
         return did, app_id, response.response_err(401, "auth failed")
 
     if access_vault:
-        if not can_access_vault(did, app_id, access_vault):
+        if not can_access_vault(did, access_vault):
             return did, app_id, response.response_err(401, "access vault failed")
 
     return did, app_id, None
@@ -31,7 +31,7 @@ def post_json_param_pre_proc(response, *args, access_vault=None):
         return did, app_id, None, response.response_err(401, "auth failed")
 
     if access_vault:
-        if not can_access_vault(did, app_id, access_vault):
+        if not can_access_vault(did, access_vault):
             return did, app_id, None, response.response_err(401, "access vault failed")
 
     content = request.get_json(force=True, silent=True)
@@ -52,7 +52,7 @@ def get_pre_proc(response, *args, access_vault=None):
         return did, app_id, None, response.response_err(401, "auth failed")
 
     if access_vault:
-        if not can_access_vault(did, app_id, access_vault):
+        if not can_access_vault(did, access_vault):
             return did, app_id, None, response.response_err(401, "access vault failed")
 
     content = dict()

@@ -6,11 +6,11 @@ from pymongo import MongoClient
 from datetime import datetime
 import requests
 
-from util.payment.payment_config import PaymentConfig
+from hive.util.payment.payment_config import PaymentConfig
 
-from settings import MONGO_HOST, MONGO_PORT, ELA_RESOLVER
-from util.constants import *
-from util.payment.vault_service_manage import setup_vault_service
+from hive.settings import MONGO_HOST, MONGO_PORT, ELA_RESOLVER
+from hive.util.constants import *
+from hive.util.payment.vault_service_manage import setup_vault_service
 
 VAULT_ORDER_STATE_WAIT_PAY = "wait_pay"
 VAULT_ORDER_STATE_WAIT_TX = "wait_tx"
@@ -158,7 +158,6 @@ def check_wait_order_tx_job():
         state = deal_order_tx(info)
         if state == VAULT_ORDER_STATE_SUCCESS:
             setup_vault_service(info[VAULT_ORDER_DID],
-                                info[VAULT_ORDER_APP_ID],
                                 info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
                                 info[VAULT_ORDER_PACKAGE_INFO]["deleteIfUnpaidAfterDays"],
                                 info[VAULT_ORDER_PACKAGE_INFO]["canReadIfUnpaid"],

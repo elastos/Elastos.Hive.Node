@@ -1,8 +1,8 @@
 import logging
 
-from util.payment.vault_order import *
-from util.payment.vault_service_manage import get_vault_service
-from util.server_response import ServerResponse
+from hive.util.payment.vault_order import *
+from hive.util.payment.vault_service_manage import get_vault_service
+from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 
 
@@ -93,7 +93,6 @@ class HivePayment:
         trail_info = PaymentConfig.get_free_trial_info()
 
         setup_vault_service(did,
-                            app_id,
                             trail_info["maxStorage"],
                             trail_info["deleteIfUnpaidAfterDays"],
                             trail_info["canReadIfUnpaid"],

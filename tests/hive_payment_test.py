@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 from hive import create_app
 from tests import test_common
+from util.did_mongo_db_resource import get_mongo_database_size
 from util.payment.vault_order import *
 from util.payment.vault_service_manage import *
 
@@ -96,7 +97,7 @@ class HivePaymentTestCase(unittest.TestCase):
     def change_service_time(self, start_time, end_time, delete_time):
         info = get_vault_service(self.did, self.app_id)
         if not info:
-            ret = setup_vault_service(self.did, self.app_id, 100, 1, True, 1)
+            ret = setup_vault_service(self.did, 100, 1, True, 1)
             _id = ret.upserted_id
         else:
             _id = info["_id"]
@@ -197,17 +198,28 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
 
         check_wait_order_tx_job()
-        self.assertTrue(can_write_read(self.did, self.app_id))
-        self.assertTrue(can_read(self.did, self.app_id))
+        self.assertTrue(can_write_read(self.did))
+        self.assertTrue(can_read(self.did))
 
     def test_6_service_management_timeout(self):
         now = datetime.utcnow().timestamp()
         self.change_service_time(now - 24 * 60 * 60, now - 1, now - 1)
         proc_expire_vault_job()
-        self.assertFalse(can_write_read(self.did, self.app_id))
-        self.assertTrue(can_read(self.did, self.app_id))
+        self.assertFalse(can_write_read(self.did))
+        self.assertTrue(can_read(self.did))
         proc_delete_vault_job()
-        self.assertFalse(can_read(self.did, self.app_id))
+        self.assertFalse(can_read(self.did))
+
+    def test_6_service_storage(self):
+        test_common.setup_test_vault(self.did)
+        count_vault_storage_job()
+        self.assertTrue(less_than_max_storage(self.did))
+        inc_file_use_storage_byte(self.did, VAULT_STORAGE_FILE, 50000000)
+        inc_file_use_storage_byte(self.did, VAULT_STORAGE_DB, 50000000)
+        self.assertFalse(less_than_max_storage(self.did))
+        inc_file_use_storage_byte(self.did, VAULT_STORAGE_FILE, -20000000)
+        inc_file_use_storage_byte(self.did, VAULT_STORAGE_DB, -20000000)
+        self.assertTrue(less_than_max_storage(self.did))
 
 
 if __name__ == '__main__':

@@ -11,7 +11,6 @@ from pymongo import MongoClient
 from hive.settings import VAULTS_BASE_DIR, MONGO_HOST, MONGO_PORT
 from hive.util.constants import DATETIME_FORMAT
 from hive.util.common import did_tail_part, create_full_path_dir
-from settings import MONGO_HOST, MONGO_PORT
 
 
 def convert_oid(query, update=False):
@@ -179,6 +178,16 @@ def delete_mongo_database(did, app_id):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db_name = gene_mongo_db_name(did, app_id)
     connection.drop_database(db_name)
+
+
+def get_mongo_database_size(did, app_id):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db_name = gene_mongo_db_name(did, app_id)
+    db = connection[db_name]
+    status = db.command("dbstats")
+    storage_size = status["storageSize"]
+    index_size = status["indexSize"]
+    return storage_size + index_size
 
 
 def get_save_mongo_db_path(did, app_id):

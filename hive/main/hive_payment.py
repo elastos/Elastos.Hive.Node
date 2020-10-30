@@ -86,7 +86,7 @@ class HivePayment:
         if err:
             return err
 
-        service = get_vault_service(did, app_id)
+        service = get_vault_service(did)
         if not service:
             return self.response.response_err(400, "No more free trial")
 
@@ -103,5 +103,5 @@ class HivePayment:
         did, app_id, err = pre_proc(self.response)
         if err:
             return err
-        info = get_vault_service(did, app_id)
+        info = get_vault_service(did)
         return self.response.response_ok(info)

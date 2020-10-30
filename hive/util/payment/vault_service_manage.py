@@ -30,20 +30,20 @@ def setup_vault_service(did, max_storage, delete_expire_days, can_read_expire, s
     end_time = now + service_days * 24 * 60 * 60
     delete_time = end_time + delete_expire_days * 24 * 60 * 60
 
-    order_dic = {VAULT_SERVICE_DID: did,
-                 VAULT_SERVICE_MAX_STORAGE: max_storage,
-                 VAULT_SERVICE_FILE_USE_STORAGE: 0.0,
-                 VAULT_SERVICE_DB_USE_STORAGE: 0.0,
-                 VAULT_SERVICE_START_TIME: now,
-                 VAULT_SERVICE_END_TIME: end_time,
-                 VAULT_SERVICE_DELETE_TIME: delete_time,
-                 VAULT_SERVICE_EXPIRE_READ: can_read_expire,
-                 VAULT_SERVICE_MODIFY_TIME: now,
-                 VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING
-                 }
+    dic = {VAULT_SERVICE_DID: did,
+           VAULT_SERVICE_MAX_STORAGE: max_storage,
+           VAULT_SERVICE_FILE_USE_STORAGE: 0.0,
+           VAULT_SERVICE_DB_USE_STORAGE: 0.0,
+           VAULT_SERVICE_START_TIME: now,
+           VAULT_SERVICE_END_TIME: end_time,
+           VAULT_SERVICE_DELETE_TIME: delete_time,
+           VAULT_SERVICE_EXPIRE_READ: can_read_expire,
+           VAULT_SERVICE_MODIFY_TIME: now,
+           VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING
+           }
 
     query = {VAULT_SERVICE_DID: did}
-    value = {"$set": order_dic}
+    value = {"$set": dic}
     ret = col.update_one(query, value, upsert=True)
     return ret
 
@@ -220,17 +220,17 @@ def inc_file_use_storage_byte(did, storage_type, size):
     col = db[VAULT_SERVICE_COL]
     now = datetime.utcnow().timestamp()
     if storage_type == VAULT_STORAGE_FILE:
-        order_dic = {
+        dic = {
             VAULT_SERVICE_FILE_USE_STORAGE: size,
             VAULT_SERVICE_MODIFY_TIME: now
         }
     else:
-        order_dic = {
+        dic = {
             VAULT_SERVICE_DB_USE_STORAGE: size,
             VAULT_SERVICE_MODIFY_TIME: now
         }
 
     query = {VAULT_SERVICE_DID: did}
-    value = {"$inc": order_dic}
+    value = {"$inc": dic}
     ret = col.update_one(query, value)
     return ret

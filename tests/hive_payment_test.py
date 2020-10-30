@@ -39,7 +39,7 @@ class HivePaymentTestCase(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger("HivePaymentTestCase").info("\n")
-        self.app = create_app(True)
+        self.app = create_app(mode=HIVE_MODE_TEST)
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
         self.content_type = ("Content-Type", "application/json")

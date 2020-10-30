@@ -10,7 +10,7 @@ from contextlib import contextmanager
 
 from hive.util.did_sync import get_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
     add_did_sync_info
-from hive.util.constants import DID
+from hive.util.constants import DID, HIVE_MODE_TEST
 from hive import create_app
 from tests import test_common
 from hive.main.hive_sync import HiveSync
@@ -45,7 +45,7 @@ class HiveSyncTestCase(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger("HiveSyncTestCase").info("\n")
-        self.app = create_app(True)
+        self.app = create_app(mode=HIVE_MODE_TEST)
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
         self.content_type = ("Content-Type", "application/json")
@@ -55,6 +55,8 @@ class HiveSyncTestCase(unittest.TestCase):
         ]
         test_common.setup_test_auth_token()
         self.init_auth()
+        self.did = test_common.get_auth_did()
+        self.app_id = test_common.get_auth_app_did()
 
     def init_auth(self):
         token = test_common.get_auth_token()
@@ -95,21 +97,19 @@ class HiveSyncTestCase(unittest.TestCase):
 
     def test_b_init_sync(self):
         logging.getLogger("HiveSyncTestCase").debug("\nRunning test_b_init_sync")
-        did = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
-        drive = HiveSync.gene_did_google_drive_name(did)
-        add_did_sync_info(did, time(), drive)
-        did_folder = HiveSync.get_did_sync_path(did)
+        drive = HiveSync.gene_did_google_drive_name(self.did)
+        add_did_sync_info(self.did, time(), drive)
+        did_folder = HiveSync.get_did_sync_path(self.did)
         if did_folder.exists():
             shutil.rmtree(did_folder)
-        info = get_did_sync_info(did)
+        info = get_did_sync_info(self.did)
         HiveSync.sync_did_data(info[DID])
 
     def test_c_sync(self):
         logging.getLogger("HiveSyncTestCase").debug("\nRunning test_c_sync")
-        did = "did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM"
-        drive = HiveSync.gene_did_google_drive_name(did)
-        update_did_sync_info(did, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, time(), drive)
-        info = get_did_sync_info(did)
+        drive = HiveSync.gene_did_google_drive_name(self.did)
+        update_did_sync_info(self.did, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, time(), drive)
+        info = get_did_sync_info(self.did)
         HiveSync.sync_did_data(info[DID])
 
     def test_d_setup_google_drive(self):

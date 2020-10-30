@@ -78,3 +78,6 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 DID_AUTH_SUBJECT = "didauth"
 DID_AUTH_REALM = "elastos_hive_node"
 
+HIVE_MODE_DEV = "dev"
+HIVE_MODE_PROD = "prod"
+HIVE_MODE_TEST = "test"

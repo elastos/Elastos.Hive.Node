@@ -24,8 +24,9 @@ cp .env.example .env
 ```
 export $HIVE_CONFIG="/etc/hive/.env"
 ```
+-  the DID_RESOLVER setting is "testnet" in the ".env.example" file.
 
-- Modify .env file with your own values. Please note that "172.17.0.1" means "localhost" but lets us access it from inside 
+- Modify .env file with your own values. Please note that "172.17.0.1" means "localhost" but lets us access it from inside
 docker container as well as it's a docker dedicated localhost IP
 - [OPTIONAL]: If you want to remove previous mongodb data and start fresh, remove the mongodb directory
 ```
@@ -45,7 +46,7 @@ rm -rf data
 
 # Option 2: Run Elastos Hive Node on Docker
 - Build docker image
-``` 
+```
 docker build -t elastos/hive-node .
 ```
 - [OPTIONAL]: If you want to remove data directory and start from scratch:
@@ -62,9 +63,9 @@ MONGO_PORT=27017
 ```
 - Run docker container
 ```
-./run.sh docker 
+./run.sh docker
 ```
-        
+
 The server will run on url like: http://127.0.0.1:5000
 
 # Test

@@ -1,5 +1,5 @@
-from settings import HIVE_VERSION, HIVE_COMMIT_HASH
-from util.server_response import ServerResponse
+from hive.settings import HIVE_VERSION, HIVE_COMMIT_HASH
+from hive.util.server_response import ServerResponse
 
 
 class HiveManage:

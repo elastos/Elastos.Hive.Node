@@ -36,3 +36,6 @@ HIVE_PAYMENT_CONFIG = env_config('HIVE_PAYMENT_CONFIG', default="./payment_confi
 
 AUTH_CHALLENGE_EXPIRED = 3 * 60
 ACCESS_TOKEN_EXPIRED = 30 * 24 * 60 * 60
+
+HIVE_VERSION = env_config('HIVE_VERSION', default="0.0.0", cast=str)
+HIVE_COMMIT_HASH = env_config('HIVE_COMMIT_HASH', default="", cast=str)

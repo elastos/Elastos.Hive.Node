@@ -1,12 +1,54 @@
 # Hive node plus plus api
 
 ## Table of Contents
+- [Hive node manage](#hive-node-manage)
 - [Auth of did and app](#auth-of-did-and-app)
 - [Synchronization](#synchronization)
 - [Vault File](#vault-file)
 - [Database](#database)
 - [Scripting](#scripting)
 - [Payment](#vault-service-payment)
+
+## Hive node manage
+- Get hive node version
+```json
+HTTP: GET
+URL: /api/v1/hive/version
+return:
+    Success:
+        {
+            "_status": "OK",
+            "version": "1.0.0"
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Get commit hash 
+```json
+HTTP: GET
+URL: /api/v1/hive/commithash
+return:
+    Success:
+        {
+            "_status": "OK",
+            "commit_hash": "279b15650a86b16dcba289e74a09290ff225c69a"
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
 
 ## Auth of did and app
 - User auth access request
@@ -563,7 +605,7 @@ return:
         }
 ```
 
-## File Operation
+## Vault File
 - Upload file
 ```json
 HTTP: POST
@@ -1419,7 +1461,7 @@ return:
       }
 ```
 
-## vault-service-payment
+## Payment
 - Get vault service package payment info
 ```json
 HTTP: GET
@@ -1698,7 +1740,7 @@ return:
                 "end_time": 1604914928,
                 "delete_time": 1613727728,
                 "can_read_if_unpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
-                "state": "running",//running, expire
+                "state": "running",//running, expire, delete
             }
         }
     Failure:

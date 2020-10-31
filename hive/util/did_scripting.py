@@ -3,9 +3,10 @@ from flask import request
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS, \
     SCRIPTING_EXECUTABLE_CALLER_APP_DID
 from hive.util.did_file_info import query_download, query_properties, query_hash, query_upload_get_filepath
+from hive.util.did_info import get_collection
 from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
-    query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection
+    query_count_documents, populate_options_update_one, query_update_one, query_delete_one
 
 
 def massage_keys_with_dollar_signs(d):

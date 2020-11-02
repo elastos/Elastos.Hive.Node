@@ -1,5 +1,7 @@
 # Elastos Hive Node
 
+[![Build Status](https://travis-ci.com/elastos/Elastos.NET.Hive.Node.svg?token=Jzerup7zXNsvF2i32hZN&branch=master)](https://travis-ci.com/elastos/Elastos.NET.Hive.Node)
+
 To start, clone Elastos.NET.Hive.Node repo
 ```
 git clone https://gitlab.com/elastos/Elastos.NET.Hive.Node.git;

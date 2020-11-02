@@ -245,8 +245,7 @@ class HiveAuthTestCase(unittest.TestCase):
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_c_auth")
         didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
         testapp1 = DApp("testapp1", test_common.app_id, "amount material swim purse swallow gate pride series cannon patient dentist person")
-        testapp2 = DApp("testapp2", "appid2",
-                        "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+        testapp2 = DApp("testapp2", "appid2", "chimney limit involve fine absent topic catch chalk goat era suit leisure", "")
         # testapp3 = DApp("testapp3", "appid3", "license mango cluster candy payment prefer video rice desert pact february rabbit")
         self.__test_auth_common(didapp, testapp1)
         token = self.__test_auth_common(didapp, testapp2)

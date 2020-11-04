@@ -5,7 +5,7 @@ from flask_apscheduler import APScheduler
 
 from hive.main.hive_sync import HiveSync
 from hive.util.payment.vault_order import check_pay_order_timeout_job, check_wait_order_tx_job
-from hive.util.payment.vault_service_manage import proc_delete_vault_job, proc_expire_vault_job
+from hive.util.payment.vault_service_manage import proc_expire_vault_job, count_vault_storage_job
 
 scheduler = APScheduler()
 
@@ -36,10 +36,10 @@ def sync_job():
     logging.getLogger("Hive scheduler").debug(f"rclone syncing end: {str(datetime.utcnow())}")
 
 
-@scheduler.task(trigger='interval', id='expire_vault_job', days=1)
+@scheduler.task(trigger='interval', id='daily_routine_job', days=1)
 def daily_routine_job():
     logging.getLogger("Hive scheduler").debug(f" daily_routine_job start: {str(datetime.utcnow())}")
-    proc_expire_vault_job()
+    count_vault_storage_job()
     logging.getLogger("Hive scheduler").debug(f"daily_routine_job end: {str(datetime.utcnow())}")
 
 
@@ -48,13 +48,6 @@ def expire_vault_job():
     logging.getLogger("Hive scheduler").debug(f"expire_vault_job start: {str(datetime.utcnow())}")
     proc_expire_vault_job()
     logging.getLogger("Hive scheduler").debug(f"expire_vault_job end: {str(datetime.utcnow())}")
-
-
-@scheduler.task(trigger='interval', id='delete_vault_job', days=1)
-def delete_vault_job():
-    logging.getLogger("Hive scheduler").debug(f"delete_vault_job start: {str(datetime.utcnow())}")
-    proc_delete_vault_job()
-    logging.getLogger("Hive scheduler").debug(f"delete_vault_job end: {str(datetime.utcnow())}")
 
 
 @scheduler.task(trigger='interval', id='check_order_timeout_job', minutes=1)

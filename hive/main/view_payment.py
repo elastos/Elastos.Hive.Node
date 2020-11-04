@@ -11,14 +11,24 @@ def init_app(app):
     app.register_blueprint(hive_payment)
 
 
+@hive_payment.route('/api/v1/payment/version', methods=['GET'])
+def get_version():
+    return h_payment.get_version()
+
+
 @hive_payment.route('/api/v1/payment/vault_package_info', methods=['GET'])
 def get_vault_package_info():
     return h_payment.get_vault_package_info()
 
 
-@hive_payment.route('/api/v1/payment/free_trial', methods=['POST'])
-def start_trial():
-    return h_payment.start_trial()
+@hive_payment.route('/api/v1/payment/vault_pricing_plan', methods=['GET'])
+def get_vault_pricing_plan():
+    return h_payment.get_vault_pricing_plan()
+
+
+@hive_payment.route('/api/v1/service/vault/create', methods=['POST'])
+def create_vault():
+    return h_payment.create_vault()
 
 
 @hive_payment.route('/api/v1/payment/create_vault_package_order', methods=['POST'])

@@ -8,27 +8,28 @@ from pymongo import MongoClient
 from hive.settings import MONGO_HOST, MONGO_PORT, VAULTS_BASE_DIR
 from hive.util.common import did_tail_part
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, \
-    VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_DELETE_TIME, \
-    VAULT_SERVICE_EXPIRE_READ, VAULT_SERVICE_STATE, VAULT_ACCESS_WR, VAULT_ACCESS_R, DID, APP_ID, \
-    VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_MODIFY_TIME, VAULT_STORAGE_FILE
+    VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_PRICING_USING, \
+    VAULT_ACCESS_WR, \
+    VAULT_ACCESS_R, DID, APP_ID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, \
+    VAULT_SERVICE_MODIFY_TIME, VAULT_STORAGE_FILE
 
 from hive.util.did_file_info import get_dir_size
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import delete_mongo_database, get_mongo_database_size
+from hive.util.payment.payment_config import PaymentConfig
 
-VAULT_SERVICE_STATE_RUNNING = "running"
-VAULT_SERVICE_STATE_EXPIRE = "expire"
-VAULT_SERVICE_STATE_DELETE = "delete"
+VAULT_SERVICE_FREE_STATE = "Free"
 
 
-def setup_vault_service(did, max_storage, delete_expire_days, can_read_expire, service_days):
-    # If there has a service, we just update it. complex process latter
+def setup_vault_service(did, max_storage, service_days, pricing_name=VAULT_SERVICE_FREE_STATE):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     now = datetime.utcnow().timestamp()
-    end_time = now + service_days * 24 * 60 * 60
-    delete_time = end_time + delete_expire_days * 24 * 60 * 60
+    if service_days == -1:
+        end_time = -1
+    else:
+        end_time = now + service_days * 24 * 60 * 60
 
     dic = {VAULT_SERVICE_DID: did,
            VAULT_SERVICE_MAX_STORAGE: max_storage,
@@ -36,15 +37,38 @@ def setup_vault_service(did, max_storage, delete_expire_days, can_read_expire, s
            VAULT_SERVICE_DB_USE_STORAGE: 0.0,
            VAULT_SERVICE_START_TIME: now,
            VAULT_SERVICE_END_TIME: end_time,
-           VAULT_SERVICE_DELETE_TIME: delete_time,
-           VAULT_SERVICE_EXPIRE_READ: can_read_expire,
            VAULT_SERVICE_MODIFY_TIME: now,
-           VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING
+           VAULT_SERVICE_PRICING_USING: pricing_name
            }
 
     query = {VAULT_SERVICE_DID: did}
     value = {"$set": dic}
     ret = col.update_one(query, value, upsert=True)
+    return ret
+
+
+def update_vault_service(did, max_storage, service_days, pricing_name):
+    # If there has a service, we just update it. complex process latter
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_SERVICE_COL]
+    now = datetime.utcnow().timestamp()
+    if service_days == -1:
+        end_time = -1
+    else:
+        end_time = now + service_days * 24 * 60 * 60
+
+    dic = {VAULT_SERVICE_DID: did,
+           VAULT_SERVICE_MAX_STORAGE: max_storage,
+           VAULT_SERVICE_START_TIME: now,
+           VAULT_SERVICE_END_TIME: end_time,
+           VAULT_SERVICE_MODIFY_TIME: now,
+           VAULT_SERVICE_PRICING_USING: pricing_name
+           }
+
+    query = {VAULT_SERVICE_DID: did}
+    value = {"$set": dic}
+    ret = col.update_one(query, value)
     return ret
 
 
@@ -57,41 +81,15 @@ def get_vault_service(did):
     return service
 
 
-def can_write_read(did):
-    info = get_vault_service(did)
-    if not info:
-        return False
-    if info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_RUNNING:
-        return True
-    else:
-        return False
-
-
-def can_read(did):
-    info = get_vault_service(did)
-    if not info:
-        return False
-    if info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_RUNNING:
-        return True
-    elif (info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_EXPIRE) and (info[VAULT_SERVICE_EXPIRE_READ]):
-        return True
-    else:
-        return False
-
-
 def can_access_vault(did, access_vault):
-    if access_vault == VAULT_ACCESS_WR:
-        if can_write_read(did):
-            return True
-        else:
-            return False
-    elif access_vault == VAULT_ACCESS_R:
-        if can_read(did):
-            return True
-        else:
-            return False
-    else:
+    info = get_vault_service(did)
+    if not info:
         return False
+
+    if access_vault == VAULT_ACCESS_WR:
+        return less_than_max_storage(did)
+    else:
+        return True
 
 
 def get_vault_path(did):
@@ -109,38 +107,23 @@ def delete_user_vault(did):
         shutil.rmtree(path)
 
 
-def proc_delete_vault_job():
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[VAULT_SERVICE_COL]
-    query = {VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_EXPIRE}
-    info_list = col.find(query)
-
-    now = datetime.utcnow().timestamp()
-    for service in info_list:
-        if now > service[VAULT_SERVICE_DELETE_TIME]:
-            delete_db_storage(service[VAULT_SERVICE_DID])
-            delete_user_vault(service[VAULT_SERVICE_DID])
-            query_id = {"_id": service["_id"]}
-            value = {"$set": {VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_DELETE,
-                              VAULT_SERVICE_FILE_USE_STORAGE: 0.0,
-                              VAULT_SERVICE_DB_USE_STORAGE: 0.0,
-                              VAULT_SERVICE_MODIFY_TIME: now
-                              }}
-            col.update_one(query_id, value)
-
-
 def proc_expire_vault_job():
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
-    query = {VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING}
+    query = {VAULT_SERVICE_PRICING_USING: {"$ne": VAULT_SERVICE_FREE_STATE}}
     info_list = col.find(query)
     now = datetime.utcnow().timestamp()
     for service in info_list:
-        if now > service[VAULT_SERVICE_END_TIME]:
+        if service[VAULT_SERVICE_END_TIME] == -1:
+            continue
+        elif now > service[VAULT_SERVICE_END_TIME]:
+            free_info = PaymentConfig.get_free_trial_info()
             query_id = {"_id": service["_id"]}
-            value = {"$set": {VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_EXPIRE,
+            value = {"$set": {VAULT_SERVICE_PRICING_USING: VAULT_SERVICE_FREE_STATE,
+                              VAULT_SERVICE_MAX_STORAGE: free_info["maxStorage"],
+                              VAULT_SERVICE_START_TIME: now,
+                              VAULT_SERVICE_END_TIME: -1,
                               VAULT_SERVICE_MODIFY_TIME: now
                               }}
             col.update_one(query_id, value)
@@ -171,8 +154,7 @@ def count_vault_storage_job():
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
-    query = {VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING}
-    info_list = col.find(query)
+    info_list = col.find()
     for service in info_list:
         file_size = count_file_system_storage_size(service[VAULT_SERVICE_DID])
         db_size = count_db_storage_size(service[VAULT_SERVICE_DID])

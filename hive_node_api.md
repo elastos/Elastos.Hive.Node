@@ -1472,76 +1472,34 @@ return:
     Success:
         {
             "_status": "OK",
-            "Trial":{
-                "freeDays": 10,
-                "maxStorage": 10,
-                "deleteIfUnpaidAfterDays": 10,
-                "canReadIfUnpaid": true
-            },
-            "vaultPackages": [
-                { 
-                    "name": "Rookie",
-                    "maxStorage": 500, // Max 500 Mb storage size
-                    //"maxNetworkSpeed": 1, // Max 1 Mbps of network use
-                    "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
-                    "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
-                    "pricing": [
-                        {
-                            "price_name": "1 week",
-                            "amount": 0.3,
-                            "serviceDays": 7,
-                            "currency": "ELA"
-                        },
-                        {
-                            "price_name": "1 month",
-                            "amount": 1,
-                            "serviceDays": 30,
-                            "currency": "ELA"
-                        },
-                        {
-                            "price_name": "3 months",
-                            "amount": 2.5,
-                            "serviceDays": 90,
-                            "currency": "ELA"
-                        },
-                        {
-                            "price_name": "12 months",
-                            "amount": 9.5,
-                            "serviceDays": 365,
-                            "currency": "ELA"
-                        }
-                    ]
+            "version": "1.0",
+            "pricingPlans": [
+                {
+                    "name": "Free",
+                    "maxStorage": 500,
+                    "serviceDays": -1,
+                    "amount": 0.0,
+                    "currency": "ELA"
                 },
-                { 
+                {
+                    "name": "Rookie",
+                    "maxStorage": 2000,
+                    "serviceDays": 30,
+                    "amount": 2.5,
+                    "currency": "ELA"
+                },
+                {
                     "name": "Advanced",
-                    "maxStorage": 2000, // Max 500 Mb storage size
-                    //"maxNetworkSpeed": 5, // Max 1 Mbps of network use
-                    "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
-                    "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
-                    "pricing": [
-                        {
-                            "price_name": "1 month",
-                            "amount": 2,
-                            "serviceDays": 30,
-                            "currency": "ELA"
-                        },
-                        {
-                            "price_name": "3 months",
-                            "amount": 5.5,
-                            "serviceDays": 90,
-                            "currency": "ELA"
-                        },
-                        {
-                            "price_name": "12 months",
-                            "amount": 21.0,
-                            "serviceDays": 365,
-                            "currency": "ELA"
-                        }
-                    ]
+                    "maxStorage": 5000,
+                    "serviceDays": 30,
+                    "amount": 5.0,
+                    "currency": "ELA"
                 }
             ],
             "paymentSettings": {
-                "receivingELAAddress": "0xabcdef"
+                "receivingELAAddress": "ETJqK7o7gBhzypmNJ1MstAHU2q77fo78jg",
+                "wait_payment_timeout": 30,
+                "wait_tx_timeout": 10
             }
         }
     Failure:
@@ -1554,10 +1512,58 @@ return:
         }
 ```
 
-- start vault service free trial
+- Get vault service pricing plan by name
+```json
+HTTP: GET 
+URL: api/v1/payment/vault_pricing_plan?name=Rookie
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+return:
+    Success:
+        {
+            "_status": "OK",
+            "name": "Rookie",
+            "maxStorage": 2000,
+            "serviceDays": 30,
+            "amount": 2.5,
+            "currency": "ELA"
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- Get vault service info version
+```json
+HTTP: GET 
+URL: api/v1/payment/version
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+return:
+    Success:
+        {
+            "_status": "OK",
+            "version": "1.0"
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+- create vault service by free pricing
 ```json
 HTTP: POST
-URL: /api/v1/payment/free_trial
+URL: /api/v1/service/vault/create
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:
@@ -1583,8 +1589,7 @@ Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 
     {
-      "package_name": "Rookie",
-      "price_name": "1 week",
+      "pricing_name": "Rookie",
     }
 return:
     Success:
@@ -1646,15 +1651,12 @@ return:
                 "order_id":"5f910273dc81b7a0b3f585fc", 
                 "did":"did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP",
                 "app_id":"appid",
-                "package_info":{
+                "pricing_info":{
                     "name": "Rookie",
-                    "maxStorage": 500, // Max 500 Mb storage size
-                    "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
-                    "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
-                    "price_name": "1 month",
-                    "amount": 1,
+                    "maxStorage": 2000,
                     "serviceDays": 30,
-                    "currency": "ELA",
+                    "amount": 2.5,
+                    "currency": "ELA"
                 },
                 "pay_txids": [
                     "0xablcddd",
@@ -1690,15 +1692,12 @@ return:
                     "order_id":"5f910273dc81b7a0b3f585fc", 
                     "did":"did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP",
                     "app_id":"appid",
-                    "package_info":{
+                    "pricing_info":{
                         "name": "Rookie",
-                        "maxStorage": 500, // Max 500 Mb storage size
-                        "deleteIfUnpaidAfterDays": 100, // Vault is permanently deleted after N days if not paid
-                        "canReadIfUnpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
-                        "price_name": "1 month",
-                        "amount": 1,
+                        "maxStorage": 2000,
                         "serviceDays": 30,
-                        "currency": "ELA",
+                        "amount": 2.5,
+                        "currency": "ELA"
                     },
                     "pay_txids": [
                         "0xablcddd",
@@ -1738,9 +1737,7 @@ return:
                 "modify_time": 1602236316,
                 "start_time": 1602236316,
                 "end_time": 1604914928,
-                "delete_time": 1613727728,
-                "can_read_if_unpaid": true, // Whether read access if granted if vault is not paid. If false, the vault is totally locked read/write
-                "state": "running",//running, expire, delete
+                "pricing_using": "Rookie",// Free, Rookie, Advanced
             }
         }
     Failure:

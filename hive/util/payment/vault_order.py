@@ -10,7 +10,7 @@ from hive.util.payment.payment_config import PaymentConfig
 
 from hive.settings import MONGO_HOST, MONGO_PORT, ELA_RESOLVER
 from hive.util.constants import *
-from hive.util.payment.vault_service_manage import setup_vault_service
+from hive.util.payment.vault_service_manage import update_vault_service, get_vault_service, setup_vault_service
 
 VAULT_ORDER_STATE_WAIT_PAY = "wait_pay"
 VAULT_ORDER_STATE_WAIT_TX = "wait_tx"
@@ -117,7 +117,8 @@ def deal_order_tx(info):
             amount -= value
             if create_time > block_time:
                 logger.error(
-                    "deal_order_tx failed. tx:" + tx + " block_time:" + str(block_time) + " creat_time" + str(create_time))
+                    "deal_order_tx failed. tx:" + tx + " block_time:" + str(block_time) + " creat_time" + str(
+                        create_time))
                 info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_FAILED
                 update_order_info(info["_id"], info)
                 return info[VAULT_ORDER_STATE]
@@ -157,8 +158,14 @@ def check_wait_order_tx_job():
     for info in info_list:
         state = deal_order_tx(info)
         if state == VAULT_ORDER_STATE_SUCCESS:
-            setup_vault_service(info[VAULT_ORDER_DID],
-                                info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
-                                info[VAULT_ORDER_PACKAGE_INFO]["deleteIfUnpaidAfterDays"],
-                                info[VAULT_ORDER_PACKAGE_INFO]["canReadIfUnpaid"],
-                                info[VAULT_ORDER_PACKAGE_INFO]["serviceDays"])
+            service = get_vault_service(info[VAULT_ORDER_DID])
+            if not service:
+                setup_vault_service(info[VAULT_ORDER_DID],
+                                    info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
+                                    info[VAULT_ORDER_PACKAGE_INFO]["serviceDays"],
+                                    pricing_name=info[VAULT_ORDER_PACKAGE_INFO]["name"])
+            else:
+                update_vault_service(info[VAULT_ORDER_DID],
+                                     info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
+                                     info[VAULT_ORDER_PACKAGE_INFO]["serviceDays"],
+                                     info[VAULT_ORDER_PACKAGE_INFO]["name"])

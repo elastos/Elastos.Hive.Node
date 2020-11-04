@@ -44,7 +44,7 @@ class HiveMongoDb:
         return self.response.response_ok()
 
     def delete_collection(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_WR)
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_R)
         if err:
             return err
 
@@ -74,9 +74,6 @@ class HiveMongoDb:
         if err:
             return err
 
-        if not less_than_max_storage(did):
-            return self.response.response_err(401, "storage is larger than limit")
-
         old_db_size = get_mongo_database_size(did, app_id)
 
         options = populate_options_insert_one(content)
@@ -97,8 +94,6 @@ class HiveMongoDb:
         if err:
             return err
 
-        if not less_than_max_storage(did):
-            return self.response.response_err(401, "storage is larger than limit")
         old_db_size = get_mongo_database_size(did, app_id)
 
         col = get_collection(did, app_id, content["collection"])
@@ -129,8 +124,6 @@ class HiveMongoDb:
         if err:
             return err
 
-        if not less_than_max_storage(did):
-            return self.response.response_err(401, "storage is larger than limit")
         old_db_size = get_mongo_database_size(did, app_id)
 
         options = populate_options_update_one(content)
@@ -150,8 +143,6 @@ class HiveMongoDb:
         if err:
             return err
 
-        if not less_than_max_storage(did):
-            return self.response.response_err(401, "storage is larger than limit")
         old_db_size = get_mongo_database_size(did, app_id)
 
         col = get_collection(did, app_id, content["collection"])
@@ -177,7 +168,7 @@ class HiveMongoDb:
 
     def delete_one(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
-                                                             access_vault=VAULT_ACCESS_WR)
+                                                             access_vault=VAULT_ACCESS_R)
         if err:
             return err
 
@@ -193,7 +184,7 @@ class HiveMongoDb:
 
     def delete_many(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
-                                                             access_vault=VAULT_ACCESS_WR)
+                                                             access_vault=VAULT_ACCESS_R)
         if err:
             return err
 

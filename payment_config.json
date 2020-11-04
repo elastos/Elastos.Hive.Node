@@ -1,69 +1,27 @@
 {
-  "Trial": {
-    "freeDays": 10,
-    "maxStorage": 10,
-    "deleteIfUnpaidAfterDays": 10,
-    "canReadIfUnpaid": true
-  },
-  "vaultPackages": [
-    {
-      "name": "Rookie",
-      "maxStorage": 500,
-      "deleteIfUnpaidAfterDays": 100,
-      "canReadIfUnpaid": true,
-      "pricing": [
-        {
-          "price_name": "1 week",
-          "amount": 0.3,
-          "serviceDays": 7,
-          "currency": "ELA"
-        },
-        {
-          "price_name": "1 month",
-          "amount": 1,
-          "serviceDays": 30,
-          "currency": "ELA"
-        },
-        {
-          "price_name": "3 months",
-          "amount": 2.5,
-          "serviceDays": 90,
-          "currency": "ELA"
-        },
-        {
-          "price_name": "12 months",
-          "amount": 9.5,
-          "serviceDays": 365,
-          "currency": "ELA"
-        }
-      ]
-    },
-    {
-      "name": "Advanced",
-      "maxStorage": 2000,
-      "deleteIfUnpaidAfterDays": 100,
-      "canReadIfUnpaid": true,
-      "pricing": [
-        {
-          "price_name": "1 month",
-          "amount": 2,
-          "serviceDays": 30,
-          "currency": "ELA"
-        },
-        {
-          "price_name": "3 months",
-          "amount": 5.5,
-          "serviceDays": 90,
-          "currency": "ELA"
-        },
-        {
-          "price_name": "12 months",
-          "amount": 21.0,
-          "serviceDays": 365,
-          "currency": "ELA"
-        }
-      ]
-    }
+  "version": "1.0",
+  "pricingPlans": [
+      {
+        "name": "Free",
+        "maxStorage": 500,
+        "serviceDays": -1,
+        "amount": 0.0,
+        "currency": "ELA"
+      },
+      {
+        "name": "Rookie",
+        "maxStorage": 2000,
+        "serviceDays": 30,
+        "amount": 2.5,
+        "currency": "ELA"
+      },
+      {
+        "name": "Advanced",
+        "maxStorage": 5000,
+        "serviceDays": 30,
+        "amount": 5.0,
+        "currency": "ELA"
+      }
   ],
   "paymentSettings": {
     "receivingELAAddress": "ETJqK7o7gBhzypmNJ1MstAHU2q77fo78jg",

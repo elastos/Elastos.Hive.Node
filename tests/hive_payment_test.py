@@ -67,16 +67,15 @@ class HivePaymentTestCase(unittest.TestCase):
         ]
 
     def init_payment_db(self):
-
         connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
         db = connection[DID_INFO_DB_NAME]
         order_col = db[VAULT_ORDER_COL]
-        query = {VAULT_ORDER_DID: self.did, VAULT_ORDER_APP_ID: self.app_id}
+        query = {VAULT_ORDER_DID: self.did}
         order_col.delete_many(query)
         service_col = db[VAULT_SERVICE_COL]
         service_col.delete_many(query)
 
-        package_info = PaymentConfig.get_package_info("Rookie", "1 month")
+        package_info = PaymentConfig.get_pricing_plan("Rookie")
         self.assertNotEqual(package_info, None)
 
         order_dic = {VAULT_ORDER_DID: self.did,
@@ -90,23 +89,24 @@ class HivePaymentTestCase(unittest.TestCase):
         ret = order_col.insert_one(order_dic)
         self.test_order_id = str(ret.inserted_id)
 
-    def change_service_time(self, start_time, end_time, delete_time):
+    def change_service(self, start_time, end_time, max_storage, pricing_name):
         info = get_vault_service(self.did)
         if not info:
-            ret = setup_vault_service(self.did, 100, 1, True, 1)
+            ret = setup_vault_service(self.did, max_storage, 1, pricing_name=pricing_name)
             _id = ret.upserted_id
         else:
             _id = info["_id"]
 
-        order_dic = {VAULT_SERVICE_START_TIME: start_time,
-                     VAULT_SERVICE_END_TIME: end_time,
-                     VAULT_SERVICE_DELETE_TIME: delete_time,
-                     }
+        _dic = {VAULT_SERVICE_START_TIME: start_time,
+                VAULT_SERVICE_END_TIME: end_time,
+                VAULT_SERVICE_MAX_STORAGE: max_storage,
+                VAULT_SERVICE_PRICING_USING: pricing_name
+                }
         connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
         db = connection[DID_INFO_DB_NAME]
         col = db[VAULT_SERVICE_COL]
         query = {"_id": _id}
-        value = {"$set": order_dic}
+        value = {"$set": _dic}
         col.update_one(query, value)
 
     def tearDown(self):
@@ -142,20 +142,45 @@ class HivePaymentTestCase(unittest.TestCase):
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
-        print(r)
+
+    def test_1_1_get_vault_pricing_plan(self):
+        logging.getLogger("").debug("\nRunning test_1_1_get_vault_pricing_plan")
+        r, s = self.parse_response(
+            self.test_client.get('api/v1/payment/vault_pricing_plan?name=Rookie', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+    def test_1_2_get_payment_version(self):
+        logging.getLogger("").debug("\nRunning test_1_2_get_payment_version")
+        r, s = self.parse_response(
+            self.test_client.get('api/v1/payment/version', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+    def test_2_0_create_vault(self):
+        logging.getLogger("").debug("\nRunning test_2_0_create_vault")
+
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/service/vault/create',
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
 
     def test_2_create_package_order(self):
         logging.getLogger("").debug("\nRunning test_2_create_package_order")
 
         package = {
-            "package_name": "Rookie",
-            "price_name": "3 months",
+            "pricing_name": "Rookie"
         }
 
         r, s = self.parse_response(
             self.test_client.post('/api/v1/payment/create_vault_package_order',
                                   data=json.dumps(package),
-                                  headers=self.upload_auth)
+                                  headers=self.auth)
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
@@ -188,34 +213,46 @@ class HivePaymentTestCase(unittest.TestCase):
         r, s = self.parse_response(
             self.test_client.post('/api/v1/payment/pay_vault_package_order',
                                   data=json.dumps(pay_param),
-                                  headers=self.upload_auth)
+                                  headers=self.auth)
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
         check_wait_order_tx_job()
-        self.assertTrue(can_write_read(self.did))
-        self.assertTrue(can_read(self.did))
+        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
 
-    def test_6_service_management_timeout(self):
-        now = datetime.utcnow().timestamp()
-        self.change_service_time(now - 24 * 60 * 60, now - 1, now - 1)
-        proc_expire_vault_job()
-        self.assertFalse(can_write_read(self.did))
-        self.assertTrue(can_read(self.did))
-        proc_delete_vault_job()
-        self.assertFalse(can_read(self.did))
-
-    def test_7_service_storage(self):
+    def test_5_service_storage(self):
         test_common.setup_test_vault(self.did)
         count_vault_storage_job()
-        self.assertTrue(less_than_max_storage(self.did))
+        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
         inc_file_use_storage_byte(self.did, VAULT_STORAGE_FILE, 51000000)
         inc_file_use_storage_byte(self.did, VAULT_STORAGE_DB, 51000000)
-        self.assertFalse(less_than_max_storage(self.did))
+        self.assertFalse(can_access_vault(self.did, VAULT_ACCESS_WR))
         inc_file_use_storage_byte(self.did, VAULT_STORAGE_FILE, -20000000)
         inc_file_use_storage_byte(self.did, VAULT_STORAGE_DB, -20000000)
-        self.assertTrue(less_than_max_storage(self.did))
+        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
+
+    def assert_service_vault_info(self, state):
+        r, s = self.parse_response(
+            self.test_client.get('api/v1/service/vault', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertEqual(r[VAULT_SERVICE_PRICING_USING], state)
+
+    def test_6_service_management_timeout_ONLY_READ(self):
+        test_common.setup_test_vault(self.did)
+        now = datetime.utcnow().timestamp()
+        self.change_service(now - 24 * 60 * 60, now - 1, 5000, "Rookie")
+        count_vault_storage_job()
+        self.assert_service_vault_info("Rookie")
+        inc_file_use_storage_byte(self.did, VAULT_STORAGE_FILE, 910000000)
+        inc_file_use_storage_byte(self.did, VAULT_STORAGE_DB, 910000000)
+        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
+        proc_expire_vault_job()
+        self.assert_service_vault_info("Free")
+        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_R))
+        self.assertFalse(can_access_vault(self.did, VAULT_ACCESS_WR))
 
 
 if __name__ == '__main__':

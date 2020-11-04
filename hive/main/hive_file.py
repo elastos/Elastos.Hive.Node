@@ -53,9 +53,6 @@ class HiveFile:
                 return self.response.response_err(500, "make dst parent path dir error")
         try:
             if is_copy:
-                if not less_than_max_storage(did):
-                    return self.response.response_err(401, "storage is larger than limit")
-
                 if src_full_path_name.is_file():
                     shutil.copy2(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
                     file_size = os.path.getsize(dst_full_path_name.as_posix())
@@ -76,9 +73,6 @@ class HiveFile:
         did, app_id, response = pre_proc(self, access_vault=VAULT_ACCESS_WR)
         if response is not None:
             return response
-
-        if not less_than_max_storage(did):
-            return self.response.response_err(401, "storage is larger than limit")
 
         full_path_name, err = query_upload_get_filepath(did, app_id, file_name)
         if err:
@@ -181,7 +175,7 @@ class HiveFile:
         return self.response.response_ok(data)
 
     def delete(self):
-        did, app_id, content, response = post_json_param_pre_proc(self.response, "path", access_vault=VAULT_ACCESS_WR)
+        did, app_id, content, response = post_json_param_pre_proc(self.response, "path", access_vault=VAULT_ACCESS_R)
         if response is not None:
             return response
 

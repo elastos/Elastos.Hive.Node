@@ -1,7 +1,9 @@
 import logging
 
+from flask import request
+
 from hive.util.payment.vault_order import *
-from hive.util.payment.vault_service_manage import get_vault_service
+from hive.util.payment.vault_service_manage import get_vault_service, setup_vault_service
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 
@@ -15,19 +17,38 @@ class HivePayment:
     def init_app(self, app):
         self.app = app
 
+    def get_version(self):
+        did, app_id, err = pre_proc(self.response)
+        if err:
+            return err
+        version = PaymentConfig.get_version()
+        return self.response.response_ok({"version": version})
+
     def get_vault_package_info(self):
+        did, app_id, err = pre_proc(self.response)
+        if err:
+            return err
         data = PaymentConfig.get_all_package_info()
         return self.response.response_ok(data)
 
-    def create_vault_package_order(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "package_name", "price_name")
+    def get_vault_pricing_plan(self):
+        did, app_id, content, err = get_pre_proc(self.response, "name")
         if err:
             return err
-        package_info = PaymentConfig.get_package_info(content["package_name"], content["price_name"])
-        if package_info is None:
-            return self.response.response_err(400,
-                                              "not found package info of:" + content["package_name"] + " " + content[
-                                                  "price_name"])
+
+        data = PaymentConfig.get_pricing_plan(content["name"])
+        if data:
+            return self.response.response_ok(data)
+        else:
+            return self.response.response_err(400, "not found pricing name of:" + content["name"])
+
+    def create_vault_package_order(self):
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "pricing_name")
+        if err:
+            return err
+        package_info = PaymentConfig.get_pricing_plan(content["pricing_name"])
+        if not package_info:
+            return self.response.response_err(400, "not found pricing_name of:" + content["pricing_name"])
         order_id = create_order_info(did, app_id, package_info)
         return self.response.response_ok({"order_id": str(order_id)})
 
@@ -38,11 +59,11 @@ class HivePayment:
 
         # if the order is success or have been put txid no more pay again
         info = get_order_info_by_id(ObjectId(content["order_id"]))
-        if info is not None:
+        if info:
             if info[VAULT_ORDER_STATE] == VAULT_ORDER_STATE_SUCCESS:
                 return self.response.response_ok({"message": "order has been effective"})
             if info[VAULT_ORDER_TXIDS]:
-                return self.response.response_err(400, "order has been payed")
+                return self.response.response_err(400, "order has been payed no need to pay again")
 
         # check whether txids have been used by other order
         for txid in content["pay_txids"]:
@@ -81,22 +102,18 @@ class HivePayment:
             self.__id_to_order_id(info)
         return self.response.response_ok({"order_info_list": info_list})
 
-    def start_trial(self):
+    def create_vault(self):
         did, app_id, err = pre_proc(self.response)
         if err:
             return err
 
         service = get_vault_service(did)
-        if not service:
-            return self.response.response_err(400, "No more free trial")
+        if service:
+            return self.response.response_ok()
 
-        trail_info = PaymentConfig.get_free_trial_info()
+        free_info = PaymentConfig.get_free_trial_info()
 
-        setup_vault_service(did,
-                            trail_info["maxStorage"],
-                            trail_info["deleteIfUnpaidAfterDays"],
-                            trail_info["canReadIfUnpaid"],
-                            trail_info["freeDays"])
+        setup_vault_service(did, free_info["maxStorage"], free_info["serviceDays"])
         return self.response.response_ok()
 
     def get_vault_service_info(self):
@@ -104,4 +121,5 @@ class HivePayment:
         if err:
             return err
         info = get_vault_service(did)
+        del info["_id"]
         return self.response.response_ok(info)

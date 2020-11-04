@@ -20,8 +20,12 @@ class PaymentConfig:
         return PaymentConfig.config_info
 
     @staticmethod
+    def get_version():
+        return PaymentConfig.config_info["version"]
+
+    @staticmethod
     def get_free_trial_info():
-        return PaymentConfig.config_info["Trial"]
+        return PaymentConfig.get_pricing_plan("Free")
 
     @staticmethod
     def get_payment_address():
@@ -36,20 +40,12 @@ class PaymentConfig:
         return PaymentConfig.config_info["paymentSettings"]["wait_tx_timeout"]
 
     @staticmethod
-    def get_package_info(name, price_name):
-        packages = PaymentConfig.config_info["vaultPackages"]
-        for package in packages:
-            if name == package["name"]:
-                pk = dict()
-                pk["name"] = package["name"]
-                pk["maxStorage"] = package["maxStorage"]
-                pk["deleteIfUnpaidAfterDays"] = package["deleteIfUnpaidAfterDays"]
-                pk["canReadIfUnpaid"] = package["canReadIfUnpaid"]
-                for price in package["pricing"]:
-                    if price_name == price["price_name"]:
-                        pk["price_name"] = price["price_name"]
-                        pk["amount"] = price["amount"]
-                        pk["serviceDays"] = price["serviceDays"]
-                        pk["currency"] = price["currency"]
-                        return pk
+    def get_pricing_plan(name):
+        pricing_plan_list = PaymentConfig.config_info["pricingPlans"]
+
+        for pricing_plan in pricing_plan_list:
+            p_name = pricing_plan["name"]
+            if p_name == name:
+                return pricing_plan
+
         return None

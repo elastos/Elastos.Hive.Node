@@ -5,7 +5,6 @@ from hive.util.did_sync import add_did_sync_info, update_did_sync_info, DATA_SYN
     delete_did_sync_info
 
 from hive.settings import AUTH_CHALLENGE_EXPIRED
-from hive.main.scheduler import scheduler_stop
 from hive.util.payment.vault_service_manage import setup_vault_service
 
 did = "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"
@@ -46,5 +45,5 @@ def get_auth_token2():
 
 
 def setup_test_vault(did):
-    setup_vault_service(did, 100, 10, True, 100)
+    setup_vault_service(did, 100, -1)
 

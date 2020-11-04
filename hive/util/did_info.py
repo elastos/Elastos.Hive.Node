@@ -32,6 +32,15 @@ def update_nonce_of_did_info(app_instance_did, nonce, expired):
     ret = col.update_one(query, value)
     return ret
 
+def update_did_info_by_app_instance_did(app_instance_did, nonce, expired):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+    query = {APP_INSTANCE_DID: app_instance_did}
+    value = {"$set": {APP_INSTANCE_DID: app_instance_did, DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRED: expired}}
+    ret = col.update_one(query, value)
+    return ret
+
 def update_token_of_did_info(did, app_id, app_instance_did, nonce, token, expired):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
@@ -75,6 +84,13 @@ def get_did_info_by_nonce(nonce):
     info = col.find_one(query)
     return info
 
+def get_did_info_by_app_instance_did(app_instance_did):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+    query = {APP_INSTANCE_DID: app_instance_did}
+    info = col.find_one(query)
+    return info
 
 # def get_did_info_by_did_appid(did, app_id):
 #     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
@@ -107,6 +123,12 @@ def get_did_info_by_token(token):
     info = col.find_one(query)
     return info
 
+def get_collection(did, app_id, collection):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db_name = gene_mongo_db_name(did, app_id)
+    db = connection[db_name]
+    col = db[collection]
+    return col
 
 def create_token():
     token = uuid.uuid1()

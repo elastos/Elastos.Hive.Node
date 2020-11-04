@@ -154,9 +154,12 @@ class HiveAuth(Entity):
         # print(ffi.string(vp_str).decode())
 
         #check nonce
-        nonce = vp_json["proof"]["nonce"]
-        if nonce is None:
+        nonce = lib.Presentation_GetNonce(vp)
+        if not nonce:
             return None, "The nonce is none."
+        nonce = ffi.string(nonce).decode()
+        if nonce is None:
+            return None, "The nonce is isn't valid."
 
         #check did:nonce from db
         info = get_did_info_by_nonce(nonce)
@@ -164,16 +167,36 @@ class HiveAuth(Entity):
             return None, "The nonce is error."
 
         #check realm
-        realm = vp_json["proof"]["realm"]
-        if realm is None:
+        realm = lib.Presentation_GetRealm(vp)
+        if not realm:
             return None, "The realm is none."
+        realm = ffi.string(realm).decode()
+        if realm is None:
+            return None, "The realm is isn't valid."
 
         if realm != self.get_did_string():
             return None, "The realm is error."
 
         #check vc
-        vc_json = vp_json["verifiableCredential"][0]
+        count = lib.Presentation_GetCredentialCount(vp)
+        if count < 1:
+            return None, "The credential count is error."
+
+        if not "verifiableCredential" in vp_json:
+            return None, "The credential isn't exist."
+
+        vcs_json = vp_json["verifiableCredential"]
+        if not isinstance(vcs_json, list):
+            return None, "The verifiableCredential isn't valid"
+
+        vc_json = vcs_json[0]
+        if vc_json is None:
+            return None, "The credential isn't exist"
+
         vc_str = json.dumps(vc_json)
+        if vc_str is None:
+            return None, "The credential isn't valid"
+
         vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
         if not vc:
             return None, "The credential string is error, unable to rebuild to a credential object."
@@ -182,21 +205,34 @@ class HiveAuth(Entity):
         if not ret:
             return None, "The verifiableCredential isn't valid"
 
+        if not "credentialSubject" in vc_json:
+            return None, "The credentialSubject isn't exist."
         credentialSubject = vc_json["credentialSubject"]
+
+        if not "id" in credentialSubject:
+            return None, "The credentialSubject's id isn't exist."
         instance_did = credentialSubject["id"]
         if info[APP_INSTANCE_DID] != instance_did:
             return None, "The app instance did is error."
+
+        if not "appDid" in credentialSubject:
+            return None, "The credentialSubject's appDid isn't exist."
 
         expired = info[DID_INFO_NONCE_EXPIRED] < int(datetime.now().timestamp())
         if expired:
             #TODO::delete it
             return None, "The nonce is expired"
 
+        if not "issuer" in vc_json:
+            return None, "The credential issuer isn't exist."
         credentialSubject["userDid"] = vc_json["issuer"]
         credentialSubject["nonce"] = nonce
-        expirationDate = vc_json["expirationDate"]
-        timeArray = time.strptime(expirationDate, "%Y-%m-%dT%H:%M:%SZ")
-        credentialSubject["expTime"] = int(time.mktime(timeArray))
+
+        expirationDate = lib.Credential_GetExpirationDate(vc)
+        if expirationDate == 0:
+            return None, "The expirationDate is error"
+
+        credentialSubject["expTime"] = expirationDate
 
         return credentialSubject, None
 
@@ -204,6 +240,8 @@ class HiveAuth(Entity):
         user_did = credentialSubject["userDid"]
         app_id = credentialSubject["appDid"]
         app_instance_did = credentialSubject["id"]
+        # target_did = credentialSubject["targetUserDid"]
+        # targetUserDid, targetAppDid,
 
         doc = lib.DIDStore_LoadDID(self.store, self.did)
         if not doc:

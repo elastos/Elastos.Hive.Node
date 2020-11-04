@@ -8,7 +8,7 @@ import os
 
 from hive.util.did.eladid import ffi, lib
 
-from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, update_nonce_of_did_info, \
+from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, get_did_info_by_app_instance_did, update_did_info_by_app_instance_did, \
         update_token_of_did_info
 from hive.util.server_response import ServerResponse
 from hive.settings import AUTH_CHALLENGE_EXPIRED, ACCESS_TOKEN_EXPIRED
@@ -270,13 +270,13 @@ class HiveAuth(Entity):
         return token, None
 
     def __save_nonce_to_db(self, nonce, app_instance_did, exp):
-        info = get_did_info_by_nonce(nonce)
+        info = get_did_info_by_app_instance_did(app_instance_did)
 
         try:
             if info is None:
                 add_did_nonce_to_db(app_instance_did, nonce, exp)
             else:
-                update_nonce_of_did_info(app_instance_did, nonce, exp)
+                update_did_info_by_app_instance_did(app_instance_did, nonce, exp)
         except Exception as e:
             logging.debug(f"Exception in __save_nonce_to_db:: {e}")
             return False

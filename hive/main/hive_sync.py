@@ -6,6 +6,8 @@ import pathlib
 import subprocess
 from time import time
 
+from flask import request
+
 from hive.util.auth import did_auth
 from hive.util.common import did_tail_part, create_full_path_dir
 from hive.settings import VAULTS_BASE_DIR, RCLONE_CONFIG_FILE

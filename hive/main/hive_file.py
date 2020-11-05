@@ -74,6 +74,8 @@ class HiveFile:
         if response is not None:
             return response
 
+        file_name = filter_path_root(file_name)
+
         full_path_name, err = query_upload_get_filepath(did, app_id, file_name)
         if err:
             return self.response.response_err(err["status_code"], err["description"])

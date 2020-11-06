@@ -121,5 +121,8 @@ class HivePayment:
         if err:
             return err
         info = get_vault_service(did)
-        del info["_id"]
-        return self.response.response_ok(info)
+        if not info:
+            return self.response.response_ok()
+        else:
+            del info["_id"]
+            return self.response.response_ok(info)

@@ -22,7 +22,8 @@ def create_all_vault():
     col = db[DID_INFO_REGISTER_COL]
     infos = col.find()
     for did_info in infos:
-        create_vault_of_did(did_info[DID])
+        if DID in did_info:
+            create_vault_of_did(did_info[DID])
 
 
 if __name__ == '__main__':

@@ -134,7 +134,7 @@ class HiveAuth(Entity):
         #check jwt token
         jws = lib.DefaultJWSParser_Parse(jwt.encode())
         if not jws:
-            return None, ffi.string(lib.DIDError_GetMessage()).decode()
+            return None, self.get_error_message("JWS parser")
 
         vp_str = lib.JWT_GetClaimAsJson(jws, "presentation".encode())
         if not vp_str:
@@ -150,7 +150,7 @@ class HiveAuth(Entity):
         #check vp
         ret = lib.Presentation_IsValid(vp)
         if not ret:
-            return None, "The presentation isn't valid"
+            return None, self.get_error_message("Presentation isValid")
         # print(ffi.string(vp_str).decode())
 
         #check nonce
@@ -203,7 +203,7 @@ class HiveAuth(Entity):
 
         ret = lib.Credential_IsValid(vc)
         if not ret:
-            return None, "The verifiableCredential isn't valid"
+            return None, self.get_error_message("Credential isValid")
 
         if not "credentialSubject" in vc_json:
             return None, "The credentialSubject isn't exist."
@@ -230,7 +230,7 @@ class HiveAuth(Entity):
 
         expirationDate = lib.Credential_GetExpirationDate(vc)
         if expirationDate == 0:
-            return None, "The expirationDate is error"
+            return None, self.get_error_message("Credential getExpirationDate")
 
         credentialSubject["expTime"] = expirationDate
 
@@ -245,7 +245,7 @@ class HiveAuth(Entity):
 
         doc = lib.DIDStore_LoadDID(self.store, self.did)
         if not doc:
-            return None, "The doc can't load from did."
+            return None, self.get_error_message("The doc load from did")
 
         builder = lib.DIDDocument_GetJwtBuilder(doc)
         if not builder:
@@ -263,7 +263,7 @@ class HiveAuth(Entity):
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
         token = lib.JWTBuilder_Compact(builder)
         if not token:
-            return None, "Compact builder to a token is fail."
+            return None, self.get_error_message("Compact builder to a token")
 
         token = ffi.string(token).decode()
         lib.JWTBuilder_Destroy(builder)
@@ -336,11 +336,11 @@ class HiveAuth(Entity):
 
         jws = lib.DefaultJWSParser_Parse(access_token.encode())
         if not jws:
-            return None, ffi.string(lib.DIDError_GetMessage()).decode()
+            return None, self.get_error_message("JWS parser")
 
         issuer = lib.JWT_GetIssuer(jws)
         if not issuer:
-            return None, "Then issuer is null!"
+            return None, self.get_error_message("JWT getIssuer")
 
         issuer = ffi.string(issuer).decode()
         if issuer != self.get_did_string():

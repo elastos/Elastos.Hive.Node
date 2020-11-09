@@ -11,13 +11,14 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, \
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_DOWNLOADABLE, \
-    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD
+    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one, populate_options_update_one, \
     get_collection
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs
+from hive.util.payment.vault_service_manage import can_access_vault
 from hive.util.server_response import ServerResponse
 
 
@@ -206,7 +207,7 @@ class HiveScripting:
 
     def set_script(self):
         # Request Validation
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "name", "executable")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "name", "executable", access_vault=VAULT_ACCESS_WR)
         if err:
             return err
 
@@ -291,6 +292,9 @@ class HiveScripting:
         params = content.get('params', None)
         condition = script.get('condition', None)
         if condition:
+            # Currently, there's only one kind of condition("count" db query)
+            if not can_access_vault(target_did, VAULT_ACCESS_R):
+                return response.response_err(401, "vault can not be accessed")
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition, params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"

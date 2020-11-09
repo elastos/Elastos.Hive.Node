@@ -5,6 +5,7 @@ from pymongo import MongoClient
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
     DID_INFO_NONCE_EXPIRED, DID_INFO_TOKEN_EXPIRED, APP_INSTANCE_DID
 from hive.settings import MONGO_HOST, MONGO_PORT
+from hive.util.did_mongo_db_resource import gene_mongo_db_name
 
 
 def add_did_nonce_to_db(app_instance_did, nonce, expired):

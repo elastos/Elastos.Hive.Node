@@ -121,7 +121,7 @@ class HiveScripting:
             return check_json_param(executable_body, f"{executable.get('name')}", args=["collection", "filter"])
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
             return check_json_param(executable_body, f"{executable.get('name')}",
-                                           args=["collection", "filter", "update"])
+                                    args=["collection", "filter", "update"])
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
             executable_name = executable.get('name')
             # We need to make sure that the script's name is not "_download" as it's a reserved field
@@ -155,7 +155,8 @@ class HiveScripting:
         else:
             return run_condition(did, app_did, target_did, target_app_did, condition_body, params)
 
-    def __executable_execution(self, did, app_did, target_did, target_app_did, executable, params, output={}, output_key=None, capture_output=False):
+    def __executable_execution(self, did, app_did, target_did, target_app_did, executable, params, output={},
+                               output_key=None, capture_output=False):
         executable_type = executable.get('type')
         executable_body = executable.get('body')
         if not output_key:
@@ -167,7 +168,8 @@ class HiveScripting:
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
             err_message = None
             for i, e in enumerate(executable_body):
-                self.__executable_execution(did, app_did, target_did, target_app_did, e, params, output, e.get('name'), e.get('output', False))
+                self.__executable_execution(did, app_did, target_did, target_app_did, e, params, output, e.get('name', f"output{i}"),
+                                            e.get('output', False))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
             data, err_message = run_executable_find(did, app_did, target_did, target_app_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
@@ -179,15 +181,19 @@ class HiveScripting:
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD:
             data, err_message = {}, None
             if capture_output:
-                data, err_message = run_executable_file_upload(did, app_did, target_did, target_app_did, executable_body, params)
+                data, err_message = run_executable_file_upload(did, app_did, target_did, target_app_did,
+                                                               executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
-            data, err_message = run_executable_file_download(did, app_did, target_did, target_app_did, executable_body, params)
+            data, err_message = run_executable_file_download(did, app_did, target_did, target_app_did, executable_body,
+                                                             params)
             if capture_output:
                 output[SCRIPTING_EXECUTABLE_DOWNLOADABLE] = output_key
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES:
-            data, err_message = run_executable_file_properties(did, app_did, target_did, target_app_did, executable_body, params)
+            data, err_message = run_executable_file_properties(did, app_did, target_did, target_app_did,
+                                                               executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_HASH:
-            data, err_message = run_executable_file_hash(did, app_did, target_did, target_app_did, executable_body, params)
+            data, err_message = run_executable_file_hash(did, app_did, target_did, target_app_did, executable_body,
+                                                         params)
         else:
             data, err_message = None, f"invalid executable type '{executable_type}'"
 
@@ -213,7 +219,8 @@ class HiveScripting:
 
     def set_script(self):
         # Request Validation
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "name", "executable", access_vault=VAULT_ACCESS_WR)
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "name", "executable",
+                                                             access_vault=VAULT_ACCESS_WR)
         if err:
             return err
 
@@ -280,7 +287,7 @@ class HiveScripting:
 
         if not can_access_vault(target_did, VAULT_ACCESS_R):
             return self.response.response_err(402, "vault can not be accessed")
-        
+
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
         content_filter = {
@@ -304,7 +311,8 @@ class HiveScripting:
             # Currently, there's only one kind of condition("count" db query)
             if not can_access_vault(target_did, VAULT_ACCESS_R):
                 return response.response_err(401, "vault can not be accessed")
-            passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition, params)
+            passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
+                                                params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
                 return self.response.response_err(403, err_message)
@@ -313,7 +321,7 @@ class HiveScripting:
         unmassage_keys_with_dollar_signs(executable)
         output = {}
         data = self.__executable_execution(caller_did, caller_app_did, target_did, target_app_did, executable, params,
-                                           output=output)
+                                           output=output, output_key=executable.get('name', "output0"))
         download_file = output.get(SCRIPTING_EXECUTABLE_DOWNLOADABLE, None)
         if download_file:
             data = output.get(download_file)

@@ -152,8 +152,13 @@ class HiveMongoDb:
             update_set_on_insert = content.get('update').get('$setOnInsert', None)
             if update_set_on_insert:
                 content["update"]["$setOnInsert"]['created'] = datetime.utcnow()
-            content["filter"]["modified"] = datetime.utcnow()
-            ret = col.update_many(convert_oid(content["filter"]), convert_oid(content["update"]), **options)
+            else:
+                content["update"]["$setOnInsert"] = {
+                    "created": datetime.utcnow()
+                }
+            if "$set" in content["update"]:
+                content["update"]["$set"]["modified"] = datetime.utcnow()
+            ret = col.update_many(convert_oid(content["filter"]), convert_oid(content["update"], update=True), **options)
             data = {
                 "acknowledged": ret.acknowledged,
                 "matched_count": ret.matched_count,

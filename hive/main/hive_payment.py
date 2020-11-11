@@ -125,4 +125,6 @@ class HivePayment:
             return self.response.response_ok()
         else:
             del info["_id"]
-            return self.response.response_ok(info)
+            data = dict()
+            data["vault_service_info"] = info
+            return self.response.response_ok(data)

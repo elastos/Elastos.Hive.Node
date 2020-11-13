@@ -57,7 +57,3 @@ def did_auth_callback(did_base58, app_id_base58):
     return h_auth.did_auth_callback(did_base58, app_id_base58)
 
 
-# file synchronization
-@main.route('/api/v1/sync/setup/google_drive', methods=['POST'])
-def setup_syn_google_drive():
-    return h_sync.setup_google_drive_rclone()

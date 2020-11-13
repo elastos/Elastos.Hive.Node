@@ -18,6 +18,12 @@ DID_SYNC_INFO_MSG = "msg"
 DID_SYNC_INFO_TIME = "time"
 DID_SYNC_INFO_DRIVE = "drive"
 
+VAULT_BACKUP_INFO_COL = "vault_backup_info"
+VAULT_BACKUP_INFO_STATE = "state"
+VAULT_BACKUP_INFO_MSG = "msg"
+VAULT_BACKUP_INFO_TIME = "time"
+VAULT_BACKUP_INFO_DRIVE = "drive"
+
 VAULT_ORDER_COL = "vault_orders"
 VAULT_ORDER_DID = "did"
 VAULT_ORDER_APP_ID = "app_id"

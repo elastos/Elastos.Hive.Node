@@ -1,5 +1,6 @@
 import hashlib
 import json
+import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -204,18 +205,6 @@ def export_mongo_db(did, app_id):
     if not save_path.exists():
         if not create_full_path_dir(save_path):
             return False
-
-    # query = {DID_RESOURCE_DID: did, DID_RESOURCE_APP_ID: app_id}
-    # # 1. export collection schema data
-    # line1 = "mongoexport -h %s --port %s  --db=%s --collection=%s -q '%s' -o %s" % (MONGO_HOST,
-    #                                                                                 MONGO_PORT,
-    #                                                                                 DID_INFO_DB_NAME,
-    #                                                                                 DID_RESOURCE_COL,
-    #                                                                                 json.dumps(query),
-    #                                                                                 save_path / DID_RESOURCE_COL)
-    # subprocess.call(line1, shell=True)
-
-    # 2. dump user data db
     db_name = gene_mongo_db_name(did, app_id)
     line2 = 'mongodump -h %s --port %s  -d %s -o %s' % (MONGO_HOST, MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
@@ -226,24 +215,14 @@ def import_mongo_db(did, app_id):
     path = get_save_mongo_db_path(did, app_id)
     if not path.exists():
         return False
-
-    # 1. import collection schema data
-    # line1 = "mongoimport -h %s --port %s  --db=%s --collection=%s --upsert %s" % (MONGO_HOST,
-    #                                                                               MONGO_PORT,
-    #                                                                               DID_INFO_DB_NAME,
-    #                                                                               DID_RESOURCE_COL,
-    #                                                                               path / DID_RESOURCE_COL)
-    #
-    # subprocess.call(line1, shell=True)
-    # 2. restore user data db
     db_name = gene_mongo_db_name(did, app_id)
     save_path = path / db_name
     line2 = 'mongorestore -h %s --port %s  -d %s --drop %s' % (MONGO_HOST, MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
     return True
 
-# if __name__ == '__main__':
-#     did_str = "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"
-#     app_id = "did:elastos:iWFAUYhTa35c1fPe3iCJvihZHx6quumnym"
-#     export_mongo_db(did_str, app_id)
-#     import_mongo_db(did_str, app_id)
+
+def delete_mongo_db_backup(did, app_id):
+    save_path = get_save_mongo_db_path(did, app_id)
+    if save_path.exists():
+        shutil.rmtree(save_path)

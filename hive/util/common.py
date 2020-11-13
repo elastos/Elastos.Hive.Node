@@ -5,7 +5,6 @@ def did_tail_part(did):
     return did.split(":")[2]
 
 
-
 def create_full_path_dir(path):
     try:
         path.mkdir(exist_ok=True, parents=True)

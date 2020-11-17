@@ -45,10 +45,11 @@ def check_json_param(content, content_type, args):
     return None
 
 
-def run_condition(did, app_did, target_did, target_app_did, condition_body, params):
-    query = {}
-    for key, value in condition_body.get('filter').items():
-        if isinstance(value, str):
+def populate_params_find_count_delete(did, app_did, query, params, condition=False):
+    for key, value in query.items():
+        if isinstance(value, dict):
+            populate_params_find_count_delete(did, app_did, value, params)
+        elif isinstance(value, str):
             if value == SCRIPTING_EXECUTABLE_CALLER_DID:
                 query[key] = {"$in": [did]}
             elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
@@ -56,13 +57,20 @@ def run_condition(did, app_did, target_did, target_app_did, condition_body, para
             elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
                 v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
                 if not (params and params.get(v, None)):
-                    return False
+                    if condition:
+                        return False
+                    else:
+                        return None, "Exception: Parameter is not set"
                 query[key] = params[v]
             else:
                 query[key] = value
         else:
             query[key] = value
-    condition_body["filter"] = query
+
+
+def run_condition(did, app_did, target_did, target_app_did, condition_body, params):
+    condition_body_filter = condition_body.get('filter', {})
+    populate_params_find_count_delete(did, app_did, condition_body_filter, params, condition=True)
 
     options = populate_options_count_documents(condition_body)
 
@@ -79,25 +87,9 @@ def run_condition(did, app_did, target_did, target_app_did, condition_body, para
 def run_executable_find(did, app_did, target_did, target_app_did, executable_body, params):
     if not can_access_vault(target_did, VAULT_ACCESS_R):
         return None, "vault can not be accessed"
-    query = {}
-    executable_body_filter = executable_body.get('filter', None)
-    if executable_body_filter:
-        for key, value in executable_body.get('filter').items():
-            if isinstance(value, str):
-                if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-                    query[key] = {"$in": [did]}
-                elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-                    query[key] = {"$in": [app_did]}
-                elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                    v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                    if not (params and params.get(v, None)):
-                        return None, "Exception: Parameter is not set"
-                    query[key] = params[v]
-                else:
-                    query[key] = value
-            else:
-                query[key] = value
-        executable_body["filter"] = query
+
+    executable_body_filter = executable_body.get('filter', {})
+    populate_params_find_count_delete(did, app_did, executable_body_filter, params)
 
     options = populate_options_find_many(executable_body)
 
@@ -109,31 +101,33 @@ def run_executable_find(did, app_did, target_did, target_app_did, executable_bod
     return data, None
 
 
-def run_executable_insert(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_WR):
-        return None, "vault can not be accessed"
-    created = False
-    query = {}
-    for key, value in executable_body.get('document').items():
-        if isinstance(value, str):
+def populate_params_insert_update(did, app_did, query, params):
+    for key, value in query.items():
+        if isinstance(value, dict):
+            populate_params_insert_update(did, app_did, value, params)
+        elif isinstance(value, str):
             if value == SCRIPTING_EXECUTABLE_CALLER_DID:
                 query[key] = did
             elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
                 query[key] = app_did
+            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                if not (params and params.get(v, None)):
+                    return None, "Exception: Parameter is not set"
+                query[key] = params[v]
             else:
-                if key == "created":
-                    created = True
-                if value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                    k = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                    if not (params and params.get(k, None)):
-                        return None, "Exception: Parameter is not set"
-                    v = params[k]
-                else:
-                    v = value
-                query[key] = v
+                query[key] = value
         else:
             query[key] = value
-    executable_body['document'] = query
+
+
+def run_executable_insert(did, app_did, target_did, target_app_did, executable_body, params):
+    if not can_access_vault(target_did, VAULT_ACCESS_WR):
+        return None, "vault can not be accessed"
+
+    executable_body_document = executable_body.get('document', {})
+    populate_params_insert_update(did, app_did, executable_body_document, params)
+    created = "created" in executable_body_document.keys()
 
     options = populate_options_insert_one(executable_body)
 
@@ -151,40 +145,12 @@ def run_executable_insert(did, app_did, target_did, target_app_did, executable_b
 def run_executable_update(did, app_did, target_did, target_app_did, executable_body, params):
     if not can_access_vault(target_did, VAULT_ACCESS_WR):
         return None, "vault can not be accessed"
-    filter_query = {}
-    for key, value in executable_body.get('filter').items():
-        if isinstance(value, str):
-            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-                filter_query[key] = did
-            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-                filter_query[key] = app_did
-            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                if not (params and params.get(v, None)):
-                    return None, "Exception: Parameter is not set"
-                filter_query[key] = params[v]
-            else:
-                filter_query[key] = value
-        else:
-            filter_query[key] = value
-    executable_body['filter'] = filter_query
-    update_set_query = {}
-    for key, value in executable_body.get('update').get('$set').items():
-        if isinstance(value, str):
-            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-                update_set_query[key] = did
-            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-                update_set_query[key] = app_did
-            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                if not (params and params.get(v, None)):
-                    return None, "Exception: Parameter is not set"
-                update_set_query[key] = params[v]
-            else:
-                update_set_query[key] = value
-        else:
-            update_set_query[key] = value
-    executable_body['update']['$set'] = update_set_query
+
+    executable_body_filter = executable_body.get('filter', {})
+    populate_params_insert_update(did, app_did, executable_body_filter, params)
+
+    executable_body_update = executable_body.get('update').get('$set')
+    populate_params_insert_update(did, app_did, executable_body_update, params)
 
     options = populate_options_update_one(executable_body)
 
@@ -202,23 +168,9 @@ def run_executable_update(did, app_did, target_did, target_app_did, executable_b
 def run_executable_delete(did, app_did, target_did, target_app_did, executable_body, params):
     if not can_access_vault(target_did, VAULT_ACCESS_R):
         return None, "vault can not be accessed"
-    query = {}
-    for key, value in executable_body.get('filter').items():
-        if isinstance(value, str):
-            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-                query[key] = {"$in": [did]}
-            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-                query[key] = {"$in": [app_did]}
-            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                if not (params and params.get(v, None)):
-                    return None, "Exception: Parameter is not set"
-                query[key] = params[v]
-            else:
-                query[key] = value
-        else:
-            query[key] = value
-    executable_body["filter"] = query
+
+    executable_body_filter = executable_body.get('filter', {})
+    populate_params_find_count_delete(did, app_did, executable_body_filter, params)
 
     old_db_size = get_mongo_database_size(target_did, target_app_did)
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))

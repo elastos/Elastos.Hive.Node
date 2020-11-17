@@ -171,6 +171,8 @@ def get_collection(did, app_id, collection):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
+    if collection not in db.list_collection_names():
+        return None
     col = db[collection]
     return col
 

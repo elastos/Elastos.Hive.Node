@@ -1,57 +1,15 @@
+import os
+
 from flask import request
 
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS, \
-    SCRIPTING_EXECUTABLE_CALLER_APP_DID
+    SCRIPTING_EXECUTABLE_CALLER_APP_DID, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_STORAGE_FILE, VAULT_STORAGE_DB
 from hive.util.did_file_info import query_download, query_properties, query_hash, query_upload_get_filepath
 from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
-    query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection
-
-
-def massage_keys_with_dollar_signs(d):
-    for key, value in d.items():
-        if key[0] == "$" and key not in [SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_CALLER_APP_DID,
-                                         SCRIPTING_EXECUTABLE_PARAMS]:
-            d[key.replace("$", "'$'")] = d.pop(key)
-        if type(value) is dict:
-            massage_keys_with_dollar_signs(value)
-        elif type(value) is list:
-            for item in value:
-                massage_keys_with_dollar_signs(item)
-
-
-def unmassage_keys_with_dollar_signs(d):
-    for key, value in d.items():
-        if key[0:3] == "'$'":
-            d[key.replace("'$'", "$")] = d.pop(key)
-        if type(value) is dict:
-            unmassage_keys_with_dollar_signs(value)
-        elif type(value) is list:
-            for item in value:
-                unmassage_keys_with_dollar_signs(item)
-
-
-def massage_keys_with_dollar_signs(d):
-    for key, value in d.items():
-        if key[0] == "$" and key not in [SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_CALLER_APP_DID,
-                                         SCRIPTING_EXECUTABLE_PARAMS]:
-            d[key.replace("$", "'$'")] = d.pop(key)
-        if type(value) is dict:
-            massage_keys_with_dollar_signs(value)
-        elif type(value) is list:
-            for item in value:
-                massage_keys_with_dollar_signs(item)
-
-
-def unmassage_keys_with_dollar_signs(d):
-    for key, value in d.items():
-        if key[0:3] == "'$'":
-            d[key.replace("'$'", "$")] = d.pop(key)
-        if type(value) is dict:
-            unmassage_keys_with_dollar_signs(value)
-        elif type(value) is list:
-            for item in value:
-                unmassage_keys_with_dollar_signs(item)
+    query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection, \
+    get_mongo_database_size
+from hive.util.payment.vault_service_manage import can_access_vault, inc_file_use_storage_byte
 
 
 def massage_keys_with_dollar_signs(d):
@@ -119,6 +77,8 @@ def run_condition(did, app_did, target_did, target_app_did, condition_body, para
 
 
 def run_executable_find(did, app_did, target_did, target_app_did, executable_body, params):
+    if not can_access_vault(target_did, VAULT_ACCESS_R):
+        return None, "vault can not be accessed"
     query = {}
     executable_body_filter = executable_body.get('filter', None)
     if executable_body_filter:
@@ -150,6 +110,8 @@ def run_executable_find(did, app_did, target_did, target_app_did, executable_bod
 
 
 def run_executable_insert(did, app_did, target_did, target_app_did, executable_body, params):
+    if not can_access_vault(target_did, VAULT_ACCESS_WR):
+        return None, "vault can not be accessed"
     created = False
     query = {}
     for key, value in executable_body.get('document').items():
@@ -175,15 +137,20 @@ def run_executable_insert(did, app_did, target_did, target_app_did, executable_b
 
     options = populate_options_insert_one(executable_body)
 
+    old_db_size = get_mongo_database_size(target_did, target_app_did)
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_insert_one(col, executable_body, options, created=created)
     if err_message:
         return None, err_message
+    db_size = get_mongo_database_size(target_did, target_app_did)
+    inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
 
     return data, None
 
 
 def run_executable_update(did, app_did, target_did, target_app_did, executable_body, params):
+    if not can_access_vault(target_did, VAULT_ACCESS_WR):
+        return None, "vault can not be accessed"
     filter_query = {}
     for key, value in executable_body.get('filter').items():
         if isinstance(value, str):
@@ -221,15 +188,20 @@ def run_executable_update(did, app_did, target_did, target_app_did, executable_b
 
     options = populate_options_update_one(executable_body)
 
+    old_db_size = get_mongo_database_size(target_did, target_app_did)
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_update_one(col, executable_body, options)
     if err_message:
         return None, err_message
+    db_size = get_mongo_database_size(target_did, target_app_did)
+    inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
 
     return data, None
 
 
 def run_executable_delete(did, app_did, target_did, target_app_did, executable_body, params):
+    if not can_access_vault(target_did, VAULT_ACCESS_R):
+        return None, "vault can not be accessed"
     query = {}
     for key, value in executable_body.get('filter').items():
         if isinstance(value, str):
@@ -248,15 +220,20 @@ def run_executable_delete(did, app_did, target_did, target_app_did, executable_b
             query[key] = value
     executable_body["filter"] = query
 
+    old_db_size = get_mongo_database_size(target_did, target_app_did)
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_delete_one(col, executable_body)
     if err_message:
         return None, err_message
+    db_size = get_mongo_database_size(target_did, target_app_did)
+    inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
 
     return data, None
 
 
 def run_executable_file_upload(did, app_did, target_did, target_app_did, executable_body, params):
+    if not can_access_vault(target_did, VAULT_ACCESS_WR):
+        return None, "vault can not be accessed"
     executable_body_path = executable_body.get("path", "")
     file_name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -271,6 +248,8 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
     try:
         uploaded_file = request.files['data']
         uploaded_file.save(full_path_name)
+        file_size = os.path.getsize(full_path_name.as_posix())
+        inc_file_use_storage_byte(target_did, VAULT_STORAGE_FILE, file_size)
     except Exception as e:
         return None, f"Exception: Could not upload file. Error: {str(e)}"
     data = {
@@ -282,6 +261,8 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
 
 
 def run_executable_file_download(did, app_did, target_did, target_app_did, executable_body, params):
+    if not can_access_vault(target_did, VAULT_ACCESS_R):
+        return None, "vault can not be accessed"
     executable_body_path = executable_body.get("path", "")
     file_name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -297,6 +278,8 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
 
 
 def run_executable_file_properties(did, app_did, target_did, target_app_did, executable_body, params):
+    if not can_access_vault(target_did, VAULT_ACCESS_R):
+        return None, "vault can not be accessed"
     executable_body_path = executable_body.get("path", "")
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -312,6 +295,8 @@ def run_executable_file_properties(did, app_did, target_did, target_app_did, exe
 
 
 def run_executable_file_hash(did, app_did, target_did, target_app_did, executable_body, params):
+    if not can_access_vault(target_did, VAULT_ACCESS_R):
+        return None, "vault can not be accessed"
     executable_body_path = executable_body.get("path", "")
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):

@@ -65,5 +65,11 @@ class Entity:
     def get_store_password(self):
         return self.storepass
 
+    def get_error_message(self, prompt):
+        err_message = ffi.string(lib.DIDError_GetMessage()).decode()
+        if not prompt is None:
+            err_message = prompt + " error: " + err_message
+        return err_message
+
 
 

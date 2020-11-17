@@ -4,11 +4,12 @@ import os
 import pathlib
 
 from hive.settings import RCLONE_CONFIG_FILE_DIR
+from hive.util.common import create_full_path_dir
 
 
 class RcloneTool:
     @staticmethod
-    def get_config_data(self, content, did):
+    def get_config_data(content, did):
         access_token = content.get('token')
         refresh_token = content.get('refresh_token')
         expiry = content.get('expiry')
@@ -32,16 +33,21 @@ class RcloneTool:
         return config_data
 
     @staticmethod
-    def find_rclone_config_file(file_name):
-        config_file = pathlib.Path(RCLONE_CONFIG_FILE_DIR).absolute() / file_name
+    def find_rclone_config_file(drive_name):
+        config_file = pathlib.Path(RCLONE_CONFIG_FILE_DIR).absolute() / drive_name
         if config_file.exists():
-            return True
+            return config_file
         else:
-            return False
+            return None
 
     @staticmethod
     def create_rclone_config_file(drive_name, config_data):
-        config_file = pathlib.Path(RCLONE_CONFIG_FILE_DIR).absolute() / drive_name
+        path = pathlib.Path(RCLONE_CONFIG_FILE_DIR).absolute()
+        if not path.exists():
+            path.mkdir(exist_ok=True, parents=True)
+
+        config_file = path / drive_name
+
         if config_file.exists():
             config_file.unlink()
 

@@ -68,10 +68,11 @@ function test () {
 
     # Run tests
     pytest --disable-pytest-warnings -xs tests/hive_auth_test.py
-    pytest --disable-pytest-warnings -xs tests/hive_sync_test.py
     pytest --disable-pytest-warnings -xs tests/hive_mongo_test.py
     pytest --disable-pytest-warnings -xs tests/hive_file_test.py
     pytest --disable-pytest-warnings -xs tests/hive_scripting_test.py
+    pytest --disable-pytest-warnings -xs tests/hive_payment_test.py
+    pytest --disable-pytest-warnings -xs tests/hive_backup_test.py
 }
 
 case "$1" in

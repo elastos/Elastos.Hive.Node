@@ -1,11 +1,9 @@
 from flask import Blueprint, request, jsonify
 
 from hive.main.hive_auth import HiveAuth
-from hive.main.hive_sync import HiveSync
 from hive.main.hive_manage import HiveManage
 
 h_auth = HiveAuth()
-h_sync = HiveSync()
 h_manage = HiveManage()
 
 main = Blueprint('main', __name__)
@@ -13,7 +11,6 @@ main = Blueprint('main', __name__)
 
 def init_app(app):
     h_auth.init_app(app)
-    h_sync.init_app(app)
     h_manage.init_app(app)
     app.register_blueprint(main)
 

@@ -92,13 +92,13 @@ def get_did_info_by_app_instance_did(app_instance_did):
     info = col.find_one(query)
     return info
 
-# def get_did_info_by_did_appid(did, app_id):
-#     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
-#     db = connection[DID_INFO_DB_NAME]
-#     col = db[DID_INFO_REGISTER_COL]
-#     query = {DID: did, APP_ID: app_id}
-#     info = col.find_one(query)
-#     return info
+def get_did_info_by_did_appid(did, app_id):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+    query = {DID: did, APP_ID: app_id}
+    info = col.find_one(query)
+    return info
 
 
 def save_token_to_db(did, app_id, token, expired):

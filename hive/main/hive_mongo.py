@@ -79,6 +79,9 @@ class HiveMongoDb:
         options = populate_options_insert_one(content)
 
         col = get_collection(did, app_id, content["collection"])
+        if not col:
+            return self.response.response_err(404, "collection not exist")
+
         data, err_message = query_insert_one(col, content, options)
         if err_message:
             return self.response.response_err(500, err_message)
@@ -97,6 +100,8 @@ class HiveMongoDb:
         old_db_size = get_mongo_database_size(did, app_id)
 
         col = get_collection(did, app_id, content["collection"])
+        if not col:
+            return self.response.response_err(404, "collection not exist")
 
         options = options_filter(content, ("bypass_document_validation", "ordered"))
 
@@ -129,6 +134,9 @@ class HiveMongoDb:
         options = populate_options_update_one(content)
 
         col = get_collection(did, app_id, content["collection"])
+        if not col:
+            return self.response.response_err(404, "collection not exist")
+
         data, err_message = query_update_one(col, content, options)
         if err_message:
             return self.response.response_err(500, err_message)
@@ -146,6 +154,9 @@ class HiveMongoDb:
         old_db_size = get_mongo_database_size(did, app_id)
 
         col = get_collection(did, app_id, content["collection"])
+        if not col:
+            return self.response.response_err(404, "collection not exist")
+
         options = options_filter(content, ("upsert", "bypass_document_validation"))
 
         try:
@@ -179,6 +190,9 @@ class HiveMongoDb:
 
         old_db_size = get_mongo_database_size(did, app_id)
         col = get_collection(did, app_id, content["collection"])
+        if not col:
+            return self.response.response_err(404, "collection not exist")
+
         data, err_message = query_delete_one(col, content)
         if err_message:
             return self.response.response_err(500, err_message)
@@ -195,6 +209,9 @@ class HiveMongoDb:
 
         old_db_size = get_mongo_database_size(did, app_id)
         col = get_collection(did, app_id, content["collection"])
+        if not col:
+            return self.response.response_err(404, "collection not exist")
+
         try:
             ret = col.delete_many(convert_oid(content["filter"]))
             data = {
@@ -216,6 +233,9 @@ class HiveMongoDb:
         options = populate_options_count_documents(content)
 
         col = get_collection(did, app_id, content["collection"])
+        if not col:
+            return self.response.response_err(404, "collection not exist")
+
         data, err_message = query_count_documents(col, content, options)
         if err_message:
             return self.response.response_err(500, err_message)
@@ -228,6 +248,9 @@ class HiveMongoDb:
             return err
 
         col = get_collection(did, app_id, content["collection"])
+        if not col:
+            return self.response.response_err(404, "collection not exist")
+
         options = options_filter(content, ("projection",
                                            "skip",
                                            "sort",
@@ -258,6 +281,9 @@ class HiveMongoDb:
         options = populate_options_find_many(content)
 
         col = get_collection(did, app_id, content.get('collection'))
+        if not col:
+            return self.response.response_err(404, "collection not exist")
+
         data, err_message = query_find_many(col, content, options)
         if err_message:
             return self.response.response_err(500, err_message)

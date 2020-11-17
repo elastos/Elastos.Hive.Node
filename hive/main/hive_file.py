@@ -70,7 +70,7 @@ class HiveFile:
         return self.response.response_ok()
 
     def upload_file(self, file_name):
-        did, app_id, response = pre_proc(self, access_vault=VAULT_ACCESS_WR)
+        did, app_id, response = pre_proc(self.response, access_vault=VAULT_ACCESS_WR)
         if response is not None:
             return response
 

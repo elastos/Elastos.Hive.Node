@@ -105,7 +105,7 @@ class HiveAuth(Entity):
         # check auth token
         credentialSubject, err = self.__check_auth_token(jwt)
         if credentialSubject is None:
-            return self.response.response_err(400, err)
+            return self.response.response_err(401, err)
 
         # create access token
         expTime = credentialSubject["expTime"]
@@ -301,7 +301,7 @@ class HiveAuth(Entity):
     def check_token(self):
         info, err = self.check_access_token()
         if info is None:
-            return self.response.response_err(400, err)
+            return self.response.response_err(401, err)
         else:
             return self.response.response_ok()
 

@@ -96,7 +96,13 @@ class HiveBackupTestCase(unittest.TestCase):
 
     def test_1_save_to_google_drive_call(self):
         logging.getLogger("HiveBackupTestCase").debug("\nRunning test_1_save_to_google_drive_call")
-        google_auth_token = '''{ "token": "ya29.A0AfH6SMAuwGipoRVMVnvon_C_qqMhzpK53QzDQ8rapZavP_JXa8ASFecIKcKsy91oek8UvjbXfLMB9rlVG3Wj3X4e6drbNGuJjq97U8Lo6uwxwTpcmeybSl0wkQihwXZJlc3fKY31tvsT55vUbSSWwugPETCPZAFs2Oo_MURWbtY", "refresh_token": "1//06-2759fIGiJdCgYIARAAGAYSNwF-L9Irf7R8nimVqT2UieEcO5wtZMk1uNLxyBk_jB2WCPHDY7rhdTV_0WvHp5K09BWy1lUZnng", "token_uri": "https://oauth2.googleapis.com/token", "client_id": "24235223939-guh47dijl0f0idm7h04bd44ulfcodta0.apps.googleusercontent.com", "client_secret": "mqaI40MlghlNkfaFtDBzvpGg", "scopes": ["https://www.googleapis.com/auth/drive"], "expiry": "2020-11-17T05:14:10Z"}'''
+        google_auth_token = '''{
+            "token": "ya29.A0AfH6SMBB9WMZvjyxF2n7lfh4NHKaHdjd7ESfJOvAQctNJqydbM6PDlfV2A4oQT_-aINM_n0qmNPuns22a_Ufwp9C1cyzrjINZ4V1l-HAwR7uH8-BxY4QsKRi0gV0T50JyKm8Bmk5uHUGsZQfJfbMoYcCGZFOdAxuvf7Ue14LFgc",
+            "refresh_token": "1//06gWBqRQQMerxCgYIARAAGAYSNwF-L9IrS5H5ETnTrxfgyMk3b9O1K1pclZducb21cqhwc2rmsLVwUHZCjXM0R4sEyAhXlM6xvPo",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "client_id": "24235223939-guh47dijl0f0idm7h04bd44ulfcodta0.apps.googleusercontent.com",
+            "client_secret": "mqaI40MlghlNkfaFtDBzvpGg", "scopes": ["https://www.googleapis.com/auth/drive"],
+            "expiry": "2020-11-18T04:13:37Z"}'''
         r, s = self.parse_response(
             self.test_client.post('/api/v1/backup/save/to/google_drive',
                                   data=google_auth_token,
@@ -109,7 +115,13 @@ class HiveBackupTestCase(unittest.TestCase):
 
     def test_2_resotre_from_google_drive(self):
         logging.getLogger("HiveBackupTestCase").debug("\nRunning test_2_resotre_from_google_drive")
-        google_auth_token = '''{"token": "ya29.A0AfH6SMAuwGipoRVMVnvon_C_qqMhzpK53QzDQ8rapZavP_JXa8ASFecIKcKsy91oek8UvjbXfLMB9rlVG3Wj3X4e6drbNGuJjq97U8Lo6uwxwTpcmeybSl0wkQihwXZJlc3fKY31tvsT55vUbSSWwugPETCPZAFs2Oo_MURWbtY", "refresh_token": "1//06-2759fIGiJdCgYIARAAGAYSNwF-L9Irf7R8nimVqT2UieEcO5wtZMk1uNLxyBk_jB2WCPHDY7rhdTV_0WvHp5K09BWy1lUZnng", "token_uri": "https://oauth2.googleapis.com/token", "client_id": "24235223939-guh47dijl0f0idm7h04bd44ulfcodta0.apps.googleusercontent.com", "client_secret": "mqaI40MlghlNkfaFtDBzvpGg", "scopes": ["https://www.googleapis.com/auth/drive"], "expiry": "2020-11-17T05:14:10Z"}'''
+        google_auth_token = '''{
+            "token": "ya29.A0AfH6SMBB9WMZvjyxF2n7lfh4NHKaHdjd7ESfJOvAQctNJqydbM6PDlfV2A4oQT_-aINM_n0qmNPuns22a_Ufwp9C1cyzrjINZ4V1l-HAwR7uH8-BxY4QsKRi0gV0T50JyKm8Bmk5uHUGsZQfJfbMoYcCGZFOdAxuvf7Ue14LFgc",
+            "refresh_token": "1//06gWBqRQQMerxCgYIARAAGAYSNwF-L9IrS5H5ETnTrxfgyMk3b9O1K1pclZducb21cqhwc2rmsLVwUHZCjXM0R4sEyAhXlM6xvPo",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "client_id": "24235223939-guh47dijl0f0idm7h04bd44ulfcodta0.apps.googleusercontent.com",
+            "client_secret": "mqaI40MlghlNkfaFtDBzvpGg", "scopes": ["https://www.googleapis.com/auth/drive"],
+            "expiry": "2020-11-18T04:13:37Z"}'''
         r, s = self.parse_response(
             self.test_client.post('/api/v1/backup/restore/from/google_drive',
                                   data=google_auth_token,

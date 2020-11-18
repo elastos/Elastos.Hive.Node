@@ -116,7 +116,8 @@ class HiveBackup:
         if not did_folder.exists():
             create_full_path_dir(did_folder)
         line = f'rclone  --config {rclone_config.as_posix()} sync {drive_name}:elastos_hive_node_data {did_folder.as_posix()}'
-        subprocess.call(line, shell=True)
+        if HiveBackup.mode != HIVE_MODE_TEST:
+            subprocess.call(line, shell=True)
         HiveBackup.import_did_mongodb_data(did)
         update_vault_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
         HiveBackup.delete_did_mongodb_export_data(did)
@@ -131,7 +132,8 @@ class HiveBackup:
         HiveBackup.export_did_mongodb_data(did)
         did_folder = HiveBackup.get_did_vault_path(did)
         line = f'rclone --config {rclone_config.as_posix()} sync {did_folder.as_posix()} {drive_name}:elastos_hive_node_data'
-        subprocess.call(line, shell=True)
+        if HiveBackup.mode != HIVE_MODE_TEST:
+            subprocess.call(line, shell=True)
         update_vault_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
         RcloneTool.remove_rclone_config_file(drive_name)
         HiveBackup.delete_did_mongodb_export_data(did)

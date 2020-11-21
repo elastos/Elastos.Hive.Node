@@ -1,4 +1,8 @@
-from flask import request, jsonify
+import logging
+from datetime import datetime
+import traceback
+
+from flask import request
 from hive.util.auth import did_auth
 from hive.util.server_response import ServerResponse
 from hive.util.payment.vault_service_manage import can_access_vault
@@ -10,7 +14,8 @@ def init_app(app):
 
 def handle_exception_500(e):
     response = ServerResponse("HiveNode")
-    return response.response_err(500, "Exception:" + str(e))
+    logging.getLogger("Hive exception").exception(f"handle_exception_500: {traceback.format_exc()}")
+    return response.response_err(500, f"Exception at {str(datetime.utcnow())} error is:{str(e)}")
 
 
 def pre_proc(response, access_vault=None):

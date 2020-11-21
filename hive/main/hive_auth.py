@@ -278,7 +278,7 @@ class HiveAuth(Entity):
             else:
                 update_did_info_by_app_instance_did(app_instance_did, nonce, exp)
         except Exception as e:
-            logging.debug(f"Exception in __save_nonce_to_db:: {e}")
+            logging.error(f"Exception in __save_nonce_to_db:: {e}")
             return False
 
         return True
@@ -292,7 +292,7 @@ class HiveAuth(Entity):
         try:
             update_token_of_did_info(user_did, app_id, app_instance_did, nonce, token, exp)
         except Exception as e:
-            logging.debug(f"Exception in __save_token_to_db:: {e}")
+            logging.error(f"Exception in __save_token_to_db:: {e}")
             return False
 
         return True

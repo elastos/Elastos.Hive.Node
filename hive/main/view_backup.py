@@ -20,6 +20,7 @@ def save_to_google_drive():
 def restore_from_google_drive():
     return h_backup.restore_from_google_drive()
 
+
 @hive_backup.route('/api/v1/backup/state', methods=['GET'])
 def get_sync_google_drive_state():
     return h_backup.get_sync_google_drive_state()

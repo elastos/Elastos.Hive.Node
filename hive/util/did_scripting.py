@@ -9,7 +9,8 @@ from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
     query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
-from hive.util.payment.vault_service_manage import can_access_vault, inc_file_use_storage_byte
+from hive.util.payment.vault_service_manage import can_access_vault, inc_file_use_storage_byte, \
+    update_db_use_storage_byte
 
 
 def massage_keys_with_dollar_signs(d):
@@ -131,13 +132,12 @@ def run_executable_insert(did, app_did, target_did, target_app_did, executable_b
 
     options = populate_options_insert_one(executable_body)
 
-    old_db_size = get_mongo_database_size(target_did, target_app_did)
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_insert_one(col, executable_body, options, created=created)
     if err_message:
         return None, err_message
     db_size = get_mongo_database_size(target_did, target_app_did)
-    inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+    update_db_use_storage_byte(did,  db_size)
 
     return data, None
 
@@ -154,13 +154,12 @@ def run_executable_update(did, app_did, target_did, target_app_did, executable_b
 
     options = populate_options_update_one(executable_body)
 
-    old_db_size = get_mongo_database_size(target_did, target_app_did)
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_update_one(col, executable_body, options)
     if err_message:
         return None, err_message
     db_size = get_mongo_database_size(target_did, target_app_did)
-    inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+    update_db_use_storage_byte(did,  db_size)
 
     return data, None
 
@@ -172,13 +171,12 @@ def run_executable_delete(did, app_did, target_did, target_app_did, executable_b
     executable_body_filter = executable_body.get('filter', {})
     populate_params_find_count_delete(did, app_did, executable_body_filter, params)
 
-    old_db_size = get_mongo_database_size(target_did, target_app_did)
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_delete_one(col, executable_body)
     if err_message:
         return None, err_message
     db_size = get_mongo_database_size(target_did, target_app_did)
-    inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+    update_db_use_storage_byte(did, db_size)
 
     return data, None
 
@@ -201,7 +199,7 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
         uploaded_file = request.files['data']
         uploaded_file.save(full_path_name)
         file_size = os.path.getsize(full_path_name.as_posix())
-        inc_file_use_storage_byte(target_did, VAULT_STORAGE_FILE, file_size)
+        inc_file_use_storage_byte(target_did, file_size)
     except Exception as e:
         return None, f"Exception: Could not upload file. Error: {str(e)}"
     data = {

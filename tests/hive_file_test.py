@@ -126,6 +126,15 @@ class HiveFileTestCase(unittest.TestCase):
     def test_b_create_and_upload_file_root(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_b_create_and_upload_file_root")
         self.create_upload_file("test_0.txt", "Hello Temp test 0!")
+        self.assert_service_vault_info()
+
+    def assert_service_vault_info(self):
+        r, s = self.parse_response(
+            self.test_client.get('api/v1/service/vault', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertNotEqual(r["vault_service_info"]["file_use_storage"], 0.0)
 
     def test_c_create_and_upload_file_in_folder(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_c_create_and_upload_file_in_folder")

@@ -179,7 +179,7 @@ def get_used_storage(did):
                       VAULT_SERVICE_MODIFY_TIME: now
                       }}
     col.update_one(query, value)
-    return (file_size + db_size) / (1000 * 1000)
+    return (file_size + db_size) / (1024 * 1024)
 
 
 def less_than_max_storage(did):
@@ -190,28 +190,36 @@ def less_than_max_storage(did):
     info = col.find_one(query)
     if info:
         return info[VAULT_SERVICE_MAX_STORAGE] >= (
-                info[VAULT_SERVICE_FILE_USE_STORAGE] + info[VAULT_SERVICE_DB_USE_STORAGE]) / (1000 * 1000)
+                info[VAULT_SERVICE_FILE_USE_STORAGE] + info[VAULT_SERVICE_DB_USE_STORAGE]) / (1024 * 1024)
     else:
         return False
 
 
-def inc_file_use_storage_byte(did, storage_type, size):
+def inc_file_use_storage_byte(did, size):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
-    now = datetime.utcnow().timestamp()
-    if storage_type == VAULT_STORAGE_FILE:
-        dic = {
-            VAULT_SERVICE_FILE_USE_STORAGE: size,
-            VAULT_SERVICE_MODIFY_TIME: now
-        }
-    else:
-        dic = {
-            VAULT_SERVICE_DB_USE_STORAGE: size,
-            VAULT_SERVICE_MODIFY_TIME: now
-        }
-
     query = {VAULT_SERVICE_DID: did}
-    value = {"$inc": dic}
+    info = col.find_one(query)
+    info[VAULT_SERVICE_FILE_USE_STORAGE] = info[VAULT_SERVICE_FILE_USE_STORAGE] + size
+    now = datetime.utcnow().timestamp()
+    info[VAULT_SERVICE_MODIFY_TIME] = now
+    query = {VAULT_SERVICE_DID: did}
+    value = {"$set": info}
+    ret = col.update_one(query, value)
+    return ret
+
+
+def update_db_use_storage_byte(did, size):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_SERVICE_COL]
+    query = {VAULT_SERVICE_DID: did}
+    now = datetime.utcnow().timestamp()
+    dic = {
+        VAULT_SERVICE_DB_USE_STORAGE: size,
+        VAULT_SERVICE_MODIFY_TIME: now
+    }
+    value = {"$set": dic}
     ret = col.update_one(query, value)
     return ret

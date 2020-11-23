@@ -14,7 +14,7 @@ from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, 
     get_mongo_database_size
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc
-from hive.util.payment.vault_service_manage import inc_file_use_storage_byte, less_than_max_storage
+from hive.util.payment.vault_service_manage import update_db_use_storage_byte, less_than_max_storage
 
 
 class HiveMongoDb:
@@ -48,8 +48,6 @@ class HiveMongoDb:
         if err:
             return err
 
-        old_db_size = get_mongo_database_size(did, app_id)
-
         collection_name = content.get('collection', None)
         if collection_name is None:
             return self.response.response_err(400, "parameter is null")
@@ -60,7 +58,7 @@ class HiveMongoDb:
         try:
             db.drop_collection(collection_name)
             db_size = get_mongo_database_size(did, app_id)
-            inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+            update_db_use_storage_byte(did,  db_size)
 
         except CollectionInvalid:
             pass
@@ -74,8 +72,6 @@ class HiveMongoDb:
         if err:
             return err
 
-        old_db_size = get_mongo_database_size(did, app_id)
-
         options = populate_options_insert_one(content)
 
         col = get_collection(did, app_id, content["collection"])
@@ -87,7 +83,7 @@ class HiveMongoDb:
             return self.response.response_err(500, err_message)
 
         db_size = get_mongo_database_size(did, app_id)
-        inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+        update_db_use_storage_byte(did,  db_size)
         return self.response.response_ok(data)
 
     def insert_many(self):
@@ -96,8 +92,6 @@ class HiveMongoDb:
 
         if err:
             return err
-
-        old_db_size = get_mongo_database_size(did, app_id)
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
@@ -114,7 +108,7 @@ class HiveMongoDb:
 
             ret = col.insert_many(new_document, **options)
             db_size = get_mongo_database_size(did, app_id)
-            inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+            update_db_use_storage_byte(did,  db_size)
             data = {
                 "acknowledged": ret.acknowledged,
                 "inserted_ids": [str(_id) for _id in ret.inserted_ids]
@@ -129,8 +123,6 @@ class HiveMongoDb:
         if err:
             return err
 
-        old_db_size = get_mongo_database_size(did, app_id)
-
         options = populate_options_update_one(content)
 
         col = get_collection(did, app_id, content["collection"])
@@ -142,7 +134,7 @@ class HiveMongoDb:
             return self.response.response_err(500, err_message)
 
         db_size = get_mongo_database_size(did, app_id)
-        inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+        update_db_use_storage_byte(did,  db_size)
         return self.response.response_ok(data)
 
     def update_many(self):
@@ -150,8 +142,6 @@ class HiveMongoDb:
                                                              access_vault=VAULT_ACCESS_WR)
         if err:
             return err
-
-        old_db_size = get_mongo_database_size(did, app_id)
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
@@ -169,7 +159,8 @@ class HiveMongoDb:
                 }
             if "$set" in content["update"]:
                 content["update"]["$set"]["modified"] = datetime.utcnow()
-            ret = col.update_many(convert_oid(content["filter"]), convert_oid(content["update"], update=True), **options)
+            ret = col.update_many(convert_oid(content["filter"]), convert_oid(content["update"], update=True),
+                                  **options)
             data = {
                 "acknowledged": ret.acknowledged,
                 "matched_count": ret.matched_count,
@@ -177,7 +168,7 @@ class HiveMongoDb:
                 "upserted_id": str(ret.upserted_id)
             }
             db_size = get_mongo_database_size(did, app_id)
-            inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+            update_db_use_storage_byte(did,  db_size)
             return self.response.response_ok(data)
         except Exception as e:
             return self.response.response_err(500, "Exception:" + str(e))
@@ -188,7 +179,6 @@ class HiveMongoDb:
         if err:
             return err
 
-        old_db_size = get_mongo_database_size(did, app_id)
         col = get_collection(did, app_id, content["collection"])
         if not col:
             return self.response.response_err(404, "collection not exist")
@@ -198,7 +188,7 @@ class HiveMongoDb:
             return self.response.response_err(500, err_message)
 
         db_size = get_mongo_database_size(did, app_id)
-        inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+        update_db_use_storage_byte(did,  db_size)
         return self.response.response_ok(data)
 
     def delete_many(self):
@@ -207,7 +197,6 @@ class HiveMongoDb:
         if err:
             return err
 
-        old_db_size = get_mongo_database_size(did, app_id)
         col = get_collection(did, app_id, content["collection"])
         if not col:
             return self.response.response_err(404, "collection not exist")
@@ -219,7 +208,7 @@ class HiveMongoDb:
                 "deleted_count": ret.deleted_count,
             }
             db_size = get_mongo_database_size(did, app_id)
-            inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+            update_db_use_storage_byte(did,  db_size)
             return self.response.response_ok(data)
         except Exception as e:
             return self.response.response_err(500, "Exception:" + str(e))

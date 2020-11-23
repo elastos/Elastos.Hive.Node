@@ -56,12 +56,12 @@ class HiveFile:
                 if src_full_path_name.is_file():
                     shutil.copy2(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
                     file_size = os.path.getsize(dst_full_path_name.as_posix())
-                    inc_file_use_storage_byte(did, VAULT_STORAGE_FILE, file_size)
+                    inc_file_use_storage_byte(did, file_size)
                 else:
                     shutil.copytree(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
                     dir_size = 0.0
                     get_dir_size(dst_full_path_name.as_posix(), dir_size)
-                    inc_file_use_storage_byte(did, VAULT_STORAGE_FILE, dir_size)
+                    inc_file_use_storage_byte(did, dir_size)
             else:
                 shutil.move(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
         except Exception as e:
@@ -87,8 +87,8 @@ class HiveFile:
                     if len(chunk) == 0:
                         break
                     f.write(chunk)
-                file_size = os.path.getsize(full_path_name.as_posix())
-                inc_file_use_storage_byte(did, VAULT_STORAGE_FILE, file_size)
+            file_size = os.path.getsize(full_path_name.as_posix())
+            inc_file_use_storage_byte(did, file_size)
         except Exception as e:
             return self.response.response_err(500, f"Exception: {str(e)}")
 
@@ -191,10 +191,10 @@ class HiveFile:
                 dir_size = 0.0
                 get_dir_size(file_full_name.as_posix(), dir_size)
                 shutil.rmtree(file_full_name)
-                inc_file_use_storage_byte(did, VAULT_STORAGE_FILE, -dir_size)
+                inc_file_use_storage_byte(did, -dir_size)
             else:
                 file_size = os.path.getsize(file_full_name.as_posix())
                 file_full_name.unlink()
-                inc_file_use_storage_byte(did, VAULT_STORAGE_FILE, -file_size)
+                inc_file_use_storage_byte(did, -file_size)
 
         return self.response.response_ok()

@@ -19,7 +19,7 @@ from hive.util.did_scripting import check_json_param, run_executable_find, run_c
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs
-from hive.util.payment.vault_service_manage import can_access_vault, inc_file_use_storage_byte
+from hive.util.payment.vault_service_manage import can_access_vault, update_db_use_storage_byte
 from hive.util.server_response import ServerResponse
 
 
@@ -61,12 +61,11 @@ class HiveScripting:
 
         options = populate_options_update_one(new_content)
 
-        old_db_size = get_mongo_database_size(did, app_id)
         data, err_message = query_update_one(col, new_content, options)
         if err_message:
             return None, err_message
         db_size = get_mongo_database_size(did, app_id)
-        inc_file_use_storage_byte(did, VAULT_STORAGE_DB, (db_size - old_db_size))
+        update_db_use_storage_byte(did, db_size)
 
         return data, None
 
@@ -168,7 +167,8 @@ class HiveScripting:
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
             err_message = None
             for i, e in enumerate(executable_body):
-                self.__executable_execution(did, app_did, target_did, target_app_did, e, params, output, e.get('name', f"output{i}"),
+                self.__executable_execution(did, app_did, target_did, target_app_did, e, params, output,
+                                            e.get('name', f"output{i}"),
                                             e.get('output', False))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
             data, err_message = run_executable_find(did, app_did, target_did, target_app_did, executable_body, params)

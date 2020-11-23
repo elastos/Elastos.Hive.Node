@@ -47,7 +47,7 @@ def print_err(fun_name=None):
     err = "Error:: "
     if fun_name:
         err += fun_name + ": "
-    logging.debug(f"{err + str(ffi.string(lib.DIDError_GetMessage()), encoding='utf-8')}")
+    logging.error(f"{err + str(ffi.string(lib.DIDError_GetMessage()), encoding='utf-8')}")
 
 def get_error_message():
     return str(ffi.string(lib.DIDError_GetMessage()), encoding='utf-8')

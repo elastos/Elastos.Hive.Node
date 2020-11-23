@@ -1,7 +1,11 @@
+import sentry_sdk
+
 from . import view, view_db, view_file, view_scripting, view_payment, interceptor, scheduler, view_backup
 import logging
 
 from hive.util.constants import HIVE_MODE_DEV, HIVE_MODE_TEST
+from ..settings import HIVE_SENTRY_DSN
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 logging.getLogger().level = logging.INFO
 
@@ -10,6 +14,13 @@ def init_app(app, mode):
     logging.getLogger("Hive").info("##############################")
     logging.getLogger("Hive").info("HIVE BACK-END IS STARTING")
     logging.getLogger("Hive").info("##############################")
+
+    if mode != HIVE_MODE_TEST and HIVE_SENTRY_DSN != "":
+        sentry_sdk.init(
+            dsn=HIVE_SENTRY_DSN,
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=1.0
+        )
 
     interceptor.init_app(app)
     view.init_app(app)

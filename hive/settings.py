@@ -33,6 +33,7 @@ MONGO_PORT = env_config('MONGO_PORT', default=27020, cast=int)
 
 RCLONE_CONFIG_FILE_DIR = env_config('RCLONE_CONFIG_FILE_DIR', default="./.rclone", cast=str)
 HIVE_PAYMENT_CONFIG = env_config('HIVE_PAYMENT_CONFIG', default="./payment_config.json", cast=str)
+HIVE_SENTRY_DSN = env_config('HIVE_SENTRY_DSN', default="", cast=str)
 
 AUTH_CHALLENGE_EXPIRED = 3 * 60
 ACCESS_TOKEN_EXPIRED = 30 * 24 * 60 * 60

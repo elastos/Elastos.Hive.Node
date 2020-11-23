@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 from datetime import datetime
 
@@ -131,7 +132,8 @@ def get_dir_size(input_path, total_size):
             try:
                 get_dir_size(i_path, total_size)
             except RecursionError:
-                print('Err too much for get_file_size')
+                logging.getLogger("Hive_file_info").error("Err: get_dir_size too much for get_file_size")
+
     return total_size
 
 

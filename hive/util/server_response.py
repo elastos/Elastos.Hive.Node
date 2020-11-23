@@ -22,5 +22,5 @@ class ServerResponse:
     def response_err(self, code, msg):
         ret = {STATUS: STATUS_ERR}
         ret.update({"_error": {"code": code, "message": msg}})
-        self.logger.debug(msg)
+        self.logger.error(msg)
         return jsonify(ret), code

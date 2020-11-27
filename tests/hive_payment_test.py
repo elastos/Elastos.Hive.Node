@@ -84,6 +84,7 @@ class HivePaymentTestCase(unittest.TestCase):
                      VAULT_ORDER_TXIDS: [],
                      VAULT_ORDER_STATE: VAULT_ORDER_STATE_WAIT_PAY,
                      VAULT_ORDER_CREATE_TIME: 1591703601,
+                     VAULT_ORDER_PAY_TIME: 1591703601,
                      VAULT_ORDER_MODIFY_TIME: 1591703601
                      }
         ret = order_col.insert_one(order_dic)

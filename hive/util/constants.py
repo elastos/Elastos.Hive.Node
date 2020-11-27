@@ -31,6 +31,7 @@ VAULT_ORDER_PACKAGE_INFO = "pricing_info"
 VAULT_ORDER_TXIDS = "pay_txids"
 VAULT_ORDER_STATE = "state"
 VAULT_ORDER_CREATE_TIME = "creat_time"
+VAULT_ORDER_PAY_TIME = "pay_time"
 VAULT_ORDER_MODIFY_TIME = "modify_time"
 
 VAULT_SERVICE_COL = "vault_service"

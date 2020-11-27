@@ -63,7 +63,7 @@ class HivePayment:
             if info[VAULT_ORDER_STATE] == VAULT_ORDER_STATE_SUCCESS:
                 return self.response.response_ok({"message": "order has been effective"})
             if info[VAULT_ORDER_TXIDS]:
-                return self.response.response_err(400, "order has been payed no need to pay again")
+                return self.response.response_ok({"message": "order has been payed no need to pay again"})
 
         # check whether txids have been used by other order
         for txid in content["pay_txids"]:
@@ -73,7 +73,7 @@ class HivePayment:
 
         info[VAULT_ORDER_TXIDS] = content["pay_txids"]
         info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_WAIT_TX
-        info[VAULT_ORDER_MODIFY_TIME] = datetime.utcnow().timestamp()
+        info[VAULT_ORDER_PAY_TIME] = datetime.utcnow().timestamp()
         update_order_info(info["_id"], info)
         return self.response.response_ok()
 
@@ -131,3 +131,4 @@ class HivePayment:
             data["vault_service_info"] = info
 
             return self.response.response_ok(data)
+

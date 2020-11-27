@@ -126,9 +126,12 @@ def deal_order_tx(info):
     if amount < 0.001:
         info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_SUCCESS
     else:
-        modify_time = info[VAULT_ORDER_MODIFY_TIME]
+        #Just be compatible
+        if VAULT_ORDER_PAY_TIME not in info:
+            info[VAULT_ORDER_PAY_TIME] = info[VAULT_ORDER_MODIFY_TIME]
+        pay_time = info[VAULT_ORDER_PAY_TIME]
         now = datetime.utcnow().timestamp()
-        if (now - modify_time) > (PaymentConfig.get_tx_timeout() * 60):
+        if (now - pay_time) > (PaymentConfig.get_tx_timeout() * 60):
             info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_WAIT_TX_TIMEOUT
 
     update_order_info(info["_id"], info)

@@ -3,7 +3,8 @@ import os
 from flask import request
 
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS, \
-    SCRIPTING_EXECUTABLE_CALLER_APP_DID, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_STORAGE_FILE, VAULT_STORAGE_DB
+    SCRIPTING_EXECUTABLE_CALLER_APP_DID, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_STORAGE_FILE, VAULT_STORAGE_DB, \
+    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from hive.util.did_file_info import query_download, query_properties, query_hash, query_upload_get_filepath
 from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
@@ -195,18 +196,30 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
     full_path_name, err = query_upload_get_filepath(target_did, target_app_did, file_name)
     if err:
         return None, f"Exception: Could not upload file. Status={err['status_code']} Error='{err['description']}'"
-    try:
-        uploaded_file = request.files['data']
-        uploaded_file.save(full_path_name)
-        file_size = os.path.getsize(full_path_name.as_posix())
-        inc_file_use_storage_byte(target_did, file_size)
-    except Exception as e:
-        return None, f"Exception: Could not upload file. Error: {str(e)}"
-    data = {
-        "upload": "Successful",
-        "path": file_name,
-        "vault_endpoint": f"/api/v1/files/download?path={file_name}"
+
+    content = {
+        "document": {
+            "target_did": target_did,
+            "target_app_did": target_app_did,
+            "file_name": file_name
+        }
     }
+    col = get_collection(did, app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
+    if not col:
+        return None, f"collection {SCRIPTING_SCRIPT_TEMP_TX_COLLECTION} does not exist"
+    data, err_message = query_insert_one(col, content, {})
+    if err_message:
+        return None, f"Could not insert data into the database: Err: {err_message}"
+    db_size = get_mongo_database_size(did, app_did)
+    update_db_use_storage_byte(did, db_size)
+
+    transaction_id = data.get("inserted_id", None)
+    if not transaction_id:
+        return None, f"Could not retrieve the transaction ID. Please try again"
+    data = {
+        "transaction_id": transaction_id
+    }
+
     return data, None
 
 
@@ -221,9 +234,29 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
             return None, "Exception: Parameter is not set"
         file_name = params[v]
 
-    data, status_code = query_download(target_did, target_app_did, file_name)
-    if status_code != 200:
-        return None, f"Exception: Could not download file. Status={status_code}"
+    content = {
+        "document": {
+            "target_did": target_did,
+            "target_app_did": target_app_did,
+            "file_name": file_name
+        }
+    }
+    col = get_collection(did, app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
+    if not col:
+        return None, f"collection {SCRIPTING_SCRIPT_TEMP_TX_COLLECTION} does not exist"
+    data, err_message = query_insert_one(col, content, {})
+    if err_message:
+        return None, f"Could not insert data into the database: Err: {err_message}"
+    db_size = get_mongo_database_size(did, app_did)
+    update_db_use_storage_byte(did, db_size)
+
+    transaction_id = data.get("inserted_id", None)
+    if not transaction_id:
+        return None, f"Could not retrieve the transaction ID. Please try again"
+    data = {
+        "transaction_id": transaction_id
+    }
+
     return data, None
 
 

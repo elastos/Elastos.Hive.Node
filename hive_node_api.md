@@ -1367,22 +1367,42 @@ return:
 ```
 
 - Run a script to upload a file
-NOTE: The upload works a bit differently compared to other types of executable queries because you will need to pass the json data as "metaddata" as a multipart-form data along with the actual file passed as "data" form field
+NOTE: The upload works a bit differently compared to other types of executable queries because there are two steps to this executable. First, you run the script to get a transaction ID and then secondly, you call a second API endpoint to actually upload the file related to that transaction ID
 ```json
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
-data: file data
-metadata: the json parameters
-    Example Request: 
-      curl -XPOST -F data=@run.sh http://localhost:5000/api/v1/scripting/run_script -H "Authorization: token $token" -H "Content-Type: multipart/form-data" -F "metadata=
-      {
-        \"name\": \"upload_picture\",
-        \"params\": {
-          \"group_id\": {\"\$oid\": \"5f84cbadc889d24b8013f0c6\"},
-          \"path\": \"run.sh_bak\"
+Content-Type: "application/json"
+data: 
+    {
+      "name": "upload_file",
+      "group_id": {"\$oid": "5fc46c9f3409d8a253dd8132"},
+        "path": "logging.conf"
+      }
+    }
+return:
+    Success:
+    {
+      "_status": "OK",
+      "upload_file": {
+        "transaction_id": "5fc4b654d3ae60e2286f0ac0"
+      }
+    }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
         }
-      }"
+```
+Then, run the second API endpoint to upload the file
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script_upload/transaction_id
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+data: file data
 return:
     Success: {"_status":"OK"}
     Failure:
@@ -1396,8 +1416,7 @@ return:
 ```
 
 - Run a script to download a file
-NOTE: The download works a bit differently compared to other types of executable queries because you can either download something or get output as json but cannot do both. If you have set "output" to true for any of the "fileDownload" type in the list of executables, that will always take precedence so it'll ignore other "output" flags set on any other executable
-You will also need to add an additional flag "--output"(if you're using curl) followed by the name you want to give the downloaded file
+NOTE: The download works a bit differently compared to other types of executable queries because there are two steps to this executable. First, you run the script to get a transaction ID and then secondly, you call a second API endpoint to actually download the file related to that transaction ID
 ```json
 HTTP: POST
 URL: /api/v1/scripting/run_script
@@ -1412,15 +1431,39 @@ data:
       }
     }
 return:
+    Success:
+    {
+      "_status": "OK",
+      "download_file": {
+        "transaction_id": "5fc4b8ef740754a38ad9fd09"
+      }
+    }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+Then, run the second API endpoint to download the file
+```json
+HTTP: POST
+URL: /api/v1/scripting/run_script_download/transaction_id
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+data: file data
+return:
     Success: file data
     Failure:
-      {
-        "_status": "ERR",
-        "_error": {
-          "code": 401,
-          "message": "Error message"
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
         }
-      }
+comment: support content range
 ```
 
 - Run a script to get properties and hash of a file

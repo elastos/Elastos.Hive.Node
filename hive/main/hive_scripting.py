@@ -1,6 +1,8 @@
 import copy
 import json
+import os
 
+from bson import ObjectId
 from flask import request
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
@@ -12,14 +14,17 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, \
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_DOWNLOADABLE, \
-    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, VAULT_STORAGE_DB
+    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, VAULT_STORAGE_DB, \
+    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
+from hive.util.did_file_info import filter_path_root, query_upload_get_filepath, query_download
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one, populate_options_update_one, \
-    get_collection, get_mongo_database_size
+    get_collection, get_mongo_database_size, query_delete_one
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs
-from hive.util.payment.vault_service_manage import can_access_vault, update_db_use_storage_byte
+from hive.util.payment.vault_service_manage import can_access_vault, update_db_use_storage_byte, \
+    inc_file_use_storage_byte
 from hive.util.server_response import ServerResponse
 
 
@@ -36,15 +41,20 @@ class HiveScripting:
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
 
-        if SCRIPTING_SCRIPT_COLLECTION not in db.list_collection_names():
-            try:
-                col = db.create_collection(SCRIPTING_SCRIPT_COLLECTION)
-            except CollectionInvalid:
-                pass
-            except Exception as e:
-                return None, f"Could not create collection. Please try again later. Exception : {str(e)}"
-        else:
-            col = get_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
+        try:
+            db.create_collection(SCRIPTING_SCRIPT_COLLECTION)
+        except CollectionInvalid:
+            pass
+        except Exception as e:
+            return None, f"Could not create collection. Please try again later. Exception : {str(e)}"
+        try:
+            db.create_collection(SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
+        except CollectionInvalid:
+            pass
+        except Exception as e:
+            return None, f"Could not create collection. Please try again later. Exception : {str(e)}"
+
+        col = get_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
 
         new_content = {
             "filter": {
@@ -179,21 +189,13 @@ class HiveScripting:
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
             data, err_message = run_executable_delete(did, app_did, target_did, target_app_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD:
-            data, err_message = {}, None
-            if capture_output:
-                data, err_message = run_executable_file_upload(did, app_did, target_did, target_app_did,
-                                                               executable_body, params)
+            data, err_message = run_executable_file_upload(did, app_did, target_did, target_app_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
-            data, err_message = run_executable_file_download(did, app_did, target_did, target_app_did, executable_body,
-                                                             params)
-            if capture_output:
-                output[SCRIPTING_EXECUTABLE_DOWNLOADABLE] = output_key
+            data, err_message = run_executable_file_download(did, app_did, target_did, target_app_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES:
-            data, err_message = run_executable_file_properties(did, app_did, target_did, target_app_did,
-                                                               executable_body, params)
+            data, err_message = run_executable_file_properties(did, app_did, target_did, target_app_did, executable_body, params)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_HASH:
-            data, err_message = run_executable_file_hash(did, app_did, target_did, target_app_did, executable_body,
-                                                         params)
+            data, err_message = run_executable_file_hash(did, app_did, target_did, target_app_did, executable_body, params)
         else:
             data, err_message = None, f"invalid executable type '{executable_type}'"
 
@@ -255,28 +257,10 @@ class HiveScripting:
         return self.response.response_ok(data)
 
     def run_script(self):
-        content = {}
-        # Sometimes, the script may be uploading a file so we need to handle the multi-form data first
-        try:
-            metadata = request.form.get('metadata', {})
-            if metadata:
-                content = json.loads(metadata)
-                if content:
-                    caller_did, caller_app_did, response = pre_proc(self)
-                    if response is not None:
-                        return response
-                    valid_content = check_json_param(content, content.get("name", ""), args=["name", "params"])
-                    if valid_content:
-                        err_message = "Exception: parameter is not valid"
-                        return self.response.response_err(400, err_message)
-        except ValueError as e:
-            pass
-
-        if not content:
-            # Request the Caller DID and Caller App Validation
-            caller_did, caller_app_did, content, err = post_json_param_pre_proc(self.response, "name")
-            if err:
-                return err
+        # Request the Caller DID and Caller App Validation
+        caller_did, caller_app_did, content, err = post_json_param_pre_proc(self.response, "name")
+        if err:
+            return err
 
         target_did, target_app_did = caller_did, caller_app_did
         # Request the Target DID and Target App Validation if present
@@ -310,7 +294,7 @@ class HiveScripting:
         if condition:
             # Currently, there's only one kind of condition("count" db query)
             if not can_access_vault(target_did, VAULT_ACCESS_R):
-                return response.response_err(401, "vault can not be accessed")
+                return self.response.response_err(401, "vault can not be accessed")
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:
@@ -322,9 +306,103 @@ class HiveScripting:
         output = {}
         data = self.__executable_execution(caller_did, caller_app_did, target_did, target_app_did, executable, params,
                                            output=output, output_key=executable.get('name', "output0"))
-        download_file = output.get(SCRIPTING_EXECUTABLE_DOWNLOADABLE, None)
-        if download_file:
-            data = output.get(download_file)
-            return data
 
         return self.response.response_ok(data)
+
+    def run_script_upload(self, transaction_id):
+        caller_did, caller_app_did, response = pre_proc(self.response, access_vault=VAULT_ACCESS_WR)
+        if response is not None:
+            return response
+
+        # Find the temporary tx in the database
+        col = get_collection(caller_did, caller_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
+        content_filter = {
+            "_id": ObjectId(transaction_id)
+        }
+
+        err_message = f"could not find the transaction ID '{transaction_id}' in the database"
+        try:
+            script_temp_tx = col.find_one(content_filter)
+        except Exception as e:
+            err_message = f"{err_message}. Exception: {str(e)}"
+            return self.response.response_err(404, err_message)
+
+        if not script_temp_tx:
+            return self.response.response_err(404, err_message)
+
+        target_did = script_temp_tx.get('target_did', None)
+        target_app_did = script_temp_tx.get('target_app_did', None)
+        file_name = script_temp_tx.get('file_name', None)
+
+        file_name = filter_path_root(file_name)
+
+        full_path_name, err = query_upload_get_filepath(target_did, target_app_did, file_name)
+        if err:
+            return self.response.response_err(err["status_code"], err["description"])
+        try:
+            with open(full_path_name, "bw") as f:
+                chunk_size = 4096
+                while True:
+                    chunk = request.stream.read(chunk_size)
+                    if len(chunk) == 0:
+                        break
+                    f.write(chunk)
+            file_size = os.path.getsize(full_path_name.as_posix())
+            inc_file_use_storage_byte(target_did, file_size)
+        except Exception as e:
+            return self.response.response_err(500, f"Exception: {str(e)}")
+
+        content_filter = {
+            "filter": {
+                "_id": ObjectId(transaction_id)
+            }
+        }
+        _, err_message = query_delete_one(col, content_filter)
+        if err_message:
+            return self.response.response_err(500, err_message)
+        db_size = get_mongo_database_size(caller_did, caller_app_did)
+        update_db_use_storage_byte(caller_did,  db_size)
+
+        return self.response.response_ok()
+
+    def run_script_download(self, transaction_id):
+        caller_did, caller_app_did, response = pre_proc(self.response, access_vault=VAULT_ACCESS_R)
+        if response is not None:
+            return response
+
+        # Find the temporary tx in the database
+        col = get_collection(caller_did, caller_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
+        content_filter = {
+            "_id": ObjectId(transaction_id)
+        }
+
+        err_message = f"could not find the transaction ID '{transaction_id}' in the database"
+        try:
+            script_temp_tx = col.find_one(content_filter)
+        except Exception as e:
+            err_message = f"{err_message}. Exception: {str(e)}"
+            return self.response.response_err(404, err_message)
+
+        if not script_temp_tx:
+            return self.response.response_err(404, err_message)
+
+        target_did = script_temp_tx.get('target_did', None)
+        target_app_did = script_temp_tx.get('target_app_did', None)
+        file_name = script_temp_tx.get('file_name', None)
+
+        data, status_code = query_download(target_did, target_app_did, file_name)
+        if status_code != 200:
+            return self.response.response_err(status_code, "Could not download file")
+
+        content_filter = {
+            "filter": {
+                "_id": ObjectId(transaction_id)
+            }
+        }
+        _, err_message = query_delete_one(col, content_filter)
+        if err_message:
+            return self.response.response_err(500, err_message)
+        db_size = get_mongo_database_size(caller_did, caller_app_did)
+        update_db_use_storage_byte(caller_did,  db_size)
+
+        return data

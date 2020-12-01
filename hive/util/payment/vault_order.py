@@ -18,6 +18,7 @@ VAULT_ORDER_STATE_WAIT_PAY_TIMEOUT = "wait_pay_timeout"
 VAULT_ORDER_STATE_WAIT_TX_TIMEOUT = "wait_tx_timeout"
 VAULT_ORDER_STATE_FAILED = "failed"
 VAULT_ORDER_STATE_SUCCESS = "success"
+VAULT_ORDER_STATE_CANCELED = "canceled"
 
 logger = logging.getLogger("vault_order")
 
@@ -44,7 +45,20 @@ def find_txid(txid):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
-    query = {"VAULT_ORDER_TXIDS": txid}
+    query = {VAULT_ORDER_TXIDS: txid}
+    ret = col.find(query)
+    return ret
+
+
+def find_canceled_order_by_txid(did, txid):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_ORDER_COL]
+    query = {
+        VAULT_ORDER_DID: did,
+        VAULT_ORDER_TXIDS: txid,
+        VAULT_ORDER_STATE: VAULT_ORDER_STATE_CANCELED
+    }
     ret = col.find(query)
     return ret
 
@@ -116,17 +130,20 @@ def deal_order_tx(info):
         if value:
             amount -= value
             if create_time > block_time:
-                logger.error(
-                    "deal_order_tx failed. tx:" + tx + " block_time:" + str(block_time) + " creat_time" + str(
-                        create_time))
-                info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_FAILED
-                update_order_info(info["_id"], info)
-                return info[VAULT_ORDER_STATE]
+                info_cursor = find_canceled_order_by_txid(info[VAULT_ORDER_DID], tx)
+                print(f"count is :{info_cursor.count()}")
+                if info_cursor.count() == 0:
+                    logger.error(
+                        "deal_order_tx failed. tx:" + tx + " block_time:" + str(block_time) + " creat_time" + str(
+                            create_time))
+                    info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_FAILED
+                    update_order_info(info["_id"], info)
+                    return info[VAULT_ORDER_STATE]
 
     if amount < 0.001:
         info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_SUCCESS
     else:
-        #Just be compatible
+        # Just be compatible
         if VAULT_ORDER_PAY_TIME not in info:
             info[VAULT_ORDER_PAY_TIME] = info[VAULT_ORDER_MODIFY_TIME]
         pay_time = info[VAULT_ORDER_PAY_TIME]

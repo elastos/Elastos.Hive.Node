@@ -77,18 +77,31 @@ class HivePaymentTestCase(unittest.TestCase):
 
         package_info = PaymentConfig.get_pricing_plan("Rookie")
         self.assertNotEqual(package_info, None)
+        # init some cancel order to test cancel order txid use in new order
+        order_dic = {VAULT_ORDER_DID: self.did,
+                     VAULT_ORDER_APP_ID: self.app_id,
+                     VAULT_ORDER_PACKAGE_INFO: package_info,
+                     VAULT_ORDER_TXIDS: ["4813ba481d0e18c4fa03ddc35c32ffbd88080fba14fec8c0c31e5843e6399940"],
+                     VAULT_ORDER_STATE: VAULT_ORDER_STATE_CANCELED,
+                     VAULT_ORDER_CREATE_TIME: 1591000001,
+                     VAULT_ORDER_PAY_TIME: 1591000031,
+                     VAULT_ORDER_MODIFY_TIME: 1591000031
+                     }
+        order_col.insert_one(order_dic)
 
         order_dic = {VAULT_ORDER_DID: self.did,
                      VAULT_ORDER_APP_ID: self.app_id,
                      VAULT_ORDER_PACKAGE_INFO: package_info,
                      VAULT_ORDER_TXIDS: [],
                      VAULT_ORDER_STATE: VAULT_ORDER_STATE_WAIT_PAY,
-                     VAULT_ORDER_CREATE_TIME: 1591703601,
-                     VAULT_ORDER_PAY_TIME: 1591703601,
-                     VAULT_ORDER_MODIFY_TIME: 1591703601
+                     VAULT_ORDER_CREATE_TIME: 1591703801,
+                     VAULT_ORDER_PAY_TIME: 1591703801,
+                     VAULT_ORDER_MODIFY_TIME: 1591703801
                      }
         ret = order_col.insert_one(order_dic)
         self.test_order_id = str(ret.inserted_id)
+
+
 
     def change_service(self, start_time, end_time, max_storage, pricing_name):
         info = get_vault_service(self.did)

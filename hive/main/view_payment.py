@@ -41,6 +41,11 @@ def pay_vault_package_order():
     return h_payment.pay_vault_package_order()
 
 
+@hive_payment.route('/api/v1/payment/cancel_vault_package_order', methods=['POST'])
+def cancel_vault_package_order():
+    return h_payment.cancel_vault_package_order()
+
+
 @hive_payment.route('/api/v1/payment/vault_package_order', methods=['GET'])
 def vault_package_order():
     return h_payment.get_vault_package_order()

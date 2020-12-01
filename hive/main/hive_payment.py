@@ -65,11 +65,14 @@ class HivePayment:
             if info[VAULT_ORDER_TXIDS]:
                 return self.response.response_ok({"message": "order has been payed no need to pay again"})
 
-        # check whether txids have been used by other order
+        # check whether txids have been used by other order which not be canceled
         for txid in content["pay_txids"]:
             info_cursor = find_txid(txid)
-            if info_cursor.count() != 0:
-                return self.response.response_err(400, "txid:" + txid + " has been used")
+            for info_c in info_cursor:
+                if (info_c["_id"] != content["order_id"]) \
+                        and ((info_c[VAULT_ORDER_STATE] != VAULT_ORDER_STATE_CANCELED) \
+                             or (info_c[VAULT_ORDER_DID] != did)):
+                    return self.response.response_err(400, "txid:" + txid + " has been used")
 
         info[VAULT_ORDER_TXIDS] = content["pay_txids"]
         info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_WAIT_TX
@@ -102,6 +105,16 @@ class HivePayment:
             self.__id_to_order_id(info)
         return self.response.response_ok({"order_info_list": info_list})
 
+    def cancel_vault_package_order(self):
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "order_id")
+        if err:
+            return err
+        order_id = content['order_id']
+        info = get_order_info_by_id(ObjectId(order_id))
+        if info[VAULT_ORDER_STATE] == VAULT_ORDER_STATE_WAIT_TX \
+                or info[VAULT_ORDER_STATE] == VAULT_ORDER_STATE_WAIT_PAY:
+            info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_CANCELED
+
     def create_vault(self):
         did, app_id, err = pre_proc(self.response)
         if err:
@@ -131,4 +144,3 @@ class HivePayment:
             data["vault_service_info"] = info
 
             return self.response.response_ok(data)
-

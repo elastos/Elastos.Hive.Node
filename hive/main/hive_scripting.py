@@ -1,6 +1,6 @@
 import copy
-import json
 import os
+import logging
 
 from bson import ObjectId
 from flask import request
@@ -226,11 +226,14 @@ class HiveScripting:
         if err:
             return err
 
+        logging.debug(f"Registering a script named '{content.get('name')}' with params: DID: '{did}', App DID: '{app_id}'")
+
         # Data Validation
         executable = content.get('executable')
         massage_keys_with_dollar_signs(executable)
         err_message = self.__executable_validation(executable)
         if err_message:
+            logging.debug(f"Error while validating executables: {err_message}")
             return self.response.response_err(400, err_message)
 
         # Condition Validation
@@ -238,15 +241,18 @@ class HiveScripting:
         if condition:
             err_message = check_json_param(condition, "condition", args=["type", "name", "body"])
             if err_message:
+                logging.debug(f"Error while validating conditions: {err_message}")
                 return self.response.response_err(400, err_message)
             nested_count = self.__count_nested_condition(condition)
             for count in nested_count.values():
                 if count >= 5:
                     err_message = "conditions cannot be nested more than 5 times"
+                    logging.debug(f"Error while validating conditions: {err_message}")
                     return self.response.response_err(400, err_message)
             is_valid = self.__condition_validation(condition)
             if not is_valid:
                 err_message = "some of the parameters are not set for 'condition'"
+                logging.debug(f"Error while validating conditions: {err_message}")
                 return self.response.response_err(400, err_message)
 
         # Create collection "scripts" if it doesn't exist and
@@ -270,7 +276,16 @@ class HiveScripting:
             target_app_did = context.get('target_app_did', caller_app_did)
 
         if not can_access_vault(target_did, VAULT_ACCESS_R):
+            logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
             return self.response.response_err(402, "vault can not be accessed")
+
+        if not target_app_did:
+            logging.debug(f"Error while executing script named '{content.get('name')}': target_app_did not set")
+            return self.response.response_err(402, "target_app_did not set")
+
+        logging.debug(f"Executing a script named '{content.get('name')}' with params: "
+                      f"Caller DID: '{caller_did}', Caller App DID: '{caller_app_did}', "
+                      f"Target DID: '{target_did}', Target App DID: '{target_app_did}'")
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -284,9 +299,11 @@ class HiveScripting:
             script = col.find_one(content_filter)
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
+            logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
             return self.response.response_err(404, err_message)
 
         if not script:
+            logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
             return self.response.response_err(404, err_message)
 
         params = content.get('params', None)
@@ -294,11 +311,13 @@ class HiveScripting:
         if condition:
             # Currently, there's only one kind of condition("count" db query)
             if not can_access_vault(target_did, VAULT_ACCESS_R):
+                logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
                 return self.response.response_err(401, "vault can not be accessed")
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
+                logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
                 return self.response.response_err(403, err_message)
 
         executable = script.get("executable")
@@ -325,9 +344,11 @@ class HiveScripting:
             script_temp_tx = col.find_one(content_filter)
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
+            logging.debug(f"Error while executing file upload via scripting: {err_message}")
             return self.response.response_err(404, err_message)
 
         if not script_temp_tx:
+            logging.debug(f"Error while executing file upload via scripting: {err_message}")
             return self.response.response_err(404, err_message)
 
         target_did = script_temp_tx.get('target_did', None)
@@ -338,6 +359,7 @@ class HiveScripting:
 
         full_path_name, err = query_upload_get_filepath(target_did, target_app_did, file_name)
         if err:
+            logging.debug(f"Error while executing file upload via scripting: {err['description']}")
             return self.response.response_err(err["status_code"], err["description"])
         try:
             with open(full_path_name, "bw") as f:
@@ -350,6 +372,7 @@ class HiveScripting:
             file_size = os.path.getsize(full_path_name.as_posix())
             inc_file_use_storage_byte(target_did, file_size)
         except Exception as e:
+            logging.debug(f"Error while executing file upload via scripting: {str(e)}")
             return self.response.response_err(500, f"Exception: {str(e)}")
 
         content_filter = {
@@ -359,6 +382,7 @@ class HiveScripting:
         }
         _, err_message = query_delete_one(col, content_filter)
         if err_message:
+            logging.debug(f"Error while executing file upload via scripting: {err_message}")
             return self.response.response_err(500, err_message)
         db_size = get_mongo_database_size(caller_did, caller_app_did)
         update_db_use_storage_byte(caller_did,  db_size)
@@ -381,9 +405,11 @@ class HiveScripting:
             script_temp_tx = col.find_one(content_filter)
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
+            logging.debug(f"Error while executing file download via scripting: {err_message}")
             return self.response.response_err(404, err_message)
 
         if not script_temp_tx:
+            logging.debug(f"Error while executing file download via scripting: {err_message}")
             return self.response.response_err(404, err_message)
 
         target_did = script_temp_tx.get('target_did', None)
@@ -392,6 +418,7 @@ class HiveScripting:
 
         data, status_code = query_download(target_did, target_app_did, file_name)
         if status_code != 200:
+            logging.debug(f"Error while executing file download via scripting: Could not download file")
             return self.response.response_err(status_code, "Could not download file")
 
         content_filter = {
@@ -401,6 +428,7 @@ class HiveScripting:
         }
         _, err_message = query_delete_one(col, content_filter)
         if err_message:
+            logging.debug(f"Error while executing file download via scripting: {err_message}")
             return self.response.response_err(500, err_message)
         db_size = get_mongo_database_size(caller_did, caller_app_did)
         update_db_use_storage_byte(caller_did,  db_size)

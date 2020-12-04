@@ -94,9 +94,9 @@ class HivePaymentTestCase(unittest.TestCase):
                      VAULT_ORDER_PACKAGE_INFO: package_info,
                      VAULT_ORDER_TXIDS: [],
                      VAULT_ORDER_STATE: VAULT_ORDER_STATE_WAIT_PAY,
-                     VAULT_ORDER_CREATE_TIME: 1591703801,
-                     VAULT_ORDER_PAY_TIME: 1591703801,
-                     VAULT_ORDER_MODIFY_TIME: 1591703801
+                     VAULT_ORDER_CREATE_TIME: (1591703671+36288000),
+                     VAULT_ORDER_PAY_TIME: (1591703671+36288000),
+                     VAULT_ORDER_MODIFY_TIME: (1591703671+36288000)
                      }
         ret = order_col.insert_one(order_dic)
         self.test_order_id = str(ret.inserted_id)

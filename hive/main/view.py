@@ -48,6 +48,17 @@ def request_did_auth():
 def check_token():
     return h_auth.check_token()
 
+@main.route('/api/v1/did/backup_request', methods=['POST'])
+def backup_request():
+    return h_auth.backup_request()
+
+@main.route('/api/v1/did/backup_auth', methods=['POST'])
+def backup_auth():
+    return h_auth.backup_auth()
+
+@main.route('/api/v1/did/check_backup_token', methods=['POST'])
+def check_backup_token():
+    return h_auth.check_backup_token()
 
 @main.route('/api/v1/did/<did_base58>/<app_id_base58>/callback', methods=['POST'])
 def did_auth_callback(did_base58, app_id_base58):

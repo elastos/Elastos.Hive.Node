@@ -8,7 +8,7 @@ from hive.main import view
 
 
 def did_auth():
-    info, err = view.h_auth.check_access_token()
+    info, err = view.h_auth.get_access_token_info()
     if not info is None:
         return info[DID], info[APP_ID]
     else:

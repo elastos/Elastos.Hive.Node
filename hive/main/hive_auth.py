@@ -133,10 +133,12 @@ class HiveAuth(Entity):
 
         vp_str = lib.JWT_GetClaimAsJson(jws, "presentation".encode())
         if not vp_str:
+            lib.JWT_Destroy(jws)
             return None, "The jwt's presentation is none."
 
         vp = lib.Presentation_FromJson(vp_str)
         if not vp:
+            lib.JWT_Destroy(jws)
             return None, "The presentation string is error, unable to rebuild to a presentation object."
 
         vp_json = json.loads(ffi.string(vp_str).decode())
@@ -303,35 +305,42 @@ class HiveAuth(Entity):
 
         issuer = lib.JWT_GetIssuer(jws)
         if not issuer:
+            lib.JWT_Destroy(jws)
             return None, self.get_error_message("JWT getIssuer")
 
         issuer = ffi.string(issuer).decode()
         if issuer != self.get_did_string():
+            lib.JWT_Destroy(jws)
             return None, "Then issuer is invalid!"
 
         expired =  lib.JWT_GetExpiration(jws)
         now = (int)(datetime.now().timestamp())
         if now > expired:
+            lib.JWT_Destroy(jws)
             return None, "Then token is expired!"
 
         did = lib.JWT_GetClaim(jws, "userDid".encode())
         if not did:
+            lib.JWT_Destroy(jws)
             return None, "Then user did is none!"
 
         appid = lib.JWT_GetClaim(jws, "appDid".encode())
         if not appid:
             appid = lib.JWT_GetClaim(jws, "appId".encode())
         if not appid:
+            lib.JWT_Destroy(jws)
             return None, "Then app id is none!"
 
         app_instance_did = ffi.string(lib.JWT_GetAudience(jws)).decode()
         if not app_instance_did:
+            lib.JWT_Destroy(jws)
             return None, "Then app instance id is none!"
 
         info = {}
         info[DID] = ffi.string(did).decode()
         info[APP_ID] = ffi.string(appid).decode()
         info[APP_INSTANCE_DID] = app_instance_did
+        lib.JWT_Destroy(jws)
 
         return info, None
 
@@ -343,92 +352,28 @@ class HiveAuth(Entity):
         if body is None:
             return self.response.response_err(400, "The parameter is not application/json")
         vc_str = body.get('credential', None)
+        if vc_str is None:
+            return self.response.response_err(401, "credential is none.")
 
         # check backup request vc
         credential_info, err = self.get_credential_info(vc_str, ["targetHost", "targetDID", "sourceHost"])
         if credential_info is None:
             return self.response.response_err(401, err)
 
-        doc = lib.DIDStore_LoadDID(self.store, self.did)
-        doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
-        doc = json.loads(doc_str)
+        # sign in and get auth token
+        auth_token, issuer, err = self.get_auth_token_by_sign_in(credential_info["targetHost"], vc_str, "DIDBackupAuthResponse")
+        if auth_token is None:
+            return self.response.response_err(401, err)
 
-        rt, s = self.parse_response(
-            self.post(credential_info["targetHost"] + '/api/v1/did/sign_in', {"document": doc}))
+        #get backup token
+        backup_token, err = self.get_backup_auth_from_node(credential_info["targetHost"], auth_token, issuer)
+        if backup_token is None:
+            return self.response.response_err(401, err)
 
-        jwt = rt["challenge"]
-        # print(jwt)
-        jws = lib.DefaultJWSParser_Parse(jwt.encode())
-        if not jws:
-            print(ffi.string(lib.DIDError_GetMessage()).decode())
-        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
-        if aud != self.get_did_string():
-            return self.response.response_err(401, "Backup sign_in is error.")
-
-        nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()
-        hive2_did = ffi.string(lib.JWT_GetIssuer(jws)).decode()
-        lib.JWT_Destroy(jws)
-
-        #backup auth
-        vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
-        if not vc:
-            return None, "The credential string is error, unable to rebuild to a credential object."
-        vp_json = self.create_presentation(vc, nonce, hive2_did)
-        auth_token = self.create_vp_token(vp_json, "DIDBackupAuthResponse", hive2_did, AUTH_CHALLENGE_EXPIRED)
-        # # print(auth_token)
-        rt, s = self.parse_response(
-            self.post(credential_info["targetHost"] + '/api/v1/did/backup_auth', {"jwt": auth_token}))
-
-
-        token = rt["backup_token"]
-        jws = lib.DefaultJWSParser_Parse(token.encode())
-        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
-        if aud != self.get_did_string():
-            return self.response.response_err(401, "Backup auth is error.")
-
-        # issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
-        lib.JWT_Destroy(jws)
+        #TODO:: use backup token to start backup thread
+        #
 
         return self.response.response_ok()
-
-    def create_backup_vc_token(self, vc_json, hive_did):
-        doc = lib.DIDStore_LoadDID(self.store, self.did)
-        builder = lib.DIDDocument_GetJwtBuilder(doc)
-        ticks = int(datetime.now().timestamp())
-        iat = ticks
-        nbf = ticks
-        exp = ticks + 60
-
-        lib.JWTBuilder_SetHeader(builder, "type".encode(), "JWT".encode())
-        lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
-
-        lib.JWTBuilder_SetSubject(builder, "DIDBackupAuthResponse".encode())
-        lib.JWTBuilder_SetAudience(builder, hive_did.encode())
-        lib.JWTBuilder_SetIssuedAt(builder, iat)
-        lib.JWTBuilder_SetExpiration(builder, exp)
-        lib.JWTBuilder_SetNotBefore(builder, nbf)
-        lib.JWTBuilder_SetClaimWithJson(builder, "credential".encode(), vc_json.encode())
-
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
-        token = ffi.string(lib.JWTBuilder_Compact(builder)).decode()
-        lib.JWTBuilder_Destroy(builder)
-        # print(token)
-        return token
-
-    def post(self, url, param):
-        try:
-            r = requests.post(url, json=param, headers={"Content-Type": "application/json"})
-        except Exception as e:
-            logging.error(f"Exception in post:: {e}")
-            return None
-        return r
-
-    def parse_response(self, r):
-        try:
-            v = r.json()
-        except json.JSONDecodeError:
-            v = None
-        return v, r.status_code
 
     def get_credential_info(self, vc_str, props):
         if vc_str is None:

@@ -4,8 +4,10 @@ import pathlib
 import json
 from datetime import datetime
 from eladid import ffi, lib
+import requests
 
 from hive.util.did.did_init import init_did
+from hive.settings import AUTH_CHALLENGE_EXPIRED, ACCESS_TOKEN_EXPIRED
 
 # ---------------
 class Entity:
@@ -121,4 +123,103 @@ class Entity:
         # print(token)
         return token
 
+    def get_auth_token_by_sign_in(self, base_url, vc_str, subject):
+        vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
+        if not vc:
+            return None, None,"The credential string is error, unable to rebuild to a credential object."
+
+        #sign_in
+        doc = lib.DIDStore_LoadDID(self.store, self.did)
+        doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
+        doc = json.loads(doc_str)
+
+        rt, status_code, err = self.parse_response(
+            self.post(base_url + '/api/v1/did/sign_in', {"document": doc}))
+
+        if status_code != 200:
+            return None, None, "Post sign_in error: " + err
+
+        jwt = rt["challenge"]
+        if jwt is None:
+            return None, None, "Challenge is none."
+
+        # print(jwt)
+        jws = lib.DefaultJWSParser_Parse(jwt.encode())
+        if not jws:
+            return None, None, "Challenge DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetMessage()).decode()
+
+        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
+        if aud != self.get_did_string():
+            lib.JWT_Destroy(jws)
+            return None, None, "Audience is error."
+
+        nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()
+        if nonce is None:
+            lib.JWT_Destroy(jws)
+            return None, None, "Nonce is none."
+
+        hive_did = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+        lib.JWT_Destroy(jws)
+        if hive_did is None:
+            return None, None, "Issuer is none."
+
+        #auth_token
+        vp_json = self.create_presentation(vc, nonce, hive_did)
+        if vp_json is None:
+            return None, None, "create_presentation error."
+        auth_token = self.create_vp_token(vp_json, subject, hive_did, AUTH_CHALLENGE_EXPIRED)
+        if auth_token is None:
+            return None, None, "create_vp_token error."
+        return auth_token, hive_did, None
+
+    def get_backup_auth_from_node(self, base_url, auth_token, hive_did):
+        rt, status_code, err = self.parse_response(
+            self.post(base_url + '/api/v1/did/backup_auth', {"jwt": auth_token}))
+
+        if status_code != 200:
+            return None, "Post backup_auth error: " + err
+
+        token = rt["backup_token"]
+        if token is None:
+            return None,  "Token is none."
+
+        jws = lib.DefaultJWSParser_Parse(token.encode())
+        if not jws:
+            return None, "Backup token DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetMessage()).decode()
+
+        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
+        if aud != self.get_did_string():
+            lib.JWT_Destroy(jws)
+            return None, "Audience is error."
+
+        issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+        lib.JWT_Destroy(jws)
+        if issuer is None:
+            return None, "Issuer is none."
+
+        if issuer != hive_did:
+            return None, "Issuer is error."
+
+        return token, None
+
+    def post(self, url, param):
+        try:
+            r = requests.post(url, json=param, headers={"Content-Type": "application/json"})
+        except Exception as e:
+            logging.error(f"Exception in post:: {e}")
+            return None
+        return r
+
+    def parse_response(self, r):
+        try:
+            err = None
+            rt = r.json()
+            if r.status_code != 200:
+                err = "[" + str(r.status_code) + "]"
+                if "_error" in rt and "message" in rt["_error"]:
+                    err += rt["_error"]["message"]
+
+        except json.JSONDecodeError:
+            rt = None
+        return rt, r.status_code, err
 

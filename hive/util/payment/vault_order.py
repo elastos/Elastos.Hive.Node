@@ -110,6 +110,8 @@ def get_tx_info(tx, target_address):
         ret = r.json()
         if not ret['error']:
             block_time = ret['result']['time']
+            if block_time < 1:
+                return None, None
             out_list = ret['result']["vout"]
             for out in out_list:
                 value = float(out['value'])

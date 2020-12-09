@@ -220,9 +220,16 @@ class HiveAuth(Entity):
         lib.JWTBuilder_SetSubject(builder, subject.encode())
         lib.JWTBuilder_SetAudience(builder, auth_info["id"].encode())
         lib.JWTBuilder_SetExpiration(builder, auth_info["expTime"])
+
+        props = {}
         for key in auth_info:
             if key != "expTime" and key != "id":
-                lib.JWTBuilder_SetClaim(builder, key.encode(), auth_info[key].encode())
+                props[key] = auth_info[key]
+
+        props_str = json.dumps(props)
+        ret = lib.JWTBuilder_SetClaim(builder, "props".encode(), props_str.encode())
+        if not ret:
+            return None, self.get_error_message("JWTBuilder_SetClaim 'props' to a token")
 
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
         token = lib.JWTBuilder_Compact(builder)
@@ -231,6 +238,7 @@ class HiveAuth(Entity):
 
         token = ffi.string(token).decode()
         lib.JWTBuilder_Destroy(builder)
+
         return token, None
 
     def __save_nonce_to_db(self, nonce, app_instance_did, exp):
@@ -264,13 +272,13 @@ class HiveAuth(Entity):
 
 
     def check_token(self):
-        info, err = self.get_access_token_info()
+        info, err = self.get_token_info()
         if info is None:
             return self.response.response_err(401, err)
         else:
             return self.response.response_ok()
 
-    def get_access_token_info(self):
+    def get_token_info(self):
         auth = request.headers.get("Authorization")
         if auth is None:
             return None, "Can't find the Authorization!"
@@ -288,18 +296,18 @@ class HiveAuth(Entity):
 
         return self.get_info_from_token(access_token)
 
-    def get_info_from_token(self, access_token):
-        if access_token is None:
-            return None, "Then access token is none!"
+    def get_info_from_token(self, token):
+        if token is None:
+            return None, "Then token is none!"
 
-        token_splits = access_token.split(".")
+        token_splits = token.split(".")
         if token_splits is None:
-            return None, "Then access token is invalid!"
+            return None, "Then token is invalid!"
 
         if (len(token_splits) != 3) or token_splits[2] == "":
-            return None, "Then access token is invalid!"
+            return None, "Then token is invalid!"
 
-        jws = lib.DefaultJWSParser_Parse(access_token.encode())
+        jws = lib.DefaultJWSParser_Parse(token.encode())
         if not jws:
             return None, self.get_error_message("JWS parser")
 
@@ -319,33 +327,29 @@ class HiveAuth(Entity):
             lib.JWT_Destroy(jws)
             return None, "Then token is expired!"
 
-        did = lib.JWT_GetClaim(jws, "userDid".encode())
-        if not did:
+        props = lib.JWT_GetClaim(jws, "props".encode())
+        if not props:
             lib.JWT_Destroy(jws)
-            return None, "Then user did is none!"
+            return None, "Then props is none!"
 
-        appid = lib.JWT_GetClaim(jws, "appDid".encode())
-        if not appid:
-            appid = lib.JWT_GetClaim(jws, "appId".encode())
-        if not appid:
-            lib.JWT_Destroy(jws)
-            return None, "Then app id is none!"
+        props_str = ffi.string(props).decode()
+        props_json = json.loads(props_str)
 
         app_instance_did = ffi.string(lib.JWT_GetAudience(jws)).decode()
         if not app_instance_did:
             lib.JWT_Destroy(jws)
             return None, "Then app instance id is none!"
 
-        info = {}
-        info[DID] = ffi.string(did).decode()
-        info[APP_ID] = ffi.string(appid).decode()
-        info[APP_INSTANCE_DID] = app_instance_did
-        lib.JWT_Destroy(jws)
+        props_json[APP_INSTANCE_DID] = app_instance_did
 
-        return info, None
+        lib.JWT_Destroy(jws)
+        # print(props_json)
+
+        return props_json, None
 
     def backup_request(self):
-        info, err = self.get_access_token_info()
+        #get access token info
+        info, err = self.get_token_info()
 
         # get credential
         body = request.get_json(force=True, silent=True)
@@ -356,7 +360,7 @@ class HiveAuth(Entity):
             return self.response.response_err(401, "credential is none.")
 
         # check backup request vc
-        credential_info, err = self.get_credential_info(vc_str, ["targetHost", "targetDID", "sourceHost"])
+        credential_info, err = self.get_credential_info(vc_str, ["targetHost", "targetDID"])
         if credential_info is None:
             return self.response.response_err(401, err)
 
@@ -370,6 +374,7 @@ class HiveAuth(Entity):
         if backup_token is None:
             return self.response.response_err(401, err)
 
+        info, err = self.get_info_from_token(backup_token)
         #TODO:: use backup token to start backup thread
         #
 
@@ -417,7 +422,7 @@ class HiveAuth(Entity):
 
     def backup_auth(self):
         # check backup auth token
-        auth_info, err = self.__get_auth_token_info(["targetHost", "targetDID", "sourceHost"])
+        auth_info, err = self.__get_auth_token_info(["targetHost", "targetDID"])
         if auth_info is None:
             return self.response.response_err(401, err)
 

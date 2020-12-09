@@ -133,10 +133,9 @@ class Entity:
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
         doc = json.loads(doc_str)
 
-        rt, status_code, err = self.parse_response(
-            self.post(base_url + '/api/v1/did/sign_in', {"document": doc}))
+        rt, status_code, err = self.post(base_url + '/api/v1/did/sign_in', {"document": doc})
 
-        if status_code != 200:
+        if err != None:
             return None, None, "Post sign_in error: " + err
 
         jwt = rt["challenge"]
@@ -173,10 +172,8 @@ class Entity:
         return auth_token, hive_did, None
 
     def get_backup_auth_from_node(self, base_url, auth_token, hive_did):
-        rt, status_code, err = self.parse_response(
-            self.post(base_url + '/api/v1/did/backup_auth', {"jwt": auth_token}))
-
-        if status_code != 200:
+        rt, status_code, err = self.post(base_url + '/api/v1/did/backup_auth', {"jwt": auth_token})
+        if err != None:
             return None, "Post backup_auth error: " + err
 
         token = rt["backup_token"]
@@ -204,22 +201,17 @@ class Entity:
 
     def post(self, url, param):
         try:
-            r = requests.post(url, json=param, headers={"Content-Type": "application/json"})
-        except Exception as e:
-            logging.error(f"Exception in post:: {e}")
-            return None
-        return r
-
-    def parse_response(self, r):
-        try:
             err = None
+            r = requests.post(url, json=param, headers={"Content-Type": "application/json"})
             rt = r.json()
             if r.status_code != 200:
                 err = "[" + str(r.status_code) + "]"
                 if "_error" in rt and "message" in rt["_error"]:
                     err += rt["_error"]["message"]
-
-        except json.JSONDecodeError:
-            rt = None
+        except Exception as e:
+            err = f"Exception in post to '{url}'': {e}"
+            logging.error(err)
+            return None, None, err
         return rt, r.status_code, err
+
 

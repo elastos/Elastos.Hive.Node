@@ -110,6 +110,8 @@ def get_tx_info(tx, target_address):
         ret = r.json()
         if not ret['error']:
             block_time = ret['result']['time']
+            if block_time < 1:
+                return None, None
             out_list = ret['result']["vout"]
             for out in out_list:
                 value = float(out['value'])
@@ -129,7 +131,8 @@ def deal_order_tx(info):
         value, block_time = get_tx_info(tx, address)
         if value:
             amount -= value
-            if create_time > block_time:
+            # If the txid blocktime is more earlier than order create time one week
+            if create_time > (block_time + 60 * 60 * 24 * 7):
                 info_cursor = find_canceled_order_by_txid(info[VAULT_ORDER_DID], tx)
                 print(f"count is :{info_cursor.count()}")
                 if info_cursor.count() == 0:

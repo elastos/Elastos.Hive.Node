@@ -182,14 +182,16 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
     if not can_access_vault(target_did, VAULT_ACCESS_WR):
         return None, "vault can not be accessed"
     executable_body_path = executable_body.get("path", "")
-    file_name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
         if not (params and params.get(v, None)):
             return None, "Exception: Parameter is not set"
-        file_name = params[v]
+        executable_body_path = params[v]
 
-    full_path_name, err = query_upload_get_filepath(target_did, target_app_did, file_name)
+    if not executable_body_path:
+        return None, f"Path cannot be empty"
+
+    full_path_name, err = query_upload_get_filepath(target_did, target_app_did, executable_body_path)
     if err:
         return None, f"Exception: Could not upload file. Status={err['status_code']} Error='{err['description']}'"
 
@@ -197,7 +199,7 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
         "document": {
             "target_did": target_did,
             "target_app_did": target_app_did,
-            "file_name": file_name
+            "file_name": executable_body_path
         }
     }
     col = get_collection(did, app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
@@ -223,18 +225,20 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
     if not can_access_vault(target_did, VAULT_ACCESS_R):
         return None, "vault can not be accessed"
     executable_body_path = executable_body.get("path", "")
-    file_name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
         if not (params and params.get(v, None)):
             return None, "Exception: Parameter is not set"
-        file_name = params[v]
+        executable_body_path = params[v]
+
+    if not executable_body_path:
+        return None, f"Path cannot be empty"
 
     content = {
         "document": {
             "target_did": target_did,
             "target_app_did": target_app_did,
-            "file_name": file_name
+            "file_name": executable_body_path
         }
     }
     col = get_collection(did, app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)

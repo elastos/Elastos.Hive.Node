@@ -86,7 +86,7 @@ def can_access_vault(did, access_vault):
         return False
 
     if access_vault == VAULT_ACCESS_WR:
-        return less_than_max_storage(did)
+        return __less_than_max_storage(did)
     else:
         return True
 
@@ -117,7 +117,7 @@ def proc_expire_vault_job():
         if service[VAULT_SERVICE_END_TIME] == -1:
             continue
         elif now > service[VAULT_SERVICE_END_TIME]:
-            free_info = PaymentConfig.get_free_trial_info()
+            free_info = PaymentConfig.get_free_vault_info()
             query_id = {"_id": service["_id"]}
             value = {"$set": {VAULT_SERVICE_PRICING_USING: VAULT_SERVICE_FREE_STATE,
                               VAULT_SERVICE_MAX_STORAGE: free_info["maxStorage"],
@@ -166,7 +166,7 @@ def count_vault_storage_job():
         col.update_one(query_id, value)
 
 
-def get_used_storage(did):
+def get_vault_used_storage(did):
     file_size = count_file_system_storage_size(did)
     db_size = count_db_storage_size(did)
     now = datetime.utcnow().timestamp()
@@ -182,7 +182,7 @@ def get_used_storage(did):
     return (file_size + db_size) / (1024 * 1024)
 
 
-def less_than_max_storage(did):
+def __less_than_max_storage(did):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
@@ -195,7 +195,7 @@ def less_than_max_storage(did):
         return False
 
 
-def inc_file_use_storage_byte(did, size):
+def inc_vault_file_use_storage_byte(did, size):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
@@ -210,7 +210,7 @@ def inc_file_use_storage_byte(did, size):
     return ret
 
 
-def update_db_use_storage_byte(did, size):
+def update_vault_db_use_storage_byte(did, size):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]

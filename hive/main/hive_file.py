@@ -10,8 +10,8 @@ from hive.util.did_file_info import get_save_files_path, filter_path_root, query
     query_properties, query_hash, query_upload_get_filepath, get_dir_size
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
-from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_STORAGE_FILE
-from hive.util.payment.vault_service_manage import can_access_vault, less_than_max_storage, inc_file_use_storage_byte
+from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR
+from hive.util.payment.vault_service_manage import can_access_vault, inc_vault_file_use_storage_byte
 
 
 class HiveFile:
@@ -56,12 +56,12 @@ class HiveFile:
                 if src_full_path_name.is_file():
                     shutil.copy2(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
                     file_size = os.path.getsize(dst_full_path_name.as_posix())
-                    inc_file_use_storage_byte(did, file_size)
+                    inc_vault_file_use_storage_byte(did, file_size)
                 else:
                     shutil.copytree(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
                     dir_size = 0.0
                     get_dir_size(dst_full_path_name.as_posix(), dir_size)
-                    inc_file_use_storage_byte(did, dir_size)
+                    inc_vault_file_use_storage_byte(did, dir_size)
             else:
                 shutil.move(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
         except Exception as e:
@@ -88,7 +88,7 @@ class HiveFile:
                         break
                     f.write(chunk)
             file_size = os.path.getsize(full_path_name.as_posix())
-            inc_file_use_storage_byte(did, file_size)
+            inc_vault_file_use_storage_byte(did, file_size)
         except Exception as e:
             return self.response.response_err(500, f"Exception: {str(e)}")
 
@@ -191,10 +191,10 @@ class HiveFile:
                 dir_size = 0.0
                 get_dir_size(file_full_name.as_posix(), dir_size)
                 shutil.rmtree(file_full_name)
-                inc_file_use_storage_byte(did, -dir_size)
+                inc_vault_file_use_storage_byte(did, -dir_size)
             else:
                 file_size = os.path.getsize(file_full_name.as_posix())
                 file_full_name.unlink()
-                inc_file_use_storage_byte(did, -file_size)
+                inc_vault_file_use_storage_byte(did, -file_size)
 
         return self.response.response_ok()

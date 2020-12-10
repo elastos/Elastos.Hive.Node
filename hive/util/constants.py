@@ -30,6 +30,7 @@ VAULT_ORDER_APP_ID = "app_id"
 VAULT_ORDER_PACKAGE_INFO = "pricing_info"
 VAULT_ORDER_TXIDS = "pay_txids"
 VAULT_ORDER_STATE = "state"
+VAULT_ORDER_TYPE = "type"
 VAULT_ORDER_CREATE_TIME = "creat_time"
 VAULT_ORDER_PAY_TIME = "pay_time"
 VAULT_ORDER_MODIFY_TIME = "modify_time"
@@ -44,6 +45,15 @@ VAULT_SERVICE_START_TIME = "start_time"
 VAULT_SERVICE_END_TIME = "end_time"
 VAULT_SERVICE_PRICING_USING = "pricing_using"
 # constants of db end
+
+VAULT_BACKUP_SERVICE_COL = "vault_backup_service"
+VAULT_BACKUP_SERVICE_DID = "did"
+VAULT_BACKUP_SERVICE_MAX_STORAGE = "max_storage"
+VAULT_BACKUP_SERVICE_USE_STORAGE = "use_storage"
+VAULT_BACKUP_SERVICE_MODIFY_TIME = "modify_time"
+VAULT_BACKUP_SERVICE_START_TIME = "start_time"
+VAULT_BACKUP_SERVICE_END_TIME = "end_time"
+VAULT_BACKUP_SERVICE_USING = "backup_using"
 
 # scripting begin
 SCRIPTING_SCRIPT_COLLECTION = "scripts"

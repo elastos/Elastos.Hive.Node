@@ -23,6 +23,29 @@
         "currency": "ELA"
       }
   ],
+  "backupPlans": [
+    {
+      "name": "Free",
+      "maxStorage": 500,
+      "serviceDays": -1,
+      "amount": 0.0,
+      "currency": "ELA"
+    },
+    {
+      "name": "Rookie",
+      "maxStorage": 2000,
+      "serviceDays": 30,
+      "amount": 1.5,
+      "currency": "ELA"
+    },
+    {
+      "name": "Advanced",
+      "maxStorage": 5000,
+      "serviceDays": 30,
+      "amount": 3.0,
+      "currency": "ELA"
+    }
+  ],
   "paymentSettings": {
     "receivingELAAddress": "ETJqK7o7gBhzypmNJ1MstAHU2q77fo78jg",
     "wait_payment_timeout": 30,

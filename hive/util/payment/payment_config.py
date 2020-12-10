@@ -24,8 +24,12 @@ class PaymentConfig:
         return PaymentConfig.config_info["version"]
 
     @staticmethod
-    def get_free_trial_info():
+    def get_free_vault_info():
         return PaymentConfig.get_pricing_plan("Free")
+
+    @staticmethod
+    def get_free_backup_info():
+        return PaymentConfig.get_backup_plan("Free")
 
     @staticmethod
     def get_payment_address():
@@ -47,5 +51,16 @@ class PaymentConfig:
             p_name = pricing_plan["name"]
             if p_name == name:
                 return pricing_plan
+
+        return None
+
+    @staticmethod
+    def get_backup_plan(name):
+        backup_plan_list = PaymentConfig.config_info["backupPlans"]
+
+        for backup_plan in backup_plan_list:
+            p_name = backup_plan["name"]
+            if p_name == name:
+                return backup_plan
 
         return None

@@ -4,6 +4,7 @@ from flask import request
 
 from hive.util.payment.vault_order import *
 from hive.util.payment.vault_service_manage import get_vault_service, setup_vault_service
+from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, setup_vault_backup_service
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 
@@ -42,15 +43,36 @@ class HivePayment:
         else:
             return self.response.response_err(400, "not found pricing name of:" + content["name"])
 
-    def create_vault_package_order(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "pricing_name")
+    def get_vault_backup_plan(self):
+        did, app_id, content, err = get_pre_proc(self.response, "name")
         if err:
             return err
-        package_info = PaymentConfig.get_pricing_plan(content["pricing_name"])
-        if not package_info:
-            return self.response.response_err(400, "not found pricing_name of:" + content["pricing_name"])
-        order_id = create_order_info(did, app_id, package_info)
-        return self.response.response_ok({"order_id": str(order_id)})
+
+        data = PaymentConfig.get_backup_plan(content["name"])
+        if data:
+            return self.response.response_ok(data)
+        else:
+            return self.response.response_err(400, "not found backup name of:" + content["name"])
+
+    def create_vault_package_order(self):
+        did, app_id, content, err = post_json_param_pre_proc(self.response)
+        if err:
+            return err
+
+        if "pricing_name" in content:
+            package_info = PaymentConfig.get_pricing_plan(content["pricing_name"])
+            if not package_info:
+                return self.response.response_err(400, "not found pricing_name of:" + content["pricing_name"])
+            order_id = create_order_info(did, app_id, package_info, order_type=VAULT_ORDER_TYPE_VAULT)
+            return self.response.response_ok({"order_id": str(order_id)})
+        elif "backup_name" in content:
+            backup_info = PaymentConfig.get_backup_plan(content["backup_name"])
+            if not backup_info:
+                return self.response.response_err(400, "not found backup_name of:" + content["backup_name"])
+            order_id = create_order_info(did, app_id, backup_info, order_type=VAULT_ORDER_TYPE_BACKUP)
+            return self.response.response_ok({"order_id": str(order_id)})
+        else:
+            return self.response.response_err(400, "parameter pricing_name and backup_name is null")
 
     def pay_vault_package_order(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "order_id", "pay_txids")
@@ -115,7 +137,7 @@ class HivePayment:
                 or info[VAULT_ORDER_STATE] == VAULT_ORDER_STATE_WAIT_PAY:
             info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_CANCELED
 
-    def create_vault(self):
+    def create_free_vault(self):
         did, app_id, err = pre_proc(self.response)
         if err:
             return err
@@ -124,7 +146,7 @@ class HivePayment:
         if service:
             return self.response.response_ok()
 
-        free_info = PaymentConfig.get_free_trial_info()
+        free_info = PaymentConfig.get_free_vault_info()
 
         setup_vault_service(did, free_info["maxStorage"], free_info["serviceDays"])
         return self.response.response_ok()
@@ -141,6 +163,35 @@ class HivePayment:
             data = dict()
             info[VAULT_SERVICE_FILE_USE_STORAGE] = info[VAULT_SERVICE_FILE_USE_STORAGE] / (1024 * 1024)
             info[VAULT_SERVICE_DB_USE_STORAGE] = info[VAULT_SERVICE_DB_USE_STORAGE] / (1024 * 1024)
+            data["vault_service_info"] = info
+
+            return self.response.response_ok(data)
+
+    def create_free_vault_backup(self):
+        did, app_id, err = pre_proc(self.response)
+        if err:
+            return err
+
+        service = get_vault_backup_service(did)
+        if service:
+            return self.response.response_ok()
+
+        free_info = PaymentConfig.get_free_backup_info()
+
+        setup_vault_backup_service(did, free_info["maxStorage"], free_info["serviceDays"])
+        return self.response.response_ok()
+
+    def get_vault_backup_service_info(self):
+        did, app_id, err = pre_proc(self.response)
+        if err:
+            return err
+        info = get_vault_backup_service(did)
+        if not info:
+            return self.response.response_ok()
+        else:
+            del info["_id"]
+            data = dict()
+            info[VAULT_BACKUP_SERVICE_USE_STORAGE] = info[VAULT_BACKUP_SERVICE_USE_STORAGE] / (1024 * 1024)
             data["vault_service_info"] = info
 
             return self.response.response_ok(data)

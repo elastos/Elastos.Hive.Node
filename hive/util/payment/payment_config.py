@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 
 from hive.settings import HIVE_PAYMENT_CONFIG
 
@@ -45,8 +46,10 @@ class PaymentConfig:
 
     @staticmethod
     def get_pricing_plan(name):
-        pricing_plan_list = PaymentConfig.config_info["pricingPlans"]
+        if "pricingPlans" not in PaymentConfig.config_info:
+            return None
 
+        pricing_plan_list = PaymentConfig.config_info["pricingPlans"]
         for pricing_plan in pricing_plan_list:
             p_name = pricing_plan["name"]
             if p_name == name:
@@ -56,8 +59,10 @@ class PaymentConfig:
 
     @staticmethod
     def get_backup_plan(name):
-        backup_plan_list = PaymentConfig.config_info["backupPlans"]
+        if "backupPlans" not in PaymentConfig.config_info:
+            return None
 
+        backup_plan_list = PaymentConfig.config_info["backupPlans"]
         for backup_plan in backup_plan_list:
             p_name = backup_plan["name"]
             if p_name == name:

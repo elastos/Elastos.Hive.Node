@@ -364,6 +364,57 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
         self.assertEqual(r["vault_service_info"][VAULT_BACKUP_SERVICE_USING], state)
 
+    def test_7_create_package_order(self):
+        logging.getLogger("").debug("\nRunning test_2_create_package_order")
+
+        package = {
+            "backup_name": "Rookie"
+        }
+
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/payment/create_vault_package_order',
+                                  data=json.dumps(package),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+        order_id = r["order_id"]
+
+        r, s = self.parse_response(
+            self.test_client.get('api/v1/payment/vault_package_order?order_id=' + order_id, headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        print(r)
+
+    def test_8_pay_and_start_backup_order(self):
+        logging.getLogger("").debug("\nRunning test_4_pay_and_start_package_order")
+        self.init_vault_backup_payment_db()
+        pay_param = {
+            "order_id": self.test_order_id,
+            "pay_txids": ["4813ba481d0e18c4fa03ddc35c32ffbd88080fba14fec8c0c31e5843e6399940"]
+        }
+
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/payment/pay_vault_package_order',
+                                  data=json.dumps(pay_param),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+        check_wait_order_tx_job()
+        self.assert_service_vault_backup_info("Rookie")
+
+    def assert_service_vault_backup_info(self, state):
+        r, s = self.parse_response(
+            self.test_client.get('api/v1/service/vault/backup', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertEqual(r["vault_service_info"][VAULT_BACKUP_SERVICE_USING], state)
+
 
 if __name__ == '__main__':
     unittest.main()

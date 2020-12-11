@@ -10,7 +10,7 @@ from hive.util.common import did_tail_part
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_PRICING_USING, \
     VAULT_ACCESS_WR, DID, APP_ID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, \
-    VAULT_SERVICE_MODIFY_TIME, VAULT_STORAGE_FILE
+    VAULT_SERVICE_MODIFY_TIME
 
 from hive.util.did_file_info import get_dir_size
 from hive.util.did_info import get_all_did_info_by_did
@@ -131,8 +131,8 @@ def proc_expire_vault_job():
 def count_file_system_storage_size(did):
     vault_path = get_vault_path(did)
     storage_size = 0.0
-    storage_size_mb = get_dir_size(vault_path.as_posix(), storage_size)
-    return storage_size_mb
+    storage_size = get_dir_size(vault_path.as_posix(), storage_size)
+    return storage_size
 
 
 def count_db_storage_size(did):

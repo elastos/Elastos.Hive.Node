@@ -119,8 +119,8 @@ def delete_user_backup_vault(did):
 def count_vault_backup_storage_size(did):
     vault_path = get_vault_backup_path(did)
     storage_size = 0.0
-    storage_size_mb = get_dir_size(vault_path.as_posix(), storage_size)
-    return storage_size_mb
+    storage_size = get_dir_size(vault_path.as_posix(), storage_size)
+    return storage_size
 
 
 def count_vault_backup_storage_job():

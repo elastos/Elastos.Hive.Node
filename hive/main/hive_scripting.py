@@ -275,9 +275,10 @@ class HiveScripting:
             target_did = context.get('target_did', caller_did)
             target_app_did = context.get('target_app_did', caller_app_did)
 
-        if not can_access_vault(target_did, VAULT_ACCESS_R):
+        r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+        if not r:
             logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
-            return self.response.response_err(402, "vault can not be accessed")
+            return self.response.response_err(402, msg)
 
         if not target_app_did:
             logging.debug(f"Error while executing script named '{content.get('name')}': target_app_did not set")
@@ -310,9 +311,10 @@ class HiveScripting:
         condition = script.get('condition', None)
         if condition:
             # Currently, there's only one kind of condition("count" db query)
-            if not can_access_vault(target_did, VAULT_ACCESS_R):
+            r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+            if not r:
                 logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
-                return self.response.response_err(401, "vault can not be accessed")
+                return self.response.response_err(401, msg)
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:

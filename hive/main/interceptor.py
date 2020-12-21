@@ -24,8 +24,9 @@ def pre_proc(response, access_vault=None):
         return did, app_id, response.response_err(401, "auth failed")
 
     if access_vault:
-        if not can_access_vault(did, access_vault):
-            return did, app_id, response.response_err(400, "vault can not modify")
+        r, msg = can_access_vault(did, access_vault)
+        if not r:
+            return did, app_id, response.response_err(400, msg)
 
     return did, app_id, None
 
@@ -36,8 +37,9 @@ def post_json_param_pre_proc(response, *args, access_vault=None):
         return did, app_id, None, response.response_err(401, "auth failed")
 
     if access_vault:
-        if not can_access_vault(did, access_vault):
-            return did, app_id, None, response.response_err(400, "vault can not modify")
+        r, msg = can_access_vault(did, access_vault)
+        if not r:
+            return did, app_id, None, response.response_err(400, msg)
 
     content = request.get_json(force=True, silent=True)
     if content is None:
@@ -57,8 +59,9 @@ def get_pre_proc(response, *args, access_vault=None):
         return did, app_id, None, response.response_err(401, "auth failed")
 
     if access_vault:
-        if not can_access_vault(did, access_vault):
-            return did, app_id, None, response.response_err(400, "vault can not modify")
+        r, msg = can_access_vault(did, access_vault)
+        if not r:
+            return did, app_id, None, response.response_err(400, msg)
 
     content = dict()
     for arg in args:

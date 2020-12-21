@@ -83,8 +83,9 @@ def run_condition(did, app_did, target_did, target_app_did, condition_body, para
 
 
 def run_executable_find(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
     populate_params_find_count_delete(did, app_did, executable_body_filter, params)
@@ -120,8 +121,9 @@ def populate_params_insert_update(did, app_did, query, params):
 
 
 def run_executable_insert(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_WR):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
+    if not r:
+        return None, msg
 
     executable_body_document = executable_body.get('document', {})
     populate_params_insert_update(did, app_did, executable_body_document, params)
@@ -140,8 +142,9 @@ def run_executable_insert(did, app_did, target_did, target_app_did, executable_b
 
 
 def run_executable_update(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_WR):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
+    if not r:
+        return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
     populate_params_insert_update(did, app_did, executable_body_filter, params)
@@ -162,8 +165,9 @@ def run_executable_update(did, app_did, target_did, target_app_did, executable_b
 
 
 def run_executable_delete(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
     populate_params_find_count_delete(did, app_did, executable_body_filter, params)
@@ -179,8 +183,10 @@ def run_executable_delete(did, app_did, target_did, target_app_did, executable_b
 
 
 def run_executable_file_upload(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_WR):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
+    if not r:
+        return None, msg
+
     executable_body_path = executable_body.get("path", "")
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
@@ -222,8 +228,9 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
 
 
 def run_executable_file_download(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
     executable_body_path = executable_body.get("path", "")
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
@@ -261,8 +268,10 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
 
 
 def run_executable_file_properties(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
+
     executable_body_path = executable_body.get("path", "")
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -278,8 +287,10 @@ def run_executable_file_properties(did, app_did, target_did, target_app_did, exe
 
 
 def run_executable_file_hash(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
+
     executable_body_path = executable_body.get("path", "")
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):

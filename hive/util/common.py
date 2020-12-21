@@ -1,4 +1,5 @@
 import logging
+import random
 
 
 def did_tail_part(did):
@@ -12,3 +13,7 @@ def create_full_path_dir(path):
         logging.debug(f"Exception in create_full_path: {e}")
         return False
     return True
+
+
+def random_string(num):
+    return random.sample('zyxwvutsrqponmlkjihgfedcba', num)

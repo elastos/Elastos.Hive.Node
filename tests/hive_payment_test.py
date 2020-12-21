@@ -218,7 +218,8 @@ class HivePaymentTestCase(unittest.TestCase):
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
-        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
+        r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
+        self.assertTrue(r)
 
     def test_2_create_package_order(self):
         logging.getLogger("").debug("\nRunning test_2_create_package_order")
@@ -270,18 +271,22 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
 
         check_wait_order_tx_job()
-        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
+        r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
+        self.assertTrue(r)
 
     def test_5_service_storage(self):
         test_common.setup_test_vault(self.did)
         count_vault_storage_job()
-        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
+        r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
+        self.assertTrue(r)
         inc_vault_file_use_storage_byte(self.did, 55000000)
         update_vault_db_use_storage_byte(self.did, 55000000)
-        self.assertFalse(can_access_vault(self.did, VAULT_ACCESS_WR))
+        r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
+        self.assertFalse(r)
         inc_vault_file_use_storage_byte(self.did, -20000000)
         update_vault_db_use_storage_byte(self.did, 30000000)
-        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
+        r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
+        self.assertTrue(r)
 
     def assert_service_vault_info(self, state):
         r, s = self.parse_response(
@@ -299,11 +304,14 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assert_service_vault_info("Rookie")
         inc_vault_file_use_storage_byte(self.did, 910000000)
         update_vault_db_use_storage_byte(self.did, 910000000)
-        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_WR))
+        r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
+        self.assertTrue(r)
         proc_expire_vault_job()
         self.assert_service_vault_info("Free")
-        self.assertTrue(can_access_vault(self.did, VAULT_ACCESS_R))
-        self.assertFalse(can_access_vault(self.did, VAULT_ACCESS_WR))
+        r, msg = can_access_vault(self.did, VAULT_ACCESS_R)
+        self.assertTrue(r)
+        r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
+        self.assertFalse(r)
 
     def test_7_create_package_order(self):
         logging.getLogger("").debug("\nRunning test_2_create_package_order")

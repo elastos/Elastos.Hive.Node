@@ -83,12 +83,15 @@ def get_vault_service(did):
 def can_access_vault(did, access_vault):
     info = get_vault_service(did)
     if not info:
-        return False
+        return False, "vault does not exist."
 
     if access_vault == VAULT_ACCESS_WR:
-        return __less_than_max_storage(did)
+        if not __less_than_max_storage(did):
+            return False, "not enough storage space"
+        else:
+            return True, None
     else:
-        return True
+        return True, None
 
 
 def get_vault_path(did):

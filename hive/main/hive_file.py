@@ -100,8 +100,8 @@ class HiveFile:
         if (did is None) or (app_id is None):
             resp.status_code = 401
             return resp
-
-        if not can_access_vault(did, VAULT_ACCESS_R):
+        r, msg = can_access_vault(did, VAULT_ACCESS_R)
+        if not r:
             resp.status_code = 402
             return resp
 
@@ -130,8 +130,9 @@ class HiveFile:
         if (did is None) or (app_id is None):
             return self.response.response_err(401, "auth failed")
 
-        if not can_access_vault(did, VAULT_ACCESS_R):
-            return self.response.response_err(401, "access vault failed")
+        r, msg = can_access_vault(did, VAULT_ACCESS_R)
+        if not r:
+            return self.response.response_err(401, msg)
 
         path = get_save_files_path(did, app_id)
 

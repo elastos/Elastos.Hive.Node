@@ -1,4 +1,5 @@
 import os
+import random
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -6,11 +7,11 @@ from pathlib import Path
 from pymongo import MongoClient
 
 from hive.settings import MONGO_HOST, MONGO_PORT, BACKUP_VAULTS_BASE_DIR
-from hive.util.common import did_tail_part
+from hive.util.common import did_tail_part, random_string
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
     VAULT_BACKUP_SERVICE_USING, VAULT_ACCESS_WR, DID, APP_ID, VAULT_BACKUP_SERVICE_USE_STORAGE, \
-    VAULT_BACKUP_SERVICE_MODIFY_TIME
+    VAULT_BACKUP_SERVICE_MODIFY_TIME, VAULT_BACKUP_SERVICE_FTP
 
 from hive.util.did_file_info import get_dir_size
 from hive.util.did_info import get_all_did_info_by_did
@@ -36,7 +37,8 @@ def setup_vault_backup_service(did, max_storage, service_days, backup_name=VAULT
            VAULT_BACKUP_SERVICE_START_TIME: now,
            VAULT_BACKUP_SERVICE_END_TIME: end_time,
            VAULT_BACKUP_SERVICE_MODIFY_TIME: now,
-           VAULT_BACKUP_SERVICE_USING: backup_name
+           VAULT_BACKUP_SERVICE_USING: backup_name,
+           VAULT_BACKUP_SERVICE_FTP: None
            }
 
     query = {VAULT_BACKUP_SERVICE_DID: did}
@@ -68,6 +70,51 @@ def update_vault_backup_service(did, max_storage, service_days, backup_name):
     value = {"$set": dic}
     ret = col.update_one(query, value)
     return ret
+
+
+def parse_ftp_record(ftp_data):
+    ftp_info = ftp_data.split(":")
+    return ftp_info[0], ftp_info[1]
+
+
+def compose_ftp_record(user, passwd):
+    return f"{user}:{passwd}"
+
+
+def gene_vault_backup_ftp_record(did):
+    user = random_string(5)
+    passwd = random_string(10)
+    now = datetime.utcnow().timestamp()
+
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_BACKUP_SERVICE_COL]
+    query = {VAULT_BACKUP_SERVICE_DID: did}
+    dic = {VAULT_BACKUP_SERVICE_FTP: compose_ftp_record(user, passwd),
+           VAULT_BACKUP_SERVICE_MODIFY_TIME: now}
+    value = {"$set": dic}
+    ret = col.update_one(query, value)
+    return user, passwd
+
+
+def remove_vault_backup_ftp_record(did):
+    now = datetime.utcnow().timestamp()
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_BACKUP_SERVICE_COL]
+    query = {VAULT_BACKUP_SERVICE_DID: did}
+    dic = {VAULT_BACKUP_SERVICE_FTP: None,
+           VAULT_BACKUP_SERVICE_MODIFY_TIME: now}
+    value = {"$set": dic}
+    ret = col.update_one(query, value)
+
+
+def get_vault_backup_ftp_record(did):
+    info = get_vault_backup_service(did)
+    if not info:
+        return None, None
+    else:
+        return parse_ftp_record(info[VAULT_BACKUP_SERVICE_FTP])
 
 
 def get_vault_backup_service(did):
@@ -108,6 +155,10 @@ def get_vault_backup_path(did):
     else:
         path = path.resolve() / did_tail_part(did)
     return path.resolve()
+
+
+def get_vault_backup_relative_path(did):
+    return did_tail_part(did)
 
 
 def delete_user_backup_vault(did):
@@ -152,7 +203,7 @@ def get_backup_used_storage(did):
     return use_size / (1024 * 1024)
 
 
-def __less_than_max_storage(did):
+def less_than_max_storage(did):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]

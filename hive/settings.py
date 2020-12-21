@@ -28,6 +28,7 @@ DID_STOREPASS = env_config('DID_STOREPASS', default="password", cast=str)
 HIVE_DATA = env_config('HIVE_DATA', default="./data", cast=str)
 VAULTS_BASE_DIR = HIVE_DATA + "/vaults"
 BACKUP_VAULTS_BASE_DIR = HIVE_DATA + "/backup_vaults"
+BACKUP_FTP_PORT = env_config('BACKUP_FTP_PORT', default=2121, cast=int)
 
 MONGO_HOST = env_config('MONGO_HOST', default="localhost", cast=str)
 MONGO_PORT = env_config('MONGO_PORT', default=27020, cast=int)

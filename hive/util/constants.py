@@ -19,10 +19,15 @@ DID_SYNC_INFO_TIME = "time"
 DID_SYNC_INFO_DRIVE = "drive"
 
 VAULT_BACKUP_INFO_COL = "vault_backup_info"
+VAULT_BACKUP_INFO_TYPE = "type"
 VAULT_BACKUP_INFO_STATE = "state"
 VAULT_BACKUP_INFO_MSG = "msg"
 VAULT_BACKUP_INFO_TIME = "time"
 VAULT_BACKUP_INFO_DRIVE = "drive"
+VAULT_BACKUP_INFO_DATA = "data"
+
+VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE = "google_drive"
+VAULT_BACKUP_INFO_TYPE_HIVE_NODE = "hive_node"
 
 VAULT_ORDER_COL = "vault_orders"
 VAULT_ORDER_DID = "did"
@@ -54,6 +59,7 @@ VAULT_BACKUP_SERVICE_MODIFY_TIME = "modify_time"
 VAULT_BACKUP_SERVICE_START_TIME = "start_time"
 VAULT_BACKUP_SERVICE_END_TIME = "end_time"
 VAULT_BACKUP_SERVICE_USING = "backup_using"
+VAULT_BACKUP_SERVICE_FTP = "ftp"
 
 # scripting begin
 SCRIPTING_SCRIPT_COLLECTION = "scripts"
@@ -95,3 +101,6 @@ DID_AUTH_REALM = "elastos_hive_node"
 HIVE_MODE_DEV = "dev"
 HIVE_MODE_PROD = "prod"
 HIVE_MODE_TEST = "test"
+
+INTER_BACKUP_START_URL = '/api/v1/inter/backup/communication/start'
+INTER_BACKUP_END_URL = '/api/v1/inter/backup/communication/end'

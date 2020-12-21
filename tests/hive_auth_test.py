@@ -51,7 +51,7 @@ class DIDApp(Entity):
     def issue_backup_auth(self, hive1_did, hive2_did):
         props = {
             'sourceDID': hive1_did,
-            'targetHost': "http://0.0.0.0:5001/",
+            'targetHost': "http://0.0.0.0:5001",
             'targetDID': hive2_did,
         }
         did = lib.DID_FromString(hive1_did.encode())
@@ -230,13 +230,13 @@ class HiveAuthTestCase(unittest.TestCase):
         vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
 
         rt, s = self.parse_response(
-            self.test_client.post('/api/v1/did/backup_request',
+            self.test_client.post('/api/v1/backup/save/to/node',
                                   data=json.dumps({
-                                      "credential": vc_json,
+                                      "backup_credential": vc_json,
                                   }),
                                   headers=self.json_header)
         )
-        # self.assert200(s)
+        self.assert200(s)
         # self.assertEqual(rt["_status"], "OK")
         pass
 

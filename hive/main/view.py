@@ -48,10 +48,6 @@ def request_did_auth():
 def check_token():
     return h_auth.check_token()
 
-@main.route('/api/v1/did/backup_request', methods=['POST'])
-def backup_request():
-    return h_auth.backup_request()
-
 @main.route('/api/v1/did/backup_auth', methods=['POST'])
 def backup_auth():
     return h_auth.backup_auth()

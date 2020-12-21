@@ -9,8 +9,10 @@ import requests
 
 from hive.util.did.eladid import ffi, lib
 
-from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, get_did_info_by_app_instance_did, update_did_info_by_app_instance_did, \
-        update_token_of_did_info
+from hive.main.interceptor import post_json_param_pre_proc
+from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, \
+    get_did_info_by_app_instance_did, update_did_info_by_app_instance_did, \
+    update_token_of_did_info
 from hive.util.server_response import ServerResponse
 from hive.settings import AUTH_CHALLENGE_EXPIRED, ACCESS_TOKEN_EXPIRED
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
@@ -24,6 +26,7 @@ from hive.util.auth import did_auth
 
 ACCESS_AUTH_COL = "did_auth"
 ACCESS_TOKEN = "access_token"
+
 
 class HiveAuth(Entity):
     access_token = None
@@ -61,7 +64,7 @@ class HiveAuth(Entity):
             f.write(doc_str)
         finally:
             f.close()
-        did_str = "did:" + ffi.string(lib.DID_GetMethod(did)).decode() +":" + spec_did_str
+        did_str = "did:" + ffi.string(lib.DID_GetMethod(did)).decode() + ":" + spec_did_str
 
         # save to db
         nonce = create_nonce()
@@ -126,7 +129,7 @@ class HiveAuth(Entity):
         if jwt is None:
             return None, "The jwt is none."
 
-        #check jwt token
+        # check jwt token
         jws = lib.DefaultJWSParser_Parse(jwt.encode())
         if not jws:
             return None, self.get_error_message("JWS parser")
@@ -144,13 +147,13 @@ class HiveAuth(Entity):
         vp_json = json.loads(ffi.string(vp_str).decode())
         lib.JWT_Destroy(jws)
 
-        #check vp
+        # check vp
         ret = lib.Presentation_IsValid(vp)
         if not ret:
             return None, self.get_error_message("Presentation isValid")
         # print(ffi.string(vp_str).decode())
 
-        #check nonce
+        # check nonce
         nonce = lib.Presentation_GetNonce(vp)
         if not nonce:
             return None, "The nonce is none."
@@ -158,12 +161,12 @@ class HiveAuth(Entity):
         if nonce is None:
             return None, "The nonce is isn't valid."
 
-        #check did:nonce from db
+        # check did:nonce from db
         info = get_did_info_by_nonce(nonce)
         if info is None:
             return None, "The nonce is error."
 
-        #check realm
+        # check realm
         realm = lib.Presentation_GetRealm(vp)
         if not realm:
             return None, "The realm is none."
@@ -174,7 +177,7 @@ class HiveAuth(Entity):
         if realm != self.get_did_string():
             return None, "The realm is error."
 
-        #check vc
+        # check vc
         count = lib.Presentation_GetCredentialCount(vp)
         if count < 1:
             return None, "The credential count is error."
@@ -270,7 +273,6 @@ class HiveAuth(Entity):
 
         return True
 
-
     def check_token(self):
         info, err = self.get_token_info()
         if info is None:
@@ -321,7 +323,7 @@ class HiveAuth(Entity):
             lib.JWT_Destroy(jws)
             return None, "Then issuer is invalid!"
 
-        expired =  lib.JWT_GetExpiration(jws)
+        expired = lib.JWT_GetExpiration(jws)
         now = (int)(datetime.now().timestamp())
         if now > expired:
             lib.JWT_Destroy(jws)
@@ -347,38 +349,27 @@ class HiveAuth(Entity):
 
         return props_json, None
 
-    def backup_request(self):
-        #get access token info
-        info, err = self.get_token_info()
-
-        # get credential
-        body = request.get_json(force=True, silent=True)
-        if body is None:
-            return self.response.response_err(400, "The parameter is not application/json")
-        vc_str = body.get('credential', None)
-        if vc_str is None:
-            return self.response.response_err(401, "credential is none.")
+    def backup_auth_request(self, content):
+        vc_str = content.get('backup_credential')
 
         # check backup request vc
         credential_info, err = self.get_credential_info(vc_str, ["targetHost", "targetDID"])
         if credential_info is None:
-            return self.response.response_err(401, err)
+            return None, None, err
 
         # sign in and get auth token
-        auth_token, issuer, err = self.get_auth_token_by_sign_in(credential_info["targetHost"], vc_str, "DIDBackupAuthResponse")
+        auth_token, issuer, err = self.get_auth_token_by_sign_in(credential_info["targetHost"], vc_str,
+                                                                 "DIDBackupAuthResponse")
         if auth_token is None:
-            return self.response.response_err(401, err)
+            return None, None, err
 
-        #get backup token
+        # get backup token
         backup_token, err = self.get_backup_auth_from_node(credential_info["targetHost"], auth_token, issuer)
         if backup_token is None:
-            return self.response.response_err(401, err)
+            return None, None, err
+        else:
+            return credential_info["targetHost"], backup_token, None
 
-        info, err = self.get_info_from_token(backup_token)
-        #TODO:: use backup token to start backup thread
-        #
-
-        return self.response.response_ok()
 
     def get_credential_info(self, vc_str, props):
         if vc_str is None:

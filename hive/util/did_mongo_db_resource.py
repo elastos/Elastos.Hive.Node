@@ -5,7 +5,6 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-import pymongo
 from bson import ObjectId, json_util
 from pymongo import MongoClient
 
@@ -224,7 +223,9 @@ def import_mongo_db(did, app_id):
     return True
 
 
-def delete_mongo_db_backup(did, app_id):
+def delete_mongo_db_export(did, app_id):
     save_path = get_save_mongo_db_path(did, app_id)
     if save_path.exists():
         shutil.rmtree(save_path)
+
+

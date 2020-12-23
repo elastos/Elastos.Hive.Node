@@ -49,6 +49,7 @@ VAULT_SERVICE_MODIFY_TIME = "modify_time"
 VAULT_SERVICE_START_TIME = "start_time"
 VAULT_SERVICE_END_TIME = "end_time"
 VAULT_SERVICE_PRICING_USING = "pricing_using"
+VAULT_SERVICE_STATE = "state"
 # constants of db end
 
 VAULT_BACKUP_SERVICE_COL = "vault_backup_service"
@@ -102,5 +103,6 @@ HIVE_MODE_DEV = "dev"
 HIVE_MODE_PROD = "prod"
 HIVE_MODE_TEST = "test"
 
-INTER_BACKUP_START_URL = '/api/v1/inter/backup/communication/start'
-INTER_BACKUP_END_URL = '/api/v1/inter/backup/communication/end'
+INTER_BACKUP_START_URL = '/api/v1/inter/backup/inter/communication/start'
+INTER_BACKUP_END_URL = '/api/v1/inter/backup/inter/communication/end'
+INTER_BACKUP_TO_VAULT_URL = '/api/v1/inter/backup/inter/to/vault'

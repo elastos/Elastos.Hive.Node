@@ -335,12 +335,12 @@ class HiveScripting:
 
         # Find the temporary tx in the database
         col = get_collection(caller_did, caller_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
-        content_filter = {
-            "_id": ObjectId(transaction_id)
-        }
 
         err_message = f"could not find the transaction ID '{transaction_id}' in the database"
         try:
+            content_filter = {
+                "_id": ObjectId(transaction_id)
+            }
             script_temp_tx = col.find_one(content_filter)
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
@@ -396,12 +396,12 @@ class HiveScripting:
 
         # Find the temporary tx in the database
         col = get_collection(caller_did, caller_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
-        content_filter = {
-            "_id": ObjectId(transaction_id)
-        }
 
         err_message = f"could not find the transaction ID '{transaction_id}' in the database"
         try:
+            content_filter = {
+                "_id": ObjectId(transaction_id)
+            }
             script_temp_tx = col.find_one(content_filter)
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"

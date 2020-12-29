@@ -105,4 +105,4 @@ HIVE_MODE_TEST = "test"
 
 INTER_BACKUP_START_URL = '/api/v1/inter/backup/inter/communication/start'
 INTER_BACKUP_END_URL = '/api/v1/inter/backup/inter/communication/end'
-INTER_BACKUP_TO_VAULT_URL = '/api/v1/inter/backup/inter/to/vault'
+BACKUP_TO_VAULT_URL = '/api/v1/backup/active/to/vault'

@@ -450,11 +450,17 @@ class HiveBackup:
             return self.response.response_err(400, "There is not backup process for " + did)
         remove_vault_backup_ftp_record(did)
         self.backup_ftp.remove_user(user)
+        self.response.response_ok()
 
     def backup_to_vault(self):
         did, app_id, content, err = post_json_param_pre_proc()
         if err:
-            return self.response.response_err(401, "Backup internal backup_to_vault auth failed")
+            return self.response.response_err(401, "Backup backup_to_vault auth failed")
+
+        vault_service = get_vault_service(did)
+        if not vault_service:
+            return self.response.response_err(400, f"There is not vault service of {did} to active")
+
         freeze_vault(did)
         delete_user_vault(did)
         app_id_list = content["app_id_list"]
@@ -462,3 +468,5 @@ class HiveBackup:
             import_files_from_backup(did, app_id)
             import_mongo_db_from_backup(did, app_id)
         unfreeze_vault(did)
+        self.response.response_ok()
+

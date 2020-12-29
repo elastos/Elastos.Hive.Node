@@ -358,7 +358,7 @@ class HivePaymentTestCase(unittest.TestCase):
 
     def assert_service_vault_backup_info(self, state):
         r, s = self.parse_response(
-            self.test_client.get('api/v1/service/vault/backup', headers=self.auth)
+            self.test_client.get('api/v1/service/vault_backup', headers=self.auth)
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")

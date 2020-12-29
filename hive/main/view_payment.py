@@ -81,11 +81,11 @@ def get_vault_backup_plan():
     return h_payment.get_vault_backup_plan()
 
 
-@hive_payment.route('/api/v1/service/vault/backup/create', methods=['POST'])
+@hive_payment.route('/api/v1/service/vault_backup/create', methods=['POST'])
 def create_free_vault_backup():
     return h_payment.create_free_vault_backup()
 
 
-@hive_payment.route('/api/v1/service/vault/backup', methods=['GET'])
+@hive_payment.route('/api/v1/service/vault_backup', methods=['GET'])
 def get_vault_backup_service_info():
     return h_payment.get_vault_backup_service_info()

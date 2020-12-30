@@ -8,7 +8,7 @@ from flask import request
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
-from hive.main.interceptor import post_json_param_pre_proc, pre_proc
+from hive.main.interceptor import post_json_param_pre_proc
 from hive.settings import MONGO_HOST, MONGO_PORT, DID_STOREPASS
 from hive.util.auth import did_auth
 from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
@@ -16,17 +16,16 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, \
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_DOWNLOADABLE, \
-    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, VAULT_STORAGE_DB, \
-    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
+    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from hive.util.did_file_info import filter_path_root, query_upload_get_filepath, query_download
-from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one, populate_options_update_one, \
+from hive.util.did_mongo_db_resource import gene_mongo_db_name, \
     get_collection, get_mongo_database_size, query_delete_one, convert_oid
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs, get_script_content
-from hive.util.payment.vault_service_manage import can_access_vault, update_db_use_storage_byte, \
-    inc_file_use_storage_byte
+from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
+    inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
 
 
@@ -474,7 +473,7 @@ class HiveScripting:
                 err_message = f"Error while executing file {fileapi_type} via scripting: {err_message}"
                 return err_message
             db_size = get_mongo_database_size(target_did, target_app_did)
-            update_db_use_storage_byte(target_did, db_size)
+            update_vault_db_use_storage_byte(target_did, db_size)
         except Exception as e:
             err_message = f"Error while executing file {fileapi_type} via scripting: Exception: {str(e)}"
             return err_message

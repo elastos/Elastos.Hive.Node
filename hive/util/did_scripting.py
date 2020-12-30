@@ -11,8 +11,8 @@ from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
     query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
-from hive.util.payment.vault_service_manage import can_access_vault, inc_file_use_storage_byte, \
-    update_db_use_storage_byte
+from hive.util.payment.vault_service_manage import can_access_vault, inc_vault_file_use_storage_byte, \
+    update_vault_db_use_storage_byte
 
 
 def massage_keys_with_dollar_signs(d):
@@ -99,8 +99,9 @@ def run_condition(did, app_did, target_did, target_app_did, condition_body, para
 
 
 def run_executable_find(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
     populate_params_find_count_delete(did, app_did, executable_body_filter, params)
@@ -136,8 +137,9 @@ def populate_params_insert_update(did, app_did, query, params):
 
 
 def run_executable_insert(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_WR):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
+    if not r:
+        return None, msg
 
     executable_body_document = executable_body.get('document', {})
     populate_params_insert_update(did, app_did, executable_body_document, params)
@@ -150,14 +152,15 @@ def run_executable_insert(did, app_did, target_did, target_app_did, executable_b
     if err_message:
         return None, err_message
     db_size = get_mongo_database_size(target_did, target_app_did)
-    update_db_use_storage_byte(did,  db_size)
+    update_vault_db_use_storage_byte(did, db_size)
 
     return data, None
 
 
 def run_executable_update(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_WR):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
+    if not r:
+        return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
     populate_params_insert_update(did, app_did, executable_body_filter, params)
@@ -172,14 +175,15 @@ def run_executable_update(did, app_did, target_did, target_app_did, executable_b
     if err_message:
         return None, err_message
     db_size = get_mongo_database_size(target_did, target_app_did)
-    update_db_use_storage_byte(did,  db_size)
+    update_vault_db_use_storage_byte(did, db_size)
 
     return data, None
 
 
 def run_executable_delete(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
     populate_params_find_count_delete(did, app_did, executable_body_filter, params)
@@ -189,14 +193,16 @@ def run_executable_delete(did, app_did, target_did, target_app_did, executable_b
     if err_message:
         return None, err_message
     db_size = get_mongo_database_size(target_did, target_app_did)
-    update_db_use_storage_byte(did, db_size)
+    update_vault_db_use_storage_byte(did, db_size)
 
     return data, None
 
 
 def run_executable_file_upload(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_WR):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
+    if not r:
+        return None, msg
+
     executable_body_path = executable_body.get("path", "")
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
@@ -242,8 +248,9 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
 
 
 def run_executable_file_download(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
     executable_body_path = executable_body.get("path", "")
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
@@ -285,8 +292,10 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
 
 
 def run_executable_file_properties(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
+
     executable_body_path = executable_body.get("path", "")
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -302,8 +311,10 @@ def run_executable_file_properties(did, app_did, target_did, target_app_did, exe
 
 
 def run_executable_file_hash(did, app_did, target_did, target_app_did, executable_body, params):
-    if not can_access_vault(target_did, VAULT_ACCESS_R):
-        return None, "vault can not be accessed"
+    r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+    if not r:
+        return None, msg
+
     executable_body_path = executable_body.get("path", "")
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):

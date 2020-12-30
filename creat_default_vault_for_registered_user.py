@@ -11,7 +11,7 @@ def create_vault_of_did(did):
     if service:
         return
 
-    free_info = PaymentConfig.get_free_trial_info()
+    free_info = PaymentConfig.get_free_vault_info()
 
     setup_vault_service(did, free_info["maxStorage"], free_info["serviceDays"])
 

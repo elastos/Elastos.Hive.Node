@@ -10,7 +10,7 @@ from hive.util.common import did_tail_part
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_PRICING_USING, \
     VAULT_ACCESS_WR, DID, APP_ID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, \
-    VAULT_SERVICE_MODIFY_TIME, VAULT_STORAGE_FILE
+    VAULT_SERVICE_MODIFY_TIME
 
 from hive.util.did_file_info import get_dir_size
 from hive.util.did_info import get_all_did_info_by_did
@@ -83,12 +83,15 @@ def get_vault_service(did):
 def can_access_vault(did, access_vault):
     info = get_vault_service(did)
     if not info:
-        return False
+        return False, "vault does not exist."
 
     if access_vault == VAULT_ACCESS_WR:
-        return less_than_max_storage(did)
+        if not __less_than_max_storage(did):
+            return False, "not enough storage space"
+        else:
+            return True, None
     else:
-        return True
+        return True, None
 
 
 def get_vault_path(did):
@@ -117,7 +120,7 @@ def proc_expire_vault_job():
         if service[VAULT_SERVICE_END_TIME] == -1:
             continue
         elif now > service[VAULT_SERVICE_END_TIME]:
-            free_info = PaymentConfig.get_free_trial_info()
+            free_info = PaymentConfig.get_free_vault_info()
             query_id = {"_id": service["_id"]}
             value = {"$set": {VAULT_SERVICE_PRICING_USING: VAULT_SERVICE_FREE_STATE,
                               VAULT_SERVICE_MAX_STORAGE: free_info["maxStorage"],
@@ -131,8 +134,8 @@ def proc_expire_vault_job():
 def count_file_system_storage_size(did):
     vault_path = get_vault_path(did)
     storage_size = 0.0
-    storage_size_mb = get_dir_size(vault_path.as_posix(), storage_size)
-    return storage_size_mb
+    storage_size = get_dir_size(vault_path.as_posix(), storage_size)
+    return storage_size
 
 
 def count_db_storage_size(did):
@@ -166,7 +169,7 @@ def count_vault_storage_job():
         col.update_one(query_id, value)
 
 
-def get_used_storage(did):
+def get_vault_used_storage(did):
     file_size = count_file_system_storage_size(did)
     db_size = count_db_storage_size(did)
     now = datetime.utcnow().timestamp()
@@ -182,7 +185,7 @@ def get_used_storage(did):
     return (file_size + db_size) / (1024 * 1024)
 
 
-def less_than_max_storage(did):
+def __less_than_max_storage(did):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
@@ -195,7 +198,7 @@ def less_than_max_storage(did):
         return False
 
 
-def inc_file_use_storage_byte(did, size):
+def inc_vault_file_use_storage_byte(did, size):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
@@ -210,7 +213,7 @@ def inc_file_use_storage_byte(did, size):
     return ret
 
 
-def update_db_use_storage_byte(did, size):
+def update_vault_db_use_storage_byte(did, size):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]

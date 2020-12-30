@@ -76,7 +76,7 @@ class HiveScripting:
         except Exception as e:
             return None, f"Exception: method: '__upsert_script_to_db', Err: {str(e)}"
         db_size = get_mongo_database_size(did, app_id)
-        update_db_use_storage_byte(did, db_size)
+        update_vault_db_use_storage_byte(did, db_size)
 
         return data, None
 
@@ -296,9 +296,10 @@ class HiveScripting:
             logging.debug(f"Error while executing script named '{content.get('name')}': target_app_did not set")
             return self.response.response_err(401, "target_app_did not set")
 
-        if not can_access_vault(target_did, VAULT_ACCESS_R):
+        r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+        if not r:
             logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
-            return self.response.response_err(402, "vault can not be accessed")
+            return self.response.response_err(402, msg)
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -352,9 +353,10 @@ class HiveScripting:
         condition = script.get('condition', None)
         if condition:
             # Currently, there's only one kind of condition("count" db query)
-            if not can_access_vault(target_did, VAULT_ACCESS_R):
+            r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
+            if not r:
                 logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
-                return self.response.response_err(401, "vault can not be accessed")
+                return self.response.response_err(401, msg)
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:
@@ -390,7 +392,7 @@ class HiveScripting:
                         break
                     f.write(chunk)
             file_size = os.path.getsize(full_path_name.as_posix())
-            inc_file_use_storage_byte(target_did, file_size)
+            inc_vault_file_use_storage_byte(target_did, file_size)
         except Exception as e:
             logging.debug(f"Error while executing file upload via scripting: {str(e)}")
             return self.response.response_err(500, f"Exception: {str(e)}")

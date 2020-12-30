@@ -10,6 +10,8 @@ from hive.util.payment.payment_config import PaymentConfig
 
 from hive.settings import MONGO_HOST, MONGO_PORT, ELA_RESOLVER
 from hive.util.constants import *
+from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, setup_vault_backup_service, \
+    update_vault_backup_service
 from hive.util.payment.vault_service_manage import update_vault_service, get_vault_service, setup_vault_service
 
 VAULT_ORDER_STATE_WAIT_PAY = "wait_pay"
@@ -19,11 +21,13 @@ VAULT_ORDER_STATE_WAIT_TX_TIMEOUT = "wait_tx_timeout"
 VAULT_ORDER_STATE_FAILED = "failed"
 VAULT_ORDER_STATE_SUCCESS = "success"
 VAULT_ORDER_STATE_CANCELED = "canceled"
+VAULT_ORDER_TYPE_VAULT = "vault"
+VAULT_ORDER_TYPE_BACKUP = "backup"
 
 logger = logging.getLogger("vault_order")
 
 
-def create_order_info(did, app_id, package_info):
+def create_order_info(did, app_id, package_info, order_type=VAULT_ORDER_TYPE_VAULT):
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
@@ -33,6 +37,7 @@ def create_order_info(did, app_id, package_info):
                  VAULT_ORDER_PACKAGE_INFO: package_info,
                  VAULT_ORDER_TXIDS: [],
                  VAULT_ORDER_STATE: VAULT_ORDER_STATE_WAIT_PAY,
+                 VAULT_ORDER_TYPE: order_type,
                  VAULT_ORDER_CREATE_TIME: datetime.utcnow().timestamp(),
                  VAULT_ORDER_MODIFY_TIME: datetime.utcnow().timestamp()
                  }
@@ -181,14 +186,41 @@ def check_wait_order_tx_job():
     for info in info_list:
         state = deal_order_tx(info)
         if state == VAULT_ORDER_STATE_SUCCESS:
-            service = get_vault_service(info[VAULT_ORDER_DID])
-            if not service:
-                setup_vault_service(info[VAULT_ORDER_DID],
+            # Be compatible
+            if VAULT_ORDER_TYPE not in info:
+                vault_order_success(info)
+            else:
+                if info[VAULT_ORDER_TYPE] == VAULT_ORDER_TYPE_VAULT:
+                    vault_order_success(info)
+                elif info[VAULT_ORDER_TYPE] == VAULT_ORDER_TYPE_BACKUP:
+                    vault_backup_order_success(info)
+                else:
+                    logger.error("check_wait_order_tx_job not support type:" + info[VAULT_ORDER_TYPE])
+
+
+def vault_order_success(info):
+    service = get_vault_service(info[VAULT_ORDER_DID])
+    if not service:
+        setup_vault_service(info[VAULT_ORDER_DID],
+                            info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
+                            info[VAULT_ORDER_PACKAGE_INFO]["serviceDays"],
+                            info[VAULT_ORDER_PACKAGE_INFO]["name"])
+    else:
+        update_vault_service(info[VAULT_ORDER_DID],
+                             info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
+                             info[VAULT_ORDER_PACKAGE_INFO]["serviceDays"],
+                             info[VAULT_ORDER_PACKAGE_INFO]["name"])
+
+
+def vault_backup_order_success(info):
+    service = get_vault_backup_service(info[VAULT_ORDER_DID])
+    if not service:
+        setup_vault_backup_service(info[VAULT_ORDER_DID],
+                                   info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
+                                   info[VAULT_ORDER_PACKAGE_INFO]["serviceDays"],
+                                   info[VAULT_ORDER_PACKAGE_INFO]["name"])
+    else:
+        update_vault_backup_service(info[VAULT_ORDER_DID],
                                     info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
                                     info[VAULT_ORDER_PACKAGE_INFO]["serviceDays"],
-                                    pricing_name=info[VAULT_ORDER_PACKAGE_INFO]["name"])
-            else:
-                update_vault_service(info[VAULT_ORDER_DID],
-                                     info[VAULT_ORDER_PACKAGE_INFO]["maxStorage"],
-                                     info[VAULT_ORDER_PACKAGE_INFO]["serviceDays"],
-                                     info[VAULT_ORDER_PACKAGE_INFO]["name"])
+                                    info[VAULT_ORDER_PACKAGE_INFO]["name"])

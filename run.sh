@@ -13,13 +13,15 @@ function setup_venv () {
   echo "setup_venv"
     case `uname` in
     Linux )
-        virtualenv -p `which python3.6` .venv
+        #virtualenv -p `which python3.6` .venv
+        python3 -m venv .venv
         source .venv/bin/activate
         pip install --upgrade pip
         pip install -r requirements.txt
         ;;
     Darwin )
-        virtualenv -p `which python3.7` .venv
+        #virtualenv -p `which python3.7` .venv
+        python3 -m venv .venv
         source .venv/bin/activate
         pip install --upgrade pip
         pip install --global-option=build_ext --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" -r requirements.txt
@@ -38,7 +40,7 @@ function start_docker () {
     echo "Running using docker..."
     docker container stop hive-node || true && docker container rm -f hive-node || true
     docker build -t elastos/hive-node .
-    docker run --name hive-node               \
+    docker run -d --name hive-node               \
       --network hive                          \
       -v ${PWD}/.data:/src/data                \
       -v ${PWD}/.env:/src/.env                \

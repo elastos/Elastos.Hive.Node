@@ -4,12 +4,21 @@
 
 To start, clone Elastos.NET.Hive.Node repo
 ```
-git clone https://gitlab.com/elastos/Elastos.NET.Hive.Node.git;
-cd Elastos.NET.Hive.Node;
+git clone https://github.com/elastos/Elastos.NET.Hive.Node.git
+cd Elastos.NET.Hive.Node
 ```
 
 # Prerequisites
-- Install docker at [https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/)
+
+- Install docker
+```bash
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+sudo usermod -aG docker $(whoami)
+#relogin the terminal so that your user can execute docker command without sudo
+```
+
 - Install required packages[Only needs to be done once]
 ```
 ./install.sh

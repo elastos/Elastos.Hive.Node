@@ -1,3 +1,8 @@
+import jwt
+
+from flask import request
+
+from hive.settings import DID_STOREPASS
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS, \
     SCRIPTING_EXECUTABLE_CALLER_APP_DID, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_STORAGE_FILE, VAULT_STORAGE_DB, \
     SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
@@ -31,6 +36,17 @@ def unmassage_keys_with_dollar_signs(d):
         elif type(value) is list:
             for item in value:
                 unmassage_keys_with_dollar_signs(item)
+
+
+def get_script_content(response, *args):
+    content = request.get_json(force=True, silent=True)
+    if content is None:
+        return None, response.response_err(400, "parameter is not application/json")
+    for arg in args:
+        data = content.get(arg, None)
+        if data is None:
+            return None, response.response_err(400, "parameter " + arg + " is null")
+    return content, None
 
 
 def check_json_param(content, content_type, args):
@@ -197,25 +213,29 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
 
     content = {
         "document": {
-            "target_did": target_did,
-            "target_app_did": target_app_did,
-            "file_name": executable_body_path
+            "file_name": executable_body_path,
+            "fileapi_type": "upload"
         }
     }
-    col = get_collection(did, app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
+    col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
     if not col:
         return None, f"collection {SCRIPTING_SCRIPT_TEMP_TX_COLLECTION} does not exist"
     data, err_message = query_insert_one(col, content, {})
     if err_message:
         return None, f"Could not insert data into the database: Err: {err_message}"
-    db_size = get_mongo_database_size(did, app_did)
-    update_db_use_storage_byte(did, db_size)
+    db_size = get_mongo_database_size(target_did, target_app_did)
+    update_db_use_storage_byte(target_did, db_size)
 
-    transaction_id = data.get("inserted_id", None)
-    if not transaction_id:
+    row_id = data.get("inserted_id", None)
+    if not row_id:
         return None, f"Could not retrieve the transaction ID. Please try again"
+
     data = {
-        "transaction_id": transaction_id
+        "transaction_id": jwt.encode({
+            "row_id": row_id,
+            "target_did": target_did,
+            "target_app_did": target_app_did
+        }, DID_STOREPASS, algorithm='HS256')
     }
 
     return data, None
@@ -236,25 +256,29 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
 
     content = {
         "document": {
-            "target_did": target_did,
-            "target_app_did": target_app_did,
-            "file_name": executable_body_path
+            "file_name": executable_body_path,
+            "fileapi_type": "download"
         }
     }
-    col = get_collection(did, app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
+    col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
     if not col:
         return None, f"collection {SCRIPTING_SCRIPT_TEMP_TX_COLLECTION} does not exist"
     data, err_message = query_insert_one(col, content, {})
     if err_message:
         return None, f"Could not insert data into the database: Err: {err_message}"
-    db_size = get_mongo_database_size(did, app_did)
-    update_db_use_storage_byte(did, db_size)
+    db_size = get_mongo_database_size(target_did, target_app_did)
+    update_db_use_storage_byte(target_did, db_size)
 
-    transaction_id = data.get("inserted_id", None)
-    if not transaction_id:
+    row_id = data.get("inserted_id", None)
+    if not row_id:
         return None, f"Could not retrieve the transaction ID. Please try again"
+
     data = {
-        "transaction_id": transaction_id
+        "transaction_id": jwt.encode({
+            "row_id": row_id,
+            "target_did": target_did,
+            "target_app_did": target_app_did
+        }, DID_STOREPASS, algorithm='HS256')
     }
 
     return data, None

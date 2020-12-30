@@ -2,13 +2,15 @@ import copy
 import os
 import logging
 
+import jwt
 from bson import ObjectId
 from flask import request
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc
-from hive.settings import MONGO_HOST, MONGO_PORT
+from hive.settings import MONGO_HOST, MONGO_PORT, DID_STOREPASS
+from hive.util.auth import did_auth
 from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, \
@@ -18,11 +20,11 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from hive.util.did_file_info import filter_path_root, query_upload_get_filepath, query_download
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, query_update_one, populate_options_update_one, \
-    get_collection, get_mongo_database_size, query_delete_one
+    get_collection, get_mongo_database_size, query_delete_one, convert_oid
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
-    unmassage_keys_with_dollar_signs
+    unmassage_keys_with_dollar_signs, get_script_content
 from hive.util.payment.vault_service_manage import can_access_vault, update_db_use_storage_byte, \
     inc_file_use_storage_byte
 from hive.util.server_response import ServerResponse
@@ -47,6 +49,7 @@ class HiveScripting:
             pass
         except Exception as e:
             return None, f"Could not create collection. Please try again later. Exception : {str(e)}"
+
         try:
             db.create_collection(SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
         except CollectionInvalid:
@@ -55,25 +58,23 @@ class HiveScripting:
             return None, f"Could not create collection. Please try again later. Exception : {str(e)}"
 
         col = get_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
-
-        new_content = {
-            "filter": {
-                "name": content.get("name")
-            },
-            "update": {
-                "$set": {k: v for k, v in content.items() if k != 'name'}
-            },
-            "options": {
-                "upsert": True,
-                "bypass_document_validation": False
-            }
+        query = {
+            "name": content.get("name")
         }
-
-        options = populate_options_update_one(new_content)
-
-        data, err_message = query_update_one(col, new_content, options)
-        if err_message:
-            return None, err_message
+        options = {
+            "upsert": True,
+            "bypass_document_validation": False
+        }
+        try:
+            ret = col.replace_one(query, convert_oid(content), **options)
+            data = {
+                "acknowledged": ret.acknowledged,
+                "matched_count": ret.matched_count,
+                "modified_count": ret.modified_count,
+                "upserted_id": str(ret.upserted_id),
+            }
+        except Exception as e:
+            return None, f"Exception: method: '__upsert_script_to_db', Err: {str(e)}"
         db_size = get_mongo_database_size(did, app_id)
         update_db_use_storage_byte(did, db_size)
 
@@ -226,7 +227,20 @@ class HiveScripting:
         if err:
             return err
 
-        logging.debug(f"Registering a script named '{content.get('name')}' with params: DID: '{did}', App DID: '{app_id}'")
+        # Anonymity Options
+        content['allowAnonymousUser'] = content.get('allowAnonymousUser', False)
+        content['allowAnonymousApp'] = content.get('allowAnonymousApp', False)
+
+        logging.debug(f"Registering a script named '{content.get('name')}' with params: DID: '{did}', App DID: '{app_id}', "
+                      f"Anonymous User Access: {content['allowAnonymousUser']}, Anonymous App Access: {content['allowAnonymousApp']}")
+
+        # Anonymity Validation
+        if (content['allowAnonymousUser'] is True) and (content['allowAnonymousApp'] is False):
+            err_message = "Error while validating anonymity options: Cannot set allowAnonymousUser to be True but " \
+                          "allowAnonymousApp to be False as we cannot request an auth to prove an app identity without " \
+                          "proving the user identity"
+            logging.debug(err_message)
+            return self.response.response_err(400, err_message)
 
         # Data Validation
         executable = content.get('executable')
@@ -263,29 +277,28 @@ class HiveScripting:
         return self.response.response_ok(data)
 
     def run_script(self):
-        # Request the Caller DID and Caller App Validation
-        caller_did, caller_app_did, content, err = post_json_param_pre_proc(self.response, "name")
+        # Request script content first
+        content, err = get_script_content(self.response, "name")
         if err:
             return err
 
+        caller_did, caller_app_did = did_auth()
         target_did, target_app_did = caller_did, caller_app_did
         # Request the Target DID and Target App Validation if present
         context = content.get('context', {})
         if context:
-            target_did = context.get('target_did', caller_did)
-            target_app_did = context.get('target_app_did', caller_app_did)
+            target_did = context.get('target_did', None)
+            target_app_did = context.get('target_app_did', None)
+        if not target_did:
+            logging.debug(f"Error while executing script named '{content.get('name')}': target_did not set")
+            return self.response.response_err(401, "target_did not set")
+        if not target_app_did:
+            logging.debug(f"Error while executing script named '{content.get('name')}': target_app_did not set")
+            return self.response.response_err(401, "target_app_did not set")
 
         if not can_access_vault(target_did, VAULT_ACCESS_R):
             logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
             return self.response.response_err(402, "vault can not be accessed")
-
-        if not target_app_did:
-            logging.debug(f"Error while executing script named '{content.get('name')}': target_app_did not set")
-            return self.response.response_err(402, "target_app_did not set")
-
-        logging.debug(f"Executing a script named '{content.get('name')}' with params: "
-                      f"Caller DID: '{caller_did}', Caller App DID: '{caller_app_did}', "
-                      f"Target DID: '{target_did}', Target App DID: '{target_app_did}'")
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -305,6 +318,35 @@ class HiveScripting:
         if not script:
             logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
             return self.response.response_err(404, err_message)
+
+        # Validate anonymity options
+        allow_anonymous_user = script.get('allowAnonymousUser', False)
+        allow_anonymous_app = script.get('allowAnonymousApp', False)
+        if (allow_anonymous_user is True) and (allow_anonymous_app is False):
+            err_message = "Error while validating anonymity options: Cannot set allowAnonymousUser to be True but " \
+                          "allowAnonymousApp to be False as we cannot request an auth to prove an app identity without " \
+                          "proving the user identity"
+            logging.debug(err_message)
+            return self.response.response_err(400, err_message)
+        if allow_anonymous_user is True:
+            caller_did = None
+        else:
+            if not caller_did:
+                logging.debug(f"Error while executing script named '{content.get('name')}': Auth failed. caller_did "
+                              f"not set")
+                return self.response.response_err(401, "Auth failed. caller_did not set")
+        if allow_anonymous_app is True:
+            caller_app_did = None
+        else:
+            if not caller_app_did:
+                logging.debug(f"Error while executing script named '{content.get('name')}': Auth failed. "
+                              f"caller_app_did not set")
+                return self.response.response_err(401, "Auth failed. caller_app_did not set")
+
+        logging.debug(f"Executing a script named '{content.get('name')}' with params: "
+                      f"Caller DID: '{caller_did}', Caller App DID: '{caller_app_did}', "
+                      f"Target DID: '{target_did}', Target App DID: '{target_app_did}', "
+                      f"Anonymous User Access: {allow_anonymous_user}, Anonymous App Access: {allow_anonymous_app}")
 
         params = content.get('params', None)
         condition = script.get('condition', None)
@@ -329,34 +371,12 @@ class HiveScripting:
         return self.response.response_ok(data)
 
     def run_script_upload(self, transaction_id):
-        caller_did, caller_app_did, response = pre_proc(self.response, access_vault=VAULT_ACCESS_WR)
-        if response is not None:
-            return response
-
-        # Find the temporary tx in the database
-        col = get_collection(caller_did, caller_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
-        content_filter = {
-            "_id": ObjectId(transaction_id)
-        }
-
-        err_message = f"could not find the transaction ID '{transaction_id}' in the database"
-        try:
-            script_temp_tx = col.find_one(content_filter)
-        except Exception as e:
-            err_message = f"{err_message}. Exception: {str(e)}"
-            logging.debug(f"Error while executing file upload via scripting: {err_message}")
-            return self.response.response_err(404, err_message)
-
-        if not script_temp_tx:
-            logging.debug(f"Error while executing file upload via scripting: {err_message}")
-            return self.response.response_err(404, err_message)
-
-        target_did = script_temp_tx.get('target_did', None)
-        target_app_did = script_temp_tx.get('target_app_did', None)
-        file_name = script_temp_tx.get('file_name', None)
+        row_id, target_did, target_app_did, file_name, err = self.run_script_fileapi_setup(transaction_id, "upload")
+        if err:
+            logging.debug(err[1])
+            return self.response.response_err(err[0], err[1])
 
         file_name = filter_path_root(file_name)
-
         full_path_name, err = query_upload_get_filepath(target_did, target_app_did, file_name)
         if err:
             logging.debug(f"Error while executing file upload via scripting: {err['description']}")
@@ -375,62 +395,86 @@ class HiveScripting:
             logging.debug(f"Error while executing file upload via scripting: {str(e)}")
             return self.response.response_err(500, f"Exception: {str(e)}")
 
-        content_filter = {
-            "filter": {
-                "_id": ObjectId(transaction_id)
-            }
-        }
-        _, err_message = query_delete_one(col, content_filter)
+        err_message = self.run_script_fileapi_teardown(row_id, target_did, target_app_did, "upload")
         if err_message:
-            logging.debug(f"Error while executing file upload via scripting: {err_message}")
+            logging.debug(err_message)
             return self.response.response_err(500, err_message)
-        db_size = get_mongo_database_size(caller_did, caller_app_did)
-        update_db_use_storage_byte(caller_did,  db_size)
 
         return self.response.response_ok()
 
     def run_script_download(self, transaction_id):
-        caller_did, caller_app_did, response = pre_proc(self.response, access_vault=VAULT_ACCESS_R)
-        if response is not None:
-            return response
-
-        # Find the temporary tx in the database
-        col = get_collection(caller_did, caller_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
-        content_filter = {
-            "_id": ObjectId(transaction_id)
-        }
-
-        err_message = f"could not find the transaction ID '{transaction_id}' in the database"
-        try:
-            script_temp_tx = col.find_one(content_filter)
-        except Exception as e:
-            err_message = f"{err_message}. Exception: {str(e)}"
-            logging.debug(f"Error while executing file download via scripting: {err_message}")
-            return self.response.response_err(404, err_message)
-
-        if not script_temp_tx:
-            logging.debug(f"Error while executing file download via scripting: {err_message}")
-            return self.response.response_err(404, err_message)
-
-        target_did = script_temp_tx.get('target_did', None)
-        target_app_did = script_temp_tx.get('target_app_did', None)
-        file_name = script_temp_tx.get('file_name', None)
+        row_id, target_did, target_app_did, file_name, err = self.run_script_fileapi_setup(transaction_id, "download")
+        if err:
+            logging.debug(err[1])
+            return self.response.response_err(err[0], err[1])
 
         data, status_code = query_download(target_did, target_app_did, file_name)
         if status_code != 200:
             logging.debug(f"Error while executing file download via scripting: Could not download file")
             return self.response.response_err(status_code, "Could not download file")
 
-        content_filter = {
-            "filter": {
-                "_id": ObjectId(transaction_id)
-            }
-        }
-        _, err_message = query_delete_one(col, content_filter)
+        err_message = self.run_script_fileapi_teardown(row_id, target_did, target_app_did, "download")
         if err_message:
-            logging.debug(f"Error while executing file download via scripting: {err_message}")
+            logging.debug(err_message)
             return self.response.response_err(500, err_message)
-        db_size = get_mongo_database_size(caller_did, caller_app_did)
-        update_db_use_storage_byte(caller_did,  db_size)
 
         return data
+
+    def run_script_fileapi_setup(self, transaction_id, fileapi_type):
+        # Request script content first
+        try:
+            transaction_detail = jwt.decode(transaction_id, DID_STOREPASS, algorithms=['HS256'])
+            row_id, target_did, target_app_did = transaction_detail.get('row_id', None), transaction_detail.get('target_did', None), \
+                                                 transaction_detail.get('target_app_did', None)
+        except Exception as e:
+            err = [500, f"Error while executing file {fileapi_type} via scripting: Could not unpack details "
+                        f"from transaction_id jwt token. Exception: {str(e)}"]
+            return None, None, None, None, err
+
+        if not can_access_vault(target_did, VAULT_ACCESS_R):
+            err = [402, f"Error while executing file {fileapi_type} via scripting: vault can not be accessed"]
+            return None, None, None, None, err
+
+        # Find the temporary tx in the database
+        try:
+            col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
+            content_filter = {
+                "_id": ObjectId(row_id)
+            }
+            script_temp_tx = col.find_one(content_filter)
+        except Exception as e:
+            err = [404, f"Error while executing file {fileapi_type} via scripting: Exception: {str(e)}"]
+            return None, None, None, None, err
+
+        if not script_temp_tx:
+            err = [404, f"Error while executing file {fileapi_type} via scripting: "
+                        f"Exception: Could not find the transaction ID '{transaction_id}' in the database"]
+            return None, None, None, None, err
+
+        file_name = script_temp_tx.get('file_name', None)
+        if not file_name:
+            err = [404, f"Error while executing file {fileapi_type} via scripting: Could not find a file_name "
+                        f"'{file_name}' to be used to upload"]
+            return None, None, None, None, err
+
+        return row_id, target_did, target_app_did, file_name, None
+
+    def run_script_fileapi_teardown(self, row_id, target_did, target_app_did, fileapi_type):
+        try:
+            col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
+            content_filter = {
+                "filter": {
+                    "_id": ObjectId(row_id)
+                }
+            }
+            _, err_message = query_delete_one(col, content_filter)
+            if err_message:
+                err_message = f"Error while executing file {fileapi_type} via scripting: {err_message}"
+                return err_message
+            db_size = get_mongo_database_size(target_did, target_app_did)
+            update_db_use_storage_byte(target_did, db_size)
+        except Exception as e:
+            err_message = f"Error while executing file {fileapi_type} via scripting: Exception: {str(e)}"
+            return err_message
+        return None
+

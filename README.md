@@ -54,28 +54,18 @@ rm -rf data
 ```
 
 # Option 2: Run Elastos Hive Node on Docker
-- Build docker image
-```
-docker build -t elastos/hive-node .
-```
+
 - [OPTIONAL]: If you want to remove data directory and start from scratch:
 ```
 # Note that docker uses ".data" while directly running on the host uses "data" directory
 rm -rf .data
 ```
-- Modify the .env file if needed(You may need to modify the value 'MONGO_HOST' and 'MONGO_PORT' to your host IP)
-```
-# Since the two docker containers run on the same network called "hive", we can directly use their name
-# as the host and the native port
-MONGO_HOST=hive-mongo
-MONGO_PORT=27017
-```
 - Run docker container
 ```
 ./run.sh docker
 ```
-
-The server will run on url like: http://127.0.0.1:5000
+       
+The server will run on url like: http://0.0.0.0:5000
 
 # Test
 - [OPTIONAL]: If you want to remove previous mongodb data and start fresh, remove the mongodb directory

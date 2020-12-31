@@ -251,7 +251,8 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                                       {
                                           "name": "script_no_condition",
                                           "context": {
-                                              "target_did": test_common.did
+                                              "target_did": test_common.did,
+                                              "target_app_did": test_common.app_id
                                           }
                                       }
                                   ),

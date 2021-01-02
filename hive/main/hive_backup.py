@@ -1,6 +1,6 @@
 import _thread
+import json
 import logging
-import os
 import pathlib
 import subprocess
 
@@ -10,22 +10,24 @@ from pathlib import Path
 from hive.main import view
 from hive.settings import VAULTS_BASE_DIR, BACKUP_VAULTS_BASE_DIR
 from hive.util.auth import did_auth
-from hive.util.common import did_tail_part, create_full_path_dir
-from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MODE_DEV, INTER_BACKUP_START_URL, \
-    VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, INTER_BACKUP_END_URL, \
-    VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_SERVICE_MAX_STORAGE
+from hive.util.common import did_tail_part, create_full_path_dir, get_host
+from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MODE_DEV, INTER_BACKUP_FTP_START_URL, \
+    VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, INTER_BACKUP_FTP_END_URL, \
+    VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_SERVICE_MAX_STORAGE, VAULT_BACKUP_INFO_FTP, VAULT_BACKUP_SERVICE_DATA, \
+    INTER_BACKUP_SAVE_URL
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
 from hive.util.ftp_tool import FtpServer
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
     get_backup_used_storage, less_than_max_storage, gene_vault_backup_ftp_record, get_vault_backup_relative_path, \
-    get_vault_backup_ftp_record, remove_vault_backup_ftp_record, import_files_from_backup, import_mongo_db_from_backup
+    get_vault_backup_ftp_record, remove_vault_backup_ftp_record, import_files_from_backup, import_mongo_db_from_backup, \
+    update_vault_backup_service_item
 from hive.util.payment.vault_service_manage import get_vault_service, get_vault_used_storage, \
     update_vault_service_state, VAULT_SERVICE_STATE_FREEZE, freeze_vault, delete_user_vault, unfreeze_vault
 from hive.util.vault_backup_info import *
 from hive.util.rclone_tool import RcloneTool
 from hive.util.server_response import ServerResponse
-from hive.main.interceptor import post_json_param_pre_proc
+from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_pre_proc
 
 logger = logging.getLogger("HiveBackup")
 
@@ -41,12 +43,17 @@ class HiveBackup:
         backup_path = Path(BACKUP_VAULTS_BASE_DIR)
         if not backup_path.exists:
             create_full_path_dir(backup_path)
-        self.backup_ftp = FtpServer(BACKUP_VAULTS_BASE_DIR, BACKUP_FTP_PORT)
+        self.backup_ftp = None
 
     def init_app(self, app, mode):
         self.app = app
         HiveBackup.mode = mode
-        _thread.start_new_thread(self.backup_ftp.run, ())
+        if mode != HIVE_MODE_TEST:
+            print("BACKUP_VAULTS_BASE_DIR:" + BACKUP_VAULTS_BASE_DIR)
+            self.backup_ftp = FtpServer(BACKUP_VAULTS_BASE_DIR, BACKUP_FTP_PORT)
+            self.backup_ftp.max_cons = 256
+            self.backup_ftp.max_cons_per_ip = 10
+            _thread.start_new_thread(self.backup_ftp.run, ())
 
     # ------------------ common start ----------------------------
     @staticmethod
@@ -68,7 +75,7 @@ class HiveBackup:
             delete_mongo_db_export(did_info[DID], did_info[APP_ID])
 
     @staticmethod
-    def restore_vault_data(did, arg):
+    def restore_vault_data(did):
         info = get_vault_backup_info(did)
         if not info:
             return
@@ -80,8 +87,8 @@ class HiveBackup:
         if info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE:
             HiveBackup.__restore_google_drive(did_folder, info[VAULT_BACKUP_INFO_DRIVE])
         elif info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_HIVE_NODE:
-            HiveBackup.__restore_hive_node(did_folder, arg, did,
-                                           info[VAULT_BACKUP_INFO_DRIVE], info[VAULT_BACKUP_INFO_DATA])
+            HiveBackup.__restore_hive_node(did_folder, info[VAULT_BACKUP_INFO_FTP], did,
+                                           info[VAULT_BACKUP_INFO_DRIVE], info[VAULT_BACKUP_INFO_TOKEN])
         else:
             logger.error("restore_vault_data not support backup type:" + info[VAULT_BACKUP_INFO_TYPE])
 
@@ -90,7 +97,7 @@ class HiveBackup:
         HiveBackup.delete_did_mongodb_export_data(did)
 
     @staticmethod
-    def save_vault_data(did, arg):
+    def save_vault_data(did):
         info = get_vault_backup_info(did)
         if not info:
             return None
@@ -101,8 +108,10 @@ class HiveBackup:
         if info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE:
             HiveBackup.__save_google_drive(did_folder, info[VAULT_BACKUP_INFO_DRIVE])
         elif info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_HIVE_NODE:
-            HiveBackup.__save_hive_node(did_folder, arg, did,
-                                        info[VAULT_BACKUP_INFO_DRIVE], info[VAULT_BACKUP_INFO_DATA])
+            HiveBackup.__save_hive_node(did_folder, info[VAULT_BACKUP_INFO_FTP], did,
+                                        info[VAULT_BACKUP_INFO_DRIVE], info[VAULT_BACKUP_INFO_TOKEN])
+            HiveBackup.internal_save_app_list(did, info[VAULT_BACKUP_INFO_DRIVE] + INTER_BACKUP_SAVE_URL,
+                                              info[VAULT_BACKUP_INFO_TOKEN])
         else:
             logger.error("restore_vault_data not support backup type:" + info[VAULT_BACKUP_INFO_TYPE])
             info = None
@@ -128,7 +137,7 @@ class HiveBackup:
         info = get_vault_backup_info(did)
         if info and info[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP:
             # If sync process more than one day, we think it is failed
-            if info[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow() - 60 * 60 * 24):
+            if info[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow().timestamp() - 60 * 60 * 24):
                 data = dict()
                 data["vault_backup_state"] = info[VAULT_BACKUP_INFO_STATE]
                 return None, None, self.response.response_ok(data)
@@ -202,7 +211,7 @@ class HiveBackup:
     # ------------------ backup to google end ----------------------------
 
     # ------------------ backup to node start ----------------------------
-    def __proc_hive_node_param(self, immigrate=False):
+    def __proc_hive_node_param(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "backup_credential")
         if err:
             return None, None, err
@@ -212,14 +221,14 @@ class HiveBackup:
 
         info = get_vault_backup_info(did)
         if info and info[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP:
-            if info[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow() - 60 * 60 * 24):
+            if info[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow().timestamp() - 60 * 60 * 24):
                 data = dict()
                 data["vault_backup_state"] = info[VAULT_BACKUP_INFO_STATE]
                 return None, None, self.response.response_ok(data)
 
         upsert_vault_backup_info(did, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, host, backup_token)
 
-        data, err = self.start_internal_backup(did, host + INTER_BACKUP_START_URL, backup_token, immigrate)
+        data, err = self.start_internal_ftp(host + INTER_BACKUP_FTP_START_URL, backup_token)
         if err:
             return None, None, err
 
@@ -228,25 +237,12 @@ class HiveBackup:
         if use_storage > backup_max_storage:
             return None, None, self.response.response_err(402, f"The hive {host} dose not enough space for backup")
 
-        if immigrate:
-            service_max_storage = data["service_max_storage"]
-            if use_storage > service_max_storage:
-                return None, None, self.response.response_err(402,
-                                                              f"The hive {host} dose not enough space to immigrate vault")
+        access_token = data["token"]
+        update_vault_backup_info_item(did, VAULT_BACKUP_INFO_FTP, access_token)
+        return did, access_token, None
 
-        return did, data["token"], None
-
-    def start_internal_backup(self, did, url, backup_token, immigrate=False):
-        if not immigrate:
-            param = {
-                "backup_did": did
-            }
-        else:
-            param = {
-                "backup_did": did,
-                "immigrate": True
-            }
-
+    def start_internal_ftp(self, url, backup_token):
+        param = {}
         try:
             r = requests.post(url,
                               json=param,
@@ -270,10 +266,8 @@ class HiveBackup:
             return data, None
 
     @staticmethod
-    def stop_internal_backup(did, url, backup_token):
-        param = {
-            "backup_did": did
-        }
+    def stop_internal_ftp(did, url, backup_token):
+        param = {}
         try:
             r = requests.post(url,
                               json=param,
@@ -294,9 +288,13 @@ class HiveBackup:
                         r.status_code + " message:" + ret["_error"]["message"]))
 
     @staticmethod
-    def internal_backup_to_vault(did, app_id_list, url, backup_token):
+    def internal_save_app_list(did, url, backup_token):
+        app_id_list = list()
+        did_info_list = get_all_did_info_by_did(did)
+        for did_info in did_info_list:
+            app_id_list.append(did_info[APP_ID])
+
         param = {
-            "backup_did": did,
             "app_id_list": app_id_list
         }
         try:
@@ -304,107 +302,90 @@ class HiveBackup:
                               json=param,
                               headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
         except Exception as e:
-            logger.error(f"internal_backup_to_vault exception:{str(e)}, host:{url} backup_token:{backup_token}")
+            logger.error(f"internal_save_app_list exception:{str(e)}, host:{url} backup_token:{backup_token}")
             return
 
         if r.status_code != 200:
             ret = r.json()
             if not ret["_error"]:
                 logger.error(
-                    "internal_backup_to_vault error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
+                    "internal_save_app_list error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
                         r.status_code + " content:" + str(r.content)))
             else:
                 logger.error(
-                    "internal_backup_to_vault error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
+                    "internal_save_app_list error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
                         r.status_code + " message:" + ret["_error"]["message"]))
 
     @staticmethod
     def __token_to_node_backup_data(access_token):
-        access_token.split(":")
-        ftp_path = access_token[0]
-        ftp_port = access_token[1]
-        user = access_token[2]
-        password = access_token[3]
-        return ftp_path, ftp_port, user, password
+        alist = access_token.split(":")
+        ftp_port = alist[0]
+        user = alist[1]
+        password = alist[2]
+        return ftp_port, user, password
 
     @staticmethod
-    def __data_to_node_backup_token(ftp_path, ftp_port, user, password):
-        return f"{ftp_path}:{ftp_port}:{user}:{password}"
+    def __data_to_node_backup_token(ftp_port, user, password):
+        return f"{ftp_port}:{user}:{password}"
+
+    @staticmethod
+    def __get_rclone_obscure(password):
+        obj = subprocess.Popen(["rclone", "obscure", password],
+                               stdout=subprocess.PIPE,
+                               universal_newlines=True,
+                               encoding="utf-8"
+                               )
+        encode_password = obj.stdout.read()
+        obj.wait()
+        obj.stdout.close()
+        return encode_password.strip("\n")
 
     @staticmethod
     def __save_hive_node(did_folder, access_token, did, host, backup_token):
-        ftp_path, ftp_port, user, password = HiveBackup.__token_to_node_backup_data(access_token)
-        obj = subprocess.Popen(["rclone", "obscure", password],
-                               stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               universal_newlines=True,
-                               encoding="utf-8"
-                               )
-        encode_password = obj.stdout.read()
-        obj.stdout.close()
-        line = f"rclone sync {did_folder.as_posix()} :ftp:/{ftp_path} --ftp-host={host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
-        if HiveBackup.mode != HIVE_MODE_TEST:
-            subprocess.call(line, shell=True)
-        HiveBackup.stop_internal_backup(did, host + INTER_BACKUP_END_URL, backup_token)
+        ftp_port, user, password = HiveBackup.__token_to_node_backup_data(access_token)
+        encode_password = HiveBackup.__get_rclone_obscure(password)
+        ftp_host = get_host(host)
+        line = f"rclone sync {did_folder.as_posix()} :ftp: --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
+        subprocess.call(line, shell=True)
+        HiveBackup.stop_internal_ftp(did, host + INTER_BACKUP_FTP_END_URL, backup_token)
 
     @staticmethod
     def __restore_hive_node(did_folder, access_token, did, host, backup_token):
-        ftp_path, ftp_port, user, password = HiveBackup.__token_to_node_backup_data(access_token)
-        obj = subprocess.Popen(["rclone", "obscure", password],
-                               stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               universal_newlines=True,
-                               encoding="utf-8"
-                               )
-        encode_password = obj.stdout.read()
-        obj.stdout.close()
-        line = f"rclone sync :ftp:/{ftp_path} {did_folder.as_posix()} --ftp-host={host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
-        if HiveBackup.mode != HIVE_MODE_TEST:
-            subprocess.call(line, shell=True)
-        HiveBackup.stop_internal_backup(did, host + INTER_BACKUP_END_URL, backup_token)
+        ftp_port, user, password = HiveBackup.__token_to_node_backup_data(access_token)
+        encode_password = HiveBackup.__get_rclone_obscure(password)
+        ftp_host = get_host(host)
+        line = f"rclone sync :ftp: {did_folder.as_posix()} --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
+        subprocess.call(line, shell=True)
+        HiveBackup.stop_internal_ftp(did, host + INTER_BACKUP_FTP_END_URL, backup_token)
 
     def save_to_hive_node(self):
         did, access_token, err = self.__proc_hive_node_param()
-        if not err:
+        if err:
             return err
+
         if HiveBackup.mode != HIVE_MODE_TEST:
-            _thread.start_new_thread(HiveBackup.save_vault_data, (did, access_token))
+            _thread.start_new_thread(HiveBackup.save_vault_data, (did,))
         return self.response.response_ok()
 
     def restore_from_hive_node(self):
         did, access_token, err = self.__proc_hive_node_param()
-        if not err:
+        if err:
             return err
         if HiveBackup.mode != HIVE_MODE_TEST:
-            _thread.start_new_thread(HiveBackup.restore_vault_data, (did, access_token))
+            _thread.start_new_thread(HiveBackup.restore_vault_data, (did,))
         return self.response.response_ok()
-
-    def immigrate_node(self):
-        did, access_token, err = self.__proc_hive_node_param(immigrate=True)
-        if not err:
-            return err
-        if HiveBackup.mode != HIVE_MODE_TEST:
-            freeze_vault(did)
-            _thread.start_new_thread(HiveBackup.immigrate_vault_data, (did, access_token))
-        return self.response.response_ok()
-
-    @staticmethod
-    def immigrate_vault_data(did, arg):
-        info = HiveBackup.save_vault_data(did, arg)
-        if info:
-            app_id_list = list()
-            did_info_list = get_all_did_info_by_did(did)
-            for did_info in did_info_list:
-                app_id_list.append(did_info[APP_ID])
-            HiveBackup.internal_backup_to_vault(did, info[VAULT_BACKUP_INFO_DRIVE] + INTER_BACKUP_END_URL,
-                                                info[VAULT_BACKUP_INFO_DATA])
 
     # ------------------ backup to node end ----------------------------
+    def inter_backup_save(self):
+        did, content, err = did_post_json_param_pre_proc(self.response, "app_id_list")
+        if err:
+            return self.response.response_err(401, "Backup internal backup_communication_start auth failed")
 
-    def backup_communication_start(self):
-        did, app_id, content, err = post_json_param_pre_proc()
+        update_vault_backup_service_item(did, VAULT_BACKUP_SERVICE_DATA, content["app_id_list"])
+        return self.response.response_ok()
+
+    def inter_backup_ftp_start(self):
+        did, content, err = did_post_json_param_pre_proc(self.response)
         if err:
             return self.response.response_err(401, "Backup internal backup_communication_start auth failed")
 
@@ -416,44 +397,32 @@ class HiveBackup:
         backup_path = get_vault_backup_path(did)
         if not backup_path.exists():
             create_full_path_dir(backup_path)
-        else:
-            # check whether enough room for backup
-            get_backup_used_storage(did)
-            if not less_than_max_storage(did):
-                return self.response.response_err(400, "There is not enough backup room for " + did)
 
         # add user to backup ftp server
         user, passwd = gene_vault_backup_ftp_record(did)
-        self.backup_ftp.add_user(user, passwd, backup_path, 'lradfmwMT')
 
-        relative_path = get_vault_backup_relative_path(did)
-        if ("immigrate" in content) and content["immigrate"]:
-            vault_service = get_vault_service(did)
-            if not vault_service:
-                return self.response.response_err(400, f"There is not vault service of {did} to immigrate")
-            data = {"token": HiveBackup.__data_to_node_backup_token(relative_path, BACKUP_FTP_PORT, user, passwd),
-                    "backup_max_storage": info[VAULT_BACKUP_SERVICE_MAX_STORAGE],
-                    "service_max_storage": vault_service[VAULT_SERVICE_MAX_STORAGE]
-                    }
-        else:
-            data = {"token": HiveBackup.__data_to_node_backup_token(relative_path, BACKUP_FTP_PORT, user, passwd),
-                    "backup_max_storage": info[VAULT_BACKUP_SERVICE_MAX_STORAGE]
-                    }
-        self.response.response_ok(data)
+        if self.mode != HIVE_MODE_TEST:
+            self.backup_ftp.add_user(user, passwd, backup_path, 'elradfmwMT')
 
-    def backup_communication_end(self):
+        data = {"token": HiveBackup.__data_to_node_backup_token(BACKUP_FTP_PORT, user, passwd),
+                "backup_max_storage": info[VAULT_BACKUP_SERVICE_MAX_STORAGE]
+                }
+        return self.response.response_ok(data)
+
+    def inter_backup_ftp_end(self):
         did, app_id = did_auth()
         if not did:
             return self.response.response_err(401, "Backup internal backup_communication_end auth failed")
         user, passwd = get_vault_backup_ftp_record(did)
         if not user:
             return self.response.response_err(400, "There is not backup process for " + did)
+        if self.mode != HIVE_MODE_TEST:
+            self.backup_ftp.remove_user(user)
         remove_vault_backup_ftp_record(did)
-        self.backup_ftp.remove_user(user)
-        self.response.response_ok()
+        return self.response.response_ok()
 
     def backup_to_vault(self):
-        did, app_id, content, err = post_json_param_pre_proc()
+        did, content, err = did_post_json_param_pre_proc(self.response)
         if err:
             return self.response.response_err(401, "Backup backup_to_vault auth failed")
 
@@ -461,12 +430,16 @@ class HiveBackup:
         if not vault_service:
             return self.response.response_err(400, f"There is not vault service of {did} to active")
 
+        backup_service = get_vault_backup_service(did)
+        if not backup_service:
+            return self.response.response_err(400, f"There is not vault backup service of {did}")
+
         freeze_vault(did)
         delete_user_vault(did)
-        app_id_list = content["app_id_list"]
+
+        app_id_list = json.loads(backup_service[VAULT_BACKUP_SERVICE_DATA])
         for app_id in app_id_list:
             import_files_from_backup(did, app_id)
             import_mongo_db_from_backup(did, app_id)
         unfreeze_vault(did)
-        self.response.response_ok()
-
+        return self.response.response_ok()

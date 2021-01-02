@@ -31,6 +31,23 @@ def pre_proc(response, access_vault=None):
     return did, app_id, None
 
 
+def did_post_json_param_pre_proc(response, *args):
+    did, app_id = did_auth()
+    if did is None:
+        return did, None, response.response_err(401, "auth failed")
+
+    content = request.get_json(force=True, silent=True)
+    if content is None:
+        return did, None, response.response_err(400, "parameter is not application/json")
+
+    for arg in args:
+        data = content.get(arg, None)
+        if data is None:
+            return did, None, response.response_err(400, "parameter " + arg + " is null")
+
+    return did, content, None
+
+
 def post_json_param_pre_proc(response, *args, access_vault=None):
     did, app_id = did_auth()
     if (did is None) or (app_id is None):

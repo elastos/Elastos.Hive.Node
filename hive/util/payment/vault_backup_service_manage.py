@@ -72,6 +72,17 @@ def update_vault_backup_service(did, max_storage, service_days, backup_name):
     return ret
 
 
+def update_vault_backup_service_item(did, item_name, item_value):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_BACKUP_SERVICE_COL]
+    dic = {item_name: item_value}
+    query = {VAULT_BACKUP_SERVICE_DID: did}
+    value = {"$set": dic}
+    ret = col.update_one(query, value)
+    return ret
+
+
 def parse_ftp_record(ftp_data):
     ftp_info = ftp_data.split(":")
     return ftp_info[0], ftp_info[1]
@@ -118,6 +129,7 @@ def get_vault_backup_ftp_record(did):
 
 
 def get_vault_backup_service(did):
+    print("get_vault_backup_service:" + str(MONGO_PORT))
     connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]

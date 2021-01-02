@@ -1,17 +1,29 @@
 import json
+import os
 import shutil
+import signal
+import subprocess
 import sys
 import unittest
 import logging
-from time import time
+import time
 
+import requests
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
+from hive.util.did.eladid import ffi, lib
+from pymongo import MongoClient
 
+from hive.main import view
 from hive.main.hive_backup import HiveBackup
-from hive.util.constants import DID, HIVE_MODE_TEST
+from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
+    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL
 from hive import create_app
+from hive.util.payment.vault_backup_service_manage import setup_vault_backup_service
+from hive.util.payment.vault_order import check_wait_order_tx_job
 from tests import test_common
+from hive import settings
+from tests.hive_auth_test import DIDApp, DApp
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -43,6 +55,7 @@ class HiveBackupTestCase(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger("HiveBackupTestCase").info("\n")
+
         self.app = create_app(mode=HIVE_MODE_TEST)
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
@@ -84,6 +97,17 @@ class HiveBackupTestCase(unittest.TestCase):
     def assert201(self, status):
         self.assertEqual(status, 201)
 
+    def test_other_echo(self):
+        child = subprocess.Popen(["python", "../manage.py", "runserver"])
+        time.sleep(1)
+
+        logging.getLogger("HiveBackupTestCase").debug("\nRunning test_a_echo")
+        param = {"key": "value"}
+        r = requests.post('http://127.0.0.1:5000/api/v1/echo', json=param, headers={"Content-Type": "application/json"})
+        self.assert200(r.status_code)
+        logging.getLogger("HiveBackupTestCase").debug("** r:" + str(r.content))
+        child.terminate()
+
     def test_echo(self):
         logging.getLogger("HiveBackupTestCase").debug("\nRunning test_a_echo")
         r, s = self.parse_response(
@@ -111,7 +135,7 @@ class HiveBackupTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
         drive_name = HiveBackup.gene_did_google_drive_name(self.did)
-        HiveBackup.save_vault_data(self.did, drive_name)
+        HiveBackup.save_vault_data(self.did)
 
     def test_2_resotre_from_google_drive(self):
         logging.getLogger("HiveBackupTestCase").debug("\nRunning test_2_resotre_from_google_drive")
@@ -130,7 +154,75 @@ class HiveBackupTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
         drive_name = HiveBackup.gene_did_google_drive_name(self.did)
-        HiveBackup.restore_vault_data(self.did, drive_name)
+        HiveBackup.restore_vault_data(self.did)
+
+    def init_vault_backup_service(self, host):
+        param = {}
+        token = test_common.get_auth_token()
+
+        r = requests.post(host + '/api/v1/service/vault_backup/create',
+                          json=param,
+                          headers={"Content-Type": "application/json", "Authorization": "token " + token})
+        self.assert200(r.status_code)
+
+    def test_internal_ftp(self):
+        backup_token = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraWQiOiAiZGlkOmVsYXN0b3M6aWpVbkQ0S2VScGVCVUZtY0VEQ2JoeE1USlJ6VVlDUUNaTSNwcmltYXJ5In0.eyJpc3MiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwic3ViIjoiQmFja3VwVG9rZW4iLCJhdWQiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwiZXhwIjoxNjEyMDAxODI2LCJwcm9wcyI6IntcInNvdXJjZURJRFwiOiBcImRpZDplbGFzdG9zOmlqVW5ENEtlUnBlQlVGbWNFRENiaHhNVEpSelVZQ1FDWk1cIiwgXCJ0YXJnZXRESURcIjogXCJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNXCIsIFwidGFyZ2V0SG9zdFwiOiBcImh0dHA6Ly8wLjAuMC4wOjUwMDBcIiwgXCJ1c2VyRGlkXCI6IFwiZGlkOmVsYXN0b3M6aWo4a3JBVlJKaXRaS0ptY0N1Zm9MSFFqcTdNZWYzWmpUTlwiLCBcIm5vbmNlXCI6IFwiNTU2OGJkOGMtNGI1MS0xMWViLWJiMDktYWNkZTQ4MDAxMTIyXCJ9In0.Kx74LxqmvQK4Vv3iJORjS6rQAZq0Yk6m7kxRQ2kVb4I0LBgk4j9GtWdHT2GBtknsJ1Qdk8ItVAfLagBozyo3Cg"
+
+        param = {
+            "backup_did": self.did
+        }
+
+        r, s = self.parse_response(
+            self.test_client.post(INTER_BACKUP_FTP_START_URL,
+                                  data=json.dumps(param),
+                                  headers=[("Content-Type", "application/json"),
+                                           ("Authorization", "token " + backup_token)]
+                                  )
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+        r, s = self.parse_response(
+            self.test_client.post(INTER_BACKUP_FTP_END_URL,
+                                  data=json.dumps(param),
+                                  headers=[("Content-Type", "application/json"),
+                                           ("Authorization", "token " + backup_token)]
+                                  )
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+    def test_3_save_to_hive_node(self):
+        host = "http://0.0.0.0:5000"
+        child = subprocess.Popen("./run_other_node.sh", stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
+
+        try:
+            time.sleep(1)
+
+            self.init_vault_backup_service(host)
+
+            user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
+            app_did = DApp("testapp", test_common.app_id,
+                           "amount material swim purse swallow gate pride series cannon patient dentist person")
+            token, hive_did = test_common.test_auth_common(self, user_did, app_did)
+
+            # backup_auth
+            vc = user_did.issue_backup_auth(hive_did, host, hive_did)
+            vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
+
+            rt, s = self.parse_response(
+                self.test_client.post('/api/v1/backup/save/to/node',
+                                      data=json.dumps({
+                                          "backup_credential": vc_json,
+                                      }),
+                                      headers=self.auth)
+            )
+            self.assert200(s)
+            info = HiveBackup.save_vault_data(user_did.get_did_string())
+            self.assertIsNotNone(info)
+        finally:
+            child.stdout.close()
+            os.killpg(os.getpgid(child.pid), signal.SIGTERM)
 
 
 if __name__ == '__main__':

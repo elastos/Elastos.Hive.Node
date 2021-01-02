@@ -1,5 +1,6 @@
 import logging
 import random
+from urllib.parse import urlparse
 
 
 def did_tail_part(did):
@@ -16,4 +17,9 @@ def create_full_path_dir(path):
 
 
 def random_string(num):
-    return random.sample('zyxwvutsrqponmlkjihgfedcba', num)
+    return "".join(random.sample('zyxwvutsrqponmlkjihgfedcba', num))
+
+
+def get_host(url):
+    data = urlparse(url)
+    return data.hostname

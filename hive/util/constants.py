@@ -24,7 +24,8 @@ VAULT_BACKUP_INFO_STATE = "state"
 VAULT_BACKUP_INFO_MSG = "msg"
 VAULT_BACKUP_INFO_TIME = "time"
 VAULT_BACKUP_INFO_DRIVE = "drive"
-VAULT_BACKUP_INFO_DATA = "data"
+VAULT_BACKUP_INFO_TOKEN = "token"
+VAULT_BACKUP_INFO_FTP = "ftp"
 
 VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE = "google_drive"
 VAULT_BACKUP_INFO_TYPE_HIVE_NODE = "hive_node"
@@ -61,6 +62,7 @@ VAULT_BACKUP_SERVICE_START_TIME = "start_time"
 VAULT_BACKUP_SERVICE_END_TIME = "end_time"
 VAULT_BACKUP_SERVICE_USING = "backup_using"
 VAULT_BACKUP_SERVICE_FTP = "ftp"
+VAULT_BACKUP_SERVICE_DATA = "data"
 
 # scripting begin
 SCRIPTING_SCRIPT_COLLECTION = "scripts"
@@ -103,6 +105,6 @@ HIVE_MODE_DEV = "dev"
 HIVE_MODE_PROD = "prod"
 HIVE_MODE_TEST = "test"
 
-INTER_BACKUP_START_URL = '/api/v1/inter/backup/inter/communication/start'
-INTER_BACKUP_END_URL = '/api/v1/inter/backup/inter/communication/end'
-BACKUP_TO_VAULT_URL = '/api/v1/backup/active/to/vault'
+INTER_BACKUP_FTP_START_URL = '/api/v1/inter/backup/ftp/start'
+INTER_BACKUP_FTP_END_URL = '/api/v1/inter/backup/ftp/end'
+INTER_BACKUP_SAVE_URL = '/api/v1/inter/backup/save'

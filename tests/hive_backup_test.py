@@ -7,6 +7,7 @@ import sys
 import unittest
 import logging
 import time
+from pathlib import Path
 
 import requests
 from flask import appcontext_pushed, g
@@ -16,6 +17,7 @@ from pymongo import MongoClient
 
 from hive.main import view
 from hive.main.hive_backup import HiveBackup
+from hive.settings import env_dist
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
     INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_DATA, INTER_BACKUP_SAVE_URL
 from hive import create_app
@@ -97,17 +99,6 @@ class HiveBackupTestCase(unittest.TestCase):
 
     def assert201(self, status):
         self.assertEqual(status, 201)
-
-    def test_other_echo(self):
-        child = subprocess.Popen(["python", "../manage.py", "runserver"])
-        time.sleep(1)
-
-        logging.getLogger("HiveBackupTestCase").debug("\nRunning test_a_echo")
-        param = {"key": "value"}
-        r = requests.post('http://127.0.0.1:5000/api/v1/echo', json=param, headers={"Content-Type": "application/json"})
-        self.assert200(r.status_code)
-        logging.getLogger("HiveBackupTestCase").debug("** r:" + str(r.content))
-        child.terminate()
 
     def test_echo(self):
         logging.getLogger("HiveBackupTestCase").debug("\nRunning test_a_echo")
@@ -219,10 +210,19 @@ class HiveBackupTestCase(unittest.TestCase):
 
     def test_3_save_restore_hive_node(self):
         host = "http://0.0.0.0:5000"
-        child = subprocess.Popen("./run_other_node.sh", stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
+        if "HIVE_NODE_HOME" in env_dist:
+            work_dir = Path(env_dist["HIVE_NODE_HOME"]).resolve()
+        else:
+            work_dir = Path("./..").resolve()
 
+        if not (work_dir/"test_hive_data/data").exists():
+            shutil.copytree((work_dir/"data").as_posix(), (work_dir/"test_hive_data/data").as_posix())
+
+        child = subprocess.Popen("./run_other_node.sh", cwd=work_dir.as_posix(),
+                                 stdout=subprocess.PIPE, shell=True,
+                                 preexec_fn=os.setsid)
         try:
-            time.sleep(1)
+            time.sleep(5)
             self.init_vault_backup_service(host)
 
             user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
@@ -242,6 +242,8 @@ class HiveBackupTestCase(unittest.TestCase):
         finally:
             child.stdout.close()
             os.killpg(os.getpgid(child.pid), signal.SIGTERM)
+            subprocess.call("docker container stop hive-test-mongo", shell=True)
+            pass
 
     def prepare_active_backup_hive_node_db(self):
         setup_vault_backup_service(self.did, 500, -1)
@@ -264,7 +266,7 @@ class HiveBackupTestCase(unittest.TestCase):
         )
         self.assert200(s)
 
-    def test_4_save_active_backup_hive_node(self):
+    def test_4_active_backup_hive_node(self):
         self.prepare_active_backup_hive_node_db()
         self.active_backup_hive_node()
 

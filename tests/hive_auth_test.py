@@ -218,28 +218,6 @@ class HiveAuthTestCase(unittest.TestCase):
         # self.__test_auth_common(didapp, testapp3)
         pass
 
-    #test bauck up auth
-    def test_d_auth(self):
-        user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
-        app_did = DApp("testapp", test_common.app_id,
-                       "amount material swim purse swallow gate pride series cannon patient dentist person")
-        token, hive_did = self.__test_auth_common(user_did, app_did)
-
-        # backup_auth
-        vc = user_did.issue_backup_auth(hive_did, "http://0.0.0.0:5001", hive_did)
-        vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
-
-        rt, s = self.parse_response(
-            self.test_client.post('/api/v1/backup/save/to/node',
-                                  data=json.dumps({
-                                      "backup_credential": vc_json,
-                                  }),
-                                  headers=self.json_header)
-        )
-        self.assert200(s)
-        # self.assertEqual(rt["_status"], "OK")
-        pass
-
 
 if __name__ == '__main__':
     unittest.main()

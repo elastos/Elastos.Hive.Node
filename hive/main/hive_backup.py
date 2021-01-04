@@ -14,7 +14,7 @@ from hive.util.common import did_tail_part, create_full_path_dir, get_host
 from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MODE_DEV, INTER_BACKUP_FTP_START_URL, \
     VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, INTER_BACKUP_FTP_END_URL, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_SERVICE_MAX_STORAGE, VAULT_BACKUP_INFO_FTP, VAULT_BACKUP_SERVICE_DATA, \
-    INTER_BACKUP_SAVE_URL
+    INTER_BACKUP_SAVE_URL, VAULT_BACKUP_SERVICE_FTP
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
 from hive.util.ftp_tool import FtpServer
@@ -173,6 +173,8 @@ class HiveBackup:
 
         info = get_vault_backup_info(did)
         data = {"hive_backup_info": info}
+        if VAULT_BACKUP_INFO_FTP in info:
+            del info[VAULT_BACKUP_INFO_FTP]
         return self.response.response_ok(data)
 
     @staticmethod
@@ -406,8 +408,14 @@ class HiveBackup:
         if self.mode != HIVE_MODE_TEST:
             self.backup_ftp.add_user(user, passwd, backup_path, 'elradfmwMT')
 
-        data = { "token": HiveBackup.__data_to_node_backup_token(BACKUP_FTP_PORT, user, passwd),
-                "backup_service": info }
+        del info["_id"]
+        if VAULT_BACKUP_SERVICE_FTP in info:
+            del info[VAULT_BACKUP_SERVICE_FTP]
+        if VAULT_BACKUP_SERVICE_DATA in info:
+            del info[VAULT_BACKUP_SERVICE_DATA]
+
+        data = {"token": HiveBackup.__data_to_node_backup_token(BACKUP_FTP_PORT, user, passwd),
+                "backup_service": info}
         return self.response.response_ok(data)
 
     def inter_backup_ftp_end(self):

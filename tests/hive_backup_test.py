@@ -17,10 +17,11 @@ from pymongo import MongoClient
 from hive.main import view
 from hive.main.hive_backup import HiveBackup
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
-    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL
+    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_DATA, INTER_BACKUP_SAVE_URL
 from hive import create_app
-from hive.util.payment.vault_backup_service_manage import setup_vault_backup_service
+from hive.util.payment.vault_backup_service_manage import setup_vault_backup_service, update_vault_backup_service_item
 from hive.util.payment.vault_order import check_wait_order_tx_job
+from hive.util.payment.vault_service_manage import delete_user_vault, setup_vault_service
 from tests import test_common
 from hive import settings
 from tests.hive_auth_test import DIDApp, DApp
@@ -192,13 +193,36 @@ class HiveBackupTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
-    def test_3_save_to_hive_node(self):
+    def save_to_hive_node(self, vc_json, did):
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/backup/save/to/node',
+                                  data=json.dumps({
+                                      "backup_credential": vc_json,
+                                  }),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        info = HiveBackup.save_vault_data(did)
+        self.assertIsNotNone(info)
+
+    def restore_from_hive_node(self, vc_json, did):
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/backup/restore/from/node',
+                                  data=json.dumps({
+                                      "backup_credential": vc_json,
+                                  }),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        info = HiveBackup.restore_vault_data(did)
+        self.assertIsNotNone(info)
+
+    def test_3_save_restore_hive_node(self):
         host = "http://0.0.0.0:5000"
         child = subprocess.Popen("./run_other_node.sh", stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
 
         try:
             time.sleep(1)
-
             self.init_vault_backup_service(host)
 
             user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
@@ -210,19 +234,39 @@ class HiveBackupTestCase(unittest.TestCase):
             vc = user_did.issue_backup_auth(hive_did, host, hive_did)
             vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
 
-            rt, s = self.parse_response(
-                self.test_client.post('/api/v1/backup/save/to/node',
-                                      data=json.dumps({
-                                          "backup_credential": vc_json,
-                                      }),
-                                      headers=self.auth)
-            )
-            self.assert200(s)
-            info = HiveBackup.save_vault_data(user_did.get_did_string())
-            self.assertIsNotNone(info)
+            did = user_did.get_did_string()
+            self.save_to_hive_node(vc_json, did)
+            delete_user_vault(did)
+            self.restore_from_hive_node(vc_json, did)
+
         finally:
             child.stdout.close()
             os.killpg(os.getpgid(child.pid), signal.SIGTERM)
+
+    def prepare_active_backup_hive_node_db(self):
+        setup_vault_backup_service(self.did, 500, -1)
+        setup_vault_service(self.did, 500, -1)
+        app_id_list = ["appid", "appid2"]
+        param = {"app_id_list": app_id_list}
+        rt, s = self.parse_response(
+            self.test_client.post(INTER_BACKUP_SAVE_URL,
+                                  data=json.dumps(param),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+
+    def active_backup_hive_node(self):
+        param = {}
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/backup/active/to/vault',
+                                  data=json.dumps(param),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+
+    def test_4_save_active_backup_hive_node(self):
+        self.prepare_active_backup_hive_node_db()
+        self.active_backup_hive_node()
 
 
 if __name__ == '__main__':

@@ -194,8 +194,6 @@ def import_files_from_backup(did, app_id):
     if not src_path.exists():
         return False
     dst_path = get_save_files_path(did, app_id)
-    if not dst_path.exists():
-        create_full_path_dir(dst_path)
     shutil.copytree(src_path.as_posix(), dst_path.as_posix())
     return True
 

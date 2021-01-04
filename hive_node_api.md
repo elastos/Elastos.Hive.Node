@@ -1170,7 +1170,8 @@ return:
         }
 ```
 
-- Get properties or a hash of a file(just for demoing purposes) 
+- Get properties or a hash of a file(just for demoing purposes)
+NOTE: We are going to allow anonymous access with this script by setting "allowAnonymousUser" to true and "allowAnonymousApp" to true
 ```json
 HTTP: POST
 URL: /api/v1/scripting/set_script
@@ -1179,6 +1180,8 @@ Content-Type: "application/json"
 data: 
     {
       "name": "get_file_info",
+      "allowAnonymousUser": true,
+      "allowAnonymousApp": true,
       "executable": {
         "type": "aggregated",
         "name": "file_properties_and_hash",
@@ -1200,17 +1203,6 @@ data:
             }
           }
         ]
-      },
-      "condition": {
-        "type": "queryHasResults",
-        "name": "user_in_group",
-        "body": {
-          "collection": "groups",
-          "filter": {
-            "_id": "$params.group_id",
-            "friends": "$caller_did"
-          }
-        }
       }
     }
 return:
@@ -1467,6 +1459,8 @@ comment: support content range
 ```
 
 - Run a script to get properties and hash of a file
+NOTE: This is a script where Anonymous options are set to true so we do not need to pass in an authorization token. 
+  However, we MUST pass in the context with "target_did" and "target_app_did"
 ```json
 HTTP: POST
 URL: /api/v1/scripting/run_script
@@ -1475,9 +1469,12 @@ Content-Type: "application/json"
 data: 
     {
       "name": "get_file_info",
+      "context": {
+        "target_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
+        "target_app_did": "did:elastos:jUdkrAVRJitZKJmcCufoLHQjq7Mef3Zi8L"
+      },
       "params": {
-        "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"},
-        "path": "kiran.jpg"
+        "path": "logging.conf"
       }
     }
 return:
@@ -1489,7 +1486,7 @@ return:
         },
         "file_properties": {
           "last_modify": 1602446791.5942733,
-          "name": "kiran.jpg",
+          "name": "logging.conf",
           "size": 78731,
           "type": "file"
         }

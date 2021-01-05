@@ -216,6 +216,4 @@ class HivePayment:
             if VAULT_BACKUP_SERVICE_DATA in info:
                 del info[VAULT_BACKUP_SERVICE_DATA]
             data["vault_service_info"] = info
-
-
             return self.response.response_ok(data)

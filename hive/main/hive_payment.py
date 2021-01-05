@@ -135,7 +135,7 @@ class HivePayment:
             return err
         info = get_vault_service(did)
         if not info:
-            return self.response.response_ok()
+            return self.response.response_err(404, "vault service not found")
         else:
             del info["_id"]
             data = dict()

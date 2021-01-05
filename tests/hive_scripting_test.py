@@ -245,23 +245,6 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
-    def test_7_run_script_with_anonymous_access(self):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_run_script_with_anonymous_access")
-        r, s = self.parse_response(
-            self.test_client.post('/api/v1/scripting/run_script',
-                                  data=json.dumps(
-                                      {
-                                          "name": "script_anonymous_access",
-                                          "context": {
-                                              "target_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
-                                              "target_app_did": "appid"
-                                          },
-                                      }
-                                  ))
-        )
-        self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
-
     def test_5_run_script_without_condition(self):
         logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_run_script_without_condition")
         r, s = self.parse_response(
@@ -338,6 +321,22 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
                               data=json.dumps({"collection": "test_group"}),
                               headers=self.auth)
 
-
+    def test_7_run_script_with_anonymous_access(self):
+        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_run_script_with_anonymous_access")
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/scripting/run_script',
+                                  data=json.dumps(
+                                      {
+                                          "name": "script_anonymous_access",
+                                          "context": {
+                                              "target_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
+                                              "target_app_did": "appid"
+                                          },
+                                      }
+                                  ))
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        
 if __name__ == '__main__':
     unittest.main()

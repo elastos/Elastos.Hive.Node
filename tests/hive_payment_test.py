@@ -301,6 +301,7 @@ class HivePaymentTestCase(unittest.TestCase):
 
 
     def test_6_service_management_timeout_ONLY_READ(self):
+        test_common.remove_test_vault(self.did)
         self.assert_service_vault_info(None)
         test_common.setup_test_vault(self.did)
         now = datetime.utcnow().timestamp()

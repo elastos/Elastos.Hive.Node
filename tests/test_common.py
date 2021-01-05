@@ -4,14 +4,13 @@ from datetime import datetime
 from time import time
 from hive.util.did.eladid import ffi, lib
 
-
 from hive.util.constants import DID_INFO_TOKEN
 from hive.util.did_info import get_did_info_by_did_appid
 from hive.util.did_sync import add_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
     delete_did_sync_info
 
 from hive.settings import AUTH_CHALLENGE_EXPIRED
-from hive.util.payment.vault_service_manage import setup_vault_service
+from hive.util.payment.vault_service_manage import setup_vault_service, remove_vault_service
 
 did = "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"
 app_id = "appid"
@@ -33,7 +32,6 @@ def setup_test_auth_token():
         global token2
         token2 = info2[DID_INFO_TOKEN]
     return
-
 
 
 def delete_test_auth_token():
@@ -59,6 +57,10 @@ def get_auth_token2():
 
 def setup_test_vault(did):
     setup_vault_service(did, 100, -1)
+
+
+def remove_test_vault(did):
+    remove_vault_service(did)
 
 
 def test_auth_common(self, user_did, app_did):
@@ -127,4 +129,3 @@ def test_auth_common(self, user_did, app_did):
     self.assert200(s)
     self.assertEqual(rt["_status"], "OK")
     return token, hive_did
-

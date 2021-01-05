@@ -75,6 +75,14 @@ def update_vault_service(did, max_storage, service_days, pricing_name):
     return ret
 
 
+def remove_vault_service(did):
+    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[VAULT_SERVICE_COL]
+    query = {VAULT_SERVICE_DID: did}
+    col.delete_many(query)
+
+
 def freeze_vault(did):
     update_vault_service_state(did, VAULT_SERVICE_STATE_FREEZE)
 
@@ -140,7 +148,7 @@ def delete_user_vault(did):
     if path.exists():
         shutil.rmtree(path)
     delete_db_storage(did)
-    update_vault_service_state(did, VAULT_SERVICE_STATE_REMOVE)
+    remove_vault_service(did)
 
 
 def proc_expire_vault_job():

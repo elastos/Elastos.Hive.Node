@@ -250,9 +250,12 @@ class HivePaymentTestCase(unittest.TestCase):
         r, s = self.parse_response(
             self.test_client.get('api/v1/service/vault', headers=self.auth)
         )
-        self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
-        self.assertEqual(r["vault_service_info"][VAULT_SERVICE_PRICING_USING], state)
+        if state:
+            self.assert200(s)
+            self.assertEqual(r["_status"], "OK")
+            self.assertEqual(r["vault_service_info"][VAULT_SERVICE_PRICING_USING], state)
+        else:
+            self.assertEqual(404, s)
 
     def test_6_service_management_timeout_ONLY_READ(self):
         test_common.setup_test_vault(self.did)

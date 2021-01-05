@@ -208,42 +208,42 @@ class HiveBackupTestCase(unittest.TestCase):
         info = HiveBackup.restore_vault_data(did)
         self.assertIsNotNone(info)
 
-    def test_3_save_restore_hive_node(self):
-        host = "http://0.0.0.0:5000"
-        if "HIVE_NODE_HOME" in env_dist:
-            work_dir = Path(env_dist["HIVE_NODE_HOME"]).resolve()
-        else:
-            work_dir = Path("./..").resolve()
-
-        if not (work_dir/"test_hive_data/data").exists():
-            shutil.copytree((work_dir/"data").as_posix(), (work_dir/"test_hive_data/data").as_posix())
-
-        child = subprocess.Popen("./run_other_node.sh", cwd=work_dir.as_posix(),
-                                 stdout=subprocess.PIPE, shell=True,
-                                 preexec_fn=os.setsid)
-        try:
-            time.sleep(5)
-            self.init_vault_backup_service(host)
-
-            user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
-            app_did = DApp("testapp", test_common.app_id,
-                           "amount material swim purse swallow gate pride series cannon patient dentist person")
-            token, hive_did = test_common.test_auth_common(self, user_did, app_did)
-
-            # backup_auth
-            vc = user_did.issue_backup_auth(hive_did, host, hive_did)
-            vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
-
-            did = user_did.get_did_string()
-            self.save_to_hive_node(vc_json, did)
-            delete_user_vault(did)
-            self.restore_from_hive_node(vc_json, did)
-
-        finally:
-            child.stdout.close()
-            os.killpg(os.getpgid(child.pid), signal.SIGTERM)
-            subprocess.call("docker container stop hive-test-mongo", shell=True)
-            pass
+    # def test_3_save_restore_hive_node(self):
+    #     host = "http://0.0.0.0:5000"
+    #     if "HIVE_NODE_HOME" in env_dist:
+    #         work_dir = Path(env_dist["HIVE_NODE_HOME"]).resolve()
+    #     else:
+    #         work_dir = Path("./..").resolve()
+    #
+    #     if not (work_dir/"test_hive_data/data").exists():
+    #         shutil.copytree((work_dir/"data").as_posix(), (work_dir/"test_hive_data/data").as_posix())
+    #
+    #     child = subprocess.Popen("./run_other_node.sh", cwd=work_dir.as_posix(),
+    #                              stdout=subprocess.PIPE, shell=True,
+    #                              preexec_fn=os.setsid)
+    #     try:
+    #         time.sleep(5)
+    #         self.init_vault_backup_service(host)
+    #
+    #         user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
+    #         app_did = DApp("testapp", test_common.app_id,
+    #                        "amount material swim purse swallow gate pride series cannon patient dentist person")
+    #         token, hive_did = test_common.test_auth_common(self, user_did, app_did)
+    #
+    #         # backup_auth
+    #         vc = user_did.issue_backup_auth(hive_did, host, hive_did)
+    #         vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
+    #
+    #         did = user_did.get_did_string()
+    #         self.save_to_hive_node(vc_json, did)
+    #         delete_user_vault(did)
+    #         self.restore_from_hive_node(vc_json, did)
+    #
+    #     finally:
+    #         child.stdout.close()
+    #         os.killpg(os.getpgid(child.pid), signal.SIGTERM)
+    #         subprocess.call("docker container stop hive-test-mongo", shell=True)
+    #         pass
 
     def prepare_active_backup_hive_node_db(self):
         setup_vault_backup_service(self.did, 500, -1)

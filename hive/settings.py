@@ -8,14 +8,13 @@ HIVE_CONFIG = '/etc/hive/.env'
 env_dist = os.environ
 if "HIVE_CONFIG" in env_dist:
     HIVE_CONFIG = env_dist["HIVE_CONFIG"]
-
 config_file = Path(HIVE_CONFIG).resolve()
 if config_file.exists():
-    env_config = Config(RepositoryEnv(HIVE_CONFIG))
-    logging.debug("Config file is " + HIVE_CONFIG)
+    env_config = Config(RepositoryEnv(config_file.as_posix()))
+    logging.getLogger("Setting").debug("Config file is:" + config_file.as_posix())
 else:
     env_config = config
-    logging.debug("Autoconfig")
+    logging.getLogger("Setting").debug("Autoconfig")
 
 DID_RESOLVER = env_config('DID_RESOLVER', default="http://api.elastos.io:21606", cast=str)
 ELA_RESOLVER = env_config('ELA_RESOLVER', default="http://api.elastos.io:21606", cast=str)
@@ -28,9 +27,13 @@ DID_STOREPASS = env_config('DID_STOREPASS', default="password", cast=str)
 HIVE_DATA = env_config('HIVE_DATA', default="./data", cast=str)
 VAULTS_BASE_DIR = HIVE_DATA + "/vaults"
 BACKUP_VAULTS_BASE_DIR = HIVE_DATA + "/backup_vaults"
+BACKUP_FTP_PORT = env_config('BACKUP_FTP_PORT', default=2121, cast=int)
 
 MONGO_HOST = env_config('MONGO_HOST', default="localhost", cast=str)
 MONGO_PORT = env_config('MONGO_PORT', default=27020, cast=int)
+
+print("setting MONGO_HOST:" + MONGO_HOST)
+print("setting MONGO_PORT:" + str(MONGO_PORT))
 
 RCLONE_CONFIG_FILE_DIR = env_config('RCLONE_CONFIG_FILE_DIR', default="./.rclone", cast=str)
 HIVE_PAYMENT_CONFIG = env_config('HIVE_PAYMENT_CONFIG', default="./payment_config.json", cast=str)

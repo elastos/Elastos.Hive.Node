@@ -3,7 +3,8 @@ import logging
 from flask import request
 
 from hive.util.payment.vault_order import *
-from hive.util.payment.vault_service_manage import get_vault_service, setup_vault_service
+from hive.util.payment.vault_service_manage import get_vault_service, setup_vault_service, delete_user_vault, \
+    freeze_vault, unfreeze_vault
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, setup_vault_backup_service
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
@@ -151,6 +152,24 @@ class HivePayment:
         setup_vault_service(did, free_info["maxStorage"], free_info["serviceDays"])
         return self.response.response_ok()
 
+    def remove_vault(self):
+        did, app_id, err = pre_proc(self.response)
+        if err:
+            return err
+        delete_user_vault(did)
+
+    def freeze_vault(self):
+        did, app_id, err = pre_proc(self.response)
+        if err:
+            return err
+        freeze_vault(did)
+
+    def unfreeze_vault(self):
+        did, app_id, err = pre_proc(self.response)
+        if err:
+            return err
+        unfreeze_vault(did)
+
     def get_vault_service_info(self):
         did, app_id, err = pre_proc(self.response)
         if err:
@@ -192,6 +211,9 @@ class HivePayment:
             del info["_id"]
             data = dict()
             info[VAULT_BACKUP_SERVICE_USE_STORAGE] = info[VAULT_BACKUP_SERVICE_USE_STORAGE] / (1024 * 1024)
+            if VAULT_BACKUP_SERVICE_FTP in info:
+                del info[VAULT_BACKUP_SERVICE_FTP]
+            if VAULT_BACKUP_SERVICE_DATA in info:
+                del info[VAULT_BACKUP_SERVICE_DATA]
             data["vault_service_info"] = info
-
             return self.response.response_ok(data)

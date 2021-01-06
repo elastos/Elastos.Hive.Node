@@ -1,5 +1,8 @@
+import json
+import logging
 from datetime import datetime
 from time import time
+from hive.util.did.eladid import ffi, lib
 
 from hive.util.constants import DID_INFO_TOKEN
 from hive.util.did_info import get_did_info_by_did_appid
@@ -7,7 +10,7 @@ from hive.util.did_sync import add_did_sync_info, update_did_sync_info, DATA_SYN
     delete_did_sync_info
 
 from hive.settings import AUTH_CHALLENGE_EXPIRED
-from hive.util.payment.vault_service_manage import setup_vault_service
+from hive.util.payment.vault_service_manage import setup_vault_service, remove_vault_service
 
 did = "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"
 app_id = "appid"
@@ -29,7 +32,6 @@ def setup_test_auth_token():
         global token2
         token2 = info2[DID_INFO_TOKEN]
     return
-
 
 
 def delete_test_auth_token():
@@ -56,3 +58,74 @@ def get_auth_token2():
 def setup_test_vault(did):
     setup_vault_service(did, 100, -1)
 
+
+def remove_test_vault(did):
+    remove_vault_service(did)
+
+
+def test_auth_common(self, user_did, app_did):
+    # sign_in
+    doc = lib.DIDStore_LoadDID(app_did.store, app_did.did)
+    doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
+    logging.getLogger("test_auth_common").debug(f"\ndoc_str: {doc_str}")
+    doc = json.loads(doc_str)
+    rt, s = self.parse_response(
+        self.test_client.post('/api/v1/did/sign_in',
+                              data=json.dumps({
+                                  "document": doc,
+                              }),
+                              headers=self.json_header)
+    )
+    self.assert200(s)
+    self.assertEqual(rt["_status"], "OK")
+    jwt = rt["challenge"]
+    # print(jwt)
+    jws = lib.DefaultJWSParser_Parse(jwt.encode())
+    # if not jws:
+    #     print(ffi.string(lib.DIDError_GetMessage()).decode())
+    aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
+    self.assertEqual(aud, app_did.get_did_string())
+    nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()
+    hive_did = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+    lib.JWT_Destroy(jws)
+
+    # auth
+    vc = user_did.issue_auth(app_did)
+    vp_json = app_did.create_presentation(vc, nonce, hive_did)
+    auth_token = app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
+    # print(auth_token)
+    logging.getLogger("test_auth_common").debug(f"\nauth_token: {auth_token}")
+
+    rt, s = self.parse_response(
+        self.test_client.post('/api/v1/did/auth',
+                              data=json.dumps({
+                                  "jwt": auth_token,
+                              }),
+                              headers=self.json_header)
+    )
+    self.assert200(s)
+    self.assertEqual(rt["_status"], "OK")
+
+    token = rt["access_token"]
+    jws = lib.DefaultJWSParser_Parse(token.encode())
+    aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
+    self.assertEqual(aud, app_did.get_did_string())
+    issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+    lib.JWT_Destroy(jws)
+    # print(token)
+    logging.getLogger("test_auth_common").debug(f"\ntoken: {token}")
+    app_did.set_access_token(token)
+
+    # auth_check
+    # token = test_common.get_auth_token()
+    self.json_header = [
+        ("Authorization", "token " + token),
+        self.content_type,
+    ]
+    rt, s = self.parse_response(
+        self.test_client.post('/api/v1/did/check_token',
+                              headers=self.json_header)
+    )
+    self.assert200(s)
+    self.assertEqual(rt["_status"], "OK")
+    return token, hive_did

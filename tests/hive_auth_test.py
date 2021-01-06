@@ -48,10 +48,10 @@ class DIDApp(Entity):
         }
         return self.issue_auth_vc("AppIdCredential", props, app.did)
 
-    def issue_backup_auth(self, hive1_did, hive2_did):
+    def issue_backup_auth(self, hive1_did, host, hive2_did):
         props = {
             'sourceDID': hive1_did,
-            'targetHost': "http://0.0.0.0:5001/",
+            'targetHost': host,
             'targetDID': hive2_did,
         }
         did = lib.DID_FromString(hive1_did.encode())
@@ -216,28 +216,6 @@ class HiveAuthTestCase(unittest.TestCase):
         token2 = self.__test_auth_common(didapp, testapp2)
         logging.getLogger("HiveAuthTestCase").debug(f"\ntoken: {token}")
         # self.__test_auth_common(didapp, testapp3)
-        pass
-
-    #test bauck up auth
-    def test_d_auth(self):
-        didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
-        testapp = DApp("testapp", test_common.app_id,
-                       "amount material swim purse swallow gate pride series cannon patient dentist person")
-        token, hive_did = self.__test_auth_common(didapp, testapp)
-
-        # backup_auth
-        vc = didapp.issue_backup_auth(hive_did, hive_did)
-        vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
-
-        rt, s = self.parse_response(
-            self.test_client.post('/api/v1/did/backup_request',
-                                  data=json.dumps({
-                                      "credential": vc_json,
-                                  }),
-                                  headers=self.json_header)
-        )
-        # self.assert200(s)
-        # self.assertEqual(rt["_status"], "OK")
         pass
 
 

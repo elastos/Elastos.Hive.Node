@@ -57,3 +57,91 @@ return:
         }
 comments: "The input data is google oauth2 token to json, no need to change anything. There is a sample code in python: oauth_google_desktop.py"
 ```
+
+## Get backup state 
+```YAML
+HTTP: GET
+URL: api/v1/backup/state
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+return:
+    Success:
+        {
+            "_status": "OK",
+            "hive_backup_state": "stop"// stop, backup, restore
+        }
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+## Backup hive vault to other hive node
+```YAML
+HTTP: POST
+URL: /api/v1/backup/save/to/node
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data:
+    { 
+        "backup_credential": '{"id":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM#didapp","type":["BackupCredential"],"issuer":"did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN","issuanceDate":"2021-01-07T05:41:28Z","expirationDate":"2025-09-01T19:47:24Z","credentialSubject":{"id":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","sourceDID":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","targetDID":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","targetHost":"http://0.0.0.0:5000"},"proof":{"type":"ECDSAsecp256r1","verificationMethod":"did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN#primary","signature":"1LfT8p5JGTQGhCpRnysBSsrZZS-Hctv_ejBn7fwaT649Manbiy6qMHvtla075x18xqqPIHB1ylWbVFBzfILUYA"}} '
+    }
+return:
+    Success: {"_status":"OK"}
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+comments: "backup_credential need to issue by user did, see it in hive_auth_test.py:issue_backup_auth"
+```
+
+## Restore hive vault from other hive node
+```YAML
+HTTP: POST
+URL: /api/v1/backup/restore/from/node
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data:
+    { 
+        "backup_credential": '{"id":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM#didapp","type":["BackupCredential"],"issuer":"did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN","issuanceDate":"2021-01-07T05:41:28Z","expirationDate":"2025-09-01T19:47:24Z","credentialSubject":{"id":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","sourceDID":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","targetDID":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","targetHost":"http://0.0.0.0:5000"},"proof":{"type":"ECDSAsecp256r1","verificationMethod":"did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN#primary","signature":"1LfT8p5JGTQGhCpRnysBSsrZZS-Hctv_ejBn7fwaT649Manbiy6qMHvtla075x18xqqPIHB1ylWbVFBzfILUYA"}} '
+    }
+return:
+    Success: {"_status":"OK"}
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+comments: "backup_credential need to issue by user did, see it in hive_auth_test.py:issue_backup_auth"
+```
+
+## Active hive backup data to vault
+```YAML
+HTTP: POST
+URL: /api/v1/backup/active/to/vault
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data:
+    {}
+return:
+    Success: {"_status":"OK"}
+    Failure:
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```

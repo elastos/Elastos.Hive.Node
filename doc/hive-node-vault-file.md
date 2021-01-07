@@ -1,6 +1,6 @@
 # Vault File
 - Upload file
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/files/upload/path_of_file_name
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -18,7 +18,7 @@ return:
 ```
 
 - Download file
-```json
+```YAML
 HTTP: GET
 URL: /api/v1/files/download?path="path/of/file/file.name"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -36,7 +36,7 @@ comment: support content range
 ```
 
 - Delete file or folder
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/files/delete
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -55,7 +55,7 @@ return:
 ```
 
 - Move file or folder
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/files/move
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -79,7 +79,7 @@ comment: usage like shell command "mv"
 ```
 
 - Copy file or folder
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/files/copy
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -103,7 +103,7 @@ comment: usage like shell command "cp"
 ```
 
 - Get properties of file or folder
-```json
+```YAML
 HTTP: GET
 URL: api/v1/files/properties?path="file.or.folder.name"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -128,7 +128,7 @@ return:
 ```
 
 - List folder
-```json
+```YAML
 HTTP: GET
 URL: /api/v1/files/list/folder?path="folder.name"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -163,7 +163,7 @@ return:
 ```
 
 - Get file hash(SHA256)
-```json
+```YAML
 HTTP: GET
 URL: /api/v1/files/file/hash?path="path/of/file/name/"
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"

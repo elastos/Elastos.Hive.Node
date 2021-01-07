@@ -1,6 +1,6 @@
 # Payment
 - Get payment version 
-```json
+```YAML
 HTTP: GET 
 URL: api/v1/payment/version
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -22,7 +22,7 @@ return:
 ```
 
 - Get vault service package payment info
-```json
+```YAML
 HTTP: GET
 URL: api/v1/payment/vault_package_info
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -95,7 +95,7 @@ return:
 ```
 
 - Get vault service pricing plan by name
-```json
+```YAML
 HTTP: GET 
 URL: api/v1/payment/vault_pricing_plan?name=Rookie
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -121,7 +121,7 @@ return:
 ```
 
 - Get vault backup service pricing plan by name
-```json
+```YAML
 HTTP: GET 
 URL: api/v1/payment/vault_backup_plan?name=Rookie
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -147,7 +147,7 @@ return:
 ```
 
 - Create vault service package order
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/payment/create_vault_package_order
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -173,7 +173,7 @@ return:
 ```
 
 - Pay vault service package order
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/payment/pay_vault_package_order
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -202,7 +202,7 @@ return:
 ```
 
 - Get order info of vault service purchase
-```json
+```YAML
 HTTP: GET
 URL: api/v1/payment/vault_package_order?order_id=5f910273dc81b7a0b3f585fc
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -243,7 +243,7 @@ return:
 ```
 
 - Get user order info list of vault service purchase
-```json
+```YAML
 HTTP: GET
 URL: api/v1/payment/vault_package_order_list
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"

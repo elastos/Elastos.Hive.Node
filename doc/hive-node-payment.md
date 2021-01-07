@@ -147,7 +147,7 @@ return:
         }
 ```
 
-## Create vault service package order
+## Create payment order
 ```YAML
 HTTP: POST
 URL: /api/v1/payment/create_vault_package_order
@@ -156,7 +156,13 @@ Content-Type: "application/json"
 data: 
     {
       "pricing_name": "Rookie",
-    }
+    } 
+    to create a vault service order
+    {
+      "backup_name": "Rookie",
+    } 
+    to create a vault backup service order
+
 return:
     Success:
       {
@@ -229,6 +235,7 @@ return:
                     "0xablcdef"
                 ],
                 "state": "wait_tx",//wait_pay, wait_tx, wait_pay_timeout, wait_tx_timeout, failed, success
+                "type": "backup", // vault, backup
                 "creat_time": 1602236316,
                 "finish_time": 1602236366
             }
@@ -269,6 +276,7 @@ return:
                         "0xablcddd",
                         "0xablcdef"
                     ],
+                    "type": "vault",
                     "state": "wait_tx",//wait_pay, wait_tx, wait_pay_timeout, wait_tx_timeout, failed, success 
                     "creat_time": 1602236316,
                     "finish_time": 1602236366

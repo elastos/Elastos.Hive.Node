@@ -1,5 +1,5 @@
 # Vault File
-- Upload file
+## Upload file
 ```YAML
 HTTP: POST
 URL: /api/v1/files/upload/path_of_file_name
@@ -17,7 +17,7 @@ return:
         }
 ```
 
-- Download file
+## Download file
 ```YAML
 HTTP: GET
 URL: /api/v1/files/download?path="path/of/file/file.name"
@@ -35,7 +35,7 @@ return:
 comment: support content range
 ```
 
-- Delete file or folder
+## Delete file or folder
 ```YAML
 HTTP: POST
 URL: /api/v1/files/delete
@@ -54,7 +54,7 @@ return:
         }
 ```
 
-- Move file or folder
+## Move file or folder
 ```YAML
 HTTP: POST
 URL: /api/v1/files/move
@@ -78,7 +78,7 @@ return:
 comment: usage like shell command "mv"
 ```
 
-- Copy file or folder
+## Copy file or folder
 ```YAML
 HTTP: POST
 URL: /api/v1/files/copy
@@ -102,7 +102,7 @@ return:
 comment: usage like shell command "cp"
 ```
 
-- Get properties of file or folder
+## Get properties of file or folder
 ```YAML
 HTTP: GET
 URL: api/v1/files/properties?path="file.or.folder.name"
@@ -127,7 +127,7 @@ return:
         }
 ```
 
-- List folder
+## List folder
 ```YAML
 HTTP: GET
 URL: /api/v1/files/list/folder?path="folder.name"
@@ -162,7 +162,7 @@ return:
         }
 ```
 
-- Get file hash(SHA256)
+## Get file hash(SHA256)
 ```YAML
 HTTP: GET
 URL: /api/v1/files/file/hash?path="path/of/file/name/"

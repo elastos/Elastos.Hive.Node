@@ -1,5 +1,6 @@
 # Payment
-- Get payment version 
+
+## Get payment version 
 ```YAML
 HTTP: GET 
 URL: api/v1/payment/version
@@ -21,7 +22,7 @@ return:
         }
 ```
 
-- Get vault service package payment info
+## Get vault service package payment info
 ```YAML
 HTTP: GET
 URL: api/v1/payment/vault_package_info
@@ -94,7 +95,7 @@ return:
         }
 ```
 
-- Get vault service pricing plan by name
+## Get vault service pricing plan by name
 ```YAML
 HTTP: GET 
 URL: api/v1/payment/vault_pricing_plan?name=Rookie
@@ -120,7 +121,7 @@ return:
         }
 ```
 
-- Get vault backup service pricing plan by name
+## Get vault backup service pricing plan by name
 ```YAML
 HTTP: GET 
 URL: api/v1/payment/vault_backup_plan?name=Rookie
@@ -146,7 +147,7 @@ return:
         }
 ```
 
-- Create vault service package order
+## Create vault service package order
 ```YAML
 HTTP: POST
 URL: /api/v1/payment/create_vault_package_order
@@ -172,7 +173,7 @@ return:
         }
 ```
 
-- Pay vault service package order
+## Pay vault service package order
 ```YAML
 HTTP: POST
 URL: /api/v1/payment/pay_vault_package_order
@@ -201,7 +202,7 @@ return:
         }
 ```
 
-- Get order info of vault service purchase
+## Get order info of vault service purchase
 ```YAML
 HTTP: GET
 URL: api/v1/payment/vault_package_order?order_id=5f910273dc81b7a0b3f585fc
@@ -242,7 +243,7 @@ return:
         }
 ```
 
-- Get user order info list of vault service purchase
+## Get user order info list of vault service purchase
 ```YAML
 HTTP: GET
 URL: api/v1/payment/vault_package_order_list

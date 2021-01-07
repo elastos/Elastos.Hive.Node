@@ -1,7 +1,6 @@
 # Service manage
 
-## Vault service
-- create vault service by free pricing
+## create vault service by free pricing
 ```YAML
 HTTP: POST
 URL: /api/v1/service/vault/create
@@ -22,7 +21,7 @@ return:
         }
 ```
 
-- Get user vault service info 
+## Get user vault service info 
 ```YAML
 HTTP: GET
 URL: api/v1/service/vault
@@ -53,5 +52,4 @@ return:
         }
 ```
 
-## Vault backup service
 

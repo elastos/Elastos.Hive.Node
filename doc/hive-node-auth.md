@@ -1,5 +1,5 @@
 # Hive node auth 
-- User auth access request
+## User auth access request
 ```json
 HTTP: POST
 URL: /api/v1/did/sign_in
@@ -21,7 +21,7 @@ return:
         }
 comments: jwt include "nonce"
 ```
-- User auth
+## User auth
 ```
 HTTP: POST
 URL: /api/v1/did/auth

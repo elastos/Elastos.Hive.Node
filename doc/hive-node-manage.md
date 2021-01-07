@@ -1,5 +1,5 @@
 # Hive node manage
-- Get hive node version
+## Get hive node version
 ```YAML
 HTTP: GET
 URL: /api/v1/hive/version
@@ -19,7 +19,7 @@ return:
         }
 ```
 
-- Get commit hash 
+## Get commit hash 
 ```YAML
 HTTP: GET
 URL: /api/v1/hive/commithash

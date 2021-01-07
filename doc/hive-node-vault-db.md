@@ -1,6 +1,6 @@
 # Vault database
 WARNING: Not support mongoDB generate "_id" filter yet
-- Create mongoDB collection
+## Create mongoDB collection
 ```YAML
 HTTP: POST
 URL: /api/v1/db/create_collection
@@ -26,7 +26,7 @@ return:
 comments: "collection" is collection name of user's mongoDB.
 ```
 
-- Delete mongoDB collection
+## Delete mongoDB collection
 ```YAML
 HTTP: POST
 URL: /api/v1/db/delete_collection
@@ -52,7 +52,7 @@ return:
 comments: "collection" is collection name of user's mongoDB.
 ```
 
-- Insert a new document in a given collection
+## Insert a new document in a given collection
     * collection: collection name.
     * document: The document to insert. Must be a mutable mapping type. If the document does not have an _id field one will be added automatically.
     * options:
@@ -88,7 +88,7 @@ return:
         }
 ```
 
-- Insert many new documents in a given collection
+## Insert many new documents in a given collection
     * collection: collection name.
     * document: The document to insert. Must be a mutable mapping type. If the document does not have an _id field one will be added automatically.
     * options:
@@ -137,7 +137,7 @@ return:
         }
 ```
 
-- Update an existing document in a given collection
+## Update an existing document in a given collection
     * collection: collection name.
     * filter: A query that matches the document to update.
     * update: The modifications to apply.
@@ -183,7 +183,7 @@ return:
         }
 ```
 
-- Update many existing documents in a given collection
+## Update many existing documents in a given collection
     * collection: collection name.
     * filter: A query that matches the document to update.
     * update: The modifications to apply.
@@ -229,7 +229,7 @@ return:
         }
 ```
 
-- Delete an existing document in a given collection
+## Delete an existing document in a given collection
     * collection: collection name.
     * filter: A query that matches the document to delete.
 ```YAML
@@ -262,7 +262,7 @@ return:
         }
 ```
 
-- Delete many existing documents in a given collection
+## Delete many existing documents in a given collection
     * collection: collection name.
     * filter: A query that matches the document to delete.
 ```YAML
@@ -294,7 +294,7 @@ return:
         }
 ```
 
-- Count documents
+## Count documents
     * collection: collection name.
     * filter: The document of filter
     * options:
@@ -334,7 +334,7 @@ return:
         }
 ```
 
-- Find a specific document(findOne)
+## Find a specific document(findOne)
     * collection: collection name.
     * options():
         * filter (optional): a SON object specifying elements which must be present for a document to be included in the result set
@@ -395,7 +395,7 @@ return:
         }
 ```
 
-- Find all documents(findMany)
+## Find all documents(findMany)
     * collection: collection name.
     * options:
         * filter (optional): a SON object specifying elements which must be present for a document to be included in the result set

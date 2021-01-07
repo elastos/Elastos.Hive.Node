@@ -270,6 +270,14 @@ class HiveBackupTestCase(unittest.TestCase):
         self.prepare_active_backup_hive_node_db()
         self.active_backup_hive_node()
 
+    def test_5_get_backup_state(self):
+        r, s = self.parse_response(
+            self.test_client.get('api/v1/backup/state', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -157,18 +157,21 @@ class HivePayment:
         if err:
             return err
         delete_user_vault(did)
+        return self.response.response_ok()
 
     def freeze_vault(self):
         did, app_id, err = pre_proc(self.response)
         if err:
             return err
         freeze_vault(did)
+        return self.response.response_ok()
 
     def unfreeze_vault(self):
         did, app_id, err = pre_proc(self.response)
         if err:
             return err
         unfreeze_vault(did)
+        return self.response.response_ok()
 
     def get_vault_service_info(self):
         did, app_id, err = pre_proc(self.response)

@@ -2,7 +2,7 @@
 
 ## Vault service
 - create vault service by free pricing
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/service/vault/create
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -23,7 +23,7 @@ return:
 ```
 
 - Get user vault service info 
-```json
+```YAML
 HTTP: GET
 URL: api/v1/service/vault
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"

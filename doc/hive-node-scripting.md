@@ -4,7 +4,7 @@
 
 - Create/Update a script that gets all the groups in an alphabetical ascending order that a particular DID user belongs to. There is no subcondition that needs to be satisfied for this script as everyone is able to retrieve other user's groups without any restriction. 
 Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend. You may or may not add the param "output" as part of the executable whether to capture the output of each executable.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -51,7 +51,7 @@ return:
 
 - Create/Update a script to get the first 100 messages for a particular group messaging. "_id" is not displayed as part of the result. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages are returned back to the client.
 Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script. You may or may not add the param "output" as part of the executable whether to capture the output of each executable.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -107,7 +107,7 @@ return:
 
 - Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run. 
 Note: "$caller_did" is a reserved keyword that will automatically be replaced with the user DID on the backend and "$params" is a reserved keyword that will automatically fill the parameter value that's passed while calling the script. You may or may not add the param "output" as part of the executable whether to capture the output of each executable.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -200,7 +200,7 @@ return:
 ```
 
 - Create/Update a script(just for demoing delete and update query)
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -281,7 +281,7 @@ return:
 ```
 
 - Upload a file(just for demoing fileUpload executable query). 
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -330,7 +330,7 @@ return:
 
 
 - Download a file(just for demoing fileDownload executable query)
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -379,7 +379,7 @@ return:
 
 - Get properties or a hash of a file(just for demoing purposes)
 NOTE: We are going to allow anonymous access with this script by setting "allowAnonymousUser" to true and "allowAnonymousApp" to true
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/set_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -434,7 +434,7 @@ return:
 ### Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
 
 - Run a script to get all the groups that the DID user belongs to. As defined by the script, it contains no restriction so anyone is able to retrieve all the groups for a DID user
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -467,7 +467,7 @@ return:
 
 - Run a script to get all the group messages for a particular group ID. This has a subcondition that needs to be satisifed first. This subcondition can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
 NOTE: We can use the field "context" along with its inner value "target_did" to tell hive which did user to use when accessing vault and "target_app_did" to tell hive which app did to use when accessing vault. This is necessary when user1 wants to call user2's vault
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -516,7 +516,7 @@ return:
 ```
 
 - Run a script to add a new message to the group messaging for a particular group id. This has two subconditions that needs to be satisifed first. These subconditions can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -567,7 +567,7 @@ return:
 
 - Run a script to upload a file
 NOTE: The upload works a bit differently compared to other types of executable queries because there are two steps to this executable. First, you run the script to get a transaction ID and then secondly, you call a second API endpoint to actually upload the file related to that transaction ID
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -597,7 +597,7 @@ return:
         }
 ```
 Then, run the second API endpoint to upload the file
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/run_script_upload/transaction_id
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -616,7 +616,7 @@ return:
 
 - Run a script to download a file
 NOTE: The download works a bit differently compared to other types of executable queries because there are two steps to this executable. First, you run the script to get a transaction ID and then secondly, you call a second API endpoint to actually download the file related to that transaction ID
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -647,7 +647,7 @@ return:
         }
 ```
 Then, run the second API endpoint to download the file
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/run_script_download/transaction_id
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -668,7 +668,7 @@ comment: support content range
 - Run a script to get properties and hash of a file
 NOTE: This is a script where Anonymous options are set to true so we do not need to pass in an authorization token. 
   However, we MUST pass in the context with "target_did" and "target_app_did"
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/scripting/run_script
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"

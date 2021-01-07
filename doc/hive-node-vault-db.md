@@ -1,7 +1,7 @@
 # Vault database
 WARNING: Not support mongoDB generate "_id" filter yet
 - Create mongoDB collection
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/create_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -27,7 +27,7 @@ comments: "collection" is collection name of user's mongoDB.
 ```
 
 - Delete mongoDB collection
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/delete_collection
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -57,7 +57,7 @@ comments: "collection" is collection name of user's mongoDB.
     * document: The document to insert. Must be a mutable mapping type. If the document does not have an _id field one will be added automatically.
     * options:
         bypass_document_validation: (optional) If True, allows the write to opt-out of document level validation. Default is False.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/insert_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -94,7 +94,7 @@ return:
     * options:
         * ordered (optional): If True (the default) documents will be inserted on the server serially, in the order provided. If an error occurs all remaining inserts are aborted. If False, documents will be inserted on the server in arbitrary order, possibly in parallel, and all document inserts will be attempted.
         * bypass_document_validation: (optional) If True, allows the write to opt-out of document level validation. Default is False.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/insert_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -144,7 +144,7 @@ return:
     * options:
         * upsert (optional): If True, perform an insert if no documents match the filter.
         * bypass_document_validation: (optional) If True, allows the write to opt-out of document level validation. Default is False. This option is only supported on MongoDB 3.2 and above.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/update_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -190,7 +190,7 @@ return:
     * options:
         * upsert (optional): If True, perform an insert if no documents match the filter.
         * bypass_document_validation: (optional) If True, allows the write to opt-out of document level validation. Default is False. This option is only supported on MongoDB 3.2 and above.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/update_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -232,7 +232,7 @@ return:
 - Delete an existing document in a given collection
     * collection: collection name.
     * filter: A query that matches the document to delete.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/delete_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -265,7 +265,7 @@ return:
 - Delete many existing documents in a given collection
     * collection: collection name.
     * filter: A query that matches the document to delete.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/delete_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -301,7 +301,7 @@ return:
         * skip (int): The number of matching documents to skip before returning results.
         * limit (int): The maximum number of documents to count. Must be a positive integer. If not provided, no limit is imposed.
         * maxTimeMS (int): The maximum amount of time to allow this operation to run, in milliseconds.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/count_documents
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -349,7 +349,7 @@ return:
         * return_key (optional): If True, return only the index keys in each document.
         * show_record_id (optional): If True, adds a field $recordId in each document with the storage engine’s internal record identifier.
         * batch_size (optional): Limits the number of documents returned in a single batch.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/find_one
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -411,7 +411,7 @@ return:
         * return_key (optional): If True, return only the index keys in each document.
         * show_record_id (optional): If True, adds a field $recordId in each document with the storage engine’s internal record identifier.
         * batch_size (optional): Limits the number of documents returned in a single batch.
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/db/find_many
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"

@@ -1,7 +1,7 @@
 # Vault Backup
 
 - Backup hive vault to google drive
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/backup/save/to/google_drive
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -26,11 +26,11 @@ return:
             "message": "Error message"
           }
         }
-comments: The input data is google oauth2 token to json, no need to change anything. There is a sample code in python: oauth_google_desktop.py
+comments: "The input data is google oauth2 token to json, no need to change anything. There is a sample code in python: oauth_google_desktop.py"
 ```
 
 - Restore hive vault from google drive
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/backup/restore/from/google_drive
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
@@ -55,5 +55,5 @@ return:
             "message": "Error message"
           }
         }
-comments: The input data is google oauth2 token to json, no need to change anything. There is a sample code in python: oauth_google_desktop.py
+comments: "The input data is google oauth2 token to json, no need to change anything. There is a sample code in python: oauth_google_desktop.py"
 ```

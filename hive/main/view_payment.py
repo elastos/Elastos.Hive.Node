@@ -51,6 +51,13 @@ def vault_package_order_list():
     return h_payment.get_vault_package_order_list()
 
 
+@hive_payment.route('/api/v1/payment/vault_backup_plan', methods=['GET'])
+def get_vault_backup_plan():
+    return h_payment.get_vault_backup_plan()
+
+
+# ------------------------------------ service ------------------------------------
+
 @hive_payment.route('/api/v1/service/vault/create', methods=['POST'])
 def create_vault():
     return h_payment.create_free_vault()
@@ -74,11 +81,6 @@ def unfreeze_vault():
 @hive_payment.route('/api/v1/service/vault', methods=['GET'])
 def get_vault_service_info():
     return h_payment.get_vault_service_info()
-
-
-@hive_payment.route('/api/v1/payment/vault_backup_plan', methods=['GET'])
-def get_vault_backup_plan():
-    return h_payment.get_vault_backup_plan()
 
 
 @hive_payment.route('/api/v1/service/vault_backup/create', methods=['POST'])

@@ -20,7 +20,6 @@ from hive.util.payment.payment_config import PaymentConfig
 VAULT_SERVICE_FREE = "Free"
 VAULT_SERVICE_STATE_RUNNING = "running"
 VAULT_SERVICE_STATE_FREEZE = "freeze"
-VAULT_SERVICE_STATE_REMOVE = "removed"
 
 
 def setup_vault_service(did, max_storage, service_days, pricing_name=VAULT_SERVICE_FREE):

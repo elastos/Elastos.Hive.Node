@@ -172,9 +172,10 @@ class HiveBackup:
             return self.response.response_err(401, "auth failed")
 
         info = get_vault_backup_info(did)
-        data = {"hive_backup_info": info}
-        if VAULT_BACKUP_INFO_FTP in info:
-            del info[VAULT_BACKUP_INFO_FTP]
+        if info:
+            data = {"hive_backup_state": info[VAULT_BACKUP_INFO_STATE]}
+        else:
+            data = {"hive_backup_state": VAULT_BACKUP_STATE_STOP}
         return self.response.response_ok(data)
 
     @staticmethod
@@ -342,19 +343,21 @@ class HiveBackup:
     @staticmethod
     def __save_hive_node(did_folder, access_token, did, host, backup_token):
         ftp_port, user, password = HiveBackup.__token_to_node_backup_data(access_token)
-        encode_password = HiveBackup.__get_rclone_obscure(password)
-        ftp_host = get_host(host)
-        line = f"rclone sync {did_folder.as_posix()} :ftp: --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
-        subprocess.call(line, shell=True)
+        if HiveBackup.mode != HIVE_MODE_TEST:
+            encode_password = HiveBackup.__get_rclone_obscure(password)
+            ftp_host = get_host(host)
+            line = f"rclone sync {did_folder.as_posix()} :ftp: --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
+            subprocess.call(line, shell=True)
         HiveBackup.stop_internal_ftp(did, host + INTER_BACKUP_FTP_END_URL, backup_token)
 
     @staticmethod
     def __restore_hive_node(did_folder, access_token, did, host, backup_token):
         ftp_port, user, password = HiveBackup.__token_to_node_backup_data(access_token)
-        encode_password = HiveBackup.__get_rclone_obscure(password)
-        ftp_host = get_host(host)
-        line = f"rclone sync :ftp: {did_folder.as_posix()} --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
-        subprocess.call(line, shell=True)
+        if HiveBackup.mode != HIVE_MODE_TEST:
+            encode_password = HiveBackup.__get_rclone_obscure(password)
+            ftp_host = get_host(host)
+            line = f"rclone sync :ftp: {did_folder.as_posix()} --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
+            subprocess.call(line, shell=True)
         HiveBackup.stop_internal_ftp(did, host + INTER_BACKUP_FTP_END_URL, backup_token)
 
     def save_to_hive_node(self):

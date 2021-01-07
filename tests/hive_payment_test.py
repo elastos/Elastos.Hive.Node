@@ -193,6 +193,14 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
+    def test_1_1_get_vault_backup_pricing_plan(self):
+        logging.getLogger("").debug("\nRunning test_1_1_get_vault_backup_package_info")
+        r, s = self.parse_response(
+            self.test_client.get('api/v1/payment/vault_backup_plan?name=Rookie', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
     def test_1_1_get_vault_pricing_plan(self):
         logging.getLogger("").debug("\nRunning test_1_1_get_vault_pricing_plan")
         r, s = self.parse_response(

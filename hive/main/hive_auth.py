@@ -14,11 +14,10 @@ from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_b
     get_did_info_by_app_instance_did, update_did_info_by_app_instance_did, \
     update_token_of_did_info
 from hive.util.server_response import ServerResponse
-from hive.settings import AUTH_CHALLENGE_EXPIRED, ACCESS_TOKEN_EXPIRED
+from hive.settings import hive_setting
 from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
     DID_INFO_NONCE_EXPIRED, DID_INFO_TOKEN_EXPIRED, APP_INSTANCE_DID
 
-from hive.settings import DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA
 
 from hive.util.did.entity import Entity
 from hive.util.did.did_init import localdids
@@ -32,9 +31,9 @@ class HiveAuth(Entity):
     access_token = None
 
     def __init__(self):
-        self.mnemonic = DID_MNEMONIC
-        self.passphrase = DID_PASSPHRASE
-        self.storepass = DID_STOREPASS
+        self.mnemonic = hive_setting.DID_MNEMONIC
+        self.passphrase = hive_setting.DID_PASSPHRASE
+        self.storepass = hive_setting.DID_STOREPASS
         Entity.__init__(self, "hive.auth")
         self.response = ServerResponse("HiveSync")
 
@@ -68,7 +67,7 @@ class HiveAuth(Entity):
 
         # save to db
         nonce = create_nonce()
-        exp = int(datetime.now().timestamp()) + AUTH_CHALLENGE_EXPIRED
+        exp = int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
         if not self.__save_nonce_to_db(nonce, did_str, exp):
             return self.response.response_err(500, "save to db fail!")
 
@@ -403,7 +402,7 @@ class HiveAuth(Entity):
         if expTime == 0:
             return None, self.get_error_message("Credential getExpirationDate")
 
-        exp = int(datetime.now().timestamp()) + ACCESS_TOKEN_EXPIRED
+        exp = int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED
         if expTime > exp:
             expTime = exp
 

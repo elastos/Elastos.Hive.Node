@@ -7,12 +7,12 @@ from pathlib import Path
 
 from hive.util.common import did_tail_part, create_full_path_dir
 
-from hive.settings import VAULTS_BASE_DIR
+from hive.settings import hive_setting
 from hive.util.flask_rangerequest import RangeRequest
 
 
 def get_save_files_path(did, app_id):
-    path = Path(VAULTS_BASE_DIR)
+    path = Path(hive_setting.VAULTS_BASE_DIR)
     if path.is_absolute():
         path = path / did_tail_part(did) / app_id / "files"
     else:

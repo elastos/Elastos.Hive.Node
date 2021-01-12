@@ -7,7 +7,7 @@ from eladid import ffi, lib
 import requests
 
 from hive.util.did.did_init import init_did
-from hive.settings import AUTH_CHALLENGE_EXPIRED, ACCESS_TOKEN_EXPIRED
+from hive.settings import hive_setting
 
 # ---------------
 class Entity:
@@ -166,7 +166,7 @@ class Entity:
         vp_json = self.create_presentation(vc, nonce, hive_did)
         if vp_json is None:
             return None, None, "create_presentation error."
-        auth_token = self.create_vp_token(vp_json, subject, hive_did, AUTH_CHALLENGE_EXPIRED)
+        auth_token = self.create_vp_token(vp_json, subject, hive_did, hive_setting.AUTH_CHALLENGE_EXPIRED)
         if auth_token is None:
             return None, None, "create_vp_token error."
         return auth_token, hive_did, None

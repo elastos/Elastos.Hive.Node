@@ -7,6 +7,7 @@ services:
 before_install:
   - docker network create hive
   - docker run -d --name hive-mongo --network hive -v  ${PWD}/.mongodb-data:/data/db -p 27020:27017 mongo
+  - docker run -d --name hive-test-mongo --network hive -v  ${PWD}/.mongodb-test-data:/data/db -p 27022:27017 mongo
 #  - sudo mkdir /etc/hive && sudo cp payment_config.json /etc/hive/
   - cp .env.example .env
 install:

@@ -3,12 +3,12 @@ import os
 import pathlib
 from eladid import ffi, lib
 
-from hive.settings import DID_RESOLVER, DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA
+from hive.settings import hive_setting
 
-resolver = DID_RESOLVER.encode()  # 20606
+resolver = hive_setting.DID_RESOLVER.encode()  # 20606
 language = "english".encode()
 
-did_data_path = HIVE_DATA + os.sep + "did" + os.sep
+did_data_path = hive_setting.HIVE_DATA + os.sep + "did" + os.sep
 localdids = did_data_path + "localdids"
 store_path = did_data_path + "store"
 cache_path = did_data_path + "cache"
@@ -175,10 +175,10 @@ def init_did(mnemonic, passphrase, storepass, name):
 
 def init_did_backend():
     print("Initializing the [Auth] module")
-    print("    DID Resolver: " + DID_RESOLVER)
-    print("    DID Mnemonic: " + DID_MNEMONIC)
+    print("    DID Resolver: " + hive_setting.DID_RESOLVER)
+    print("    DID Mnemonic: " + hive_setting.DID_MNEMONIC)
 
-    assert DID_RESOLVER == "http://api.elastos.io:20606" or DID_RESOLVER == "http://api.elastos.io:21606", "resolver is invalid!"
+    assert hive_setting.DID_RESOLVER == "http://api.elastos.io:20606" or hive_setting.DID_RESOLVER == "http://api.elastos.io:21606", "resolver is invalid!"
 
     ret = lib.DIDBackend_InitializeDefault(resolver, cache_path.encode())
     if ret == -1:
@@ -192,4 +192,4 @@ def init_did_backend():
     return ret
 
 init_did_backend()
-# init_did(DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS)
+# init_did(hive_setting.DID_MNEMONIC, hive_setting.DID_PASSPHRASE, hive_setting.DID_STOREPASS)

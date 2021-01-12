@@ -8,7 +8,7 @@ from pathlib import Path
 from bson import ObjectId, json_util
 from pymongo import MongoClient
 
-from hive.settings import VAULTS_BASE_DIR, MONGO_HOST, MONGO_PORT
+from hive.settings import hive_setting
 from hive.util.constants import DATETIME_FORMAT
 from hive.util.common import did_tail_part, create_full_path_dir
 
@@ -167,7 +167,7 @@ def gene_mongo_db_name(did, app_id):
 
 
 def get_collection(did, app_id, collection):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
     if collection not in db.list_collection_names():
@@ -177,13 +177,13 @@ def get_collection(did, app_id, collection):
 
 
 def delete_mongo_database(did, app_id):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db_name = gene_mongo_db_name(did, app_id)
     connection.drop_database(db_name)
 
 
 def get_mongo_database_size(did, app_id):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
     status = db.command("dbstats")
@@ -193,7 +193,7 @@ def get_mongo_database_size(did, app_id):
 
 
 def get_save_mongo_db_path(did, app_id):
-    path = Path(VAULTS_BASE_DIR)
+    path = Path(hive_setting.VAULTS_BASE_DIR)
     if path.is_absolute():
         path = path / did_tail_part(did) / app_id / "mongo_db"
     else:
@@ -207,7 +207,7 @@ def export_mongo_db(did, app_id):
         if not create_full_path_dir(save_path):
             return False
     db_name = gene_mongo_db_name(did, app_id)
-    line2 = 'mongodump -h %s --port %s  -d %s -o %s' % (MONGO_HOST, MONGO_PORT, db_name, save_path)
+    line2 = 'mongodump -h %s --port %s  -d %s -o %s' % (hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
     return True
 
@@ -218,7 +218,7 @@ def import_mongo_db(did, app_id):
         return False
     db_name = gene_mongo_db_name(did, app_id)
     save_path = path / db_name
-    line2 = 'mongorestore -h %s --port %s  -d %s --drop %s' % (MONGO_HOST, MONGO_PORT, db_name, save_path)
+    line2 = 'mongorestore -h %s --port %s  -d %s --drop %s' % (hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
     return True
 

@@ -8,7 +8,7 @@ import requests
 
 from hive.util.payment.payment_config import PaymentConfig
 
-from hive.settings import MONGO_HOST, MONGO_PORT, ELA_RESOLVER
+from hive.settings import hive_setting
 from hive.util.constants import *
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, setup_vault_backup_service, \
     update_vault_backup_service
@@ -28,7 +28,7 @@ logger = logging.getLogger("vault_order")
 
 
 def create_order_info(did, app_id, package_info, order_type=VAULT_ORDER_TYPE_VAULT):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
 
@@ -47,7 +47,7 @@ def create_order_info(did, app_id, package_info, order_type=VAULT_ORDER_TYPE_VAU
 
 
 def find_txid(txid):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
     query = {VAULT_ORDER_TXIDS: txid}
@@ -56,7 +56,7 @@ def find_txid(txid):
 
 
 def find_canceled_order_by_txid(did, txid):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
     query = {
@@ -69,7 +69,7 @@ def find_canceled_order_by_txid(did, txid):
 
 
 def update_order_info(_id, info_dic):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
     query = {"_id": _id}
@@ -80,7 +80,7 @@ def update_order_info(_id, info_dic):
 
 
 def get_order_info_by_id(_id):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
     query = {"_id": _id}
@@ -89,7 +89,7 @@ def get_order_info_by_id(_id):
 
 
 def get_order_info_list(did, app_id):
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
     query = {VAULT_ORDER_DID: did, VAULT_ORDER_APP_ID: app_id}
@@ -103,7 +103,7 @@ def get_tx_info(tx, target_address):
         "params": [tx, True]
     }
     try:
-        r = requests.post(ELA_RESOLVER, json=param, headers={"Content-Type": "application/json"})
+        r = requests.post(hive_setting.ELA_RESOLVER, json=param, headers={"Content-Type": "application/json"})
     except Exception as e:
         logger.error("get_tx_info exception, tx:" + tx + " address:" + target_address)
         return None, None
@@ -164,7 +164,7 @@ def deal_order_tx(info):
 
 
 def check_pay_order_timeout_job():
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
     query = {VAULT_ORDER_STATE: VAULT_ORDER_STATE_WAIT_PAY}
@@ -178,7 +178,7 @@ def check_pay_order_timeout_job():
 
 
 def check_wait_order_tx_job():
-    connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
     query = {VAULT_ORDER_STATE: VAULT_ORDER_STATE_WAIT_TX}

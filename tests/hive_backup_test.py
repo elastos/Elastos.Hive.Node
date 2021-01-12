@@ -17,7 +17,6 @@ from pymongo import MongoClient
 
 from hive.main import view
 from hive.main.hive_backup import HiveBackup
-from hive.settings import env_dist
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
     INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_DATA, INTER_BACKUP_SAVE_URL
 from hive import create_app

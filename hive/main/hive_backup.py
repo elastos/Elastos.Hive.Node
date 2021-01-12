@@ -8,7 +8,7 @@ import requests
 from pathlib import Path
 
 from hive.main import view
-from hive.settings import VAULTS_BASE_DIR, BACKUP_VAULTS_BASE_DIR
+from hive.settings import hive_setting
 from hive.util.auth import did_auth
 from hive.util.common import did_tail_part, create_full_path_dir, get_host
 from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MODE_DEV, INTER_BACKUP_FTP_START_URL, \
@@ -31,8 +31,6 @@ from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_
 
 logger = logging.getLogger("HiveBackup")
 
-from hive.settings import BACKUP_FTP_PORT
-
 
 class HiveBackup:
     mode = HIVE_MODE_DEV
@@ -40,7 +38,7 @@ class HiveBackup:
     def __init__(self):
         self.app = None
         self.response = ServerResponse("HiveBackup")
-        backup_path = Path(BACKUP_VAULTS_BASE_DIR)
+        backup_path = Path(hive_setting.BACKUP_VAULTS_BASE_DIR)
         if not backup_path.exists:
             create_full_path_dir(backup_path)
         self.backup_ftp = None
@@ -49,8 +47,8 @@ class HiveBackup:
         self.app = app
         HiveBackup.mode = mode
         if mode != HIVE_MODE_TEST:
-            print("BACKUP_VAULTS_BASE_DIR:" + BACKUP_VAULTS_BASE_DIR)
-            self.backup_ftp = FtpServer(BACKUP_VAULTS_BASE_DIR, BACKUP_FTP_PORT)
+            print("hive_setting.BACKUP_VAULTS_BASE_DIR:" + hive_setting.BACKUP_VAULTS_BASE_DIR)
+            self.backup_ftp = FtpServer(hive_setting.BACKUP_VAULTS_BASE_DIR, hive_setting.BACKUP_FTP_PORT)
             self.backup_ftp.max_cons = 256
             self.backup_ftp.max_cons_per_ip = 10
             _thread.start_new_thread(self.backup_ftp.run, ())
@@ -185,7 +183,7 @@ class HiveBackup:
 
     @staticmethod
     def get_did_vault_path(did):
-        path = pathlib.Path(VAULTS_BASE_DIR)
+        path = pathlib.Path(hive_setting.VAULTS_BASE_DIR)
         if path.is_absolute():
             path = path / did_tail_part(did)
         else:
@@ -417,7 +415,7 @@ class HiveBackup:
         if VAULT_BACKUP_SERVICE_DATA in info:
             del info[VAULT_BACKUP_SERVICE_DATA]
 
-        data = {"token": HiveBackup.__data_to_node_backup_token(BACKUP_FTP_PORT, user, passwd),
+        data = {"token": HiveBackup.__data_to_node_backup_token(hive_setting.BACKUP_FTP_PORT, user, passwd),
                 "backup_service": info}
         return self.response.response_ok(data)
 

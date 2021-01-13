@@ -17,3 +17,4 @@ pyftpdlib==1.5.6
 PyOpenSSL==19.1.0
 pysendfile==2.0.1
 PyJWT==2.0.0
+Flask-Testing

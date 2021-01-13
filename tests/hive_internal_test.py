@@ -6,6 +6,11 @@ import requests
 import unittest
 from flask_testing import LiveServerTestCase
 
+from hive.main.hive_backup import HiveBackup
+from hive.util.payment.vault_service_manage import delete_user_vault
+from tests.hive_auth_test import DIDApp, DApp
+from hive.util.did.eladid import ffi, lib
+
 unittest.TestSuite
 
 import hive
@@ -15,29 +20,32 @@ from tests import test_common
 logger = logging.getLogger()
 logger.level = logging.DEBUG
 
-class MyTest(LiveServerTestCase):
+
+PORT = 5002
+
+
+class HiveInternalTest(LiveServerTestCase):
+
     def assert200(self, status):
         self.assertEqual(status, 200)
 
+    def parse_response(self, r):
+        try:
+            v = json.loads(r.get_data())
+        except json.JSONDecodeError:
+            v = None
+        return v, r.status_code
+
     def create_app(self):
-        app = hive.create_app()
+        app = hive.create_app(hive_config='.env.test')
         app.config['TESTING'] = True
         # Default port is 5000
-        app.config['LIVESERVER_PORT'] =8493
+        app.config['LIVESERVER_PORT'] = PORT
         # Default timeout is 5 seconds
         app.config['LIVESERVER_TIMEOUT'] = 10
         return app
 
-    def init_vault_backup_service(self, host):
-        param = {}
-        token = test_common.get_auth_token()
-
-        r = requests.post(host + '/api/v1/service/vault_backup/create',
-                          json=param,
-                          headers={"Content-Type": "application/json", "Authorization": "token " + token})
-        self.assert200(r.status_code)
-
-    def set_Up(self):
+    def setUp(self):
         logging.getLogger("HiveBackupTestCase").info("\n")
 
         self.app = hive.create_app(mode=HIVE_MODE_TEST)
@@ -61,27 +69,53 @@ class MyTest(LiveServerTestCase):
             self.content_type,
         ]
 
-    def test_server_is_up_and_running(self):
-        print(self.get_server_url())
-        self.init_vault_backup_service("http://127.0.0.1:8493")
-        self.set_Up()
-        self.test_echo()
+    def init_vault_backup_service(self, host):
+        param = {}
+        token = test_common.get_auth_token()
 
-    def parse_response(self, r):
-        try:
-            v = json.loads(r.get_data())
-        except json.JSONDecodeError:
-            v = None
-        return v, r.status_code
+        r = requests.post(host + '/api/v1/service/vault_backup/create',
+                          json=param,
+                          headers={"Content-Type": "application/json", "Authorization": "token " + token})
+        self.assert200(r.status_code)
 
-    def test_echo(self):
-        logging.getLogger("HiveBackupTestCase").debug("\nRunning test_a_echo")
-        r, s = self.parse_response(
-            self.test_client.post('/api/v1/echo',
-                                  data=json.dumps({"key": "value"}),
-                                  headers=self.json_header)
+    def save_to_hive_node(self, vc_json, did):
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/backup/save/to/node',
+                                  data=json.dumps({
+                                      "backup_credential": vc_json,
+                                  }),
+                                  headers=self.auth)
         )
         self.assert200(s)
-        logging.getLogger("HiveBackupTestCase").debug("** r:" + str(r))
+        info = HiveBackup.save_vault_data(did)
+        self.assertIsNotNone(info)
 
+    def restore_from_hive_node(self, vc_json, did):
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/backup/restore/from/node',
+                                  data=json.dumps({
+                                      "backup_credential": vc_json,
+                                  }),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        info = HiveBackup.restore_vault_data(did)
+        self.assertIsNotNone(info)
 
+    def test_1_save_restore_hive_node(self):
+        host = self.get_server_url()
+        self.init_vault_backup_service(host)
+
+        user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
+        app_did = DApp("testapp", test_common.app_id,
+                       "amount material swim purse swallow gate pride series cannon patient dentist person")
+        token, hive_did = test_common.test_auth_common(self, user_did, app_did)
+
+        # backup_auth
+        vc = user_did.issue_backup_auth(hive_did, host, hive_did)
+        vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
+
+        did = user_did.get_did_string()
+        self.save_to_hive_node(vc_json, did)
+        delete_user_vault(did)
+        self.restore_from_hive_node(vc_json, did)

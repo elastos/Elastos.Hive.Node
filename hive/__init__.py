@@ -10,7 +10,6 @@ DEFAULT_APP_NAME = 'Hive Node'
 app = Flask(DEFAULT_APP_NAME)
 
 
-
 def init_log():
     print("init log")
     logging.config.dictConfig(yaml.load(open('logging.conf'), Loader=yaml.FullLoader))
@@ -18,6 +17,7 @@ def init_log():
     log_console = logging.getLogger('console')
     logfile.debug("Debug FILE")
     log_console.debug("Debug CONSOLE")
+
 
 
 def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):

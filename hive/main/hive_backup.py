@@ -38,12 +38,12 @@ class HiveBackup:
     def __init__(self):
         self.app = None
         self.response = ServerResponse("HiveBackup")
-        backup_path = Path(hive_setting.BACKUP_VAULTS_BASE_DIR)
-        if not backup_path.exists:
-            create_full_path_dir(backup_path)
         self.backup_ftp = None
 
     def init_app(self, app, mode):
+        backup_path = Path(hive_setting.BACKUP_VAULTS_BASE_DIR)
+        if not backup_path.exists:
+            create_full_path_dir(backup_path)
         self.app = app
         HiveBackup.mode = mode
         if mode != HIVE_MODE_TEST:

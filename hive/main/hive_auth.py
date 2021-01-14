@@ -20,7 +20,6 @@ from hive.util.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, AP
 
 
 from hive.util.did.entity import Entity
-from hive.util.did.did_init import localdids
 from hive.util.auth import did_auth
 
 ACCESS_AUTH_COL = "did_auth"
@@ -31,14 +30,15 @@ class HiveAuth(Entity):
     access_token = None
 
     def __init__(self):
-        self.mnemonic = hive_setting.DID_MNEMONIC
-        self.passphrase = hive_setting.DID_PASSPHRASE
-        self.storepass = hive_setting.DID_STOREPASS
-        Entity.__init__(self, "hive.auth")
+        self.app = None
         self.response = ServerResponse("HiveSync")
 
     def init_app(self, app):
         self.app = app
+        self.mnemonic = hive_setting.DID_MNEMONIC
+        self.passphrase = hive_setting.DID_PASSPHRASE
+        self.storepass = hive_setting.DID_STOREPASS
+        Entity.__init__(self, "hive.auth")
 
     def sign_in(self):
         body = request.get_json(force=True, silent=True)
@@ -58,7 +58,7 @@ class HiveAuth(Entity):
             return self.response.response_err(400, "Thd did document is vaild, can't get did.")
 
         spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
-        f = open(localdids + os.sep + spec_did_str, "w")
+        f = open(hive_setting.DID_DATA_LOCAL_DIDS+ os.sep + spec_did_str, "w")
         try:
             f.write(doc_str)
         finally:

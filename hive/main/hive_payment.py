@@ -14,10 +14,10 @@ class HivePayment:
     def __init__(self):
         self.app = None
         self.response = ServerResponse("HivePayment")
-        PaymentConfig.init_config()
 
     def init_app(self, app):
         self.app = app
+        PaymentConfig.init_config()
 
     def get_version(self):
         did, app_id, err = pre_proc(self.response)

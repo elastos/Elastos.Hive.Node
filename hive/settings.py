@@ -3,44 +3,118 @@ from pathlib import Path
 from decouple import config, Config, RepositoryEnv
 import logging
 
-HIVE_CONFIG = '/etc/hive/.env'
 
-env_dist = os.environ
-if "HIVE_CONFIG" in env_dist:
-    HIVE_CONFIG = env_dist["HIVE_CONFIG"]
-config_file = Path(HIVE_CONFIG).resolve()
-if config_file.exists():
-    env_config = Config(RepositoryEnv(config_file.as_posix()))
-    logging.getLogger("Setting").debug("Config file is:" + config_file.as_posix())
-else:
-    env_config = config
-    logging.getLogger("Setting").debug("Autoconfig")
+class HiveSetting:
+    def __init__(self):
+        self.env_config = config
 
-DID_RESOLVER = env_config('DID_RESOLVER', default="http://api.elastos.io:21606", cast=str)
-ELA_RESOLVER = env_config('ELA_RESOLVER', default="http://api.elastos.io:21606", cast=str)
+    def init_config(self, hive_config='/etc/hive/.env'):
+        env_dist = os.environ
+        if "HIVE_CONFIG" in env_dist:
+            hive_config = env_dist["HIVE_CONFIG"]
+        config_file = Path(hive_config).resolve()
+        if config_file.exists():
+            self.env_config = Config(RepositoryEnv(config_file.as_posix()))
+            logging.getLogger("Setting").debug("Config file is:" + config_file.as_posix())
+            print("Setting Config file is:" + config_file.as_posix())
 
-DID_MNEMONIC = env_config('DID_MNEMONIC',
-                          default="advance duty suspect finish space matter squeeze elephant twenty over stick shield",
-                          cast=str)
-DID_PASSPHRASE = env_config('DID_PASSPHRASE', default="", cast=str)
-DID_STOREPASS = env_config('DID_STOREPASS', default="password", cast=str)
-HIVE_DATA = env_config('HIVE_DATA', default="./data", cast=str)
-VAULTS_BASE_DIR = HIVE_DATA + "/vaults"
-BACKUP_VAULTS_BASE_DIR = HIVE_DATA + "/backup_vaults"
-BACKUP_FTP_PORT = env_config('BACKUP_FTP_PORT', default=2121, cast=int)
+    @property
+    def DID_RESOLVER(self):
+        return self.env_config('DID_RESOLVER', default="http://api.elastos.io:21606", cast=str)
 
-MONGO_HOST = env_config('MONGO_HOST', default="localhost", cast=str)
-MONGO_PORT = env_config('MONGO_PORT', default=27020, cast=int)
+    @property
+    def ELA_RESOLVER(self):
+        return self.env_config('ELA_RESOLVER', default="http://api.elastos.io:21606", cast=str)
 
-print("setting MONGO_HOST:" + MONGO_HOST)
-print("setting MONGO_PORT:" + str(MONGO_PORT))
+    @property
+    def DID_MNEMONIC(self):
+        return self.env_config('DID_MNEMONIC',
+                               default="advance duty suspect finish space matter squeeze elephant twenty over stick shield",
+                               cast=str)
 
-RCLONE_CONFIG_FILE_DIR = env_config('RCLONE_CONFIG_FILE_DIR', default="./.rclone", cast=str)
-HIVE_PAYMENT_CONFIG = env_config('HIVE_PAYMENT_CONFIG', default="./payment_config.json", cast=str)
-HIVE_SENTRY_DSN = env_config('HIVE_SENTRY_DSN', default="", cast=str)
+    @property
+    def DID_PASSPHRASE(self):
+        return self.env_config('DID_PASSPHRASE', default="", cast=str)
 
-AUTH_CHALLENGE_EXPIRED = 3 * 60
-ACCESS_TOKEN_EXPIRED = 30 * 24 * 60 * 60
+    @property
+    def DID_STOREPASS(self):
+        return self.env_config('DID_STOREPASS', default="password", cast=str)
 
-HIVE_VERSION = env_config('HIVE_VERSION', default="0.0.0", cast=str)
-HIVE_COMMIT_HASH = env_config('HIVE_COMMIT_HASH', default="", cast=str)
+    @property
+    def HIVE_DATA(self):
+        return self.env_config('HIVE_DATA', default="./data", cast=str)
+
+    @property
+    def VAULTS_BASE_DIR(self):
+        return self.HIVE_DATA + "/vaults"
+
+    @property
+    def BACKUP_VAULTS_BASE_DIR(self):
+        return self.HIVE_DATA + "/backup_vaults"
+
+    @property
+    def DID_DATA_BASE_DIR(self):
+        return self.HIVE_DATA + "/did"
+
+    @property
+    def DID_DATA_LOCAL_DIDS(self):
+        return self.DID_DATA_BASE_DIR + "/localdids"
+
+    @property
+    def DID_DATA_STORE_PATH(self):
+        return self.DID_DATA_BASE_DIR + "/store"
+
+    @property
+    def DID_DATA_CACHE_PATH(self):
+        return self.DID_DATA_BASE_DIR + "/cache"
+
+    @property
+    def BACKUP_FTP_PORT(self):
+        return self.env_config('BACKUP_FTP_PORT', default=2121, cast=int)
+
+    @property
+    def MONGO_HOST(self):
+        return self.env_config('MONGO_HOST', default="localhost", cast=str)
+
+    @property
+    def MONGO_PORT(self):
+        return self.env_config('MONGO_PORT', default=27020, cast=int)
+
+    @property
+    def RCLONE_CONFIG_FILE_DIR(self):
+        return self.env_config('RCLONE_CONFIG_FILE_DIR', default="./.rclone", cast=str)
+
+    @property
+    def HIVE_PAYMENT_CONFIG(self):
+        return self.env_config('HIVE_PAYMENT_CONFIG', default="./payment_config.json", cast=str)
+
+    @property
+    def HIVE_SENTRY_DSN(self):
+        return self.env_config('HIVE_SENTRY_DSN', default="", cast=str)
+
+    @property
+    def AUTH_CHALLENGE_EXPIRED(self):
+        return 3 * 60
+
+    @property
+    def ACCESS_TOKEN_EXPIRED(self):
+        return 30 * 24 * 60 * 60
+
+    @property
+    def HIVE_VERSION(self):
+        return self.env_config('HIVE_VERSION', default="0.0.0", cast=str)
+
+    @property
+    def HIVE_COMMIT_HASH(self):
+        return self.env_config('HIVE_COMMIT_HASH', default="", cast=str)
+
+    @property
+    def LANGUAGE(self):
+        return "english"
+
+
+
+
+hive_setting = HiveSetting()
+
+

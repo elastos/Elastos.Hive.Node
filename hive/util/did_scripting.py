@@ -2,7 +2,7 @@ import jwt
 
 from flask import request
 
-from hive.settings import DID_STOREPASS
+from hive.settings import hive_setting
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS, \
     SCRIPTING_EXECUTABLE_CALLER_APP_DID, VAULT_ACCESS_R, VAULT_ACCESS_WR, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from hive.util.did_file_info import query_properties, query_hash, query_upload_get_filepath
@@ -239,7 +239,7 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
             "row_id": row_id,
             "target_did": target_did,
             "target_app_did": target_app_did
-        }, DID_STOREPASS, algorithm='HS256')
+        }, hive_setting.DID_STOREPASS, algorithm='HS256')
     }
 
     return data, None
@@ -283,7 +283,7 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
             "row_id": row_id,
             "target_did": target_did,
             "target_app_did": target_app_did
-        }, DID_STOREPASS, algorithm='HS256')
+        }, hive_setting.DID_STOREPASS, algorithm='HS256')
     }
 
     return data, None

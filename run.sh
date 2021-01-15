@@ -9,6 +9,15 @@ function start_db () {
         mongo
 }
 
+function start_test_db () {
+    docker container stop hive-test-mongo || true && docker container rm -f hive-test-mongo || true
+    docker run -d --name hive-test-mongo                \
+        --network hive                                  \
+        -v ${PWD}/.mongodb-test-data:/data/db           \
+        -p 27022:27017                                  \
+        mongo
+}
+
 function setup_venv () {
   echo "setup_venv"
     case `uname` in
@@ -65,6 +74,7 @@ function test () {
     docker network create hive
 
     start_db
+    start_test_db
 
     setup_venv
 
@@ -75,6 +85,7 @@ function test () {
     pytest --disable-pytest-warnings -xs tests/hive_scripting_test.py
     pytest --disable-pytest-warnings -xs tests/hive_payment_test.py
     pytest --disable-pytest-warnings -xs tests/hive_backup_test.py
+    pytest --disable-pytest-warnings -xs tests/hive_internal_test.py
 
     docker container stop hive-mongo && docker container rm -f hive-mongo
 }

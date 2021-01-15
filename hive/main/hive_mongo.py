@@ -6,7 +6,7 @@ from bson import json_util
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
-from hive.settings import MONGO_HOST, MONGO_PORT
+from hive.settings import hive_setting
 from hive.util.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort, convert_oid, \
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
@@ -32,7 +32,7 @@ class HiveMongoDb:
 
         collection_name = content.get('collection')
 
-        connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
         try:
@@ -52,7 +52,7 @@ class HiveMongoDb:
         if collection_name is None:
             return self.response.response_err(400, "parameter is null")
 
-        connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
         try:

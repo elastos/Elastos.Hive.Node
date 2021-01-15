@@ -2,7 +2,9 @@ from flask import Flask, request
 import logging.config, yaml
 
 from hive import main
+from hive.settings import hive_setting
 from hive.util.constants import HIVE_MODE_PROD, HIVE_MODE_DEV, HIVE_MODE_TEST
+from hive.util.did.did_init import init_did_backend
 
 DEFAULT_APP_NAME = 'Hive Node'
 
@@ -18,9 +20,12 @@ def init_log():
     log_console.debug("Debug CONSOLE")
 
 
-def create_app(mode=HIVE_MODE_PROD):
+
+def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     global app
+    hive_setting.init_config(hive_config)
     init_log()
+    init_did_backend()
     main.init_app(app, mode)
     logging.getLogger("create_app").debug("create_app")
     return app

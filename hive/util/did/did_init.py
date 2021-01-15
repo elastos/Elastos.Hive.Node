@@ -3,15 +3,8 @@ import os
 import pathlib
 from eladid import ffi, lib
 
-from hive.settings import DID_RESOLVER, DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS, HIVE_DATA
+from hive.settings import hive_setting
 
-resolver = DID_RESOLVER.encode()  # 20606
-language = "english".encode()
-
-did_data_path = HIVE_DATA + os.sep + "did" + os.sep
-localdids = did_data_path + "localdids"
-store_path = did_data_path + "store"
-cache_path = did_data_path + "cache"
 
 def new_adapter():
     adapter = ffi.new("struct DIDAdapter *")
@@ -31,7 +24,7 @@ def MyDIDLocalResovleHandle(did):
     spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
     doc = ffi.NULL
 
-    file_path = localdids + os.sep + spec_did_str
+    file_path = hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_did_str
     is_exist =os.path.exists(file_path)
     if is_exist:
         f = open(file_path, "r")
@@ -57,7 +50,7 @@ def init_did_store(name):
     if name is None:
         return ffi.NULL
 
-    store_dir = store_path + os.sep + name
+    store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + name
     store = lib.DIDStore_Open(store_dir.encode(), adapter)
     return store
 
@@ -82,8 +75,8 @@ def init_private_identity(store, mnemonic, storepass, passphrase):
 
     mnemonic = mnemonic.encode()
     if not mnemonic:
-        mnemonic = lib.Mnemonic_Generate(language)
-    ret = lib.DIDStore_InitPrivateIdentity(store, storepass, mnemonic, passphrase, language, True)
+        mnemonic = lib.Mnemonic_Generate(hive_setting.LANGUAGE.encode())
+    ret = lib.DIDStore_InitPrivateIdentity(store, storepass, mnemonic, passphrase, hive_setting.LANGUAGE.encode(), True)
     if ret == -1:
         print_err("DIDStore_InitPrivateIdentity")
 
@@ -175,21 +168,20 @@ def init_did(mnemonic, passphrase, storepass, name):
 
 def init_did_backend():
     print("Initializing the [Auth] module")
-    print("    DID Resolver: " + DID_RESOLVER)
-    print("    DID Mnemonic: " + DID_MNEMONIC)
+    print("    DID Resolver: " + hive_setting.DID_RESOLVER)
+    print("    DID Mnemonic: " + hive_setting.DID_MNEMONIC)
 
-    assert DID_RESOLVER == "http://api.elastos.io:20606" or DID_RESOLVER == "http://api.elastos.io:21606", "resolver is invalid!"
+    assert hive_setting.DID_RESOLVER == "http://api.elastos.io:20606" or hive_setting.DID_RESOLVER == "http://api.elastos.io:21606", "resolver is invalid!"
 
-    ret = lib.DIDBackend_InitializeDefault(resolver, cache_path.encode())
+    ret = lib.DIDBackend_InitializeDefault(hive_setting.DID_RESOLVER.encode(), hive_setting.DID_DATA_CACHE_PATH.encode())
     if ret == -1:
         print_err("DIDBackend_InitializeDefault")
 
-    is_exist =os.path.exists(localdids)
+    is_exist =os.path.exists(hive_setting.DID_DATA_LOCAL_DIDS)
     if not is_exist:
-        os.makedirs(localdids)
+        os.makedirs(hive_setting.DID_DATA_LOCAL_DIDS)
     lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)
 
     return ret
 
-init_did_backend()
-# init_did(DID_MNEMONIC, DID_PASSPHRASE, DID_STOREPASS)
+# init_did(hive_setting.DID_MNEMONIC, hive_setting.DID_PASSPHRASE, hive_setting.DID_STOREPASS)

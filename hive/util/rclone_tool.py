@@ -3,7 +3,7 @@ import logging
 import os
 import pathlib
 
-from hive.settings import RCLONE_CONFIG_FILE_DIR
+from hive.settings import hive_setting
 from hive.util.common import create_full_path_dir
 
 
@@ -34,7 +34,7 @@ class RcloneTool:
 
     @staticmethod
     def find_rclone_config_file(drive_name):
-        config_file = pathlib.Path(RCLONE_CONFIG_FILE_DIR).absolute() / drive_name
+        config_file = pathlib.Path(hive_setting.RCLONE_CONFIG_FILE_DIR).absolute() / drive_name
         if config_file.exists():
             return config_file
         else:
@@ -42,7 +42,7 @@ class RcloneTool:
 
     @staticmethod
     def create_rclone_config_file(drive_name, config_data):
-        path = pathlib.Path(RCLONE_CONFIG_FILE_DIR).absolute()
+        path = pathlib.Path(hive_setting.RCLONE_CONFIG_FILE_DIR).absolute()
         if not path.exists():
             path.mkdir(exist_ok=True, parents=True)
 
@@ -71,6 +71,6 @@ class RcloneTool:
 
     @staticmethod
     def remove_rclone_config_file(drive_name):
-        config_file = pathlib.Path(RCLONE_CONFIG_FILE_DIR).absolute() / drive_name
+        config_file = pathlib.Path(hive_setting.RCLONE_CONFIG_FILE_DIR).absolute() / drive_name
         if config_file.exists():
             config_file.unlink()

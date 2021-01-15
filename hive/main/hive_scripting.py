@@ -9,7 +9,7 @@ from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from hive.main.interceptor import post_json_param_pre_proc
-from hive.settings import MONGO_HOST, MONGO_PORT, DID_STOREPASS
+from hive.settings import hive_setting
 from hive.util.auth import did_auth
 from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_CONDITION_TYPE_AND, SCRIPTING_CONDITION_TYPE_OR, \
@@ -38,7 +38,7 @@ class HiveScripting:
         self.app = app
 
     def __upsert_script_to_db(self, did, app_id, content):
-        connection = MongoClient(host=MONGO_HOST, port=MONGO_PORT)
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
 
@@ -424,7 +424,7 @@ class HiveScripting:
     def run_script_fileapi_setup(self, transaction_id, fileapi_type):
         # Request script content first
         try:
-            transaction_detail = jwt.decode(transaction_id, DID_STOREPASS, algorithms=['HS256'])
+            transaction_detail = jwt.decode(transaction_id, hive_setting.DID_STOREPASS, algorithms=['HS256'])
             row_id, target_did, target_app_did = transaction_detail.get('row_id', None), transaction_detail.get('target_did', None), \
                                                  transaction_detail.get('target_app_did', None)
         except Exception as e:

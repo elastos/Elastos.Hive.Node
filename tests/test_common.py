@@ -9,7 +9,7 @@ from hive.util.did_info import get_did_info_by_did_appid
 from hive.util.did_sync import add_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
     delete_did_sync_info
 
-from hive.settings import AUTH_CHALLENGE_EXPIRED
+from hive.settings import hive_setting
 from hive.util.payment.vault_service_manage import setup_vault_service, remove_vault_service
 
 did = "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"

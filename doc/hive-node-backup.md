@@ -3,7 +3,7 @@
 ## Backup hive vault to google drive
 ```YAML
 HTTP: POST
-URL: /api/v1/backup/save/to/google_drive
+URL: /api/v1/backup/save_to_google_drive
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data:
@@ -32,7 +32,7 @@ comments: "The input data is google oauth2 token to json, no need to change anyt
 ## Restore hive vault from google drive
 ```YAML
 HTTP: POST
-URL: /api/v1/backup/restore/from/google_drive
+URL: /api/v1/backup/restore_from_google_drive
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data:
@@ -83,7 +83,7 @@ return:
 ## Backup hive vault to other hive node
 ```YAML
 HTTP: POST
-URL: /api/v1/backup/save/to/node
+URL: /api/v1/backup/save_to_node
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data:
@@ -106,7 +106,7 @@ comments: "backup_credential need to issue by user did, see it in hive_auth_test
 ## Restore hive vault from other hive node
 ```YAML
 HTTP: POST
-URL: /api/v1/backup/restore/from/node
+URL: /api/v1/backup/restore_from_node
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data:
@@ -129,7 +129,7 @@ comments: "backup_credential need to issue by user did, see it in hive_auth_test
 ## Active hive backup data to vault
 ```YAML
 HTTP: POST
-URL: /api/v1/backup/active/to/vault
+URL: /api/v1/backup/activate_to_vault
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data:

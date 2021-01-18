@@ -118,7 +118,7 @@ class HiveBackupTestCase(unittest.TestCase):
             "client_secret": "mqaI40MlghlNkfaFtDBzvpGg", "scopes": ["https://www.googleapis.com/auth/drive"],
             "expiry": "2020-11-18T04:13:37Z"}'''
         r, s = self.parse_response(
-            self.test_client.post('/api/v1/backup/save/to/google_drive',
+            self.test_client.post('/api/v1/backup/save_to_google_drive',
                                   data=google_auth_token,
                                   headers=self.auth)
         )
@@ -137,7 +137,7 @@ class HiveBackupTestCase(unittest.TestCase):
             "client_secret": "mqaI40MlghlNkfaFtDBzvpGg", "scopes": ["https://www.googleapis.com/auth/drive"],
             "expiry": "2020-11-18T04:13:37Z"}'''
         r, s = self.parse_response(
-            self.test_client.post('/api/v1/backup/restore/from/google_drive',
+            self.test_client.post('/api/v1/backup/restore_from_google_drive',
                                   data=google_auth_token,
                                   headers=self.auth)
         )
@@ -199,7 +199,7 @@ class HiveBackupTestCase(unittest.TestCase):
     def active_backup_hive_node(self):
         param = {}
         rt, s = self.parse_response(
-            self.test_client.post('/api/v1/backup/active/to/vault',
+            self.test_client.post('/api/v1/backup/activate_to_vault',
                                   data=json.dumps(param),
                                   headers=self.auth)
         )

@@ -80,7 +80,7 @@ class HiveInternalTest(LiveServerTestCase):
 
     def save_to_hive_node(self, vc_json, did):
         rt, s = self.parse_response(
-            self.test_client.post('/api/v1/backup/save/to/node',
+            self.test_client.post('/api/v1/backup/save_to_node',
                                   data=json.dumps({
                                       "backup_credential": vc_json,
                                   }),
@@ -92,7 +92,7 @@ class HiveInternalTest(LiveServerTestCase):
 
     def restore_from_hive_node(self, vc_json, did):
         rt, s = self.parse_response(
-            self.test_client.post('/api/v1/backup/restore/from/node',
+            self.test_client.post('/api/v1/backup/restore_from_node',
                                   data=json.dumps({
                                       "backup_credential": vc_json,
                                   }),

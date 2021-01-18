@@ -12,12 +12,12 @@ def init_app(app, mode):
     app.register_blueprint(hive_backup)
 
 
-@hive_backup.route('/api/v1/backup/save/to/google_drive', methods=['POST'])
+@hive_backup.route('/api/v1/backup/save_to_google_drive', methods=['POST'])
 def save_to_google_drive():
     return h_backup.save_to_google_drive()
 
 
-@hive_backup.route('/api/v1/backup/restore/from/google_drive', methods=['POST'])
+@hive_backup.route('/api/v1/backup/restore_from_google_drive', methods=['POST'])
 def restore_from_google_drive():
     return h_backup.restore_from_google_drive()
 
@@ -27,17 +27,17 @@ def get_sync_state():
     return h_backup.get_sync_state()
 
 
-@hive_backup.route('/api/v1/backup/save/to/node', methods=['POST'])
+@hive_backup.route('/api/v1/backup/save_to_node', methods=['POST'])
 def save_to_node():
     return h_backup.save_to_hive_node()
 
 
-@hive_backup.route('/api/v1/backup/restore/from/node', methods=['POST'])
+@hive_backup.route('/api/v1/backup/restore_from_node', methods=['POST'])
 def restore_from_node():
     return h_backup.restore_from_hive_node()
 
 
-@hive_backup.route("/api/v1/backup/active/to/vault", methods=['POST'])
+@hive_backup.route("/api/v1/backup/activate_to_vault", methods=['POST'])
 def backup_to_vault():
     return h_backup.backup_to_vault()
 

@@ -10,6 +10,7 @@ from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
     query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
+from hive.util.error_code import BAD_REQUEST
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
 
 
@@ -39,11 +40,11 @@ def unmassage_keys_with_dollar_signs(d):
 def get_script_content(response, *args):
     content = request.get_json(force=True, silent=True)
     if content is None:
-        return None, response.response_err(400, "parameter is not application/json")
+        return None, response.response_err(BAD_REQUEST, "parameter is not application/json")
     for arg in args:
         data = content.get(arg, None)
         if data is None:
-            return None, response.response_err(400, "parameter " + arg + " is null")
+            return None, response.response_err(BAD_REQUEST, "parameter " + arg + " is null")
     return content, None
 
 

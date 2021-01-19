@@ -4,7 +4,7 @@ import traceback
 
 from flask import request
 from hive.util.auth import did_auth
-from hive.util.error_code import INTERNAL_SERVER_ERROR
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST
 from hive.util.server_response import ServerResponse
 from hive.util.payment.vault_service_manage import can_access_vault
 
@@ -27,7 +27,7 @@ def pre_proc(response, access_vault=None):
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
         if not r:
-            return did, app_id, response.response_err(400, msg)
+            return did, app_id, response.response_err(BAD_REQUEST, msg)
 
     return did, app_id, None
 
@@ -39,12 +39,12 @@ def did_post_json_param_pre_proc(response, *args):
 
     content = request.get_json(force=True, silent=True)
     if content is None:
-        return did, None, response.response_err(400, "parameter is not application/json")
+        return did, None, response.response_err(BAD_REQUEST, "parameter is not application/json")
 
     for arg in args:
         data = content.get(arg, None)
         if data is None:
-            return did, None, response.response_err(400, "parameter " + arg + " is null")
+            return did, None, response.response_err(BAD_REQUEST, "parameter " + arg + " is null")
 
     return did, content, None
 
@@ -57,16 +57,16 @@ def post_json_param_pre_proc(response, *args, access_vault=None):
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
         if not r:
-            return did, app_id, None, response.response_err(400, msg)
+            return did, app_id, None, response.response_err(BAD_REQUEST, msg)
 
     content = request.get_json(force=True, silent=True)
     if content is None:
-        return did, app_id, None, response.response_err(400, "parameter is not application/json")
+        return did, app_id, None, response.response_err(BAD_REQUEST, "parameter is not application/json")
 
     for arg in args:
         data = content.get(arg, None)
         if data is None:
-            return did, app_id, None, response.response_err(400, "parameter " + arg + " is null")
+            return did, app_id, None, response.response_err(BAD_REQUEST, "parameter " + arg + " is null")
 
     return did, app_id, content, None
 
@@ -79,13 +79,13 @@ def get_pre_proc(response, *args, access_vault=None):
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
         if not r:
-            return did, app_id, None, response.response_err(400, msg)
+            return did, app_id, None, response.response_err(BAD_REQUEST, msg)
 
     content = dict()
     for arg in args:
         data = request.args.get(arg, None)
         if data is None:
-            return did, app_id, None, response.response_err(400, "parameter " + arg + " is null")
+            return did, app_id, None, response.response_err(BAD_REQUEST, "parameter " + arg + " is null")
         else:
             content[arg] = data
 

@@ -24,7 +24,7 @@ from hive.util.did_scripting import check_json_param, run_executable_find, run_c
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs, get_script_content
-from hive.util.error_code import INTERNAL_SERVER_ERROR
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
@@ -240,7 +240,7 @@ class HiveScripting:
                           "allowAnonymousApp to be False as we cannot request an auth to prove an app identity without " \
                           "proving the user identity"
             logging.debug(err_message)
-            return self.response.response_err(400, err_message)
+            return self.response.response_err(BAD_REQUEST, err_message)
 
         # Data Validation
         executable = content.get('executable')
@@ -248,7 +248,7 @@ class HiveScripting:
         err_message = self.__executable_validation(executable)
         if err_message:
             logging.debug(f"Error while validating executables: {err_message}")
-            return self.response.response_err(400, err_message)
+            return self.response.response_err(BAD_REQUEST, err_message)
 
         # Condition Validation
         condition = content.get('condition', None)
@@ -256,18 +256,18 @@ class HiveScripting:
             err_message = check_json_param(condition, "condition", args=["type", "name", "body"])
             if err_message:
                 logging.debug(f"Error while validating conditions: {err_message}")
-                return self.response.response_err(400, err_message)
+                return self.response.response_err(BAD_REQUEST, err_message)
             nested_count = self.__count_nested_condition(condition)
             for count in nested_count.values():
                 if count >= 5:
                     err_message = "conditions cannot be nested more than 5 times"
                     logging.debug(f"Error while validating conditions: {err_message}")
-                    return self.response.response_err(400, err_message)
+                    return self.response.response_err(BAD_REQUEST, err_message)
             is_valid = self.__condition_validation(condition)
             if not is_valid:
                 err_message = "some of the parameters are not set for 'condition'"
                 logging.debug(f"Error while validating conditions: {err_message}")
-                return self.response.response_err(400, err_message)
+                return self.response.response_err(BAD_REQUEST, err_message)
 
         # Create collection "scripts" if it doesn't exist and
         # create/update script in the database
@@ -328,7 +328,7 @@ class HiveScripting:
                           "allowAnonymousApp to be False as we cannot request an auth to prove an app identity without " \
                           "proving the user identity"
             logging.debug(err_message)
-            return self.response.response_err(400, err_message)
+            return self.response.response_err(BAD_REQUEST, err_message)
         if allow_anonymous_user is True:
             caller_did = None
         else:

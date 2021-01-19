@@ -17,6 +17,7 @@ from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MOD
     INTER_BACKUP_SAVE_URL, VAULT_BACKUP_SERVICE_FTP
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
+from hive.util.error_code import BAD_REQUEST
 from hive.util.ftp_tool import FtpServer
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
     get_backup_used_storage, less_than_max_storage, gene_vault_backup_ftp_record, get_vault_backup_relative_path, \
@@ -247,7 +248,7 @@ class HiveBackup:
                               headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
         except Exception as e:
             logger.error(f"start_internal_backup exception:{str(e)}, host:{url} backup_token:{backup_token}")
-            return None, self.response.response_err(400, "start node backup error")
+            return None, self.response.response_err(BAD_REQUEST, "start node backup error")
 
         if r.status_code != 200:
             ret = r.json()
@@ -397,7 +398,7 @@ class HiveBackup:
         # check backup service exist
         info = get_vault_backup_service(did)
         if not info:
-            return self.response.response_err(400, "There is no backup service of " + did)
+            return self.response.response_err(BAD_REQUEST, "There is no backup service of " + did)
 
         backup_path = get_vault_backup_path(did)
         if not backup_path.exists():
@@ -425,7 +426,7 @@ class HiveBackup:
             return self.response.response_err(401, "Backup internal backup_communication_end auth failed")
         user, passwd = get_vault_backup_ftp_record(did)
         if not user:
-            return self.response.response_err(400, "There is not backup process for " + did)
+            return self.response.response_err(BAD_REQUEST, "There is not backup process for " + did)
         if self.mode != HIVE_MODE_TEST:
             self.backup_ftp.remove_user(user)
         remove_vault_backup_ftp_record(did)
@@ -438,11 +439,11 @@ class HiveBackup:
 
         vault_service = get_vault_service(did)
         if not vault_service:
-            return self.response.response_err(400, f"There is not vault service of {did} to active")
+            return self.response.response_err(BAD_REQUEST, f"There is not vault service of {did} to active")
 
         backup_service = get_vault_backup_service(did)
         if not backup_service:
-            return self.response.response_err(400, f"There is not vault backup service of {did}")
+            return self.response.response_err(BAD_REQUEST, f"There is not vault backup service of {did}")
 
         freeze_vault(did)
         delete_user_vault(did)

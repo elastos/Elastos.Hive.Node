@@ -12,7 +12,7 @@ from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, 
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
     populate_options_count_documents, query_update_one, populate_options_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
-from hive.util.error_code import INTERNAL_SERVER_ERROR
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
@@ -51,7 +51,7 @@ class HiveMongoDb:
 
         collection_name = content.get('collection', None)
         if collection_name is None:
-            return self.response.response_err(400, "parameter is null")
+            return self.response.response_err(BAD_REQUEST, "parameter is null")
 
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
         db_name = gene_mongo_db_name(did, app_id)

@@ -8,7 +8,7 @@ from pathlib import Path
 from hive.util.common import did_tail_part, create_full_path_dir
 
 from hive.settings import hive_setting
-from hive.util.error_code import INTERNAL_SERVER_ERROR
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST
 from hive.util.flask_rangerequest import RangeRequest
 
 
@@ -50,7 +50,7 @@ def query_upload_get_filepath(did, app_id, file_name):
 
 def query_download(did, app_id, file_name):
     if file_name is None:
-        return None, 400
+        return None, BAD_REQUEST
     filename = filter_path_root(file_name)
 
     path = get_save_files_path(did, app_id)

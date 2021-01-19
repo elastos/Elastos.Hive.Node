@@ -10,6 +10,9 @@ from hive.util.did.did_init import init_did
 from hive.settings import hive_setting
 
 # ---------------
+from hive.util.error_code import SUCCESS
+
+
 class Entity:
     passphrase = "secret"
     storepass = "password"
@@ -204,7 +207,7 @@ class Entity:
             err = None
             r = requests.post(url, json=param, headers={"Content-Type": "application/json"})
             rt = r.json()
-            if r.status_code != 200:
+            if r.status_code != SUCCESS:
                 err = "[" + str(r.status_code) + "]"
                 if "_error" in rt and "message" in rt["_error"]:
                     err += rt["_error"]["message"]

@@ -12,7 +12,7 @@ from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, 
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
     populate_options_count_documents, query_update_one, populate_options_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
-from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, NOT_FOUND
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
@@ -77,7 +77,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_insert_one(col, content, options)
         if err_message:
@@ -96,7 +96,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         options = options_filter(content, ("bypass_document_validation", "ordered"))
 
@@ -128,7 +128,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_update_one(col, content, options)
         if err_message:
@@ -146,7 +146,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         options = options_filter(content, ("upsert", "bypass_document_validation"))
 
@@ -182,7 +182,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_delete_one(col, content)
         if err_message:
@@ -200,7 +200,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         try:
             ret = col.delete_many(convert_oid(content["filter"]))
@@ -224,7 +224,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_count_documents(col, content, options)
         if err_message:
@@ -239,7 +239,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         options = options_filter(content, ("projection",
                                            "skip",
@@ -272,7 +272,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content.get('collection'))
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_find_many(col, content, options)
         if err_message:

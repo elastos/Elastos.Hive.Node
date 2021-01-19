@@ -17,7 +17,7 @@ from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MOD
     INTER_BACKUP_SAVE_URL, VAULT_BACKUP_SERVICE_FTP
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
-from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED
+from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE, SUCCESS
 from hive.util.ftp_tool import FtpServer
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
     get_backup_used_storage, less_than_max_storage, gene_vault_backup_ftp_record, get_vault_backup_relative_path, \
@@ -250,7 +250,7 @@ class HiveBackup:
             logger.error(f"start_internal_backup exception:{str(e)}, host:{url} backup_token:{backup_token}")
             return None, self.response.response_err(BAD_REQUEST, "start node backup error")
 
-        if r.status_code != 200:
+        if r.status_code != SUCCESS:
             ret = r.json()
             logger.error(
                 "start_internal_backup error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
@@ -275,7 +275,7 @@ class HiveBackup:
             logger.error(f"stop_internal_backup exception:{str(e)}, host:{url} backup_token:{backup_token}")
             return
 
-        if r.status_code != 200:
+        if r.status_code != SUCCESS:
             ret = r.json()
             if not ret["_error"]:
                 logger.error(
@@ -304,7 +304,7 @@ class HiveBackup:
             logger.error(f"internal_save_app_list exception:{str(e)}, host:{url} backup_token:{backup_token}")
             return
 
-        if r.status_code != 200:
+        if r.status_code != SUCCESS:
             ret = r.json()
             if not ret["_error"]:
                 logger.error(
@@ -366,7 +366,7 @@ class HiveBackup:
 
         use_storage = get_vault_used_storage(did)
         if use_storage > backup_service[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
-            return self.response.response_err(402, f"The backup hive node dose not enough space for backup")
+            return self.response.response_err(INSUFFICIENT_STORAGE, f"The backup hive node dose not enough space for backup")
 
         if HiveBackup.mode != HIVE_MODE_TEST:
             _thread.start_new_thread(HiveBackup.save_vault_data, (did,))

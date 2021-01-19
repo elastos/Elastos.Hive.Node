@@ -8,7 +8,7 @@ from hive.util.auth import did_auth
 from hive.util.common import create_full_path_dir
 from hive.util.did_file_info import get_save_files_path, filter_path_root, query_download, \
     query_properties, query_hash, query_upload_get_filepath, get_dir_size
-from hive.util.error_code import INTERNAL_SERVER_ERROR
+from hive.util.error_code import INTERNAL_SERVER_ERROR, UNAUTHORIZED
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR
@@ -99,7 +99,7 @@ class HiveFile:
         resp = Response()
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
-            resp.status_code = 401
+            resp.status_code = UNAUTHORIZED
             return resp
         r, msg = can_access_vault(did, VAULT_ACCESS_R)
         if not r:
@@ -129,11 +129,11 @@ class HiveFile:
     def list_files(self):
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
-            return self.response.response_err(401, "auth failed")
+            return self.response.response_err(UNAUTHORIZED, "auth failed")
 
         r, msg = can_access_vault(did, VAULT_ACCESS_R)
         if not r:
-            return self.response.response_err(401, msg)
+            return self.response.response_err(UNAUTHORIZED, msg)
 
         path = get_save_files_path(did, app_id)
 

@@ -17,7 +17,7 @@ from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MOD
     INTER_BACKUP_SAVE_URL, VAULT_BACKUP_SERVICE_FTP
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
-from hive.util.error_code import BAD_REQUEST
+from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED
 from hive.util.ftp_tool import FtpServer
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
     get_backup_used_storage, less_than_max_storage, gene_vault_backup_ftp_record, get_vault_backup_relative_path, \
@@ -168,7 +168,7 @@ class HiveBackup:
     def get_sync_state(self):
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
-            return self.response.response_err(401, "auth failed")
+            return self.response.response_err(UNAUTHORIZED, "auth failed")
 
         info = get_vault_backup_info(did)
         if info:
@@ -220,7 +220,7 @@ class HiveBackup:
             return None, None, None, err
         host, backup_token, err = view.h_auth.backup_auth_request(content)
         if err:
-            return None, None, None, self.response.response_err(401, err)
+            return None, None, None, self.response.response_err(UNAUTHORIZED, err)
 
         info = get_vault_backup_info(did)
         if info and info[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP:
@@ -385,7 +385,7 @@ class HiveBackup:
     def inter_backup_save(self):
         did, content, err = did_post_json_param_pre_proc(self.response, "app_id_list")
         if err:
-            return self.response.response_err(401, "Backup internal backup_communication_start auth failed")
+            return self.response.response_err(UNAUTHORIZED, "Backup internal backup_communication_start auth failed")
 
         update_vault_backup_service_item(did, VAULT_BACKUP_SERVICE_DATA, content["app_id_list"])
         return self.response.response_ok()
@@ -393,7 +393,7 @@ class HiveBackup:
     def inter_backup_ftp_start(self):
         did, content, err = did_post_json_param_pre_proc(self.response)
         if err:
-            return self.response.response_err(401, "Backup internal backup_communication_start auth failed")
+            return self.response.response_err(UNAUTHORIZED, "Backup internal backup_communication_start auth failed")
 
         # check backup service exist
         info = get_vault_backup_service(did)
@@ -423,7 +423,7 @@ class HiveBackup:
     def inter_backup_ftp_end(self):
         did, app_id = did_auth()
         if not did:
-            return self.response.response_err(401, "Backup internal backup_communication_end auth failed")
+            return self.response.response_err(UNAUTHORIZED, "Backup internal backup_communication_end auth failed")
         user, passwd = get_vault_backup_ftp_record(did)
         if not user:
             return self.response.response_err(BAD_REQUEST, "There is not backup process for " + did)
@@ -435,7 +435,7 @@ class HiveBackup:
     def backup_to_vault(self):
         did, content, err = did_post_json_param_pre_proc(self.response)
         if err:
-            return self.response.response_err(401, "Backup backup_to_vault auth failed")
+            return self.response.response_err(UNAUTHORIZED, "Backup backup_to_vault auth failed")
 
         vault_service = get_vault_service(did)
         if not vault_service:

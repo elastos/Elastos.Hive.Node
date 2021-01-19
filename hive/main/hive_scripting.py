@@ -24,7 +24,7 @@ from hive.util.did_scripting import check_json_param, run_executable_find, run_c
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs, get_script_content
-from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
@@ -291,10 +291,10 @@ class HiveScripting:
             target_app_did = context.get('target_app_did', None)
         if not target_did:
             logging.debug(f"Error while executing script named '{content.get('name')}': target_did not set")
-            return self.response.response_err(401, "target_did not set")
+            return self.response.response_err(UNAUTHORIZED, "target_did not set")
         if not target_app_did:
             logging.debug(f"Error while executing script named '{content.get('name')}': target_app_did not set")
-            return self.response.response_err(401, "target_app_did not set")
+            return self.response.response_err(UNAUTHORIZED, "target_app_did not set")
 
         r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
         if not r:
@@ -335,14 +335,14 @@ class HiveScripting:
             if not caller_did:
                 logging.debug(f"Error while executing script named '{content.get('name')}': Auth failed. caller_did "
                               f"not set")
-                return self.response.response_err(401, "Auth failed. caller_did not set")
+                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_did not set")
         if allow_anonymous_app is True:
             caller_app_did = None
         else:
             if not caller_app_did:
                 logging.debug(f"Error while executing script named '{content.get('name')}': Auth failed. "
                               f"caller_app_did not set")
-                return self.response.response_err(401, "Auth failed. caller_app_did not set")
+                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_app_did not set")
 
         logging.debug(f"Executing a script named '{content.get('name')}' with params: "
                       f"Caller DID: '{caller_did}', Caller App DID: '{caller_app_did}', "
@@ -356,7 +356,7 @@ class HiveScripting:
             r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
             if not r:
                 logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
-                return self.response.response_err(401, msg)
+                return self.response.response_err(UNAUTHORIZED, msg)
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:

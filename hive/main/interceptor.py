@@ -4,7 +4,7 @@ import traceback
 
 from flask import request
 from hive.util.auth import did_auth
-from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED
 from hive.util.server_response import ServerResponse
 from hive.util.payment.vault_service_manage import can_access_vault
 
@@ -22,7 +22,7 @@ def handle_exception_500(e):
 def pre_proc(response, access_vault=None):
     did, app_id = did_auth()
     if (did is None) or (app_id is None):
-        return did, app_id, response.response_err(401, "auth failed")
+        return did, app_id, response.response_err(UNAUTHORIZED, "auth failed")
 
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
@@ -35,7 +35,7 @@ def pre_proc(response, access_vault=None):
 def did_post_json_param_pre_proc(response, *args):
     did, app_id = did_auth()
     if did is None:
-        return did, None, response.response_err(401, "auth failed")
+        return did, None, response.response_err(UNAUTHORIZED, "auth failed")
 
     content = request.get_json(force=True, silent=True)
     if content is None:
@@ -52,7 +52,7 @@ def did_post_json_param_pre_proc(response, *args):
 def post_json_param_pre_proc(response, *args, access_vault=None):
     did, app_id = did_auth()
     if (did is None) or (app_id is None):
-        return did, app_id, None, response.response_err(401, "auth failed")
+        return did, app_id, None, response.response_err(UNAUTHORIZED, "auth failed")
 
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
@@ -74,7 +74,7 @@ def post_json_param_pre_proc(response, *args, access_vault=None):
 def get_pre_proc(response, *args, access_vault=None):
     did, app_id = did_auth()
     if (did is None) or (app_id is None):
-        return did, app_id, None, response.response_err(401, "auth failed")
+        return did, app_id, None, response.response_err(UNAUTHORIZED, "auth failed")
 
     if access_vault:
         r, msg = can_access_vault(did, access_vault)

@@ -12,6 +12,7 @@ from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, 
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
     populate_options_count_documents, query_update_one, populate_options_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
+from hive.util.error_code import INTERNAL_SERVER_ERROR
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
@@ -40,7 +41,7 @@ class HiveMongoDb:
         except CollectionInvalid:
             pass
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
         return self.response.response_ok()
 
     def delete_collection(self):
@@ -63,7 +64,7 @@ class HiveMongoDb:
         except CollectionInvalid:
             pass
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
         return self.response.response_ok()
 
     def insert_one(self):
@@ -80,7 +81,7 @@ class HiveMongoDb:
 
         data, err_message = query_insert_one(col, content, options)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         db_size = get_mongo_database_size(did, app_id)
         update_vault_db_use_storage_byte(did, db_size)
@@ -115,7 +116,7 @@ class HiveMongoDb:
             }
             return self.response.response_ok(data)
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
     def update_one(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter", "update",
@@ -131,7 +132,7 @@ class HiveMongoDb:
 
         data, err_message = query_update_one(col, content, options)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         db_size = get_mongo_database_size(did, app_id)
         update_vault_db_use_storage_byte(did, db_size)
@@ -171,7 +172,7 @@ class HiveMongoDb:
             update_vault_db_use_storage_byte(did, db_size)
             return self.response.response_ok(data)
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
     def delete_one(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
@@ -185,7 +186,7 @@ class HiveMongoDb:
 
         data, err_message = query_delete_one(col, content)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         db_size = get_mongo_database_size(did, app_id)
         update_vault_db_use_storage_byte(did, db_size)
@@ -211,7 +212,7 @@ class HiveMongoDb:
             update_vault_db_use_storage_byte(did, db_size)
             return self.response.response_ok(data)
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
     def count_documents(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
@@ -227,7 +228,7 @@ class HiveMongoDb:
 
         data, err_message = query_count_documents(col, content, options)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         return self.response.response_ok(data)
 
@@ -260,7 +261,7 @@ class HiveMongoDb:
             data = {"items": json.loads(json_util.dumps(result))}
             return self.response.response_ok(data)
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
     def find_many(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_R)
@@ -275,6 +276,6 @@ class HiveMongoDb:
 
         data, err_message = query_find_many(col, content, options)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         return self.response.response_ok(data)

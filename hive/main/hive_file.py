@@ -8,6 +8,7 @@ from hive.util.auth import did_auth
 from hive.util.common import create_full_path_dir
 from hive.util.did_file_info import get_save_files_path, filter_path_root, query_download, \
     query_properties, query_hash, query_upload_get_filepath, get_dir_size
+from hive.util.error_code import INTERNAL_SERVER_ERROR
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR
@@ -50,7 +51,7 @@ class HiveFile:
         dst_parent_folder = dst_full_path_name.parent
         if not dst_parent_folder.exists():
             if not create_full_path_dir(dst_parent_folder):
-                return self.response.response_err(500, "make dst parent path dir error")
+                return self.response.response_err(INTERNAL_SERVER_ERROR, "make dst parent path dir error")
         try:
             if is_copy:
                 if src_full_path_name.is_file():
@@ -65,7 +66,7 @@ class HiveFile:
             else:
                 shutil.move(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
         return self.response.response_ok()
 
@@ -90,7 +91,7 @@ class HiveFile:
             file_size = os.path.getsize(full_path_name.as_posix())
             inc_vault_file_use_storage_byte(did, file_size)
         except Exception as e:
-            return self.response.response_err(500, f"Exception: {str(e)}")
+            return self.response.response_err(INTERNAL_SERVER_ERROR, f"Exception: {str(e)}")
 
         return self.response.response_ok()
 

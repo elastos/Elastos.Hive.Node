@@ -4,18 +4,19 @@ import traceback
 
 from flask import request
 from hive.util.auth import did_auth
+from hive.util.error_code import INTERNAL_SERVER_ERROR
 from hive.util.server_response import ServerResponse
 from hive.util.payment.vault_service_manage import can_access_vault
 
 
 def init_app(app):
-    app.register_error_handler(500, handle_exception_500)
+    app.register_error_handler(INTERNAL_SERVER_ERROR, handle_exception_500)
 
 
 def handle_exception_500(e):
     response = ServerResponse("HiveNode")
     logging.getLogger("Hive exception").exception(f"handle_exception_500: {traceback.format_exc()}")
-    return response.response_err(500, f"Exception at {str(datetime.utcnow())} error is:{str(e)}")
+    return response.response_err(INTERNAL_SERVER_ERROR, f"Exception at {str(datetime.utcnow())} error is:{str(e)}")
 
 
 def pre_proc(response, access_vault=None):

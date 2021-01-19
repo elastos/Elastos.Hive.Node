@@ -24,6 +24,7 @@ from hive.util.did_scripting import check_json_param, run_executable_find, run_c
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs, get_script_content
+from hive.util.error_code import INTERNAL_SERVER_ERROR
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
@@ -272,7 +273,7 @@ class HiveScripting:
         # create/update script in the database
         data, err_message = self.__upsert_script_to_db(did, app_id, content)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
         return self.response.response_ok(data)
 
     def run_script(self):
@@ -394,12 +395,12 @@ class HiveScripting:
             inc_vault_file_use_storage_byte(target_did, file_size)
         except Exception as e:
             logging.debug(f"Error while executing file upload via scripting: {str(e)}")
-            return self.response.response_err(500, f"Exception: {str(e)}")
+            return self.response.response_err(INTERNAL_SERVER_ERROR, f"Exception: {str(e)}")
 
         err_message = self.run_script_fileapi_teardown(row_id, target_did, target_app_did, "upload")
         if err_message:
             logging.debug(err_message)
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         return self.response.response_ok()
 
@@ -417,7 +418,7 @@ class HiveScripting:
         err_message = self.run_script_fileapi_teardown(row_id, target_did, target_app_did, "download")
         if err_message:
             logging.debug(err_message)
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         return data
 
@@ -428,7 +429,7 @@ class HiveScripting:
             row_id, target_did, target_app_did = transaction_detail.get('row_id', None), transaction_detail.get('target_did', None), \
                                                  transaction_detail.get('target_app_did', None)
         except Exception as e:
-            err = [500, f"Error while executing file {fileapi_type} via scripting: Could not unpack details "
+            err = [INTERNAL_SERVER_ERROR, f"Error while executing file {fileapi_type} via scripting: Could not unpack details "
                         f"from transaction_id jwt token. Exception: {str(e)}"]
             return None, None, None, None, err
 

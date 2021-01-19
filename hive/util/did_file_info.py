@@ -8,6 +8,7 @@ from pathlib import Path
 from hive.util.common import did_tail_part, create_full_path_dir
 
 from hive.settings import hive_setting
+from hive.util.error_code import INTERNAL_SERVER_ERROR
 from hive.util.flask_rangerequest import RangeRequest
 
 
@@ -34,7 +35,7 @@ def query_upload_get_filepath(did, app_id, file_name):
     full_path_name = (path / file_name).resolve()
 
     if not create_full_path_dir(full_path_name.parent):
-        err["status_code"], err["description"] = 500, "make path dir error"
+        err["status_code"], err["description"] = INTERNAL_SERVER_ERROR, "make path dir error"
         return full_path_name, err
 
     if not full_path_name.exists():

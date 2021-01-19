@@ -8,7 +8,7 @@ from pathlib import Path
 from hive.util.common import did_tail_part, create_full_path_dir
 
 from hive.settings import hive_setting
-from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, NOT_FOUND, SUCCESS, FORBIDDEN
 from hive.util.flask_rangerequest import RangeRequest
 
 
@@ -42,7 +42,7 @@ def query_upload_get_filepath(did, app_id, file_name):
         full_path_name.touch(exist_ok=True)
 
     if full_path_name.is_dir():
-        err["status_code"], err["description"] = 404, "file name is a directory"
+        err["status_code"], err["description"] = NOT_FOUND, "file name is a directory"
         return full_path_name, err
 
     return full_path_name, err
@@ -57,10 +57,10 @@ def query_download(did, app_id, file_name):
     file_full_name = (path / filename).resolve()
 
     if not file_full_name.exists():
-        return None, 404
+        return None, NOT_FOUND
 
     if not file_full_name.is_file():
-        return None, 403
+        return None, FORBIDDEN
 
     size = file_full_name.stat().st_size
     with open(file_full_name, 'rb') as f:
@@ -70,7 +70,7 @@ def query_download(did, app_id, file_name):
     return RangeRequest(open(file_full_name, 'rb'),
                         etag=etag,
                         last_modified=last_modified,
-                        size=size).make_response(), 200
+                        size=size).make_response(), SUCCESS
 
 
 def query_properties(did, app_id, name):
@@ -81,7 +81,7 @@ def query_properties(did, app_id, name):
     full_path_name = (path / name).resolve()
 
     if not full_path_name.exists():
-        err["status_code"], err["description"] = 404, "file not exists"
+        err["status_code"], err["description"] = NOT_FOUND, "file not exists"
         return data, err
 
     stat_info = full_path_name.stat()
@@ -103,7 +103,7 @@ def query_hash(did, app_id, name):
     full_path_name = (path / name).resolve()
 
     if not full_path_name.exists() or (not full_path_name.is_file()):
-        err["status_code"], err["description"] = 404, "file not exists"
+        err["status_code"], err["description"] = NOT_FOUND, "file not exists"
         return data, err
 
     buf_size = 65536  # lets read stuff in 64kb chunks!

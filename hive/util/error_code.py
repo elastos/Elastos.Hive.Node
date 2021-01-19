@@ -1,3 +1,5 @@
+SUCCESS = 200
+
 # client error. code:452-498 is available
 BAD_REQUEST = 400
 UNAUTHORIZED = 401

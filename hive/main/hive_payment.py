@@ -2,7 +2,7 @@ import logging
 
 from flask import request
 
-from hive.util.error_code import BAD_REQUEST
+from hive.util.error_code import BAD_REQUEST, NOT_FOUND
 from hive.util.payment.vault_order import *
 from hive.util.payment.vault_service_manage import get_vault_service, setup_vault_service, delete_user_vault, \
     freeze_vault, unfreeze_vault
@@ -180,7 +180,7 @@ class HivePayment:
             return err
         info = get_vault_service(did)
         if not info:
-            return self.response.response_err(404, "vault service not found")
+            return self.response.response_err(NOT_FOUND, "vault service not found")
         else:
             del info["_id"]
             data = dict()
@@ -210,7 +210,7 @@ class HivePayment:
             return err
         info = get_vault_backup_service(did)
         if not info:
-            return self.response.response_err(404, "vault backup service not found")
+            return self.response.response_err(NOT_FOUND, "vault backup service not found")
         else:
             del info["_id"]
             data = dict()

@@ -8,7 +8,7 @@ from hive.util.auth import did_auth
 from hive.util.common import create_full_path_dir
 from hive.util.did_file_info import get_save_files_path, filter_path_root, query_download, \
     query_properties, query_hash, query_upload_get_filepath, get_dir_size
-from hive.util.error_code import INTERNAL_SERVER_ERROR, UNAUTHORIZED
+from hive.util.error_code import INTERNAL_SERVER_ERROR, UNAUTHORIZED, NOT_FOUND, METHOD_NOT_ALLOWED, SUCCESS, FORBIDDEN
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR
@@ -43,10 +43,10 @@ class HiveFile:
         dst_full_path_name = (path / dst_name).resolve()
 
         if not src_full_path_name.exists():
-            return self.response.response_err(404, "src_name not exists")
+            return self.response.response_err(NOT_FOUND, "src_name not exists")
 
         if dst_full_path_name.exists() and dst_full_path_name.is_file():
-            return self.response.response_err(409, "dst_name file exists")
+            return self.response.response_err(METHOD_NOT_ALLOWED, "dst_name file exists")
 
         dst_parent_folder = dst_full_path_name.parent
         if not dst_parent_folder.exists():
@@ -103,12 +103,12 @@ class HiveFile:
             return resp
         r, msg = can_access_vault(did, VAULT_ACCESS_R)
         if not r:
-            resp.status_code = 402
+            resp.status_code = FORBIDDEN
             return resp
 
         file_name = request.args.get('path')
         data, status_code = query_download(did, app_id, file_name)
-        if status_code != 200:
+        if status_code != SUCCESS:
             resp.status_code = status_code
             return resp
 
@@ -145,7 +145,7 @@ class HiveFile:
             full_path_name = (path / name).resolve()
 
         if not (full_path_name.exists() and full_path_name.is_dir()):
-            return self.response.response_err(404, "folder not exists")
+            return self.response.response_err(NOT_FOUND, "folder not exists")
 
         try:
             files = os.listdir(full_path_name.as_posix())

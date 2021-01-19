@@ -24,7 +24,7 @@ from hive.util.did_scripting import check_json_param, run_executable_find, run_c
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs, get_script_content
-from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SUCCESS
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
@@ -299,7 +299,7 @@ class HiveScripting:
         r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
         if not r:
             logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
-            return self.response.response_err(402, msg)
+            return self.response.response_err(FORBIDDEN, msg)
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -314,11 +314,11 @@ class HiveScripting:
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
             logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
-            return self.response.response_err(404, err_message)
+            return self.response.response_err(NOT_FOUND, err_message)
 
         if not script:
             logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
-            return self.response.response_err(404, err_message)
+            return self.response.response_err(NOT_FOUND, err_message)
 
         # Validate anonymity options
         allow_anonymous_user = script.get('allowAnonymousUser', False)
@@ -362,7 +362,7 @@ class HiveScripting:
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
                 logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
-                return self.response.response_err(403, err_message)
+                return self.response.response_err(FORBIDDEN, err_message)
 
         executable = script.get("executable")
         unmassage_keys_with_dollar_signs(executable)
@@ -411,7 +411,7 @@ class HiveScripting:
             return self.response.response_err(err[0], err[1])
 
         data, status_code = query_download(target_did, target_app_did, file_name)
-        if status_code != 200:
+        if status_code != SUCCESS:
             logging.debug(f"Error while executing file download via scripting: Could not download file")
             return self.response.response_err(status_code, "Could not download file")
 
@@ -434,7 +434,7 @@ class HiveScripting:
             return None, None, None, None, err
 
         if not can_access_vault(target_did, VAULT_ACCESS_R):
-            err = [402, f"Error while executing file {fileapi_type} via scripting: vault can not be accessed"]
+            err = [FORBIDDEN, f"Error while executing file {fileapi_type} via scripting: vault can not be accessed"]
             return None, None, None, None, err
 
         # Find the temporary tx in the database
@@ -445,17 +445,17 @@ class HiveScripting:
             }
             script_temp_tx = col.find_one(content_filter)
         except Exception as e:
-            err = [404, f"Error while executing file {fileapi_type} via scripting: Exception: {str(e)}"]
+            err = [NOT_FOUND, f"Error while executing file {fileapi_type} via scripting: Exception: {str(e)}"]
             return None, None, None, None, err
 
         if not script_temp_tx:
-            err = [404, f"Error while executing file {fileapi_type} via scripting: "
+            err = [NOT_FOUND, f"Error while executing file {fileapi_type} via scripting: "
                         f"Exception: Could not find the transaction ID '{transaction_id}' in the database"]
             return None, None, None, None, err
 
         file_name = script_temp_tx.get('file_name', None)
         if not file_name:
-            err = [404, f"Error while executing file {fileapi_type} via scripting: Could not find a file_name "
+            err = [NOT_FOUND, f"Error while executing file {fileapi_type} via scripting: Could not find a file_name "
                         f"'{file_name}' to be used to upload"]
             return None, None, None, None, err
 

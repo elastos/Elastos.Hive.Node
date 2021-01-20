@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, request
 
 from hive.main.hive_scripting import HiveScripting
 
@@ -21,6 +21,15 @@ def set_script():
 @hive_scripting.route('/api/v1/scripting/run_script', methods=['POST'])
 def run_script():
     return h_scripting.run_script()
+
+
+@hive_scripting.route('/api/v1/scripting/run_script_url/<target_did>@<target_app_did>/<script_name>', methods=['GET'])
+def run_script_url(target_did, target_app_did, script_name):
+    # Get parameters
+    params = {}
+    for key in request.args.keys():
+        params[key] = request.args.get(key)
+    return h_scripting.run_script_url(target_did, target_app_did, script_name, params)
 
 
 @hive_scripting.route('/api/v1/scripting/run_script_upload/<path:transaction_id>', methods=['POST'])

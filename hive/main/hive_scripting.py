@@ -280,7 +280,7 @@ class HiveScripting:
         r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
         if not r:
             logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
-            return self.response.response_err(FORBIDDEN, msg)
+            return self.response.response_err(UNAUTHORIZED, msg)
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -295,7 +295,7 @@ class HiveScripting:
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
             logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-            return self.response.response_err(NOT_FOUND, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         if not script:
             logging.debug(f"Error while executing script named '{script_name}': {err_message}")
@@ -375,10 +375,10 @@ class HiveScripting:
             target_app_did = context.get('target_app_did', None)
         if not target_did:
             logging.debug(f"Error while executing script named '{script_name}': target_did not set")
-            return self.response.response_err(401, "target_did not set")
+            return self.response.response_err(BAD_REQUEST, "target_did not set")
         if not target_app_did:
             logging.debug(f"Error while executing script named '{script_name}': target_app_did not set")
-            return self.response.response_err(401, "target_app_did not set")
+            return self.response.response_err(BAD_REQUEST, "target_app_did not set")
 
         params = content.get('params', None)
         data = self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)

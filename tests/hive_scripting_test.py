@@ -260,7 +260,8 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_5_1_run_other_user_script_without_condition(self):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_1_run_other_user_script_without_condition")
+        logging.getLogger("HiveMongoScriptingTestCase").debug(
+            "\nRunning test_4_1_run_other_user_script_without_condition")
 
         token = test_common.get_auth_token2()
         auth = [
@@ -337,6 +338,17 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
-        
+
+    def test_8_run_script_with_url(self):
+        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_8_run_script_with_url")
+        r, s = self.parse_response(
+            self.test_client.get('/api/v1/scripting/run_script_url/'
+                                 'did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN@appid/'
+                                 'script_anonymous_access')
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -276,48 +276,29 @@ class HiveScripting:
             return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
         return self.response.response_ok(data)
 
-    def run_script(self):
-        # Request script content first
-        content, err = get_script_content(self.response, "name")
-        if err:
-            return err
-
-        caller_did, caller_app_did = did_auth()
-        target_did, target_app_did = caller_did, caller_app_did
-        # Request the Target DID and Target App Validation if present
-        context = content.get('context', {})
-        if context:
-            target_did = context.get('target_did', None)
-            target_app_did = context.get('target_app_did', None)
-        if not target_did:
-            logging.debug(f"Error while executing script named '{content.get('name')}': target_did not set")
-            return self.response.response_err(UNAUTHORIZED, "target_did not set")
-        if not target_app_did:
-            logging.debug(f"Error while executing script named '{content.get('name')}': target_app_did not set")
-            return self.response.response_err(UNAUTHORIZED, "target_app_did not set")
-
+    def __run_script(self, script_name, caller_did, caller_app_did, target_did, target_app_did, params):
         r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
         if not r:
-            logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
-            return self.response.response_err(FORBIDDEN, msg)
+            logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
+            return self.response.response_err(UNAUTHORIZED, msg)
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
         content_filter = {
-            "name": content.get('name')
+            "name": script_name
         }
 
-        err_message = f"could not find script '{content['name']}' in the database. Please register the script " \
+        err_message = f"could not find script '{script_name}' in the database. Please register the script " \
                       f"first with set_script' API endpoint"
         try:
             script = col.find_one(content_filter)
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
-            logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
-            return self.response.response_err(NOT_FOUND, err_message)
+            logging.debug(f"Error while executing script named '{script_name}': {err_message}")
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         if not script:
-            logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
+            logging.debug(f"Error while executing script named '{script_name}': {err_message}")
             return self.response.response_err(NOT_FOUND, err_message)
 
         # Validate anonymity options
@@ -333,35 +314,34 @@ class HiveScripting:
             caller_did = None
         else:
             if not caller_did:
-                logging.debug(f"Error while executing script named '{content.get('name')}': Auth failed. caller_did "
+                logging.debug(f"Error while executing script named '{script_name}': Auth failed. caller_did "
                               f"not set")
                 return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_did not set")
         if allow_anonymous_app is True:
             caller_app_did = None
         else:
             if not caller_app_did:
-                logging.debug(f"Error while executing script named '{content.get('name')}': Auth failed. "
+                logging.debug(f"Error while executing script named '{script_name}': Auth failed. "
                               f"caller_app_did not set")
                 return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_app_did not set")
 
-        logging.debug(f"Executing a script named '{content.get('name')}' with params: "
+        logging.debug(f"Executing a script named '{script_name}' with params: "
                       f"Caller DID: '{caller_did}', Caller App DID: '{caller_app_did}', "
                       f"Target DID: '{target_did}', Target App DID: '{target_app_did}', "
                       f"Anonymous User Access: {allow_anonymous_user}, Anonymous App Access: {allow_anonymous_app}")
 
-        params = content.get('params', None)
         condition = script.get('condition', None)
         if condition:
             # Currently, there's only one kind of condition("count" db query)
             r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
             if not r:
-                logging.debug(f"Error while executing script named '{content.get('name')}': vault can not be accessed")
+                logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
                 return self.response.response_err(UNAUTHORIZED, msg)
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
-                logging.debug(f"Error while executing script named '{content.get('name')}': {err_message}")
+                logging.debug(f"Error while executing script named '{script_name}': {err_message}")
                 return self.response.response_err(FORBIDDEN, err_message)
 
         executable = script.get("executable")
@@ -369,6 +349,39 @@ class HiveScripting:
         output = {}
         data = self.__executable_execution(caller_did, caller_app_did, target_did, target_app_did, executable, params,
                                            output=output, output_key=executable.get('name', "output0"))
+        return data
+
+    def run_script_url(self, target_did, target_app_did, script_name, params):
+        # Get caller info
+        caller_did, caller_app_did = did_auth()
+
+        data = self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
+
+        return self.response.response_ok(data)
+
+    def run_script(self):
+        # Request script content first
+        content, err = get_script_content(self.response, "name")
+        if err:
+            return err
+
+        script_name = content.get('name')
+        caller_did, caller_app_did = did_auth()
+        target_did, target_app_did = caller_did, caller_app_did
+        # Request the Target DID and Target App Validation if present
+        context = content.get('context', {})
+        if context:
+            target_did = context.get('target_did', None)
+            target_app_did = context.get('target_app_did', None)
+        if not target_did:
+            logging.debug(f"Error while executing script named '{script_name}': target_did not set")
+            return self.response.response_err(BAD_REQUEST, "target_did not set")
+        if not target_app_did:
+            logging.debug(f"Error while executing script named '{script_name}': target_app_did not set")
+            return self.response.response_err(BAD_REQUEST, "target_app_did not set")
+
+        params = content.get('params', None)
+        data = self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
 
         return self.response.response_ok(data)
 

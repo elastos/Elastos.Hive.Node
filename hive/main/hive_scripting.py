@@ -24,6 +24,7 @@ from hive.util.did_scripting import check_json_param, run_executable_find, run_c
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs, get_script_content
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SUCCESS
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
@@ -239,7 +240,7 @@ class HiveScripting:
                           "allowAnonymousApp to be False as we cannot request an auth to prove an app identity without " \
                           "proving the user identity"
             logging.debug(err_message)
-            return self.response.response_err(400, err_message)
+            return self.response.response_err(BAD_REQUEST, err_message)
 
         # Data Validation
         executable = content.get('executable')
@@ -247,7 +248,7 @@ class HiveScripting:
         err_message = self.__executable_validation(executable)
         if err_message:
             logging.debug(f"Error while validating executables: {err_message}")
-            return self.response.response_err(400, err_message)
+            return self.response.response_err(BAD_REQUEST, err_message)
 
         # Condition Validation
         condition = content.get('condition', None)
@@ -255,31 +256,31 @@ class HiveScripting:
             err_message = check_json_param(condition, "condition", args=["type", "name", "body"])
             if err_message:
                 logging.debug(f"Error while validating conditions: {err_message}")
-                return self.response.response_err(400, err_message)
+                return self.response.response_err(BAD_REQUEST, err_message)
             nested_count = self.__count_nested_condition(condition)
             for count in nested_count.values():
                 if count >= 5:
                     err_message = "conditions cannot be nested more than 5 times"
                     logging.debug(f"Error while validating conditions: {err_message}")
-                    return self.response.response_err(400, err_message)
+                    return self.response.response_err(BAD_REQUEST, err_message)
             is_valid = self.__condition_validation(condition)
             if not is_valid:
                 err_message = "some of the parameters are not set for 'condition'"
                 logging.debug(f"Error while validating conditions: {err_message}")
-                return self.response.response_err(400, err_message)
+                return self.response.response_err(BAD_REQUEST, err_message)
 
         # Create collection "scripts" if it doesn't exist and
         # create/update script in the database
         data, err_message = self.__upsert_script_to_db(did, app_id, content)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
         return self.response.response_ok(data)
 
     def __run_script(self, script_name, caller_did, caller_app_did, target_did, target_app_did, params):
         r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
         if not r:
             logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
-            return self.response.response_err(402, msg)
+            return self.response.response_err(FORBIDDEN, msg)
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -294,11 +295,11 @@ class HiveScripting:
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
             logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-            return self.response.response_err(404, err_message)
+            return self.response.response_err(NOT_FOUND, err_message)
 
         if not script:
             logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-            return self.response.response_err(404, err_message)
+            return self.response.response_err(NOT_FOUND, err_message)
 
         # Validate anonymity options
         allow_anonymous_user = script.get('allowAnonymousUser', False)
@@ -308,21 +309,21 @@ class HiveScripting:
                           "allowAnonymousApp to be False as we cannot request an auth to prove an app identity without " \
                           "proving the user identity"
             logging.debug(err_message)
-            return self.response.response_err(400, err_message)
+            return self.response.response_err(BAD_REQUEST, err_message)
         if allow_anonymous_user is True:
             caller_did = None
         else:
             if not caller_did:
                 logging.debug(f"Error while executing script named '{script_name}': Auth failed. caller_did "
                               f"not set")
-                return self.response.response_err(401, "Auth failed. caller_did not set")
+                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_did not set")
         if allow_anonymous_app is True:
             caller_app_did = None
         else:
             if not caller_app_did:
                 logging.debug(f"Error while executing script named '{script_name}': Auth failed. "
                               f"caller_app_did not set")
-                return self.response.response_err(401, "Auth failed. caller_app_did not set")
+                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_app_did not set")
 
         logging.debug(f"Executing a script named '{script_name}' with params: "
                       f"Caller DID: '{caller_did}', Caller App DID: '{caller_app_did}', "
@@ -335,13 +336,13 @@ class HiveScripting:
             r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
             if not r:
                 logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
-                return self.response.response_err(401, msg)
+                return self.response.response_err(UNAUTHORIZED, msg)
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
                 logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-                return self.response.response_err(403, err_message)
+                return self.response.response_err(FORBIDDEN, err_message)
 
         executable = script.get("executable")
         unmassage_keys_with_dollar_signs(executable)
@@ -407,12 +408,12 @@ class HiveScripting:
             inc_vault_file_use_storage_byte(target_did, file_size)
         except Exception as e:
             logging.debug(f"Error while executing file upload via scripting: {str(e)}")
-            return self.response.response_err(500, f"Exception: {str(e)}")
+            return self.response.response_err(INTERNAL_SERVER_ERROR, f"Exception: {str(e)}")
 
         err_message = self.run_script_fileapi_teardown(row_id, target_did, target_app_did, "upload")
         if err_message:
             logging.debug(err_message)
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         return self.response.response_ok()
 
@@ -423,14 +424,14 @@ class HiveScripting:
             return self.response.response_err(err[0], err[1])
 
         data, status_code = query_download(target_did, target_app_did, file_name)
-        if status_code != 200:
+        if status_code != SUCCESS:
             logging.debug(f"Error while executing file download via scripting: Could not download file")
             return self.response.response_err(status_code, "Could not download file")
 
         err_message = self.run_script_fileapi_teardown(row_id, target_did, target_app_did, "download")
         if err_message:
             logging.debug(err_message)
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         return data
 
@@ -441,12 +442,12 @@ class HiveScripting:
             row_id, target_did, target_app_did = transaction_detail.get('row_id', None), transaction_detail.get('target_did', None), \
                                                  transaction_detail.get('target_app_did', None)
         except Exception as e:
-            err = [500, f"Error while executing file {fileapi_type} via scripting: Could not unpack details "
+            err = [INTERNAL_SERVER_ERROR, f"Error while executing file {fileapi_type} via scripting: Could not unpack details "
                         f"from transaction_id jwt token. Exception: {str(e)}"]
             return None, None, None, None, err
 
         if not can_access_vault(target_did, VAULT_ACCESS_R):
-            err = [402, f"Error while executing file {fileapi_type} via scripting: vault can not be accessed"]
+            err = [FORBIDDEN, f"Error while executing file {fileapi_type} via scripting: vault can not be accessed"]
             return None, None, None, None, err
 
         # Find the temporary tx in the database
@@ -457,17 +458,17 @@ class HiveScripting:
             }
             script_temp_tx = col.find_one(content_filter)
         except Exception as e:
-            err = [404, f"Error while executing file {fileapi_type} via scripting: Exception: {str(e)}"]
+            err = [NOT_FOUND, f"Error while executing file {fileapi_type} via scripting: Exception: {str(e)}"]
             return None, None, None, None, err
 
         if not script_temp_tx:
-            err = [404, f"Error while executing file {fileapi_type} via scripting: "
+            err = [NOT_FOUND, f"Error while executing file {fileapi_type} via scripting: "
                         f"Exception: Could not find the transaction ID '{transaction_id}' in the database"]
             return None, None, None, None, err
 
         file_name = script_temp_tx.get('file_name', None)
         if not file_name:
-            err = [404, f"Error while executing file {fileapi_type} via scripting: Could not find a file_name "
+            err = [NOT_FOUND, f"Error while executing file {fileapi_type} via scripting: Could not find a file_name "
                         f"'{file_name}' to be used to upload"]
             return None, None, None, None, err
 

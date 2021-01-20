@@ -8,6 +8,7 @@ from hive.util.auth import did_auth
 from hive.util.common import create_full_path_dir
 from hive.util.did_file_info import get_save_files_path, filter_path_root, query_download, \
     query_properties, query_hash, query_upload_get_filepath, get_dir_size
+from hive.util.error_code import INTERNAL_SERVER_ERROR, UNAUTHORIZED, NOT_FOUND, METHOD_NOT_ALLOWED, SUCCESS, FORBIDDEN
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR
@@ -42,15 +43,15 @@ class HiveFile:
         dst_full_path_name = (path / dst_name).resolve()
 
         if not src_full_path_name.exists():
-            return self.response.response_err(404, "src_name not exists")
+            return self.response.response_err(NOT_FOUND, "src_name not exists")
 
         if dst_full_path_name.exists() and dst_full_path_name.is_file():
-            return self.response.response_err(409, "dst_name file exists")
+            return self.response.response_err(METHOD_NOT_ALLOWED, "dst_name file exists")
 
         dst_parent_folder = dst_full_path_name.parent
         if not dst_parent_folder.exists():
             if not create_full_path_dir(dst_parent_folder):
-                return self.response.response_err(500, "make dst parent path dir error")
+                return self.response.response_err(INTERNAL_SERVER_ERROR, "make dst parent path dir error")
         try:
             if is_copy:
                 if src_full_path_name.is_file():
@@ -65,7 +66,7 @@ class HiveFile:
             else:
                 shutil.move(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
         return self.response.response_ok()
 
@@ -90,7 +91,7 @@ class HiveFile:
             file_size = os.path.getsize(full_path_name.as_posix())
             inc_vault_file_use_storage_byte(did, file_size)
         except Exception as e:
-            return self.response.response_err(500, f"Exception: {str(e)}")
+            return self.response.response_err(INTERNAL_SERVER_ERROR, f"Exception: {str(e)}")
 
         return self.response.response_ok()
 
@@ -98,16 +99,16 @@ class HiveFile:
         resp = Response()
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
-            resp.status_code = 401
+            resp.status_code = UNAUTHORIZED
             return resp
         r, msg = can_access_vault(did, VAULT_ACCESS_R)
         if not r:
-            resp.status_code = 402
+            resp.status_code = FORBIDDEN
             return resp
 
         file_name = request.args.get('path')
         data, status_code = query_download(did, app_id, file_name)
-        if status_code != 200:
+        if status_code != SUCCESS:
             resp.status_code = status_code
             return resp
 
@@ -128,11 +129,11 @@ class HiveFile:
     def list_files(self):
         did, app_id = did_auth()
         if (did is None) or (app_id is None):
-            return self.response.response_err(401, "auth failed")
+            return self.response.response_err(UNAUTHORIZED, "auth failed")
 
         r, msg = can_access_vault(did, VAULT_ACCESS_R)
         if not r:
-            return self.response.response_err(401, msg)
+            return self.response.response_err(UNAUTHORIZED, msg)
 
         path = get_save_files_path(did, app_id)
 
@@ -144,7 +145,7 @@ class HiveFile:
             full_path_name = (path / name).resolve()
 
         if not (full_path_name.exists() and full_path_name.is_dir()):
-            return self.response.response_err(404, "folder not exists")
+            return self.response.response_err(NOT_FOUND, "folder not exists")
 
         try:
             files = os.listdir(full_path_name.as_posix())

@@ -12,6 +12,7 @@ from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, 
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
     populate_options_count_documents, query_update_one, populate_options_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, NOT_FOUND
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
@@ -40,7 +41,7 @@ class HiveMongoDb:
         except CollectionInvalid:
             pass
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
         return self.response.response_ok()
 
     def delete_collection(self):
@@ -50,7 +51,7 @@ class HiveMongoDb:
 
         collection_name = content.get('collection', None)
         if collection_name is None:
-            return self.response.response_err(400, "parameter is null")
+            return self.response.response_err(BAD_REQUEST, "parameter is null")
 
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
         db_name = gene_mongo_db_name(did, app_id)
@@ -63,7 +64,7 @@ class HiveMongoDb:
         except CollectionInvalid:
             pass
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
         return self.response.response_ok()
 
     def insert_one(self):
@@ -76,11 +77,11 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_insert_one(col, content, options)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         db_size = get_mongo_database_size(did, app_id)
         update_vault_db_use_storage_byte(did, db_size)
@@ -95,7 +96,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         options = options_filter(content, ("bypass_document_validation", "ordered"))
 
@@ -115,7 +116,7 @@ class HiveMongoDb:
             }
             return self.response.response_ok(data)
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
     def update_one(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter", "update",
@@ -127,11 +128,11 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_update_one(col, content, options)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         db_size = get_mongo_database_size(did, app_id)
         update_vault_db_use_storage_byte(did, db_size)
@@ -145,7 +146,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         options = options_filter(content, ("upsert", "bypass_document_validation"))
 
@@ -171,7 +172,7 @@ class HiveMongoDb:
             update_vault_db_use_storage_byte(did, db_size)
             return self.response.response_ok(data)
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
     def delete_one(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
@@ -181,11 +182,11 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_delete_one(col, content)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         db_size = get_mongo_database_size(did, app_id)
         update_vault_db_use_storage_byte(did, db_size)
@@ -199,7 +200,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         try:
             ret = col.delete_many(convert_oid(content["filter"]))
@@ -211,7 +212,7 @@ class HiveMongoDb:
             update_vault_db_use_storage_byte(did, db_size)
             return self.response.response_ok(data)
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
     def count_documents(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
@@ -223,11 +224,11 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_count_documents(col, content, options)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         return self.response.response_ok(data)
 
@@ -238,7 +239,7 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content["collection"])
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         options = options_filter(content, ("projection",
                                            "skip",
@@ -260,7 +261,7 @@ class HiveMongoDb:
             data = {"items": json.loads(json_util.dumps(result))}
             return self.response.response_ok(data)
         except Exception as e:
-            return self.response.response_err(500, "Exception:" + str(e))
+            return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
 
     def find_many(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_R)
@@ -271,10 +272,10 @@ class HiveMongoDb:
 
         col = get_collection(did, app_id, content.get('collection'))
         if not col:
-            return self.response.response_err(404, "collection not exist")
+            return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_find_many(col, content, options)
         if err_message:
-            return self.response.response_err(500, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         return self.response.response_ok(data)

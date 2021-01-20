@@ -2,6 +2,7 @@ import logging
 
 from flask import request
 
+from hive.util.error_code import BAD_REQUEST, NOT_FOUND
 from hive.util.payment.vault_order import *
 from hive.util.payment.vault_service_manage import get_vault_service, setup_vault_service, delete_user_vault, \
     freeze_vault, unfreeze_vault
@@ -42,7 +43,7 @@ class HivePayment:
         if data:
             return self.response.response_ok(data)
         else:
-            return self.response.response_err(400, "not found pricing name of:" + content["name"])
+            return self.response.response_err(BAD_REQUEST, "not found pricing name of:" + content["name"])
 
     def get_vault_backup_plan(self):
         did, app_id, content, err = get_pre_proc(self.response, "name")
@@ -53,7 +54,7 @@ class HivePayment:
         if data:
             return self.response.response_ok(data)
         else:
-            return self.response.response_err(400, "not found backup name of:" + content["name"])
+            return self.response.response_err(BAD_REQUEST, "not found backup name of:" + content["name"])
 
     def create_vault_package_order(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response)
@@ -63,17 +64,17 @@ class HivePayment:
         if "pricing_name" in content:
             package_info = PaymentConfig.get_pricing_plan(content["pricing_name"])
             if not package_info:
-                return self.response.response_err(400, "not found pricing_name of:" + content["pricing_name"])
+                return self.response.response_err(BAD_REQUEST, "not found pricing_name of:" + content["pricing_name"])
             order_id = create_order_info(did, app_id, package_info, order_type=VAULT_ORDER_TYPE_VAULT)
             return self.response.response_ok({"order_id": str(order_id)})
         elif "backup_name" in content:
             backup_info = PaymentConfig.get_backup_plan(content["backup_name"])
             if not backup_info:
-                return self.response.response_err(400, "not found backup_name of:" + content["backup_name"])
+                return self.response.response_err(BAD_REQUEST, "not found backup_name of:" + content["backup_name"])
             order_id = create_order_info(did, app_id, backup_info, order_type=VAULT_ORDER_TYPE_BACKUP)
             return self.response.response_ok({"order_id": str(order_id)})
         else:
-            return self.response.response_err(400, "parameter pricing_name and backup_name is null")
+            return self.response.response_err(BAD_REQUEST, "parameter pricing_name and backup_name is null")
 
     def pay_vault_package_order(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "order_id", "pay_txids")
@@ -95,7 +96,7 @@ class HivePayment:
                 if (info_c["_id"] != content["order_id"]) \
                         and ((info_c[VAULT_ORDER_STATE] != VAULT_ORDER_STATE_CANCELED) \
                              or (info_c[VAULT_ORDER_DID] != did)):
-                    return self.response.response_err(400, "txid:" + txid + " has been used")
+                    return self.response.response_err(BAD_REQUEST, "txid:" + txid + " has been used")
 
         info[VAULT_ORDER_TXIDS] = content["pay_txids"]
         info[VAULT_ORDER_STATE] = VAULT_ORDER_STATE_WAIT_TX
@@ -179,7 +180,7 @@ class HivePayment:
             return err
         info = get_vault_service(did)
         if not info:
-            return self.response.response_err(404, "vault service not found")
+            return self.response.response_err(NOT_FOUND, "vault service not found")
         else:
             del info["_id"]
             data = dict()
@@ -209,7 +210,7 @@ class HivePayment:
             return err
         info = get_vault_backup_service(did)
         if not info:
-            return self.response.response_err(404, "vault backup service not found")
+            return self.response.response_err(NOT_FOUND, "vault backup service not found")
         else:
             del info["_id"]
             data = dict()

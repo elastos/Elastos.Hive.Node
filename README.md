@@ -87,7 +87,7 @@ http://your-hive-node-ip-address:5000/api/v1/hive/version
 
 Sincerely thanks to all teams and projects that we rely on directly or indirectly.
 ## Contribution
-We welcome contributions to the Elastos Hive Java Project.
+Welcome contributions to the Elastos Hive Node Project.
 ## License
 MIT
 

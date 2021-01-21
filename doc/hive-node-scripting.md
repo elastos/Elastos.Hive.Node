@@ -47,6 +47,17 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (BAD_REQUEST, "conditions cannot be nested more than 5 times")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (INTERNAL_SERVER_ERROR, "Exception method '__upsert_script_to_db')
 ```
 
 ## Create/Update a script to get the first 100 messages for a particular group messaging. "_id" is not displayed as part of the result. The condition first has to return successfully that checks whether the DID user belongs to the group. Then, the appropriate messages are returned back to the client.
@@ -103,6 +114,18 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (BAD_REQUEST, "conditions cannot be nested more than 5 times")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (INTERNAL_SERVER_ERROR, "Exception method '__upsert_script_to_db')
+
 ```
 
 ## Create/Update a script to add a new message to the group messaging and then returns the last message in the group messaging that was just added. This script contains a condition of type "and" which means all the conditions defined have to return successfully first before the executables can be run. 
@@ -197,6 +220,17 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (BAD_REQUEST, "conditions cannot be nested more than 5 times")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (INTERNAL_SERVER_ERROR, "Exception method '__upsert_script_to_db')
 ```
 
 ## Create/Update a script(just for demoing delete and update query)
@@ -278,6 +312,17 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (BAD_REQUEST, "conditions cannot be nested more than 5 times")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (INTERNAL_SERVER_ERROR, "Exception method '__upsert_script_to_db')
 ```
 
 ## Upload a file(just for demoing fileUpload executable query). 
@@ -326,6 +371,17 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (BAD_REQUEST, "conditions cannot be nested more than 5 times")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (INTERNAL_SERVER_ERROR, "Exception method '__upsert_script_to_db')
 ```
 
 
@@ -375,6 +431,17 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (BAD_REQUEST, "conditions cannot be nested more than 5 times")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (INTERNAL_SERVER_ERROR, "Exception method '__upsert_script_to_db')
 ```
 
 ## Get properties or a hash of a file(just for demoing purposes)
@@ -429,6 +496,17 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (BAD_REQUEST, "conditions cannot be nested more than 5 times")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (BAD_REQUEST, "some of the parameters are not set for 'condition'")
+    (INTERNAL_SERVER_ERROR, "Exception method '__upsert_script_to_db')
 ```
 
 ### Executes a previously registered server side script using /scripting/set_script endpoint. Vault owner or external users are allowed to call scripts on someone's vault
@@ -463,6 +541,24 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (UNAUTHORIZED, "target_did not set")
+    (UNAUTHORIZED, "target_app_did not set")
+    (FORBIDDEN, "vault does not exist.")
+    (FORBIDDEN, "vault have been freeze, can not write")
+    (FORBIDDEN, "not enough storage space")
+    (NOT_FOUND, Exception err_message)
+    (NOT_FOUND, f"could not find script '{content['name']}' in the database. Please register the script  first with set_script' API endpoint")
+    (BAD_REQUEST, "Error while validating anonymity options Cannot set allowAnonymousUser to be True but allowAnonymousApp to be False as we cannot request an auth to prove an app identity without proving the user identity")
+    (UNAUTHORIZED, "Auth failed. caller_did not set")
+    (UNAUTHORIZED, "Auth failed. caller_app_did not set")
+    (UNAUTHORIZED, "vault does not exist.")
+    (UNAUTHORIZED, "vault have been freeze, can not write")
+    (UNAUTHORIZED, "not enough storage space")
+    (FORBIDDEN, "the conditions were not met to execute this script")
+
 ```
 
 ## Run a script to get all the group messages for a particular group ID. This has a subcondition that needs to be satisifed first. This subcondition can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
@@ -513,6 +609,23 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (UNAUTHORIZED, "target_did not set")
+    (UNAUTHORIZED, "target_app_did not set")
+    (FORBIDDEN, "vault does not exist.")
+    (FORBIDDEN, "vault have been freeze, can not write")
+    (FORBIDDEN, "not enough storage space")
+    (NOT_FOUND, Exception err_message)
+    (NOT_FOUND, f"could not find script '{content['name']}' in the database. Please register the script  first with set_script' API endpoint")
+    (BAD_REQUEST, "Error while validating anonymity options Cannot set allowAnonymousUser to be True but allowAnonymousApp to be False as we cannot request an auth to prove an app identity without proving the user identity")
+    (UNAUTHORIZED, "Auth failed. caller_did not set")
+    (UNAUTHORIZED, "Auth failed. caller_app_did not set")
+    (UNAUTHORIZED, "vault does not exist.")
+    (UNAUTHORIZED, "vault have been freeze, can not write")
+    (UNAUTHORIZED, "not enough storage space")
+    (FORBIDDEN, "the conditions were not met to execute this script")
 ```
 
 ## Run a script to add a new message to the group messaging for a particular group id. This has two subconditions that needs to be satisifed first. These subconditions can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
@@ -563,6 +676,23 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (UNAUTHORIZED, "target_did not set")
+    (UNAUTHORIZED, "target_app_did not set")
+    (FORBIDDEN, "vault does not exist.")
+    (FORBIDDEN, "vault have been freeze, can not write")
+    (FORBIDDEN, "not enough storage space")
+    (NOT_FOUND, Exception err_message)
+    (NOT_FOUND, f"could not find script '{content['name']}' in the database. Please register the script  first with set_script' API endpoint")
+    (BAD_REQUEST, "Error while validating anonymity options Cannot set allowAnonymousUser to be True but allowAnonymousApp to be False as we cannot request an auth to prove an app identity without proving the user identity")
+    (UNAUTHORIZED, "Auth failed. caller_did not set")
+    (UNAUTHORIZED, "Auth failed. caller_app_did not set")
+    (UNAUTHORIZED, "vault does not exist.")
+    (UNAUTHORIZED, "vault have been freeze, can not write")
+    (UNAUTHORIZED, "not enough storage space")
+    (FORBIDDEN, "the conditions were not met to execute this script")
 ```
 
 ## Run a script to upload a file
@@ -595,6 +725,23 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (UNAUTHORIZED, "target_did not set")
+    (UNAUTHORIZED, "target_app_did not set")
+    (FORBIDDEN, "vault does not exist.")
+    (FORBIDDEN, "vault have been freeze, can not write")
+    (FORBIDDEN, "not enough storage space")
+    (NOT_FOUND, Exception err_message)
+    (NOT_FOUND, f"could not find script '{content['name']}' in the database. Please register the script  first with set_script' API endpoint")
+    (BAD_REQUEST, "Error while validating anonymity options Cannot set allowAnonymousUser to be True but allowAnonymousApp to be False as we cannot request an auth to prove an app identity without proving the user identity")
+    (UNAUTHORIZED, "Auth failed. caller_did not set")
+    (UNAUTHORIZED, "Auth failed. caller_app_did not set")
+    (UNAUTHORIZED, "vault does not exist.")
+    (UNAUTHORIZED, "vault have been freeze, can not write")
+    (UNAUTHORIZED, "not enough storage space")
+    (FORBIDDEN, "the conditions were not met to execute this script")
 ```
 Then, run the second API endpoint to upload the file
 ```YAML
@@ -612,6 +759,18 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (INTERNAL_SERVER_ERROR, "Error while executing file {fileapi_type} via scripting: Could not unpack details from transaction_id jwt token. Exception: {str(e)}")
+    (FORBIDDEN, "Error while executing file {fileapi_type} via scripting: vault can not be accessed")
+    (NOT_FOUND, "Error while executing file {fileapi_type} via scripting: vault can not be accessed")
+    (NOT_FOUND, "Error while executing file {fileapi_type} via scripting: Exception: {str(e)}")
+    (NOT_FOUND, "Error while executing file {fileapi_type} via scripting: Exception: Could not find the transaction ID '{transaction_id}' in the database")
+    (INTERNAL_SERVER_ERROR, "make path dir error")
+    (NOT_FOUND, "file name is a directory")
+    (INTERNAL_SERVER_ERROR, "Exception: {exception message}")
+    (INTERNAL_SERVER_ERROR, "Error while executing file {fileapi_type} via scripting: {err_message}")
+    (INTERNAL_SERVER_ERROR, "Error while executing file {fileapi_type} via scripting: Exception: {exception message}")
+
 ```
 
 ## Run a script to download a file
@@ -645,6 +804,23 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (UNAUTHORIZED, "target_did not set")
+    (UNAUTHORIZED, "target_app_did not set")
+    (FORBIDDEN, "vault does not exist.")
+    (FORBIDDEN, "vault have been freeze, can not write")
+    (FORBIDDEN, "not enough storage space")
+    (NOT_FOUND, Exception err_message)
+    (NOT_FOUND, f"could not find script '{content['name']}' in the database. Please register the script  first with set_script' API endpoint")
+    (BAD_REQUEST, "Error while validating anonymity options Cannot set allowAnonymousUser to be True but allowAnonymousApp to be False as we cannot request an auth to prove an app identity without proving the user identity")
+    (UNAUTHORIZED, "Auth failed. caller_did not set")
+    (UNAUTHORIZED, "Auth failed. caller_app_did not set")
+    (UNAUTHORIZED, "vault does not exist.")
+    (UNAUTHORIZED, "vault have been freeze, can not write")
+    (UNAUTHORIZED, "not enough storage space")
+    (FORBIDDEN, "the conditions were not met to execute this script")
 ```
 Then, run the second API endpoint to download the file
 ```YAML
@@ -663,6 +839,17 @@ return:
           }
         }
 comment: support content range
+error code:
+    (INTERNAL_SERVER_ERROR, "Error while executing file {fileapi_type} via scripting: Could not unpack details from transaction_id jwt token. Exception: {str(e)}")
+    (FORBIDDEN, "Error while executing file {fileapi_type} via scripting: vault can not be accessed")
+    (NOT_FOUND, "Error while executing file {fileapi_type} via scripting: vault can not be accessed")
+    (NOT_FOUND, "Error while executing file {fileapi_type} via scripting: Exception: {str(e)}")
+    (NOT_FOUND, "Error while executing file {fileapi_type} via scripting: Exception: Could not find the transaction ID '{transaction_id}' in the database")
+    (BAD_REQUEST, "Could not download file")
+    (NOT_FOUND, "Could not download file")
+    (FORBIDDEN, "Could not download file")
+    (INTERNAL_SERVER_ERROR, "Error while executing file")
+    (INTERNAL_SERVER_ERROR, "Error while executing file Exception")
 ```
 
 ## Run a script to get properties and hash of a file
@@ -706,5 +893,22 @@ return:
           "message": "Error message"
         }
       }
+error code:
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (UNAUTHORIZED, "target_did not set")
+    (UNAUTHORIZED, "target_app_did not set")
+    (FORBIDDEN, "vault does not exist.")
+    (FORBIDDEN, "vault have been freeze, can not write")
+    (FORBIDDEN, "not enough storage space")
+    (NOT_FOUND, Exception err_message)
+    (NOT_FOUND, f"could not find script '{content['name']}' in the database. Please register the script  first with set_script' API endpoint")
+    (BAD_REQUEST, "Error while validating anonymity options Cannot set allowAnonymousUser to be True but allowAnonymousApp to be False as we cannot request an auth to prove an app identity without proving the user identity")
+    (UNAUTHORIZED, "Auth failed. caller_did not set")
+    (UNAUTHORIZED, "Auth failed. caller_app_did not set")
+    (UNAUTHORIZED, "vault does not exist.")
+    (UNAUTHORIZED, "vault have been freeze, can not write")
+    (UNAUTHORIZED, "not enough storage space")
+    (FORBIDDEN, "the conditions were not met to execute this script")
 ```
 

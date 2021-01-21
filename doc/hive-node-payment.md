@@ -20,6 +20,11 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
 ```
 
 ## Get vault service package payment info
@@ -93,6 +98,8 @@ return:
             "message": "Error message"
           }
         }
+error code:
+(UNAUTHORIZED, "auth failed")
 ```
 
 ## Get vault service pricing plan by name
@@ -119,6 +126,10 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed") 
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "not found pricing name")
 ```
 
 ## Get vault backup service pricing plan by name
@@ -145,6 +156,10 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed") 
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "not found backup name")
 ```
 
 ## Create payment order
@@ -177,6 +192,11 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (NOT_FOUND, "not found pricing_name of:" + content["pricing_name"])
+    (NOT_FOUND, "not found backup_name of:" + content["backup_name"])
+    (BAD_REQUEST, "parameter pricing_name and backup_name is null")
 ```
 
 ## Pay vault service package order
@@ -206,6 +226,11 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (BAD_REQUEST, "txid has been used")
 ```
 
 ## Get order info of vault service purchase
@@ -248,6 +273,10 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
 ```
 
 ## Get user order info list of vault service purchase
@@ -291,5 +320,7 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 

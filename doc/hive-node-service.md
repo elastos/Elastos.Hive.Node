@@ -19,6 +19,8 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
 ## remove vault service
@@ -40,6 +42,8 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
 ## freeze vault service
@@ -61,6 +65,8 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
 ## unfreeze vault service
@@ -82,6 +88,8 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
 ## Get vault service info 
@@ -115,6 +123,9 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (NOT_FOUND, "vault service not found")
 ```
 
 ## create free backup vault service
@@ -136,6 +147,8 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
 ## Get backup vault service info 
@@ -167,6 +180,9 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (NOT_FOUND, "vault backup service not found")
 ```
 
 

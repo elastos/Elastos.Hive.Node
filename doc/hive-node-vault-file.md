@@ -15,6 +15,13 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (NOT_FOUND, "file name is a directory")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Download file
@@ -33,6 +40,11 @@ return:
           }
         }
 comment: support content range
+error code:
+    UNAUTHORIZED
+    FORBIDDEN
+    INTERNAL_SERVER_ERROR
+    NOT_FOUND
 ```
 
 ## Delete file or folder
@@ -52,6 +64,13 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "parameter is not application/json") 
+    (BAD_REQUEST, "parameter is null") 
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Move file or folder
@@ -76,6 +95,17 @@ return:
           }
         }
 comment: usage like shell command "mv"
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json") 
+    (BAD_REQUEST, "parameter is null") 
+    (NOT_FOUND, "src_name not exists")
+    (METHOD_NOT_ALLOWED, "dst_name file exists")
+    (INTERNAL_SERVER_ERROR, "make dst parent path dir error")
+    (INTERNAL_SERVER_ERROR, exception message)
 ```
 
 ## Copy file or folder
@@ -100,6 +130,17 @@ return:
           }
         }
 comment: usage like shell command "cp"
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json") 
+    (BAD_REQUEST, "parameter is null") 
+    (NOT_FOUND, "src_name not exists")
+    (METHOD_NOT_ALLOWED, "dst_name file exists")
+    (INTERNAL_SERVER_ERROR, "make dst parent path dir error")
+    (INTERNAL_SERVER_ERROR, exception message)
 ```
 
 ## Get properties of file or folder
@@ -125,6 +166,14 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "parameter is null") 
+    (NOT_FOUND, "src_name not exists")
+    (METHOD_NOT_ALLOWED, "file not exists")
+    (INTERNAL_SERVER_ERROR, "make dst parent path dir error")
+    (INTERNAL_SERVER_ERROR, exception message)
 ```
 
 ## List folder
@@ -160,6 +209,10 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (NOT_FOUND, "folder not exists")
 ```
 
 ## Get file hash(SHA256)
@@ -182,5 +235,10 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "parameter is null") 
+    (NOT_FOUND, "file not exists")
 ```
 

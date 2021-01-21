@@ -7,7 +7,7 @@ from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from hive.settings import hive_setting
-from hive.util.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
+from hive.util.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R, VAULT_ACCESS_DEL
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort, convert_oid, \
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
     populate_options_count_documents, query_update_one, populate_options_update_one, query_delete_one, get_collection, \
@@ -45,7 +45,7 @@ class HiveMongoDb:
         return self.response.response_ok()
 
     def delete_collection(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_R)
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", access_vault=VAULT_ACCESS_DEL)
         if err:
             return err
 
@@ -176,7 +176,7 @@ class HiveMongoDb:
 
     def delete_one(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
-                                                             access_vault=VAULT_ACCESS_R)
+                                                             access_vault=VAULT_ACCESS_DEL)
         if err:
             return err
 
@@ -194,7 +194,7 @@ class HiveMongoDb:
 
     def delete_many(self):
         did, app_id, content, err = post_json_param_pre_proc(self.response, "collection", "filter",
-                                                             access_vault=VAULT_ACCESS_R)
+                                                             access_vault=VAULT_ACCESS_DEL)
         if err:
             return err
 

@@ -61,6 +61,14 @@ Run the next command to launch test-cases to verify the deployed node at the sam
 ```shell
 ./run.sh test
 ```
+
+## Develop mode support cors
+Run the hive node server in dev mode, it will support CORS for developer.
+In product condition, we suggest develop hive node behind some http server like nginx.
+```shell
+python manage.py -c dev runserver
+```
+
 ## Deploy Hive without Docker involved
 Coming soon
 

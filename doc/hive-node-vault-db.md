@@ -24,6 +24,14 @@ return:
           }
         }
 comments: "collection" is collection name of user's mongoDB.
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Delete mongoDB collection
@@ -50,6 +58,13 @@ return:
           }
         }
 comments: "collection" is collection name of user's mongoDB.
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Insert a new document in a given collection
@@ -86,6 +101,15 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "collection not exist")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Insert many new documents in a given collection
@@ -135,6 +159,15 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "collection not exist")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Update an existing document in a given collection
@@ -181,6 +214,15 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "collection not exist")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Update many existing documents in a given collection
@@ -227,6 +269,15 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "collection not exist")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Delete an existing document in a given collection
@@ -260,6 +311,14 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "collection not exist")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Delete many existing documents in a given collection
@@ -292,6 +351,15 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (INTERNAL_SERVER_ERROR, "make path dir error")
+    (NOT_FOUND, "file name is a directory")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Count documents
@@ -332,6 +400,13 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "collection not exist")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Find a specific document(findOne)
@@ -393,6 +468,13 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "collection not exist")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 
 ## Find all documents(findMany)
@@ -472,5 +554,12 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (NOT_FOUND, "collection not exist")
+    (INTERNAL_SERVER_ERROR, Exception message)
 ```
 

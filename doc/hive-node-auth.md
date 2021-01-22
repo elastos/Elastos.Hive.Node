@@ -1,6 +1,6 @@
 # Hive node auth 
 ## User auth access request
-```json
+```YAML
 HTTP: POST
 URL: /api/v1/did/sign_in
 Content-Type: "application/json"
@@ -20,9 +20,14 @@ return:
           }
         }
 comments: jwt include "nonce"
+error code:
+    (UNAUTHORIZED, "parameter is not application/json")
+    (BAD_REQUEST, "error message")
+    (INTERNAL_SERVER_ERROR, "error message")
+
 ```
 ## User auth
-```
+```YAML
 HTTP: POST
 URL: /api/v1/did/auth
 Content-Type: "application/json"
@@ -42,5 +47,7 @@ return:
           }
         }
 comments: access_token is a "token", and it is a jwt too.
+error code:
+    (UNAUTHORIZED, "error message")
 ```
 

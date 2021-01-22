@@ -19,7 +19,7 @@ return:
         }
 ```
 
-## Get commit hash 
+## Get commit hash
 ```YAML
 HTTP: GET
 URL: /api/v1/hive/commithash

@@ -88,6 +88,7 @@ function test () {
     pytest --disable-pytest-warnings -xs tests/hive_internal_test.py
 
     docker container stop hive-mongo && docker container rm -f hive-mongo
+    docker container stop hive-test-mongo && docker container rm -f hive-test-mongo
 }
 
 export HIVE_NODE_HOME="."

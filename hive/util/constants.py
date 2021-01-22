@@ -92,6 +92,7 @@ SCRIPTING_EXECUTABLE_DOWNLOADABLE = "_downloadable"
 # other
 VAULT_ACCESS_WR = "vault_write_read"
 VAULT_ACCESS_R = "vault_read"
+VAULT_ACCESS_DEL = "vault_delete"
 
 VAULT_STORAGE_DB = "vault_db"
 VAULT_STORAGE_FILE = "vault_file"

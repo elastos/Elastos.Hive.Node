@@ -10,7 +10,7 @@ from hive.util.common import did_tail_part
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_STATE, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_PRICING_USING, \
     VAULT_ACCESS_WR, DID, APP_ID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, \
-    VAULT_SERVICE_MODIFY_TIME
+    VAULT_SERVICE_MODIFY_TIME, VAULT_ACCESS_DEL
 
 from hive.util.did_file_info import get_dir_size
 from hive.util.did_info import get_all_did_info_by_did
@@ -127,6 +127,11 @@ def can_access_vault(did, access_vault):
             return False, "vault have been freeze, can not write"
         elif not __less_than_max_storage(did):
             return False, "not enough storage space"
+        else:
+            return True, None
+    elif access_vault == VAULT_ACCESS_DEL:
+        if info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
+            return False, "vault have been freeze, can not write"
         else:
             return True, None
     else:

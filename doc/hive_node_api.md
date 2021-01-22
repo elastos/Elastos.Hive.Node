@@ -9,4 +9,3 @@
 - [Vault File](./hive-node-vault-file.md)
 - [Vault Scripting](./hive-node-scripting.md)
 - [Vault backup](hive-node-backup.md)
-

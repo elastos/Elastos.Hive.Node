@@ -11,7 +11,7 @@ return:
       {
         "_status": "OK",
       }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -19,6 +19,8 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
 ## remove vault service
@@ -32,7 +34,7 @@ return:
       {
         "_status": "OK",
       }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -40,12 +42,14 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
 ## freeze vault service
 ```YAML
 HTTP: POST
-URL: /api/v1/service/vault/freeze 
+URL: /api/v1/service/vault/freeze
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:
@@ -53,7 +57,7 @@ return:
       {
         "_status": "OK",
       }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -61,12 +65,14 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
 ## unfreeze vault service
 ```YAML
 HTTP: POST
-URL: /api/v1/service/vault/unfreeze 
+URL: /api/v1/service/vault/unfreeze
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:
@@ -74,7 +80,7 @@ return:
       {
         "_status": "OK",
       }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -82,9 +88,11 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
-## Get vault service info 
+## Get vault service info
 ```YAML
 HTTP: GET
 URL: api/v1/service/vault
@@ -95,7 +103,7 @@ return:
         {
             "_status": "OK",
             "vault_service_info":
-            { 
+            {
                 "did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
                 "max_storage": 500, // Max 500 Mb storage size
                 "file_use_storage": 100, // user have used 100 Mb in file storage size
@@ -115,6 +123,9 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (NOT_FOUND, "vault service not found")
 ```
 
 ## create free backup vault service
@@ -128,7 +139,7 @@ return:
       {
         "_status": "OK",
       }
-    Failure: 
+    Failure:
         {
           "_status": "ERR",
           "_error": {
@@ -136,9 +147,11 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
 ```
 
-## Get backup vault service info 
+## Get backup vault service info
 ```YAML
 HTTP: GET
 URL: /api/v1/service/vault_backup
@@ -149,7 +162,7 @@ return:
         {
             "_status": "OK",
             "vault_service_info":
-            { 
+            {
                 "did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
                 "backup_using": "Rookie",// backup plan
                 "max_storage": 500, // Max 500 Mb backup storage size
@@ -167,6 +180,9 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (NOT_FOUND, "vault backup service not found")
 ```
 
 

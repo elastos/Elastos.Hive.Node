@@ -956,25 +956,7 @@ return:
           "message": "Error message"
         }
       }
-error code:
-    (BAD_REQUEST, "parameter is not application/json")
-    (BAD_REQUEST, "parameter is null")
-    (UNAUTHORIZED, "target_did not set")
-    (UNAUTHORIZED, "target_app_did not set")
-    (FORBIDDEN, "vault does not exist.")
-    (FORBIDDEN, "vault have been freeze, can not write")
-    (FORBIDDEN, "not enough storage space")
-    (NOT_FOUND, Exception err_message)
-    (NOT_FOUND, f"could not find script '{content['name']}' in the database. Please register the script  first with set_script' API endpoint")
-    (BAD_REQUEST, "Error while validating anonymity options Cannot set allowAnonymousUser to be True but allowAnonymousApp to be False as we cannot request an auth to prove an app identity without proving the user identity")
-    (UNAUTHORIZED, "Auth failed. caller_did not set")
-    (UNAUTHORIZED, "Auth failed. caller_app_did not set")
-    (UNAUTHORIZED, "vault does not exist.")
-    (UNAUTHORIZED, "vault have been freeze, can not write")
-    (UNAUTHORIZED, "not enough storage space")
-    (FORBIDDEN, "the conditions were not met to execute this script")
 ```
-
 ### Run a script to get all the group messages for a particular group ID(directly calling the URL). This has a subcondition that needs to be satisifed first. This subcondition can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
 
 NOTE: We can use the field "context" along with its inner value "target_did" to tell hive which did user to use when accessing vault and "target_app_did" to tell hive which app did to use when accessing vault. This is necessary when user1 wants to call user2's vault
@@ -1013,4 +995,21 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (UNAUTHORIZED, "target_did not set")
+    (UNAUTHORIZED, "target_app_did not set")
+    (FORBIDDEN, "vault does not exist.")
+    (FORBIDDEN, "vault have been freeze, can not write")
+    (FORBIDDEN, "not enough storage space")
+    (NOT_FOUND, Exception err_message)
+    (NOT_FOUND, f"could not find script '{content['name']}' in the database. Please register the script  first with set_script' API endpoint")
+    (BAD_REQUEST, "Error while validating anonymity options Cannot set allowAnonymousUser to be True but allowAnonymousApp to be False as we cannot request an auth to prove an app identity without proving the user identity")
+    (UNAUTHORIZED, "Auth failed. caller_did not set")
+    (UNAUTHORIZED, "Auth failed. caller_app_did not set")
+    (UNAUTHORIZED, "vault does not exist.")
+    (UNAUTHORIZED, "vault have been freeze, can not write")
+    (UNAUTHORIZED, "not enough storage space")
+    (FORBIDDEN, "the conditions were not met to execute this script")
 ```

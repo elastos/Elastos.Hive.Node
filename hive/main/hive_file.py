@@ -8,10 +8,11 @@ from hive.util.auth import did_auth
 from hive.util.common import create_full_path_dir
 from hive.util.did_file_info import get_save_files_path, filter_path_root, query_download, \
     query_properties, query_hash, query_upload_get_filepath, get_dir_size
-from hive.util.error_code import INTERNAL_SERVER_ERROR, UNAUTHORIZED, NOT_FOUND, METHOD_NOT_ALLOWED, SUCCESS, FORBIDDEN
+from hive.util.error_code import INTERNAL_SERVER_ERROR, UNAUTHORIZED, NOT_FOUND, METHOD_NOT_ALLOWED, SUCCESS, FORBIDDEN, \
+    BAD_REQUEST
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
-from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR
+from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL
 from hive.util.payment.vault_service_manage import can_access_vault, inc_vault_file_use_storage_byte
 
 
@@ -133,7 +134,7 @@ class HiveFile:
 
         r, msg = can_access_vault(did, VAULT_ACCESS_R)
         if not r:
-            return self.response.response_err(UNAUTHORIZED, msg)
+            return self.response.response_err(BAD_REQUEST, msg)
 
         path = get_save_files_path(did, app_id)
 
@@ -179,7 +180,7 @@ class HiveFile:
         return self.response.response_ok(data)
 
     def delete(self):
-        did, app_id, content, response = post_json_param_pre_proc(self.response, "path", access_vault=VAULT_ACCESS_R)
+        did, app_id, content, response = post_json_param_pre_proc(self.response, "path", access_vault=VAULT_ACCESS_DEL)
         if response is not None:
             return response
 

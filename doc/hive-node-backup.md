@@ -27,6 +27,14 @@ return:
           }
         }
 comments: "The input data is google oauth2 token to json, no need to change anything. There is a sample code in python: oauth_google_desktop.py"
+error code: 
+    todo post json
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
 ```
 
 ## Restore hive vault from google drive
@@ -56,6 +64,13 @@ return:
           }
         }
 comments: "The input data is google oauth2 token to json, no need to change anything. There is a sample code in python: oauth_google_desktop.py"
+error code:
+    (UNAUTHORIZED, "auth failed")
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
 ```
 
 ## Get backup state 
@@ -78,6 +93,8 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "auth failed") 
 ```
 
 ## Backup hive vault to other hive node
@@ -101,6 +118,16 @@ return:
           }
         }
 comments: "backup_credential need to issue by user did, see it in hive_auth_test.py:issue_backup_auth"
+error code:
+    (UNAUTHORIZED, "auth failed") 
+    (UNAUTHORIZED, "internal auth failed message") 
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (INSUFFICIENT_STORAGE, "The backup hive node dose not enough space for backup")
+    (other code: hive interal communicate error )
 ```
 
 ## Restore hive vault from other hive node
@@ -124,6 +151,17 @@ return:
           }
         }
 comments: "backup_credential need to issue by user did, see it in hive_auth_test.py:issue_backup_auth"
+error code:
+    (UNAUTHORIZED, "auth failed") 
+    (UNAUTHORIZED, "internal auth failed message") 
+    (BAD_REQUEST, "vault does not exist.")
+    (BAD_REQUEST, "vault have been freeze, can not write")
+    (BAD_REQUEST, "not enough storage space")
+    (BAD_REQUEST, "parameter is not application/json")
+    (BAD_REQUEST, "parameter is null")
+    (BAD_REQUEST, "start node backup error")
+    (INSUFFICIENT_STORAGE, "The backup hive node dose not enough space for backup")
+    (other code: hive interal communicate error )
 ```
 
 ## Active hive backup data to vault
@@ -144,4 +182,8 @@ return:
             "message": "Error message"
           }
         }
+error code:
+    (UNAUTHORIZED, "Backup backup_to_vault auth failed")
+    (BAD_REQUEST, "There is not vault service of did to active")
+    (BAD_REQUEST, "There is not vault backup service of did"
 ```

@@ -49,7 +49,7 @@ $ tar -xzvf release.tar.gz
 Enter into the source code folder, directly run the command to install the Hive node service:
 
 ```shell
-$ /bin/bash -c “$(curl -fsSL https://www.trinity-tech.io/hivenode/scripts/run.sh)" -s docker
+$ /bin/bash -c "$(curl -fsSL https://www.trinity-tech.io/hivenode/scripts/run.sh)" -s docker
 ```
 After all the stuff has been finished, use the next command to check whether the Hive Node can work or not.  In the case of success, it will display two container instances. One is hive-node, and the other is mongodb.
 ```shell

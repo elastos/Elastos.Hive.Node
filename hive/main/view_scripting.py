@@ -1,9 +1,10 @@
+import json
+
 from flask import Blueprint, request
 
 from hive.main.hive_scripting import HiveScripting
 
 h_scripting = HiveScripting()
-
 
 hive_scripting = Blueprint('hive_scripting', __name__)
 
@@ -26,9 +27,11 @@ def run_script():
 @hive_scripting.route('/api/v1/scripting/run_script_url/<target_did>@<target_app_did>/<script_name>', methods=['GET'])
 def run_script_url(target_did, target_app_did, script_name):
     # Get parameters
-    params = {}
-    for key in request.args.keys():
-        params[key] = request.args.get(key)
+    try:
+        params = request.args.get("params")
+        params = json.loads(params)
+    except:
+        params = {}
     return h_scripting.run_script_url(target_did, target_app_did, script_name, params)
 
 

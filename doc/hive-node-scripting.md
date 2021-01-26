@@ -923,47 +923,16 @@ return:
 Format of the URL:
 
 ```YAML
-/api/v1/scripting/run_script_url/target_did@target_app_did/script_name?key=value
+/api/v1/scripting/run_script_url/target_did@target_app_did/script_name?params={key=value}
 ```
 
-### Run a script to get properties and hash of a file(directly calling the URL)
-
-NOTE: This is a script where Anonymous options are set to true so we do not need to pass in an authorization token.
-However, we MUST pass in the context with "target_did" and "target_app_did"
-
-```YAML
-HTTP: GET
-URL: /api/v1/scripting/run_script_url/did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN@did:elastos:jUdkrAVRJitZKJmcCufoLHQjq7Mef3Zi8L/get_file_info?path=logging.conf
-return:
-    Success:
-      {
-        "_status": "OK",
-        "file_hash": {
-          "SHA256": "b032e73f4d677a82e932ba106b295365079d123973832c0fc1e06d3900e1fd84"
-        },
-        "file_properties": {
-          "last_modify": 1602446791.5942733,
-          "name": "logging.conf",
-          "size": 78731,
-          "type": "file"
-        }
-      }
-    Failure:
-      {
-        "_status": "ERR",
-        "_error": {
-          "code": 401,
-          "message": "Error message"
-        }
-      }
-```
 ### Run a script to get all the group messages for a particular group ID(directly calling the URL). This has a subcondition that needs to be satisifed first. This subcondition can access the values of "params" as they are. Mongodb queries are allowed as part of these fields.
 
 NOTE: We can use the field "context" along with its inner value "target_did" to tell hive which did user to use when accessing vault and "target_app_did" to tell hive which app did to use when accessing vault. This is necessary when user1 wants to call user2's vault
 
 ```YAML
 HTTP: GET
-URL: /api/v1/scripting/run_script_url/did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN@did:elastos:jUdkrAVRJitZKJmcCufoLHQjq7Mef3Zi8L/get_group_messages?group_id=%7B%27%5C%5C%24oid%27%3A+%275f497bb83bd36ab235d82e6a%27%7D
+URL: /api/v1/scripting/run_script_url/did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN@did:elastos:jUdkrAVRJitZKJmcCufoLHQjq7Mef3Zi8L/get_group_messages?params=%7B%20%22group_id%22%3A%20%7B%22%24oid%22%3A%20%22600727f9239421f76705a817%22%7D%2C%20%22path%22%3A%20%22logging.conf%22%7D
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 return:
     Success:

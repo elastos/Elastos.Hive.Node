@@ -95,6 +95,19 @@ class HiveMongoDbTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/db/create_collection',
+                                  data=json.dumps(
+                                      {
+                                          "collection": "works"
+                                      }
+                                  ),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertTrue(r["existing"])
+
+
     def test_2_insert_one(self):
         logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_2_insert_one")
         r, s = self.parse_response(

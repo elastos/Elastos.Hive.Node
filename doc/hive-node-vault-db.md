@@ -24,6 +24,12 @@ return:
           }
         }
 comments: "collection" is collection name of user's mongoDB.
+if vault exist, it will return
+      {
+        "_status": "OK",
+        "existing": True
+      }
+
 error code:
     (UNAUTHORIZED, "auth failed")
     (BAD_REQUEST, "vault does not exist.")

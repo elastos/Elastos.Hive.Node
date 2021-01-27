@@ -21,6 +21,12 @@ return:
         }
 error code:
     (UNAUTHORIZED, "auth failed")
+comment: if vault exist, it will return
+      {
+        "_status": "OK",
+        "existing": True
+      }
+
 ```
 
 ## remove vault service
@@ -149,6 +155,11 @@ return:
         }
 error code:
     (UNAUTHORIZED, "auth failed")
+comment: if vault exist, it will return
+      {
+        "_status": "OK",
+        "existing": True
+      }
 ```
 
 ## Get backup vault service info 

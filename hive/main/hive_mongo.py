@@ -39,7 +39,8 @@ class HiveMongoDb:
         try:
             col = db.create_collection(collection_name)
         except CollectionInvalid:
-            pass
+            data = {"existing": True}
+            return self.response.response_ok(data)
         except Exception as e:
             return self.response.response_err(INTERNAL_SERVER_ERROR, "Exception:" + str(e))
         return self.response.response_ok()

@@ -350,6 +350,12 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
         print(r)
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/service/vault/create',
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertTrue(r["existing"])
 
     def test_8_pay_and_start_backup_order(self):
         logging.getLogger("").debug("\nRunning test_4_pay_and_start_package_order")
@@ -369,6 +375,13 @@ class HivePaymentTestCase(unittest.TestCase):
 
         check_wait_order_tx_job()
         self.assert_service_vault_backup_info("Rookie")
+
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/service/vault_backup/create',
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertTrue(r["existing"])
 
     def assert_service_vault_backup_info(self, state):
         r, s = self.parse_response(
@@ -471,6 +484,12 @@ class HivePaymentTestCase(unittest.TestCase):
 
         check_wait_order_tx_job()
         self.assert_service_vault_backup_info("Rookie")
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/service/vault_backup/create',
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertTrue(r["existing"])
 
     def assert_service_vault_backup_info(self, state):
         r, s = self.parse_response(

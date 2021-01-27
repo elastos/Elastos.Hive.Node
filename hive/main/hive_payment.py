@@ -146,7 +146,8 @@ class HivePayment:
 
         service = get_vault_service(did)
         if service:
-            return self.response.response_ok()
+            data = {"existing": True}
+            return self.response.response_ok(data)
 
         free_info = PaymentConfig.get_free_vault_info()
 
@@ -197,7 +198,8 @@ class HivePayment:
 
         service = get_vault_backup_service(did)
         if service:
-            return self.response.response_ok()
+            data = {"existing": True}
+            return self.response.response_ok(data)
 
         free_info = PaymentConfig.get_free_backup_info()
 

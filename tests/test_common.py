@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime
 from time import time
+from io import BytesIO
 from hive.util.did.eladid import ffi, lib
 
 from hive.util.constants import DID_INFO_TOKEN
@@ -129,3 +130,58 @@ def test_auth_common(self, user_did, app_did):
     self.assert200(s)
     self.assertEqual(rt["_status"], "OK")
     return token, hive_did
+
+
+def create_upload_file(self, file_name, data):
+    temp = BytesIO()
+    temp.write(data.encode(encoding="utf-8"))
+    temp.seek(0)
+    temp.name = 'temp.txt'
+
+    upload_auth = [
+        ("Authorization", "token " + token),
+    ]
+
+    upload_file_url = "/api/v1/files/upload/" + file_name
+    r2, s = self.parse_response(
+        self.test_client.post(upload_file_url,
+                              data=temp,
+                              headers=upload_auth)
+    )
+    self.assert200(s)
+    self.assertEqual(r2["_status"], "OK")
+
+    r3, s = self.parse_response(
+        self.test_client.get('/api/v1/files/properties?path=' + file_name, headers=self.auth)
+    )
+
+    self.assert200(s)
+    self.assertEqual(r3["_status"], "OK")
+    logging.getLogger("HiveFileTestCase").debug(json.dumps(r3))
+
+
+def upsert_collection(self, col_name, doc):
+    logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_1_create_collection")
+    r, s = self.parse_response(
+        self.test_client.post('/api/v1/db/create_collection',
+                              data=json.dumps(
+                                  {
+                                      "collection": col_name
+                                  }
+                              ),
+                              headers=self.auth)
+    )
+    self.assert200(s)
+
+    r, s = self.parse_response(
+        self.test_client.post('/api/v1/db/insert_one',
+                              data=json.dumps(
+                                  {
+                                      "collection": col_name,
+                                      "document": doc,
+                                  }
+                              ),
+                              headers=self.auth)
+    )
+    self.assert200(s)
+    self.assertEqual(r["_status"], "OK")

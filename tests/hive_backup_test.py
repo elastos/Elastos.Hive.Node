@@ -17,7 +17,7 @@ from pymongo import MongoClient
 from hive.main import view
 from hive.main.hive_backup import HiveBackup
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
-    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_DATA, INTER_BACKUP_SAVE_URL
+    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_APPS, INTER_BACKUP_SAVE_URL
 from hive import create_app
 from hive.util.payment.vault_backup_service_manage import setup_vault_backup_service, update_vault_backup_service_item
 from hive.util.payment.vault_order import check_wait_order_tx_job
@@ -25,6 +25,7 @@ from hive.util.payment.vault_service_manage import delete_user_vault, setup_vaul
 from tests import test_common
 from hive import settings
 from tests.hive_auth_test import DIDApp, DApp
+from tests.test_common import upsert_collection, create_upload_file
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -216,6 +217,21 @@ class HiveBackupTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
+    def prepare_backup_data(self):
+        doc = dict()
+        for i in range(1, 10):
+            doc["work" + str(i)] = "work_content" + str(i)
+            upsert_collection(self, "works", doc)
+        create_upload_file(self, "test0.txt", "this is a test 0 file")
+        create_upload_file(self, "f1/test1.txt", "this is a test 1 file")
+        create_upload_file(self, "f1/test1_2.txt", "this is a test 1_2 file")
+        create_upload_file(self, "f2/f1/test2.txt", "this is a test 2 file")
+        create_upload_file(self, "f2/f1/test2_2.txt", "this is a test 2_2 file")
+
+    def test_6_test_backup_checksum_list(self):
+        self.prepare_backup_data()
+        did_folder = HiveBackup.get_did_vault_path(self.did)
+        HiveBackup.get_file_checksum_list(did_folder)
 
 
 if __name__ == '__main__':

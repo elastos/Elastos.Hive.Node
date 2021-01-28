@@ -8,6 +8,7 @@ from flask import appcontext_pushed, g
 from contextlib import contextmanager
 from hive import create_app, HIVE_MODE_TEST
 from tests import test_common
+from tests.test_common import create_upload_file
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -100,32 +101,9 @@ class HiveFileTestCase(unittest.TestCase):
     def assert201(self, status):
         self.assertEqual(status, 201)
 
-    def create_upload_file(self, file_name, data):
-        temp = BytesIO()
-        temp.write(data.encode(encoding="utf-8"))
-        temp.seek(0)
-        temp.name = 'temp.txt'
-
-        upload_file_url = "/api/v1/files/upload/" + file_name
-        r2, s = self.parse_response(
-            self.test_client.post(upload_file_url,
-                                  data=temp,
-                                  headers=self.upload_auth)
-        )
-        self.assert200(s)
-        self.assertEqual(r2["_status"], "OK")
-
-        r3, s = self.parse_response(
-            self.test_client.get('/api/v1/files/properties?path=' + file_name, headers=self.auth)
-        )
-
-        self.assert200(s)
-        self.assertEqual(r3["_status"], "OK")
-        logging.getLogger("HiveFileTestCase").debug(json.dumps(r3))
-
     def test_b_create_and_upload_file_root(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_b_create_and_upload_file_root")
-        self.create_upload_file("test_0.txt", "Hello Temp test 0!")
+        create_upload_file(self, "test_0.txt", "Hello Temp test 0!")
         self.assert_service_vault_info()
 
     def assert_service_vault_info(self):
@@ -138,20 +116,20 @@ class HiveFileTestCase(unittest.TestCase):
 
     def test_c_create_and_upload_file_in_folder(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_c_create_and_upload_file_in_folder")
-        self.create_upload_file("folder1/test1.txt", "Hello Temp test 1!")
+        create_upload_file(self, "folder1/test1.txt", "Hello Temp test 1!")
 
     def test_d_create_and_upload_file_further_folder(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_d_create_and_upload_file_further_folder")
-        self.create_upload_file("folder1/folder2/folder3/test0.txt", "Hello Temp test 0!")
+        create_upload_file(self, "folder1/folder2/folder3/test0.txt", "Hello Temp test 0!")
 
     def test_e_create_and_upload_file_new_folder(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_e_create_and_upload_file_new_folder")
-        self.create_upload_file("f1/f2/f3/test_f3_1.txt", "Hello Temp test f3_1!")
-        self.create_upload_file("f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
+        create_upload_file(self, "f1/f2/f3/test_f3_1.txt", "Hello Temp test f3_1!")
+        create_upload_file(self, "f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
 
     def test_f_download_file(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_f_download_file")
-        self.create_upload_file("f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
+        create_upload_file(self, "f1/f2/f3/test_f3_2.txt", "Hello Temp test f3_2!")
         r = self.test_client.get('api/v1/files/download?path=f1/f2/f3/test_f3_2.txt', headers=self.auth)
 
         self.assert200(r.status_code)
@@ -159,7 +137,7 @@ class HiveFileTestCase(unittest.TestCase):
 
     def test_g_move_file(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_g_move_file")
-        self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1_2!")
+        create_upload_file(self, "f1/test_f1.txt", "Hello Temp test f1_2!")
 
         move_file = {
             "src_path": "f1/test_f1.txt",
@@ -187,9 +165,9 @@ class HiveFileTestCase(unittest.TestCase):
 
     def test_h_move_folder(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_h_move_folder")
-        self.create_upload_file("f1/f2/f3/f4/test_f4.txt", "Hello Temp test f1_2!")
-        self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1.txt", "Hello Temp test fr4_1!")
-        self.create_upload_file("f1/f2/f3/fr4_1/test_fr4_1_2.txt", "Hello Temp test fr4_2!")
+        create_upload_file(self, "f1/f2/f3/f4/test_f4.txt", "Hello Temp test f1_2!")
+        create_upload_file(self, "f1/f2/f3/fr4_1/test_fr4_1.txt", "Hello Temp test fr4_1!")
+        create_upload_file(self, "f1/f2/f3/fr4_1/test_fr4_1_2.txt", "Hello Temp test fr4_2!")
 
         r2, s = self.parse_response(
             self.test_client.get('/api/v1/files/list/folder?path=f1/f2/f3', headers=self.auth)
@@ -226,7 +204,7 @@ class HiveFileTestCase(unittest.TestCase):
 
     def test_i_copy_file(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_i_copy_file")
-        self.create_upload_file("f1/f2/test_f2.txt", "Hello Temp test f2_2!")
+        create_upload_file(self, "f1/f2/test_f2.txt", "Hello Temp test f2_2!")
 
         move_file = {
             "src_path": "f1/f2/test_f2.txt",
@@ -255,9 +233,9 @@ class HiveFileTestCase(unittest.TestCase):
 
     def test_j_copy_folder(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_j_copy_folder")
-        self.create_upload_file("f1/f2/f3/f4/test_f4_1.txt", "Hello Temp test f4_1!")
-        self.create_upload_file("f1/f2/f3/fr4_2/test_fr4_2.txt", "Hello Temp test fr4_1!")
-        self.create_upload_file("f1/f2/f3/fr4_2/test_fr4_2_2.txt", "Hello Temp test fr4_2!")
+        create_upload_file(self, "f1/f2/f3/f4/test_f4_1.txt", "Hello Temp test f4_1!")
+        create_upload_file(self, "f1/f2/f3/fr4_2/test_fr4_2.txt", "Hello Temp test fr4_1!")
+        create_upload_file(self, "f1/f2/f3/fr4_2/test_fr4_2_2.txt", "Hello Temp test fr4_2!")
 
         move_file = {
             "src_path": "f1/f2/f3/fr4_2",
@@ -290,7 +268,7 @@ class HiveFileTestCase(unittest.TestCase):
 
     def test_k_file_hash(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_k_file_hash")
-        self.create_upload_file("f1/f2/test_f2_hash.txt", "Hello Temp test f2_hash!")
+        create_upload_file(self, "f1/f2/test_f2_hash.txt", "Hello Temp test f2_hash!")
         r1, s = self.parse_response(
             self.test_client.get('/api/v1/files/file/hash?path=f1/f2/test_f2_hash.txt', headers=self.auth)
         )
@@ -301,8 +279,8 @@ class HiveFileTestCase(unittest.TestCase):
 
     def test_l_delete_file(self):
         logging.getLogger("HiveFileTestCase").debug("\nRunning test_l_delete_file")
-        self.create_upload_file("f1/test_f1.txt", "Hello Temp test f1!")
-        self.create_upload_file("f1/test_f2.txt", "Hello Temp test f1!")
+        create_upload_file(self, "f1/test_f1.txt", "Hello Temp test f1!")
+        create_upload_file(self, "f1/test_f2.txt", "Hello Temp test f1!")
         r, s = self.parse_response(
             self.test_client.post('/api/v1/files/delete',
                                   data=json.dumps({

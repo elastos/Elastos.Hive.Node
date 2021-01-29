@@ -1,7 +1,8 @@
 from flask import Blueprint
 
 from hive.main.hive_backup import HiveBackup
-from hive.util.constants import INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, INTER_BACKUP_SAVE_URL
+from hive.util.constants import INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, INTER_BACKUP_SAVE_URL, \
+    INTER_BACKUP_RESTORE_URL
 
 h_backup = HiveBackup()
 hive_backup = Blueprint('hive_backup', __name__)
@@ -45,6 +46,11 @@ def backup_to_vault():
 @hive_backup.route(INTER_BACKUP_SAVE_URL, methods=['POST'])
 def inter_backup_save():
     return h_backup.inter_backup_save()
+
+
+@hive_backup.route(INTER_BACKUP_RESTORE_URL, methods=['POST'])
+def inter_backup_restore():
+    return h_backup.inter_backup_restore()
 
 
 @hive_backup.route(INTER_BACKUP_FTP_START_URL, methods=['POST'])

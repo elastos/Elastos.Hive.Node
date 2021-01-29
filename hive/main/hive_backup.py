@@ -8,26 +8,23 @@ import re
 import requests
 from pathlib import Path
 
-from pygments.unistring import No
-
 from hive.main import view
-from hive.settings import hive_setting
 from hive.util.auth import did_auth
 from hive.util.common import did_tail_part, create_full_path_dir, get_host
 from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MODE_DEV, INTER_BACKUP_FTP_START_URL, \
     VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, INTER_BACKUP_FTP_END_URL, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_SERVICE_MAX_STORAGE, VAULT_BACKUP_INFO_FTP, VAULT_BACKUP_SERVICE_APPS, \
-    INTER_BACKUP_SAVE_URL, VAULT_BACKUP_SERVICE_FTP
+    INTER_BACKUP_SAVE_URL, VAULT_BACKUP_SERVICE_FTP, INTER_BACKUP_RESTORE_URL
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
 from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE, SUCCESS, NOT_FOUND, CHECKSUM_FAILED
 from hive.util.ftp_tool import FtpServer
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
-    get_backup_used_storage, less_than_max_storage, gene_vault_backup_ftp_record, get_vault_backup_relative_path, \
-    get_vault_backup_ftp_record, remove_vault_backup_ftp_record, import_files_from_backup, import_mongo_db_from_backup, \
-    update_vault_backup_service_item
+    gene_vault_backup_ftp_record, get_vault_backup_ftp_record, remove_vault_backup_ftp_record, import_files_from_backup, \
+    import_mongo_db_from_backup, update_vault_backup_service_item
 from hive.util.payment.vault_service_manage import get_vault_service, get_vault_used_storage, \
-    update_vault_service_state, VAULT_SERVICE_STATE_FREEZE, freeze_vault, delete_user_vault, unfreeze_vault
+    update_vault_service_state, VAULT_SERVICE_STATE_FREEZE, freeze_vault, delete_user_vault, unfreeze_vault, \
+    get_vault_path
 from hive.util.vault_backup_info import *
 from hive.util.rclone_tool import RcloneTool
 from hive.util.server_response import ServerResponse
@@ -82,21 +79,30 @@ class HiveBackup:
         if not info:
             return None
         update_vault_backup_state(did, VAULT_BACKUP_STATE_RESTORE, VAULT_BACKUP_MSG_SUCCESS)
-        did_folder = HiveBackup.get_did_vault_path(did)
-        if not did_folder.exists():
-            create_full_path_dir(did_folder)
+        vault_folder = HiveBackup.get_did_vault_path(did)
+        if not vault_folder.exists():
+            create_full_path_dir(vault_folder)
 
+        vault_backup_msg = VAULT_BACKUP_MSG_SUCCESS
         if info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE:
-            HiveBackup.__restore_google_drive(did_folder, info[VAULT_BACKUP_INFO_DRIVE])
+            HiveBackup.__restore_google_drive(vault_folder, info[VAULT_BACKUP_INFO_DRIVE])
         elif info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_HIVE_NODE:
-            HiveBackup.__restore_hive_node(did_folder, info[VAULT_BACKUP_INFO_FTP], did,
+            HiveBackup.__restore_hive_node(vault_folder, info[VAULT_BACKUP_INFO_FTP], did,
                                            info[VAULT_BACKUP_INFO_DRIVE], info[VAULT_BACKUP_INFO_TOKEN])
+            ret = HiveBackup.internal_restore_data(did, info[VAULT_BACKUP_INFO_DRIVE] + INTER_BACKUP_RESTORE_URL,
+                                                   info[VAULT_BACKUP_INFO_TOKEN])
+            if not ret:
+                vault_backup_msg = VAULT_BACKUP_MSG_FAILED
         else:
             logger.error("restore_vault_data not support backup type:" + info[VAULT_BACKUP_INFO_TYPE])
+            info = None
 
-        HiveBackup.import_did_mongodb_data(did)
-        update_vault_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
-        HiveBackup.delete_did_mongodb_export_data(did)
+        if vault_backup_msg == VAULT_BACKUP_MSG_SUCCESS:
+            HiveBackup.import_did_mongodb_data(did)
+            update_vault_backup_state(did, VAULT_BACKUP_STATE_STOP, vault_backup_msg)
+            HiveBackup.delete_did_mongodb_export_data(did)
+        else:
+            update_vault_backup_state(did, VAULT_BACKUP_STATE_STOP, vault_backup_msg)
         return info
 
     @staticmethod
@@ -227,7 +233,8 @@ class HiveBackup:
 
     # ------------------ backup to node start ----------------------------
     def __proc_hive_node_param(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "backup_credential")
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "backup_credential",
+                                                             access_vault=VAULT_ACCESS_R)
         if err:
             return None, None, None, err
         host, backup_token, err = view.h_auth.backup_auth_request(content)
@@ -329,6 +336,43 @@ class HiveBackup:
                         r.status_code + " message:" + ret["_error"]["message"]))
             return False
         else:
+            return True
+
+    @staticmethod
+    def internal_restore_data(did, url, backup_token):
+        param = {}
+        try:
+            r = requests.post(url,
+                              json=param,
+                              headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
+        except Exception as e:
+            logger.error(f"internal_restore_data exception:{str(e)}, did:{did} host:{url}")
+            return False
+
+        if r.status_code != SUCCESS:
+            ret = r.json()
+            if not ret["_error"]:
+                logger.error(
+                    f"internal_restore_data error, did:{did} host:{url} error code {str(r.status_code)} content {str(r.content)}")
+            else:
+                logger.error(
+                    f"internal_restore_data error, did:{did} host:{url} error code {str(r.status_code)}  message:{ret['_error']['message']}")
+            return False
+        else:
+            data = r.json()
+            checksum_list = data["checksum_list"]
+            vault_path = get_vault_path(did)
+            if not vault_path.exists():
+                logger.error(
+                    f"internal_restore_data error, did:{did} host:{url} vault not exist")
+                return False
+
+            restore_checksum_list = HiveBackup.get_file_checksum_list(vault_path)
+            for checksum in checksum_list:
+                if checksum not in restore_checksum_list:
+                    logger.error(
+                        f"internal_restore_data error, did:{did} host:{url} vault restore check failed")
+                    return False
             return True
 
     @staticmethod
@@ -447,6 +491,19 @@ class HiveBackup:
                 return self.response.response_err(CHECKSUM_FAILED, f"{did} backup file checksum failed")
 
         return self.response.response_ok()
+
+    def inter_backup_restore(self):
+        did, content, err = did_post_json_param_pre_proc(self.response)
+        if err:
+            return err
+
+        backup_path = get_vault_backup_path(did)
+        if not backup_path.exists():
+            return self.response.response_err(NOT_FOUND, f"{did} backup vault not found")
+
+        backup_checksum_list = HiveBackup.get_file_checksum_list(backup_path)
+        data = {"checksum_list": backup_checksum_list}
+        return self.response.response_ok(data)
 
     def inter_backup_ftp_start(self):
         did, content, err = did_post_json_param_pre_proc(self.response)

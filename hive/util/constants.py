@@ -109,3 +109,4 @@ HIVE_MODE_TEST = "test"
 INTER_BACKUP_FTP_START_URL = '/api/v1/inter/backup/ftp/start'
 INTER_BACKUP_FTP_END_URL = '/api/v1/inter/backup/ftp/end'
 INTER_BACKUP_SAVE_URL = '/api/v1/inter/backup/save'
+INTER_BACKUP_RESTORE_URL = '/api/v1/inter/backup/restore'

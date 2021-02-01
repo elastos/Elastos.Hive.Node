@@ -123,14 +123,14 @@ def can_access_vault(did, access_vault):
         return False, "vault does not exist."
 
     if access_vault == VAULT_ACCESS_WR:
-        if info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
+        if (VAULT_SERVICE_STATE in info) and (info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE):
             return False, "vault have been freeze, can not write"
         elif not __less_than_max_storage(did):
             return False, "not enough storage space"
         else:
             return True, None
     elif access_vault == VAULT_ACCESS_DEL:
-        if info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
+        if (VAULT_SERVICE_STATE in info) and (info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE):
             return False, "vault have been freeze, can not write"
         else:
             return True, None

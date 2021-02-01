@@ -155,33 +155,33 @@ class HiveBackupTestCase(unittest.TestCase):
                           headers={"Content-Type": "application/json", "Authorization": "token " + token})
         self.assert200(r.status_code)
 
-    def test_internal_ftp(self):
-        backup_token = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraWQiOiAiZGlkOmVsYXN0b3M6aWpVbkQ0S2VScGVCVUZtY0VEQ2JoeE1USlJ6VVlDUUNaTSNwcmltYXJ5In0.eyJpc3MiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwic3ViIjoiQmFja3VwVG9rZW4iLCJhdWQiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwiZXhwIjoxNjEyMDAxODI2LCJwcm9wcyI6IntcInNvdXJjZURJRFwiOiBcImRpZDplbGFzdG9zOmlqVW5ENEtlUnBlQlVGbWNFRENiaHhNVEpSelVZQ1FDWk1cIiwgXCJ0YXJnZXRESURcIjogXCJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNXCIsIFwidGFyZ2V0SG9zdFwiOiBcImh0dHA6Ly8wLjAuMC4wOjUwMDBcIiwgXCJ1c2VyRGlkXCI6IFwiZGlkOmVsYXN0b3M6aWo4a3JBVlJKaXRaS0ptY0N1Zm9MSFFqcTdNZWYzWmpUTlwiLCBcIm5vbmNlXCI6IFwiNTU2OGJkOGMtNGI1MS0xMWViLWJiMDktYWNkZTQ4MDAxMTIyXCJ9In0.Kx74LxqmvQK4Vv3iJORjS6rQAZq0Yk6m7kxRQ2kVb4I0LBgk4j9GtWdHT2GBtknsJ1Qdk8ItVAfLagBozyo3Cg"
-
-        param = {
-            "backup_did": self.did
-        }
-
-        r, s = self.parse_response(
-            self.test_client.post(INTER_BACKUP_FTP_START_URL,
-                                  data=json.dumps(param),
-                                  headers=[("Content-Type", "application/json"),
-                                           ("Authorization", "token " + backup_token)]
-                                  )
-        )
-        self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
-
-        r, s = self.parse_response(
-            self.test_client.post(INTER_BACKUP_FTP_END_URL,
-                                  data=json.dumps(param),
-                                  headers=[("Content-Type", "application/json"),
-                                           ("Authorization", "token " + backup_token)]
-                                  )
-        )
-        self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
-
+    # def test_internal_ftp(self):
+    #     backup_token = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraWQiOiAiZGlkOmVsYXN0b3M6aWpVbkQ0S2VScGVCVUZtY0VEQ2JoeE1USlJ6VVlDUUNaTSNwcmltYXJ5In0.eyJpc3MiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwic3ViIjoiQmFja3VwVG9rZW4iLCJhdWQiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwiZXhwIjoxNjE0NzY1MTE2LCJwcm9wcyI6IntcInNvdXJjZURJRFwiOiBcImRpZDplbGFzdG9zOmlqVW5ENEtlUnBlQlVGbWNFRENiaHhNVEpSelVZQ1FDWk1cIiwgXCJ0YXJnZXRESURcIjogXCJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNXCIsIFwidGFyZ2V0SG9zdFwiOiBcImh0dHA6Ly9sb2NhbGhvc3Q6NTAwMlwiLCBcInVzZXJEaWRcIjogXCJkaWQ6ZWxhc3RvczppajhrckFWUkppdFpLSm1jQ3Vmb0xIUWpxN01lZjNaalROXCIsIFwibm9uY2VcIjogXCIxZTE5ZTE1NC02NDczLTExZWItYmRhNy1hY2RlNDgwMDExMjJcIn0ifQ.M2vvOSoiAUxn0vBIR6SN06IWuFY5CnUJa8dt2pGg1XxYQPQPGn0NAAaB28witXg1POUHo4FjsR6o5oCx9baLDw"
+    #
+    #     param = {
+    #         "backup_did": self.did
+    #     }
+    #
+    #     r, s = self.parse_response(
+    #         self.test_client.post(INTER_BACKUP_FTP_START_URL,
+    #                               data=json.dumps(param),
+    #                               headers=[("Content-Type", "application/json"),
+    #                                        ("Authorization", "token " + backup_token)]
+    #                               )
+    #     )
+    #     self.assert200(s)
+    #     self.assertEqual(r["_status"], "OK")
+    #
+    #     r, s = self.parse_response(
+    #         self.test_client.post(INTER_BACKUP_FTP_END_URL,
+    #                               data=json.dumps(param),
+    #                               headers=[("Content-Type", "application/json"),
+    #                                        ("Authorization", "token " + backup_token)]
+    #                               )
+    #     )
+    #     self.assert200(s)
+    #     self.assertEqual(r["_status"], "OK")
+    #
 
 
     def prepare_active_backup_hive_node_db(self):

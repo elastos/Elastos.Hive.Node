@@ -229,7 +229,6 @@ class HiveBackup:
                 data["vault_backup_state"] = info[VAULT_BACKUP_INFO_STATE]
                 return None, None, None, self.response.response_ok(data)
 
-        print("backup_token:"+backup_token)
         upsert_vault_backup_info(did, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, host, backup_token)
 
         data, err = self.start_internal_ftp(host + INTER_BACKUP_FTP_START_URL, backup_token)

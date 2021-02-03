@@ -200,7 +200,8 @@ def copy_to_backup_data(self):
     backup_path = get_vault_backup_path(self.did)
     print(vault_path.as_posix())
     print(backup_path.as_posix())
-    shutil.rmtree(backup_path.as_posix())
+    if backup_path.exists():
+        shutil.rmtree(backup_path.as_posix())
     shutil.copytree(vault_path.as_posix(), backup_path.as_posix())
 
 
@@ -209,5 +210,6 @@ def move_to_backup_data(self):
     backup_path = get_vault_backup_path(self.did)
     print(vault_path.as_posix())
     print(backup_path.as_posix())
-    shutil.rmtree(backup_path.as_posix())
+    if backup_path.exists():
+        shutil.rmtree(backup_path.as_posix())
     shutil.move(vault_path.as_posix(), backup_path.as_posix())

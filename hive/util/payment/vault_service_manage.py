@@ -155,6 +155,13 @@ def delete_user_vault(did):
     remove_vault_service(did)
 
 
+def delete_user_vault_data(did):
+    path = get_vault_path(did)
+    if path.exists():
+        shutil.rmtree(path)
+    delete_db_storage(did)
+
+
 def proc_expire_vault_job():
     connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]

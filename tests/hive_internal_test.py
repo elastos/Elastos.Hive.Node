@@ -94,8 +94,8 @@ class HiveInternalTest(LiveServerTestCase):
                                   headers=self.auth)
         )
         self.assert200(s)
-        info = HiveBackup.save_vault_data(did)
-        self.assertIsNotNone(info)
+        # info = HiveBackup.save_vault_data(did)
+        # self.assertIsNotNone(info)
 
     def restore_from_hive_node(self, vc_json, did):
         rt, s = self.parse_response(
@@ -106,8 +106,8 @@ class HiveInternalTest(LiveServerTestCase):
                                   headers=self.auth)
         )
         self.assert200(s)
-        info = HiveBackup.restore_vault_data(did)
-        self.assertIsNotNone(info)
+        # info = HiveBackup.restore_vault_data(did)
+        # self.assertIsNotNone(info)
 
     def test_1_save_restore_hive_node(self):
         host = self.get_server_url()

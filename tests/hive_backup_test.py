@@ -266,10 +266,10 @@ class HiveBackupTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
-    def test_6_test_checksum_list(self):
-        prepare_vault_data(self)
-        did_folder = get_vault_path(self.did)
-        HiveBackup.get_file_checksum_list(did_folder)
+    # def test_6_test_checksum_list(self):
+    #     prepare_vault_data(self)
+    #     did_folder = get_vault_path(self.did)
+    #     HiveBackup.get_file_checksum_list(did_folder)
 
 
 if __name__ == '__main__':

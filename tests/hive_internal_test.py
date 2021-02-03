@@ -1,15 +1,19 @@
 import json
 import logging
+import shutil
 import sys
 
 import requests
 import unittest
 from flask_testing import LiveServerTestCase
 
-from hive.main.hive_backup import HiveBackup
-from hive.util.payment.vault_service_manage import delete_user_vault
+from hive.main.hive_backup import HiveBackup, VAULT_BACKUP_INFO_STATE, VAULT_BACKUP_MSG_SUCCESS, VAULT_BACKUP_INFO_MSG
+from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
+from hive.util.payment.vault_service_manage import delete_user_vault, delete_user_vault_data, get_vault_path
 from tests.hive_auth_test import DIDApp, DApp
 from hive.util.did.eladid import ffi, lib
+
+from tests.test_common import upsert_collection, create_upload_file, prepare_vault_data, copy_to_backup_data
 
 unittest.TestSuite
 
@@ -48,7 +52,7 @@ class HiveInternalTest(LiveServerTestCase):
     def setUp(self):
         logging.getLogger("HiveBackupTestCase").info("\n")
 
-        self.app = hive.create_app(mode=HIVE_MODE_TEST)
+        self.app = hive.create_app(mode=HIVE_MODE_TEST, hive_config='.env')
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
         self.content_type = ("Content-Type", "application/json")
@@ -67,6 +71,9 @@ class HiveInternalTest(LiveServerTestCase):
         self.auth = [
             ("Authorization", "token " + token),
             self.content_type,
+        ]
+        self.upload_auth = [
+            ("Authorization", "token " + token),
         ]
 
     def init_vault_backup_service(self, host):
@@ -105,6 +112,8 @@ class HiveInternalTest(LiveServerTestCase):
     def test_1_save_restore_hive_node(self):
         host = self.get_server_url()
         self.init_vault_backup_service(host)
+        prepare_vault_data(self)
+        copy_to_backup_data(self)
 
         user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
         app_did = DApp("testapp", test_common.app_id,
@@ -117,5 +126,4 @@ class HiveInternalTest(LiveServerTestCase):
 
         did = user_did.get_did_string()
         self.save_to_hive_node(vc_json, did)
-        delete_user_vault(did)
         self.restore_from_hive_node(vc_json, did)

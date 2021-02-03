@@ -1,17 +1,17 @@
 import json
 import logging
+import shutil
 from datetime import datetime
 from time import time
 from io import BytesIO
+
 from hive.util.did.eladid import ffi, lib
 
 from hive.util.constants import DID_INFO_TOKEN
 from hive.util.did_info import get_did_info_by_did_appid
-from hive.util.did_sync import add_did_sync_info, update_did_sync_info, DATA_SYNC_STATE_RUNNING, DATA_SYNC_MSG_SUCCESS, \
-    delete_did_sync_info
 
-from hive.settings import hive_setting
-from hive.util.payment.vault_service_manage import setup_vault_service, remove_vault_service
+from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
+from hive.util.payment.vault_service_manage import setup_vault_service, remove_vault_service, get_vault_path
 
 did = "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"
 app_id = "appid"
@@ -138,15 +138,11 @@ def create_upload_file(self, file_name, data):
     temp.seek(0)
     temp.name = 'temp.txt'
 
-    upload_auth = [
-        ("Authorization", "token " + token),
-    ]
-
     upload_file_url = "/api/v1/files/upload/" + file_name
     r2, s = self.parse_response(
         self.test_client.post(upload_file_url,
                               data=temp,
-                              headers=upload_auth)
+                              headers=self.upload_auth)
     )
     self.assert200(s)
     self.assertEqual(r2["_status"], "OK")
@@ -185,3 +181,33 @@ def upsert_collection(self, col_name, doc):
     )
     self.assert200(s)
     self.assertEqual(r["_status"], "OK")
+
+
+def prepare_vault_data(self):
+    doc = dict()
+    for i in range(1, 10):
+        doc["work" + str(i)] = "work_content" + str(i)
+        upsert_collection(self, "works", doc)
+    create_upload_file(self, "test0.txt", "this is a test 0 file")
+    create_upload_file(self, "f1/test1.txt", "this is a test 1 file")
+    create_upload_file(self, "f1/test1_2.txt", "this is a test 1_2 file")
+    create_upload_file(self, "f2/f1/test2.txt", "this is a test 2 file")
+    create_upload_file(self, "f2/f1/test2_2.txt", "this is a test 2_2 file")
+
+
+def copy_to_backup_data(self):
+    vault_path = get_vault_path(self.did)
+    backup_path = get_vault_backup_path(self.did)
+    print(vault_path.as_posix())
+    print(backup_path.as_posix())
+    shutil.rmtree(backup_path.as_posix())
+    shutil.copytree(vault_path.as_posix(), backup_path.as_posix())
+
+
+def move_to_backup_data(self):
+    vault_path = get_vault_path(self.did)
+    backup_path = get_vault_backup_path(self.did)
+    print(vault_path.as_posix())
+    print(backup_path.as_posix())
+    shutil.rmtree(backup_path.as_posix())
+    shutil.move(vault_path.as_posix(), backup_path.as_posix())

@@ -4,6 +4,7 @@ import logging
 import pathlib
 import subprocess
 import re
+import sys
 
 import requests
 from pathlib import Path
@@ -24,7 +25,7 @@ from hive.util.payment.vault_backup_service_manage import get_vault_backup_servi
     import_mongo_db_from_backup, update_vault_backup_service_item
 from hive.util.payment.vault_service_manage import get_vault_service, get_vault_used_storage, \
     update_vault_service_state, VAULT_SERVICE_STATE_FREEZE, freeze_vault, delete_user_vault, unfreeze_vault, \
-    get_vault_path
+    get_vault_path, delete_user_vault_data
 from hive.util.vault_backup_info import *
 from hive.util.rclone_tool import RcloneTool
 from hive.util.server_response import ServerResponse
@@ -48,7 +49,6 @@ class HiveBackup:
         self.app = app
         HiveBackup.mode = mode
         if mode != HIVE_MODE_TEST:
-            print("hive_setting.BACKUP_VAULTS_BASE_DIR:" + hive_setting.BACKUP_VAULTS_BASE_DIR)
             self.backup_ftp = FtpServer(hive_setting.BACKUP_VAULTS_BASE_DIR, hive_setting.BACKUP_FTP_PORT)
             self.backup_ftp.max_cons = 256
             self.backup_ftp.max_cons_per_ip = 10
@@ -79,7 +79,7 @@ class HiveBackup:
         if not info:
             return None
         update_vault_backup_state(did, VAULT_BACKUP_STATE_RESTORE, VAULT_BACKUP_MSG_SUCCESS)
-        vault_folder = HiveBackup.get_did_vault_path(did)
+        vault_folder = get_vault_path(did)
         if not vault_folder.exists():
             create_full_path_dir(vault_folder)
 
@@ -112,7 +112,7 @@ class HiveBackup:
             return None
         update_vault_backup_state(did, VAULT_BACKUP_STATE_BACKUP, VAULT_BACKUP_MSG_SUCCESS)
         HiveBackup.export_did_mongodb_data(did)
-        did_folder = HiveBackup.get_did_vault_path(did)
+        did_folder = get_vault_path(did)
         vault_backup_msg = VAULT_BACKUP_MSG_SUCCESS
         if info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE:
             HiveBackup.__save_google_drive(did_folder, info[VAULT_BACKUP_INFO_DRIVE])
@@ -135,6 +135,7 @@ class HiveBackup:
             info = None
 
         update_vault_backup_state(did, VAULT_BACKUP_STATE_STOP, vault_backup_msg)
+        info = get_vault_backup_info(did)
         HiveBackup.delete_did_mongodb_export_data(did)
         return info
 
@@ -325,15 +326,9 @@ class HiveBackup:
             return False
 
         if r.status_code != SUCCESS:
-            ret = r.json()
-            if not ret["_error"]:
-                logger.error(
-                    "internal_save_app_list error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
-                        r.status_code + " content:" + str(r.content)))
-            else:
-                logger.error(
-                    "internal_save_app_list error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
-                        r.status_code + " message:" + ret["_error"]["message"]))
+            logger.error(
+                "internal_save_app_list error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
+                    r.status_code) + " content:" + str(r.content))
             return False
         else:
             return True
@@ -413,7 +408,6 @@ class HiveBackup:
         if not out_checksum:
             return checksum_list
 
-        print(out_checksum)
         checker = re.compile(r"^([0-9A-Fa-f]{32}) (.*)$", re.I)
         out_checksum_list = out_checksum.split('\n')
         for checksum_txt in out_checksum_list:
@@ -423,7 +417,6 @@ class HiveBackup:
             if not ma:
                 return checksum_list
             checksum = ma.group(1)
-            print(checksum)
             checksum_list.append(checksum)
         return checksum_list
 
@@ -561,7 +554,7 @@ class HiveBackup:
             return self.response.response_err(BAD_REQUEST, f"There is not vault backup service of {did}")
 
         freeze_vault(did)
-        delete_user_vault(did)
+        delete_user_vault_data(did)
 
         app_id_list = backup_service[VAULT_BACKUP_SERVICE_APPS]
         for app_id in app_id_list:

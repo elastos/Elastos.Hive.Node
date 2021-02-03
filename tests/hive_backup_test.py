@@ -17,15 +17,18 @@ from pymongo import MongoClient
 from hive.main import view
 from hive.main.hive_backup import HiveBackup
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
-    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_APPS, INTER_BACKUP_SAVE_URL
+    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_APPS, INTER_BACKUP_SAVE_URL, \
+    INTER_BACKUP_RESTORE_URL, APP_ID
 from hive import create_app
+from hive.util.did_info import get_all_did_info_by_did
 from hive.util.payment.vault_backup_service_manage import setup_vault_backup_service, update_vault_backup_service_item
 from hive.util.payment.vault_order import check_wait_order_tx_job
-from hive.util.payment.vault_service_manage import delete_user_vault, setup_vault_service
+from hive.util.payment.vault_service_manage import delete_user_vault, setup_vault_service, get_vault_path
 from tests import test_common
 from hive import settings
 from tests.hive_auth_test import DIDApp, DApp
-from tests.test_common import upsert_collection, create_upload_file
+from tests.test_common import upsert_collection, create_upload_file, prepare_vault_data, copy_to_backup_data, \
+    move_to_backup_data
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -77,6 +80,9 @@ class HiveBackupTestCase(unittest.TestCase):
         self.auth = [
             ("Authorization", "token " + token),
             self.content_type,
+        ]
+        self.upload_auth = [
+            ("Authorization", "token " + token),
         ]
 
     def tearDown(self):
@@ -156,40 +162,72 @@ class HiveBackupTestCase(unittest.TestCase):
                           headers={"Content-Type": "application/json", "Authorization": "token " + token})
         self.assert200(r.status_code)
 
-    # def test_internal_ftp(self):
-    #     backup_token = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraWQiOiAiZGlkOmVsYXN0b3M6aWpVbkQ0S2VScGVCVUZtY0VEQ2JoeE1USlJ6VVlDUUNaTSNwcmltYXJ5In0.eyJpc3MiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwic3ViIjoiQmFja3VwVG9rZW4iLCJhdWQiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwiZXhwIjoxNjE0NzY1MTE2LCJwcm9wcyI6IntcInNvdXJjZURJRFwiOiBcImRpZDplbGFzdG9zOmlqVW5ENEtlUnBlQlVGbWNFRENiaHhNVEpSelVZQ1FDWk1cIiwgXCJ0YXJnZXRESURcIjogXCJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNXCIsIFwidGFyZ2V0SG9zdFwiOiBcImh0dHA6Ly9sb2NhbGhvc3Q6NTAwMlwiLCBcInVzZXJEaWRcIjogXCJkaWQ6ZWxhc3RvczppajhrckFWUkppdFpLSm1jQ3Vmb0xIUWpxN01lZjNaalROXCIsIFwibm9uY2VcIjogXCIxZTE5ZTE1NC02NDczLTExZWItYmRhNy1hY2RlNDgwMDExMjJcIn0ifQ.M2vvOSoiAUxn0vBIR6SN06IWuFY5CnUJa8dt2pGg1XxYQPQPGn0NAAaB28witXg1POUHo4FjsR6o5oCx9baLDw"
-    #
-    #     param = {
-    #         "backup_did": self.did
-    #     }
-    #
-    #     r, s = self.parse_response(
-    #         self.test_client.post(INTER_BACKUP_FTP_START_URL,
-    #                               data=json.dumps(param),
-    #                               headers=[("Content-Type", "application/json"),
-    #                                        ("Authorization", "token " + backup_token)]
-    #                               )
-    #     )
-    #     self.assert200(s)
-    #     self.assertEqual(r["_status"], "OK")
-    #
-    #     r, s = self.parse_response(
-    #         self.test_client.post(INTER_BACKUP_FTP_END_URL,
-    #                               data=json.dumps(param),
-    #                               headers=[("Content-Type", "application/json"),
-    #                                        ("Authorization", "token " + backup_token)]
-    #                               )
-    #     )
-    #     self.assert200(s)
-    #     self.assertEqual(r["_status"], "OK")
-    #
+    def test_internal_ftp(self):
 
+        param = {
+            "backup_did": self.did
+        }
 
-    def prepare_active_backup_hive_node_db(self):
+        r, s = self.parse_response(
+            self.test_client.post(INTER_BACKUP_FTP_START_URL,
+                                  data=json.dumps(param),
+                                  headers=self.auth
+                                  )
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+        r, s = self.parse_response(
+            self.test_client.post(INTER_BACKUP_FTP_END_URL,
+                                  data=json.dumps(param),
+                                  headers=self.auth
+                                  )
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+    def test_internal_restore_data(self):
+        prepare_vault_data(self)
+        copy_to_backup_data(self)
+        param = {}
+        r, s = self.parse_response(
+            self.test_client.post(INTER_BACKUP_RESTORE_URL,
+                                  json=param,
+                                  headers=self.auth
+                                  )
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+
+        checksum_list = r["checksum_list"]
+        vault_path = get_vault_path(self.did)
+
+        restore_checksum_list = HiveBackup.get_file_checksum_list(vault_path)
+        print("vault_path:" + vault_path.as_posix())
+        print("restore_checksum_list:" + str(restore_checksum_list))
+        print("checksum_list:" + str(checksum_list))
+        for checksum in checksum_list:
+            if checksum not in restore_checksum_list:
+                self.assertTrue(False)
+
+    def prepare_active_backup_hive_node(self):
         setup_vault_backup_service(self.did, 500, -1)
         setup_vault_service(self.did, 500, -1)
-        app_id_list = ["appid", "appid2"]
-        param = {"app_id_list": app_id_list}
+        prepare_vault_data(self)
+        HiveBackup.export_did_mongodb_data(self.did)
+
+        app_id_list = list()
+        did_info_list = get_all_did_info_by_did(self.did)
+        for did_info in did_info_list:
+            app_id_list.append(did_info[APP_ID])
+
+        vault_path = get_vault_path(self.did)
+        checksum_list = HiveBackup.get_file_checksum_list(vault_path)
+        move_to_backup_data(self)
+        param = {"app_id_list": app_id_list,
+                 "checksum_list": checksum_list
+                 }
+
         rt, s = self.parse_response(
             self.test_client.post(INTER_BACKUP_SAVE_URL,
                                   data=json.dumps(param),
@@ -206,8 +244,19 @@ class HiveBackupTestCase(unittest.TestCase):
         )
         self.assert200(s)
 
+    def init_vault_service(self):
+        param = {}
+        rt, s = self.parse_response(
+            self.test_client.post('/api/v1/service/vault/create',
+                                  data=json.dumps(param),
+                                  headers=self.auth)
+        )
+
+        self.assert200(s)
+
     def test_4_active_backup_hive_node(self):
-        self.prepare_active_backup_hive_node_db()
+        self.init_vault_service()
+        self.prepare_active_backup_hive_node()
         self.active_backup_hive_node()
 
     def test_5_get_backup_state(self):
@@ -217,20 +266,9 @@ class HiveBackupTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
-    def prepare_backup_data(self):
-        doc = dict()
-        for i in range(1, 10):
-            doc["work" + str(i)] = "work_content" + str(i)
-            upsert_collection(self, "works", doc)
-        create_upload_file(self, "test0.txt", "this is a test 0 file")
-        create_upload_file(self, "f1/test1.txt", "this is a test 1 file")
-        create_upload_file(self, "f1/test1_2.txt", "this is a test 1_2 file")
-        create_upload_file(self, "f2/f1/test2.txt", "this is a test 2 file")
-        create_upload_file(self, "f2/f1/test2_2.txt", "this is a test 2_2 file")
-
-    def test_6_test_backup_checksum_list(self):
-        self.prepare_backup_data()
-        did_folder = HiveBackup.get_did_vault_path(self.did)
+    def test_6_test_checksum_list(self):
+        prepare_vault_data(self)
+        did_folder = get_vault_path(self.did)
         HiveBackup.get_file_checksum_list(did_folder)
 
 

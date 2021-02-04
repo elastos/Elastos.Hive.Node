@@ -163,6 +163,7 @@ class HiveBackupTestCase(unittest.TestCase):
         self.assert200(r.status_code)
 
     def test_internal_ftp(self):
+        setup_vault_backup_service(self.did, 500, -1)
 
         param = {
             "backup_did": self.did

@@ -15,6 +15,7 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVI
 from hive.util.did_file_info import get_dir_size
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import delete_mongo_database, get_mongo_database_size
+from hive.util.error_code import NOT_FOUND, LOCKED, NOT_ENOUGH_SPACE, SUCCESS
 from hive.util.payment.payment_config import PaymentConfig
 
 VAULT_SERVICE_FREE = "Free"
@@ -120,22 +121,22 @@ def get_vault_service(did):
 def can_access_vault(did, access_vault):
     info = get_vault_service(did)
     if not info:
-        return False, "vault does not exist."
+        return NOT_FOUND, "vault does not exist."
 
     if access_vault == VAULT_ACCESS_WR:
         if (VAULT_SERVICE_STATE in info) and (info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE):
-            return False, "vault have been freeze, can not write"
+            return LOCKED, "vault have been freeze, can not write"
         elif not __less_than_max_storage(did):
-            return False, "not enough storage space"
+            return NOT_ENOUGH_SPACE, "not enough storage space"
         else:
-            return True, None
+            return SUCCESS, None
     elif access_vault == VAULT_ACCESS_DEL:
         if (VAULT_SERVICE_STATE in info) and (info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE):
-            return False, "vault have been freeze, can not write"
+            return LOCKED, "vault have been freeze, can not write"
         else:
-            return True, None
+            return SUCCESS, None
     else:
-        return True, None
+        return SUCCESS, None
 
 
 def get_vault_path(did):

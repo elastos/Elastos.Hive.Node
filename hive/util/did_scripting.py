@@ -10,7 +10,7 @@ from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
     query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
-from hive.util.error_code import BAD_REQUEST
+from hive.util.error_code import BAD_REQUEST, SUCCESS
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
 
 
@@ -99,7 +99,7 @@ def run_condition(did, app_did, target_did, target_app_did, condition_body, para
 
 def run_executable_find(did, app_did, target_did, target_app_did, executable_body, params):
     r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
-    if not r:
+    if r != SUCCESS:
         return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
@@ -137,7 +137,7 @@ def populate_params_insert_update(did, app_did, query, params):
 
 def run_executable_insert(did, app_did, target_did, target_app_did, executable_body, params):
     r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
-    if not r:
+    if r != SUCCESS:
         return None, msg
 
     executable_body_document = executable_body.get('document', {})
@@ -158,7 +158,7 @@ def run_executable_insert(did, app_did, target_did, target_app_did, executable_b
 
 def run_executable_update(did, app_did, target_did, target_app_did, executable_body, params):
     r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
-    if not r:
+    if r != SUCCESS:
         return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
@@ -181,7 +181,7 @@ def run_executable_update(did, app_did, target_did, target_app_did, executable_b
 
 def run_executable_delete(did, app_did, target_did, target_app_did, executable_body, params):
     r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
-    if not r:
+    if r != SUCCESS:
         return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
@@ -199,7 +199,7 @@ def run_executable_delete(did, app_did, target_did, target_app_did, executable_b
 
 def run_executable_file_upload(did, app_did, target_did, target_app_did, executable_body, params):
     r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
-    if not r:
+    if r != SUCCESS:
         return None, msg
 
     executable_body_path = executable_body.get("path", "")
@@ -248,7 +248,7 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
 
 def run_executable_file_download(did, app_did, target_did, target_app_did, executable_body, params):
     r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
-    if not r:
+    if r != SUCCESS:
         return None, msg
     executable_body_path = executable_body.get("path", "")
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
@@ -292,7 +292,7 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
 
 def run_executable_file_properties(did, app_did, target_did, target_app_did, executable_body, params):
     r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
-    if not r:
+    if r != SUCCESS:
         return None, msg
 
     executable_body_path = executable_body.get("path", "")
@@ -311,7 +311,7 @@ def run_executable_file_properties(did, app_did, target_did, target_app_did, exe
 
 def run_executable_file_hash(did, app_did, target_did, target_app_did, executable_body, params):
     r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
-    if not r:
+    if r != SUCCESS:
         return None, msg
 
     executable_body_path = executable_body.get("path", "")

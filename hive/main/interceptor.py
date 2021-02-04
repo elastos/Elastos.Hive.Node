@@ -4,7 +4,7 @@ import traceback
 
 from flask import request
 from hive.util.auth import did_auth
-from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED
+from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED, SUCCESS
 from hive.util.server_response import ServerResponse
 from hive.util.payment.vault_service_manage import can_access_vault
 
@@ -26,8 +26,8 @@ def pre_proc(response, access_vault=None):
 
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
-        if not r:
-            return did, app_id, response.response_err(BAD_REQUEST, msg)
+        if r != SUCCESS:
+            return did, app_id, response.response_err(r, msg)
 
     return did, app_id, None
 
@@ -56,8 +56,8 @@ def post_json_param_pre_proc(response, *args, access_vault=None):
 
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
-        if not r:
-            return did, app_id, None, response.response_err(BAD_REQUEST, msg)
+        if r != SUCCESS:
+            return did, app_id, None, response.response_err(r, msg)
 
     content = request.get_json(force=True, silent=True)
     if content is None:
@@ -78,8 +78,8 @@ def get_pre_proc(response, *args, access_vault=None):
 
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
-        if not r:
-            return did, app_id, None, response.response_err(BAD_REQUEST, msg)
+        if r != SUCCESS:
+            return did, app_id, None, response.response_err(r, msg)
 
     content = dict()
     for arg in args:

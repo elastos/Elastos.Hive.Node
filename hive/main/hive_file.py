@@ -103,8 +103,8 @@ class HiveFile:
             resp.status_code = UNAUTHORIZED
             return resp
         r, msg = can_access_vault(did, VAULT_ACCESS_R)
-        if not r:
-            resp.status_code = FORBIDDEN
+        if r != SUCCESS:
+            resp.status_code = r
             return resp
 
         file_name = request.args.get('path')
@@ -133,8 +133,8 @@ class HiveFile:
             return self.response.response_err(UNAUTHORIZED, "auth failed")
 
         r, msg = can_access_vault(did, VAULT_ACCESS_R)
-        if not r:
-            return self.response.response_err(BAD_REQUEST, msg)
+        if r != SUCCESS:
+            return self.response.response_err(r, msg)
 
         path = get_save_files_path(did, app_id)
 

@@ -278,9 +278,9 @@ class HiveScripting:
 
     def __run_script(self, script_name, caller_did, caller_app_did, target_did, target_app_did, params):
         r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
-        if not r:
+        if r != SUCCESS:
             logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
-            return self.response.response_err(UNAUTHORIZED, msg)
+            return self.response.response_err(r, msg)
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -334,9 +334,9 @@ class HiveScripting:
         if condition:
             # Currently, there's only one kind of condition("count" db query)
             r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
-            if not r:
+            if r != SUCCESS:
                 logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
-                return self.response.response_err(UNAUTHORIZED, msg)
+                return self.response.response_err(r, msg)
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:
@@ -446,8 +446,9 @@ class HiveScripting:
                         f"from transaction_id jwt token. Exception: {str(e)}"]
             return None, None, None, None, err
 
-        if not can_access_vault(target_did, VAULT_ACCESS_R):
-            err = [FORBIDDEN, f"Error while executing file {fileapi_type} via scripting: vault can not be accessed"]
+        r, m = can_access_vault(target_did, VAULT_ACCESS_R)
+        if r != SUCCESS:
+            err = [r, f"Error while executing file {fileapi_type} via scripting: vault can not be accessed"]
             return None, None, None, None, err
 
         # Find the temporary tx in the database

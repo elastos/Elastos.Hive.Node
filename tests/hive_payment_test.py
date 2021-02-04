@@ -290,7 +290,7 @@ class HivePaymentTestCase(unittest.TestCase):
         inc_vault_file_use_storage_byte(self.did, 55000000)
         update_vault_db_use_storage_byte(self.did, 55000000)
         r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
-        self.assertEqual(r, SUCCESS)
+        self.assertNotEqual(r, SUCCESS)
         inc_vault_file_use_storage_byte(self.did, -20000000)
         update_vault_db_use_storage_byte(self.did, 30000000)
         r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)

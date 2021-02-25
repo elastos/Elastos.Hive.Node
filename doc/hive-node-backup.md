@@ -84,6 +84,7 @@ return:
         {
             "_status": "OK",
             "hive_backup_state": "stop"// stop, backup, restore
+            "result": "success" //success, failed
         }
     Failure:
         {

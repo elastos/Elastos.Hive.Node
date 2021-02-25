@@ -191,9 +191,19 @@ class HiveBackup:
 
         info = get_vault_backup_info(did)
         if info:
-            data = {"hive_backup_state": info[VAULT_BACKUP_INFO_STATE]}
+            if VAULT_BACKUP_INFO_MSG not in info:
+                result = VAULT_BACKUP_MSG_SUCCESS
+            else:
+                result = info[VAULT_BACKUP_INFO_MSG]
+            data = {
+                "hive_backup_state": info[VAULT_BACKUP_INFO_STATE],
+                "result": result
+            }
         else:
-            data = {"hive_backup_state": VAULT_BACKUP_STATE_STOP}
+            data = {
+                "hive_backup_state": VAULT_BACKUP_STATE_STOP,
+                "result": VAULT_BACKUP_MSG_SUCCESS
+            }
         return self.response.response_ok(data)
 
     @staticmethod

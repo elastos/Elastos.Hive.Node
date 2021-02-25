@@ -58,10 +58,39 @@ def check_json_param(content, content_type, args):
     return None
 
 
+def populate_options_with_params_values(did, app_did, options, params, condition=False):
+    for key, value in options.items():
+        if isinstance(value, dict):
+            populate_options_with_params_values(did, app_did, value, params, condition)
+        elif isinstance(value, str):
+            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
+                options[key] = did
+            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+                options[key] = app_did
+            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+                try:
+                    v = params[v]
+                except Exception as e:
+                    if condition:
+                        return False
+                    else:
+                        return None, f"Exception: {str(e)}"
+                options[key] = v
+            else:
+                options[key] = value
+        else:
+            options[key] = value
+    if condition:
+        return True
+    else:
+        return None
+
+
 def populate_params_find_count_delete(did, app_did, query, params, condition=False):
     for key, value in query.items():
         if isinstance(value, dict):
-            populate_params_find_count_delete(did, app_did, value, params)
+            populate_params_find_count_delete(did, app_did, value, params, condition)
         elif isinstance(value, str):
             if value == SCRIPTING_EXECUTABLE_CALLER_DID:
                 query[key] = {"$in": [did]}
@@ -69,23 +98,32 @@ def populate_params_find_count_delete(did, app_did, query, params, condition=Fal
                 query[key] = {"$in": [app_did]}
             elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
                 v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                if not (params and params.get(v, None)):
+                try:
+                    v = params[v]
+                except Exception as e:
                     if condition:
                         return False
                     else:
-                        return None, "Exception: Parameter is not set"
-                query[key] = params[v]
+                        return f"Exception: {str(e)}"
+                query[key] = v
             else:
                 query[key] = value
         else:
             query[key] = value
+    if condition:
+        return True
+    else:
+        return None
 
 
 def run_condition(did, app_did, target_did, target_app_did, condition_body, params):
     condition_body_filter = condition_body.get('filter', {})
-    populate_params_find_count_delete(did, app_did, condition_body_filter, params, condition=True)
+    if not populate_params_find_count_delete(did, app_did, condition_body_filter, params, condition=True):
+        return False
 
     options = populate_options_count_documents(condition_body)
+    if not populate_options_with_params_values(did, app_did, options, params, condition=True):
+        return False
 
     col = get_collection(target_did, target_app_did, condition_body.get('collection'))
     data, err_message = query_count_documents(col, condition_body, options)
@@ -103,9 +141,14 @@ def run_executable_find(did, app_did, target_did, target_app_did, executable_bod
         return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
-    populate_params_find_count_delete(did, app_did, executable_body_filter, params)
+    err_message = populate_params_find_count_delete(did, app_did, executable_body_filter, params)
+    if err_message:
+        return None, err_message
 
     options = populate_options_find_many(executable_body)
+    err_message = populate_options_with_params_values(did, app_did, options, params)
+    if err_message:
+        return None, err_message
 
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_find_many(col, executable_body, options)
@@ -126,13 +169,16 @@ def populate_params_insert_update(did, app_did, query, params):
                 query[key] = app_did
             elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
                 v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                if not (params and params.get(v, None)):
-                    return None, "Exception: Parameter is not set"
-                query[key] = params[v]
+                try:
+                    v = params[v]
+                except Exception as e:
+                    return f"Exception: {str(e)}"
+                query[key] = v
             else:
                 query[key] = value
         else:
             query[key] = value
+    return None
 
 
 def run_executable_insert(did, app_did, target_did, target_app_did, executable_body, params):
@@ -141,10 +187,15 @@ def run_executable_insert(did, app_did, target_did, target_app_did, executable_b
         return None, msg
 
     executable_body_document = executable_body.get('document', {})
-    populate_params_insert_update(did, app_did, executable_body_document, params)
+    err_message = populate_params_insert_update(did, app_did, executable_body_document, params)
+    if err_message:
+        return None, err_message
     created = "created" in executable_body_document.keys()
 
     options = populate_options_insert_one(executable_body)
+    err_message = populate_options_with_params_values(did, app_did, options, params)
+    if err_message:
+        return None, err_message
 
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_insert_one(col, executable_body, options, created=created)
@@ -162,12 +213,19 @@ def run_executable_update(did, app_did, target_did, target_app_did, executable_b
         return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
-    populate_params_insert_update(did, app_did, executable_body_filter, params)
+    err_message = populate_params_insert_update(did, app_did, executable_body_filter, params)
+    if err_message:
+        return None, err_message
 
     executable_body_update = executable_body.get('update').get('$set')
-    populate_params_insert_update(did, app_did, executable_body_update, params)
+    err_message = populate_params_insert_update(did, app_did, executable_body_update, params)
+    if err_message:
+        return None, err_message
 
     options = populate_options_update_one(executable_body)
+    err_message = populate_options_with_params_values(did, app_did, options, params)
+    if err_message:
+        return None, err_message
 
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_update_one(col, executable_body, options)
@@ -185,7 +243,9 @@ def run_executable_delete(did, app_did, target_did, target_app_did, executable_b
         return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
-    populate_params_find_count_delete(did, app_did, executable_body_filter, params)
+    err_message = populate_params_find_count_delete(did, app_did, executable_body_filter, params)
+    if err_message:
+        return None, err_message
 
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
     data, err_message = query_delete_one(col, executable_body)
@@ -205,9 +265,11 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
     executable_body_path = executable_body.get("path", "")
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-        if not (params and params.get(v, None)):
-            return None, "Exception: Parameter is not set"
-        executable_body_path = params[v]
+        try:
+            v = params[v]
+        except Exception as e:
+            return None, f"Exception: {str(e)}"
+        executable_body_path = v
 
     if not executable_body_path:
         return None, f"Path cannot be empty"
@@ -253,9 +315,11 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
     executable_body_path = executable_body.get("path", "")
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-        if not (params and params.get(v, None)):
-            return None, "Exception: Parameter is not set"
-        executable_body_path = params[v]
+        try:
+            v = params[v]
+        except Exception as e:
+            return None, f"Exception: {str(e)}"
+        executable_body_path = v
 
     if not executable_body_path:
         return None, f"Path cannot be empty"
@@ -299,9 +363,11 @@ def run_executable_file_properties(did, app_did, target_did, target_app_did, exe
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-        if not (params and params.get(v, None)):
-            return None, "Exception: Parameter is not set"
-        name = params[v]
+        try:
+            v = params[v]
+        except Exception as e:
+            return None, f"Exception: {str(e)}"
+        name = v
 
     data, err = query_properties(target_did, target_app_did, name)
     if err:
@@ -318,9 +384,11 @@ def run_executable_file_hash(did, app_did, target_did, target_app_did, executabl
     name = ""
     if executable_body_path.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
         v = executable_body_path.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-        if not (params and params.get(v, None)):
-            return None, "Exception: Parameter is not set"
-        name = params[v]
+        try:
+            v = params[v]
+        except Exception as e:
+            return None, f"Exception: {str(e)}"
+        name = v
 
     data, err = query_hash(target_did, target_app_did, name)
     if err:

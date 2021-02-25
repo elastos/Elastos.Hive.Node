@@ -163,3 +163,7 @@ test_did_user_data
 
 # Log files
 hive.log
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

@@ -3,6 +3,7 @@
 .venv
 venv
 .mongodb-data
+.mongodb-test-data/
 data
 .data
 did_user_data

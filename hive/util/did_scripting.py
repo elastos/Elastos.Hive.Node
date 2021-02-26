@@ -58,10 +58,10 @@ def check_json_param(content, content_type, args):
     return None
 
 
-def populate_options_with_params_values(did, app_did, options, params, condition=False):
+def populate_with_params_values(did, app_did, options, params):
     for key, value in options.items():
         if isinstance(value, dict):
-            populate_options_with_params_values(did, app_did, value, params, condition)
+            populate_with_params_values(did, app_did, value, params)
         elif isinstance(value, str):
             if value == SCRIPTING_EXECUTABLE_CALLER_DID:
                 options[key] = did
@@ -72,57 +72,24 @@ def populate_options_with_params_values(did, app_did, options, params, condition
                 try:
                     v = params[v]
                 except Exception as e:
-                    if condition:
-                        return False
-                    else:
-                        return f"Exception: {str(e)}"
+                    return f"Exception: {str(e)}"
                 options[key] = v
             else:
                 options[key] = value
         else:
             options[key] = value
-    if condition:
-        return True
-    else:
-        return None
-
-
-def populate_params_find_count_delete(did, app_did, query, params, condition=False):
-    for key, value in query.items():
-        if isinstance(value, dict):
-            populate_params_find_count_delete(did, app_did, value, params, condition)
-        elif isinstance(value, str):
-            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-                query[key] = {"$in": [did]}
-            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-                query[key] = {"$in": [app_did]}
-            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                try:
-                    v = params[v]
-                except Exception as e:
-                    if condition:
-                        return False
-                    else:
-                        return f"Exception: {str(e)}"
-                query[key] = v
-            else:
-                query[key] = value
-        else:
-            query[key] = value
-    if condition:
-        return True
-    else:
-        return None
+    return None
 
 
 def run_condition(did, app_did, target_did, target_app_did, condition_body, params):
     condition_body_filter = condition_body.get('filter', {})
-    if not populate_params_find_count_delete(did, app_did, condition_body_filter, params, condition=True):
+    err_message = populate_with_params_values(did, app_did, condition_body_filter, params)
+    if err_message:
         return False
 
     options = populate_options_count_documents(condition_body)
-    if not populate_options_with_params_values(did, app_did, options, params, condition=True):
+    err_message = populate_with_params_values(did, app_did, options, params)
+    if err_message:
         return False
 
     col = get_collection(target_did, target_app_did, condition_body.get('collection'))
@@ -141,12 +108,12 @@ def run_executable_find(did, app_did, target_did, target_app_did, executable_bod
         return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
-    err_message = populate_params_find_count_delete(did, app_did, executable_body_filter, params)
+    err_message = populate_with_params_values(did, app_did, executable_body_filter, params)
     if err_message:
         return None, err_message
 
     options = populate_options_find_many(executable_body)
-    err_message = populate_options_with_params_values(did, app_did, options, params)
+    err_message = populate_with_params_values(did, app_did, options, params)
     if err_message:
         return None, err_message
 
@@ -158,42 +125,19 @@ def run_executable_find(did, app_did, target_did, target_app_did, executable_bod
     return data, None
 
 
-def populate_params_insert_update(did, app_did, query, params):
-    for key, value in query.items():
-        if isinstance(value, dict):
-            populate_params_insert_update(did, app_did, value, params)
-        elif isinstance(value, str):
-            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
-                query[key] = did
-            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
-                query[key] = app_did
-            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                v = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
-                try:
-                    v = params[v]
-                except Exception as e:
-                    return f"Exception: {str(e)}"
-                query[key] = v
-            else:
-                query[key] = value
-        else:
-            query[key] = value
-    return None
-
-
 def run_executable_insert(did, app_did, target_did, target_app_did, executable_body, params):
     r, msg = can_access_vault(target_did, VAULT_ACCESS_WR)
     if r != SUCCESS:
         return None, msg
 
     executable_body_document = executable_body.get('document', {})
-    err_message = populate_params_insert_update(did, app_did, executable_body_document, params)
+    err_message = populate_with_params_values(did, app_did, executable_body_document, params)
     if err_message:
         return None, err_message
     created = "created" in executable_body_document.keys()
 
     options = populate_options_insert_one(executable_body)
-    err_message = populate_options_with_params_values(did, app_did, options, params)
+    err_message = populate_with_params_values(did, app_did, options, params)
     if err_message:
         return None, err_message
 
@@ -213,17 +157,17 @@ def run_executable_update(did, app_did, target_did, target_app_did, executable_b
         return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
-    err_message = populate_params_insert_update(did, app_did, executable_body_filter, params)
+    err_message = populate_with_params_values(did, app_did, executable_body_filter, params)
     if err_message:
         return None, err_message
 
     executable_body_update = executable_body.get('update').get('$set')
-    err_message = populate_params_insert_update(did, app_did, executable_body_update, params)
+    err_message = populate_with_params_values(did, app_did, executable_body_update, params)
     if err_message:
         return None, err_message
 
     options = populate_options_update_one(executable_body)
-    err_message = populate_options_with_params_values(did, app_did, options, params)
+    err_message = populate_with_params_values(did, app_did, options, params)
     if err_message:
         return None, err_message
 
@@ -243,7 +187,7 @@ def run_executable_delete(did, app_did, target_did, target_app_did, executable_b
         return None, msg
 
     executable_body_filter = executable_body.get('filter', {})
-    err_message = populate_params_find_count_delete(did, app_did, executable_body_filter, params)
+    err_message = populate_with_params_values(did, app_did, executable_body_filter, params)
     if err_message:
         return None, err_message
 

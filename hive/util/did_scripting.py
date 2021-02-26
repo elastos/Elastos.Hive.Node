@@ -75,7 +75,7 @@ def populate_options_with_params_values(did, app_did, options, params, condition
                     if condition:
                         return False
                     else:
-                        return None, f"Exception: {str(e)}"
+                        return f"Exception: {str(e)}"
                 options[key] = v
             else:
                 options[key] = value

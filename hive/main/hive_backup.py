@@ -12,6 +12,7 @@ from pathlib import Path
 from hive.main import view
 from hive.util.auth import did_auth
 from hive.util.common import did_tail_part, create_full_path_dir, get_host
+from hive.util.common import did_tail_part, create_full_path_dir, get_host
 from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MODE_DEV, INTER_BACKUP_FTP_START_URL, \
     VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, INTER_BACKUP_FTP_END_URL, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_SERVICE_MAX_STORAGE, VAULT_BACKUP_INFO_FTP, VAULT_BACKUP_SERVICE_APPS, \
@@ -22,7 +23,7 @@ from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE
 from hive.util.ftp_tool import FtpServer
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
     gene_vault_backup_ftp_record, get_vault_backup_ftp_record, remove_vault_backup_ftp_record, import_files_from_backup, \
-    import_mongo_db_from_backup, update_vault_backup_service_item
+    import_mongo_db_from_backup, update_vault_backup_service_item, get_backup_used_storage
 from hive.util.payment.vault_service_manage import get_vault_service, get_vault_used_storage, \
     update_vault_service_state, VAULT_SERVICE_STATE_FREEZE, freeze_vault, delete_user_vault, unfreeze_vault, \
     get_vault_path, delete_user_vault_data
@@ -119,9 +120,10 @@ class HiveBackup:
         elif info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_HIVE_NODE:
             checksum_list = HiveBackup.get_file_checksum_list(did_folder)
             if not checksum_list:
-                logger.info(f"{did} vault data is empty, no need to backup")
+                logger.error(f"{did} vault data is empty, no need to backup")
                 HiveBackup.stop_internal_ftp(did, info[VAULT_BACKUP_INFO_DRIVE] + INTER_BACKUP_FTP_END_URL,
                                              info[VAULT_BACKUP_INFO_TOKEN])
+                vault_backup_msg = VAULT_BACKUP_MSG_FAILED
             else:
                 HiveBackup.__save_hive_node(did_folder, info[VAULT_BACKUP_INFO_FTP], did,
                                             info[VAULT_BACKUP_INFO_DRIVE], info[VAULT_BACKUP_INFO_TOKEN])
@@ -407,7 +409,7 @@ class HiveBackup:
     @staticmethod
     def get_file_checksum_list(folder):
         checksum_list = list()
-        obj = subprocess.Popen(["rclone", "hashsum", "MD5", folder.as_posix()],
+        obj = subprocess.Popen(["rclone", "md5sum", folder.as_posix()],
                                stdout=subprocess.PIPE,
                                universal_newlines=True,
                                encoding="utf-8"
@@ -482,6 +484,8 @@ class HiveBackup:
             return err
 
         update_vault_backup_service_item(did, VAULT_BACKUP_SERVICE_APPS, content["app_id_list"])
+
+        get_backup_used_storage(did)
 
         checksum_list = content["checksum_list"]
         backup_path = get_vault_backup_path(did)
@@ -562,6 +566,9 @@ class HiveBackup:
         backup_service = get_vault_backup_service(did)
         if not backup_service:
             return self.response.response_err(BAD_REQUEST, f"There is not vault backup service of {did}")
+
+        if VAULT_BACKUP_SERVICE_APPS not in backup_service:
+            return self.response.response_err(BAD_REQUEST, f"There is an empty vault backup {did}")
 
         freeze_vault(did)
         delete_user_vault_data(did)

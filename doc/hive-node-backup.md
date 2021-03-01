@@ -106,7 +106,7 @@ Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data:
     { 
-        "backup_credential": '{"id":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM#didapp","type":["BackupCredential"],"issuer":"did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN","issuanceDate":"2021-01-07T05:41:28Z","expirationDate":"2025-09-01T19:47:24Z","credentialSubject":{"id":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","sourceDID":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","targetDID":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","targetHost":"http://0.0.0.0:5000"},"proof":{"type":"ECDSAsecp256r1","verificationMethod":"did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN#primary","signature":"1LfT8p5JGTQGhCpRnysBSsrZZS-Hctv_ejBn7fwaT649Manbiy6qMHvtla075x18xqqPIHB1ylWbVFBzfILUYA"}} '
+        "backup_credential": "{\"id\":\"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM#backupId\",\"type\":[\"BackupCredential\"],\"issuer\":\"did:elastos:icXtpDnZRSDrjmD5NQt6TYSphFRqoo2q6n\",\"issuanceDate\":\"2021-02-26T08:47:26Z\",\"expirationDate\":\"2026-02-26T08:47:26Z\",\"credentialSubject\":{\"id\":\"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM\",\"sourceDID\":\"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM\",\"targetDID\":\"did:elastos:iiTvjocqh7C78KjWyDVk2C2kbueJvkuXTW\",\"targetHost\":\"https://hive-testnet2.trinity-tech.io\"},\"proof\":{\"verificationMethod\":\"#primary\",\"signature\":\"6l48lIa25AfEGxtlH_AsGO2cKOZ7CzydP1f4Tyg7zom6QgKOQAyTxkey7_0B1L9ZejKgPjJU5t4OYrQ3uaVEdQ\"}}"
     }
 return:
     Success: {"_status":"OK"}
@@ -139,7 +139,7 @@ Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data:
     { 
-        "backup_credential": '{"id":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM#didapp","type":["BackupCredential"],"issuer":"did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN","issuanceDate":"2021-01-07T05:41:28Z","expirationDate":"2025-09-01T19:47:24Z","credentialSubject":{"id":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","sourceDID":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","targetDID":"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM","targetHost":"http://0.0.0.0:5000"},"proof":{"type":"ECDSAsecp256r1","verificationMethod":"did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN#primary","signature":"1LfT8p5JGTQGhCpRnysBSsrZZS-Hctv_ejBn7fwaT649Manbiy6qMHvtla075x18xqqPIHB1ylWbVFBzfILUYA"}} '
+        "backup_credential":"{\"id\":\"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM#backupId\",\"type\":[\"BackupCredential\"],\"issuer\":\"did:elastos:icXtpDnZRSDrjmD5NQt6TYSphFRqoo2q6n\",\"issuanceDate\":\"2021-02-26T08:47:26Z\",\"expirationDate\":\"2026-02-26T08:47:26Z\",\"credentialSubject\":{\"id\":\"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM\",\"sourceDID\":\"did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM\",\"targetDID\":\"did:elastos:iiTvjocqh7C78KjWyDVk2C2kbueJvkuXTW\",\"targetHost\":\"https://hive-testnet2.trinity-tech.io\"},\"proof\":{\"verificationMethod\":\"#primary\",\"signature\":\"6l48lIa25AfEGxtlH_AsGO2cKOZ7CzydP1f4Tyg7zom6QgKOQAyTxkey7_0B1L9ZejKgPjJU5t4OYrQ3uaVEdQ\"}}" 
     }
 return:
     Success: {"_status":"OK"}

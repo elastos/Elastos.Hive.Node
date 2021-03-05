@@ -84,8 +84,11 @@ def update_vault_backup_service_item(did, item_name, item_value):
 
 
 def parse_ftp_record(ftp_data):
-    ftp_info = ftp_data.split(":")
-    return ftp_info[0], ftp_info[1]
+    if ftp_data:
+        ftp_info = ftp_data.split(":")
+        return ftp_info[0], ftp_info[1]
+    else:
+        return None, None
 
 
 def compose_ftp_record(user, passwd):

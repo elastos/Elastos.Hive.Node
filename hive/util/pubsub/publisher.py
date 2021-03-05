@@ -32,6 +32,18 @@ def pub_setup_channel(pub_did, pub_appid, channel_name):
     return channel_id
 
 
+def pub_remove_channel(pub_did, pub_appid, channel_name):
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[PUB_CHANNEL_COLLECTION]
+    query = {
+        PUB_CHANNEL_PUB_DID: pub_did,
+        PUB_CHANNEL_PUB_APPID: pub_appid,
+        PUB_CHANNEL_NAME: channel_name,
+    }
+    col.delete_many(query)
+
+
 def pubsub_get_channel_id(did, app_id, channel_name):
     md5 = hashlib.md5()
     md5.update(f"{did}_{app_id}_{channel_name}".encode("utf-8"))
@@ -92,6 +104,17 @@ def pub_add_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
 
     subscribe_id = ret.inserted_id
     return subscribe_id
+
+
+def pub_remove_subscribe(pub_did, pub_appid, channel_name, sub_did, sub_appid):
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[PUB_CHANNEL_COLLECTION]
+    _id = pubsub_get_subscribe_id(pub_did, pub_appid, channel_name, sub_did, sub_appid)
+    query = {
+        "_id": _id
+    }
+    col.delete_one(query)
 
 
 def pub_get_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):

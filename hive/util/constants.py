@@ -89,6 +89,28 @@ SCRIPTING_EXECUTABLE_PARAMS = "$params"
 SCRIPTING_EXECUTABLE_DOWNLOADABLE = "_downloadable"
 # scripting end
 
+# pubsub start
+PUB_CHANNEL_COLLECTION = "pub_channel_col"
+PUB_CHANNEL_ID = "channel_id"
+PUB_CHANNEL_PUB_DID = "pub_did"
+PUB_CHANNEL_PUB_APPID = "pub_appid"
+PUB_CHANNEL_NAME = "channel_name"
+PUB_CHANNEL_SUB_DID = "sub_did"
+PUB_CHANNEL_SUB_APPID = "sub_appid"
+PUB_CHANNEL_MODIFY_TIME = "modify_time"
+
+SUB_MESSAGE_COLLECTION = "sub_message_col"
+SUB_MESSAGE_SUBSCRIBE_ID = "subscribe_id"
+SUB_MESSAGE_PUB_DID = "pub_did"
+SUB_MESSAGE_PUB_APPID = "pub_appid"
+SUB_MESSAGE_CHANNEL_NAME = "channel_name"
+SUB_MESSAGE_SUB_DID = "sub_did"
+SUB_MESSAGE_SUB_APPID = "sub_appid"
+SUB_MESSAGE_DATA = "message_data"
+SUB_MESSAGE_TIME = "message_time"
+SUB_MESSAGE_MODIFY_TIME = "modify_time"
+# pubsub end
+
 # other
 VAULT_ACCESS_WR = "vault_write_read"
 VAULT_ACCESS_R = "vault_read"

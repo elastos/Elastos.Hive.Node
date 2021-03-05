@@ -312,11 +312,11 @@ class HiveBackup:
             if not ret["_error"]:
                 logger.error(
                     "stop_internal_backup error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
-                        r.status_code + " content:" + str(r.content)))
+                        r.status_code) + " content:" + str(r.content))
             else:
                 logger.error(
                     "stop_internal_backup error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
-                        r.status_code + " message:" + ret["_error"]["message"]))
+                        r.status_code) + " message:" + ret["_error"]["message"])
 
     @staticmethod
     def internal_save_data(did, url, backup_token, checksum_list):
@@ -548,7 +548,7 @@ class HiveBackup:
             return self.response.response_err(UNAUTHORIZED, "Backup internal backup_communication_end auth failed")
         user, passwd = get_vault_backup_ftp_record(did)
         if not user:
-            return self.response.response_err(BAD_REQUEST, "There is not backup process for " + did)
+            return self.response.response_err(BAD_REQUEST, "There is not backup ftp for " + did)
         if self.mode != HIVE_MODE_TEST:
             self.backup_ftp.remove_user(user)
         remove_vault_backup_ftp_record(did)

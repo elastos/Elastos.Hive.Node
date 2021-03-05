@@ -15,6 +15,8 @@ RUN pip install --upgrade pip
 RUN pip install -r requirements.txt && \
     pip install gunicorn
 
+RUN touch /root/.config/rclone/rclone.conf
+
 ADD . /src/
 
 ENV LD_LIBRARY_PATH="/src/hive/util/did/"

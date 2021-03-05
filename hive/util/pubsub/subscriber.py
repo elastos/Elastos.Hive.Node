@@ -34,6 +34,20 @@ def sub_setup_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_
     return subscribe_id
 
 
+def sub_remove_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[SUB_MESSAGE_COLLECTION]
+    query = {
+        SUB_MESSAGE_PUB_DID: pub_did,
+        SUB_MESSAGE_PUB_APPID: pub_appid,
+        SUB_MESSAGE_CHANNEL_NAME: channel_name,
+        SUB_MESSAGE_SUB_DID: sub_did,
+        SUB_MESSAGE_SUB_APPID: sub_appid,
+    }
+    col.delete_many(query)
+
+
 def sub_get_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
     connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
@@ -94,4 +108,3 @@ def __remove_messages(message_ids):
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
     col.delete_many({"_id": {"$in": message_ids}})
-

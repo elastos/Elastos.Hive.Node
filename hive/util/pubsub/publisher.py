@@ -4,7 +4,7 @@ from datetime import datetime
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
 
-from hive import hive_setting
+from hive.settings import hive_setting
 from hive.util.constants import DID_INFO_DB_NAME, PUB_CHANNEL_COLLECTION, PUB_CHANNEL_PUB_DID, \
     PUB_CHANNEL_PUB_APPID, PUB_CHANNEL_NAME, PUB_CHANNEL_MODIFY_TIME, PUB_CHANNEL_ID, \
     PUB_CHANNEL_SUB_DID, PUB_CHANNEL_SUB_APPID
@@ -63,14 +63,14 @@ def pub_get_channel(pub_did, pub_appid, channel_name):
     return info
 
 
-def pub_get_channel_list(pub_did):
+def pub_get_channels(pub_did):
     connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     query = {
         PUB_CHANNEL_PUB_DID: pub_did,
-        PUB_CHANNEL_SUB_DID: {"$exist": False},
-        PUB_CHANNEL_SUB_APPID: {"$exist": False}
+        PUB_CHANNEL_SUB_DID: {"$exists": False},
+        PUB_CHANNEL_SUB_APPID: {"$exists": False}
     }
 
     info = col.find(query)
@@ -137,7 +137,9 @@ def pub_get_subscriber_list(pub_did, pub_appid, channel_name):
     query = {
         PUB_CHANNEL_PUB_DID: pub_did,
         PUB_CHANNEL_PUB_APPID: pub_appid,
-        PUB_CHANNEL_NAME: channel_name
+        PUB_CHANNEL_NAME: channel_name,
+        PUB_CHANNEL_SUB_DID: {"$exists": True},
+        PUB_CHANNEL_SUB_APPID: {"$exists": True}
     }
 
     info_list = col.find(query)

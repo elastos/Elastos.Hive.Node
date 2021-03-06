@@ -4,7 +4,7 @@ from hive.main.interceptor import post_json_param_pre_proc, pre_proc
 from hive.util.constants import PUB_CHANNEL_NAME
 from hive.util.error_code import ALREADY_EXIST, NOT_FOUND
 from hive.util.pubsub.pb_exchanger import pubsub_push_message
-from hive.util.pubsub.publisher import pub_setup_channel, pub_get_channel_list, pub_add_subscriber
+from hive.util.pubsub.publisher import pub_setup_channel, pub_get_channels, pub_add_subscriber
 from hive.util.pubsub.subscriber import sub_setup_message_subscriber, sub_pop_messages, sub_get_message_subscriber
 from hive.util.server_response import ServerResponse
 
@@ -33,7 +33,7 @@ class HivePubSub:
         if err:
             return err
 
-        channel_list = pub_get_channel_list(did)
+        channel_list = pub_get_channels(did)
         if not channel_list:
             return self.response.response_err(NOT_FOUND, "not found channel of " + did)
 
@@ -55,7 +55,6 @@ class HivePubSub:
         pub_appid = content["pub_app_id"]
         channel_name = content["channel_name"]
         pub_add_subscriber(pub_did, pub_appid, channel_name, did, app_id)
-        sub_setup_message_subscriber(pub_did, pub_appid, channel_name, did, app_id)
         return self.response.response_ok()
 
     def push_message(self):
@@ -81,11 +80,7 @@ class HivePubSub:
         pub_appid = content["pub_app_id"]
         channel_name = content["channel_name"]
         limit = int(content["message_limit"])
-        info = sub_get_message_subscriber(pub_did, pub_appid, channel_name, did, app_id)
-        if not info:
-            self.response.response_err(NOT_FOUND, "not subscribe channel")
-
         message_list = sub_pop_messages(pub_did, pub_appid, channel_name, did, app_id, limit)
-        data = {"messages", message_list}
+        data = {"messages": message_list}
         return self.response.response_ok(data)
 

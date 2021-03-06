@@ -5,7 +5,7 @@ h_pubsub = HivePubSub()
 hive_pubsub = Blueprint('hive_pubsub', __name__)
 
 
-def init_app(app):
+def init_app(app, mode):
     h_pubsub.init_app(app)
     app.register_blueprint(hive_pubsub)
 

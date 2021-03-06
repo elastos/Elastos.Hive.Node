@@ -4,7 +4,7 @@ import pymongo
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
 
-from hive import hive_setting
+from hive.settings import hive_setting
 from hive.util.constants import DID_INFO_DB_NAME, SUB_MESSAGE_COLLECTION, SUB_MESSAGE_PUB_DID, \
     SUB_MESSAGE_PUB_APPID, SUB_MESSAGE_CHANNEL_NAME, SUB_MESSAGE_SUB_DID, SUB_MESSAGE_SUB_APPID, \
     SUB_MESSAGE_MODIFY_TIME, SUB_MESSAGE_DATA, SUB_MESSAGE_TIME, SUB_MESSAGE_SUBSCRIBE_ID

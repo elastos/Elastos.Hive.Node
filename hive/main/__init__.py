@@ -1,6 +1,6 @@
 import sentry_sdk
 
-from . import view, view_db, view_file, view_scripting, view_payment, interceptor, scheduler, view_backup
+from . import view, view_db, view_file, view_scripting, view_payment, interceptor, scheduler, view_backup, view_pubsub
 import logging
 
 from hive.util.constants import HIVE_MODE_DEV, HIVE_MODE_TEST
@@ -29,6 +29,7 @@ def init_app(app, mode):
     view_scripting.init_app(app)
     view_payment.init_app(app)
     view_backup.init_app(app, mode)
+    view_pubsub.init_app(app, mode)
     if mode == HIVE_MODE_TEST:
         scheduler.scheduler_init(app, paused=True)
     else:

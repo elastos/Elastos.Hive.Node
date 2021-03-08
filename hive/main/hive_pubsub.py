@@ -5,7 +5,7 @@ from hive.util.constants import PUB_CHANNEL_NAME
 from hive.util.error_code import ALREADY_EXIST, NOT_FOUND
 from hive.util.pubsub.pb_exchanger import pubsub_push_message
 from hive.util.pubsub.publisher import pub_setup_channel, pub_get_channels, pub_add_subscriber, pub_remove_channel, \
-    pub_remove_subscribe
+    pub_remove_subscribe, pub_get_pub_channels, pub_get_sub_channels
 from hive.util.pubsub.subscriber import sub_setup_message_subscriber, sub_pop_messages, sub_get_message_subscriber
 from hive.util.server_response import ServerResponse
 
@@ -37,12 +37,28 @@ class HivePubSub:
         pub_remove_channel(did, app_id, channel_name)
         return self.response.response_ok()
 
-    def get_channels(self):
+    def get_pub_channels(self):
         did, app_id, err = pre_proc(self.response)
         if err:
             return err
 
-        channel_list = pub_get_channels(did)
+        channel_list = pub_get_pub_channels(did, app_id)
+        if not channel_list:
+            return self.response.response_err(NOT_FOUND, "not found channel of " + did)
+
+        channel_name_list = list()
+        for channel in channel_list:
+            channel_name_list.append(channel[PUB_CHANNEL_NAME])
+
+        data = {"channels": channel_name_list}
+        return self.response.response_ok(data)
+
+    def get_sub_channels(self):
+        did, app_id, err = pre_proc(self.response)
+        if err:
+            return err
+
+        channel_list = pub_get_sub_channels(did, app_id)
         if not channel_list:
             return self.response.response_err(NOT_FOUND, "not found channel of " + did)
 

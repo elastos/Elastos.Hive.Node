@@ -50,10 +50,36 @@ return:
         }
 ```
 
-## get pub/sub channels
+## get this did and app_id publish channels
 ```YAML
 HTTP: GET
-URL: /api/v1/pubsub/channels
+URL: /api/v1/pubsub/pub/channels
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+return:
+    Success:
+      {
+        "_status": "OK",
+        channels = [
+            "channel_1",
+            "channel_2",
+            "channel_3"
+        ]
+      }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+            }
+```
+
+## get this did and app_id subscribe channels
+```YAML
+HTTP: GET
+URL: /api/v1/pubsub/sub/channels
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:

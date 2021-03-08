@@ -63,14 +63,28 @@ def pub_get_channel(pub_did, pub_appid, channel_name):
     return info
 
 
-def pub_get_channels(pub_did):
+def pub_get_pub_channels(pub_did, pub_appid):
     connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     query = {
         PUB_CHANNEL_PUB_DID: pub_did,
+        PUB_CHANNEL_PUB_APPID: pub_appid,
         PUB_CHANNEL_SUB_DID: {"$exists": False},
         PUB_CHANNEL_SUB_APPID: {"$exists": False}
+    }
+
+    info = col.find(query)
+    return info
+
+
+def pub_get_sub_channels(sub_did, sub_appid):
+    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[PUB_CHANNEL_COLLECTION]
+    query = {
+        PUB_CHANNEL_SUB_DID: sub_did,
+        PUB_CHANNEL_SUB_APPID: sub_appid
     }
 
     info = col.find(query)

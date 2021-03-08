@@ -20,9 +20,14 @@ def pb_remove_channel():
     return h_pubsub.remove_channel()
 
 
-@hive_pubsub.route('/api/v1/pubsub/channels', methods=['GET'])
-def pb_get_channels():
-    return h_pubsub.get_channels()
+@hive_pubsub.route('/api/v1/pubsub/pub/channels', methods=['GET'])
+def pb_get_publish_channels():
+    return h_pubsub.get_pub_channels()
+
+
+@hive_pubsub.route('/api/v1/pubsub/sub/channels', methods=['GET'])
+def pb_get_subscribe_channels():
+    return h_pubsub.get_pub_channels()
 
 
 @hive_pubsub.route('/api/v1/pubsub/subscribe', methods=['POST'])

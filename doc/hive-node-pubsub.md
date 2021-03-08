@@ -24,6 +24,32 @@ return:
           }
         }
 ```
+
+## remove a pub/sub channel
+```YAML
+HTTP: POST
+URL: /api/v1/pubsub/remove
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+        "channel_name": "some_talking_channel"
+    } 
+return:
+    Success:
+      {
+        "_status": "OK",
+      }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
 ## get pub/sub channels
 ```YAML
 HTTP: GET
@@ -51,10 +77,37 @@ return:
 ```
 
 
-## subsicribe  a pub/sub channel
+## subscribe  a pub/sub channel
 ```YAML
 HTTP: POST
 URL: /api/v1/pubsub/subscribe
+Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
+Content-Type: "application/json"
+data: 
+    {
+        "pub_did": "elastos:did:xxxxxxxx",
+        "pub_app_id": "some data for appid",
+        "channel_name": "some_talking_channel"
+    } 
+return:
+    Success:
+      {
+        "_status": "OK",
+      }
+    Failure: 
+        {
+          "_status": "ERR",
+          "_error": {
+            "code": 401,
+            "message": "Error message"
+          }
+        }
+```
+
+## unsubscribe a pub/sub channel
+```YAML
+HTTP: POST
+URL: /api/v1/pubsub/unsubscribe
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 

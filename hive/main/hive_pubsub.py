@@ -4,7 +4,8 @@ from hive.main.interceptor import post_json_param_pre_proc, pre_proc
 from hive.util.constants import PUB_CHANNEL_NAME
 from hive.util.error_code import ALREADY_EXIST, NOT_FOUND
 from hive.util.pubsub.pb_exchanger import pubsub_push_message
-from hive.util.pubsub.publisher import pub_setup_channel, pub_get_channels, pub_add_subscriber
+from hive.util.pubsub.publisher import pub_setup_channel, pub_get_channels, pub_add_subscriber, pub_remove_channel, \
+    pub_remove_subscribe
 from hive.util.pubsub.subscriber import sub_setup_message_subscriber, sub_pop_messages, sub_get_message_subscriber
 from hive.util.server_response import ServerResponse
 
@@ -27,6 +28,14 @@ class HivePubSub:
             return self.response.response_ok()
         else:
             return self.response.response_err(ALREADY_EXIST, f"Channel {channel_name} has exist")
+
+    def remove_channel(self):
+        did, app_id, content, err = post_json_param_pre_proc(self.response, "channel_name")
+        if err:
+            return err
+        channel_name = content["channel_name"]
+        pub_remove_channel(did, app_id, channel_name)
+        return self.response.response_ok()
 
     def get_channels(self):
         did, app_id, err = pre_proc(self.response)
@@ -55,6 +64,19 @@ class HivePubSub:
         pub_appid = content["pub_app_id"]
         channel_name = content["channel_name"]
         pub_add_subscriber(pub_did, pub_appid, channel_name, did, app_id)
+        return self.response.response_ok()
+
+    def unsubscribe_channel(self):
+        did, app_id, content, err = post_json_param_pre_proc(self.response,
+                                                             "pub_did",
+                                                             "pub_app_id",
+                                                             "channel_name")
+        if err:
+            return err
+        pub_did = content["pub_did"]
+        pub_appid = content["pub_app_id"]
+        channel_name = content["channel_name"]
+        pub_remove_subscribe(pub_did, pub_appid, channel_name, did, app_id)
         return self.response.response_ok()
 
     def push_message(self):

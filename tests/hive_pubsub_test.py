@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from hive import create_app, hive_setting
 from hive.util.constants import DID_INFO_DB_NAME, HIVE_MODE_TEST, SUB_MESSAGE_COLLECTION, SUB_MESSAGE_PUB_DID, \
     SUB_MESSAGE_PUB_APPID, PUB_CHANNEL_COLLECTION, PUB_CHANNEL_PUB_DID, PUB_CHANNEL_PUB_APPID
-from hive.util.pubsub.publisher import pub_remove_channel
+from hive.util.error_code import ALREADY_EXIST, NOT_FOUND
 from tests import test_common
 from tests.hive_auth_test import DIDApp, DApp
 
@@ -177,13 +177,13 @@ class HivePubsubTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
         return r["messages"]
 
-    def test_1_publish_and_subscribe(self):
-        logging.getLogger("").debug("\nRunning test_1_get_vault_package_info")
+    def test_publish_and_subscribe(self):
+        logging.getLogger("HivePubsubTestCase").debug("\nRunning test_1_publish_and_subscribe")
         self.publish_channel("test_channel1")
         self.publish_channel("test_channel2")
 
         r, s = self.parse_response(
-            self.test_client.get('/api/v1/pubsub/channels', headers=self.auth)
+            self.test_client.get('/api/v1/pubsub/pub/channels', headers=self.auth)
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
@@ -205,7 +205,6 @@ class HivePubsubTestCase(unittest.TestCase):
         self.subscribe_channel(self.did, self.app_id, "test_channel1", token2)
         self.subscribe_channel(self.did, self.app_id, "test_channel1", token3)
         self.subscribe_channel(self.did, self.app_id, "test_channel2", token1)
-
 
         for i in range(0, 30):
             self.push_message("test_channel1", f"message_{str(i)}")
@@ -235,6 +234,162 @@ class HivePubsubTestCase(unittest.TestCase):
         for m in messages3:
             messages3_list.append(m["message"])
         self.assertTrue(operator.eq(messages3_list, messages))
+
+    def test_publish_duplicate_channel(self):
+        logging.getLogger("HivePubsubTestCase").debug("\nRunning test_1_publish_and_subscribe")
+        self.publish_channel("test_channel1")
+        data = {
+            "channel_name": "test_channel1"
+        }
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/pubsub/publish',
+                                  data=json.dumps(data),
+                                  headers=self.auth)
+        )
+        self.assertEqual(s, ALREADY_EXIST)
+
+    def test_remove_channel(self):
+        self.publish_channel("test_channel1")
+        data = {
+            "channel_name": "test_channel1"
+        }
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/pubsub/remove',
+                                  data=json.dumps(data),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        r, s = self.parse_response(
+            self.test_client.get('/api/v1/pubsub/pub/channels', headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertTrue(operator.eq(r["channels"], list()))
+
+        # remove a not existing channel
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/pubsub/remove',
+                                  data=json.dumps(data),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+
+
+    def test_unsubscribe_channel(self):
+        self.publish_channel("test_channel1")
+        self.user_did1 = DIDApp("didapp1",
+                                "clever bless future fuel obvious black subject cake art pyramid member clump")
+        self.testapp1 = DApp("testapp1", test_common.app_id,
+                             "amount material swim purse swallow gate pride series cannon patient dentist person")
+        self.testapp2 = DApp("testapp2", test_common.app_id2,
+                             "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+        self.testapp3 = DApp("testapp3", "appid3",
+                             "license mango cluster candy payment prefer video rice desert pact february rabbit")
+        token1, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp1)
+        token2, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp2)
+        token3, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp3)
+        self.subscribe_channel(self.did, self.app_id, "test_channel1", token1)
+        self.subscribe_channel(self.did, self.app_id, "test_channel1", token2)
+        self.subscribe_channel(self.did, self.app_id, "test_channel1", token3)
+
+        data = {
+            "pub_did": self.did,
+            "pub_app_id": self.app_id,
+            "channel_name": "test_channel1"
+        }
+        auth1 = self.get_auth(token1)
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/pubsub/unsubscribe',
+                                  data=json.dumps(data),
+                                  headers=auth1)
+        )
+        self.assert200(s)
+        r, s = self.parse_response(
+            self.test_client.get('/api/v1/pubsub/sub/channels', headers=auth1)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertTrue(operator.eq(r["channels"], list()))
+
+        # unsubscribe again, should be ok
+        auth1 = self.get_auth(token1)
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/pubsub/unsubscribe',
+                                  data=json.dumps(data),
+                                  headers=auth1)
+        )
+        self.assert200(s)
+
+        # unsubscribe no existing channel, should be ok
+        no_channle = {
+            "pub_did": self.did,
+            "pub_app_id": self.app_id,
+            "channel_name": "no_channel"
+        }
+        auth1 = self.get_auth(token1)
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/pubsub/unsubscribe',
+                                  data=json.dumps(no_channle),
+                                  headers=auth1)
+        )
+        self.assert200(s)
+
+        auth2 = self.get_auth(token2)
+        r, s = self.parse_response(
+            self.test_client.get('/api/v1/pubsub/sub/channels', headers=auth2)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertTrue(operator.eq(r["channels"], ["test_channel1"]))
+
+        auth3 = self.get_auth(token3)
+        r, s = self.parse_response(
+            self.test_client.get('/api/v1/pubsub/sub/channels', headers=auth3)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertTrue(operator.eq(r["channels"], ["test_channel1"]))
+
+    def test_subscribe_empty_channel(self):
+        channel_name = "test_channel1"
+        self.user_did1 = DIDApp("didapp1",
+                                "clever bless future fuel obvious black subject cake art pyramid member clump")
+        self.testapp1 = DApp("testapp1", test_common.app_id,
+                             "amount material swim purse swallow gate pride series cannon patient dentist person")
+        token, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp1)
+        auth = self.get_auth(token)
+        data = {
+            "pub_did": self.did,
+            "pub_app_id": self.app_id,
+            "channel_name": channel_name
+        }
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/pubsub/subscribe',
+                                  data=json.dumps(data),
+                                  headers=auth)
+        )
+        self.assertEqual(NOT_FOUND, s)
+
+    def test_push_an_empty_channel(self):
+        data = {
+            "channel_name": "no_channel",
+            "message": "some message"
+        }
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/pubsub/push',
+                                  data=json.dumps(data),
+                                  headers=self.auth)
+        )
+        self.assertEqual(NOT_FOUND, s)
+
+    def test_pop_an_empty_channel(self):
+        self.user_did1 = DIDApp("didapp1",
+                                "clever bless future fuel obvious black subject cake art pyramid member clump")
+        self.testapp1 = DApp("testapp1", test_common.app_id,
+                             "amount material swim purse swallow gate pride series cannon patient dentist person")
+        token1, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp1)
+        messages1 = self.pop_message(self.did, self.app_id, "test_channel1", 10, token1)
+        self.assertTrue(operator.eq(messages1, list()))
 
 
 if __name__ == '__main__':

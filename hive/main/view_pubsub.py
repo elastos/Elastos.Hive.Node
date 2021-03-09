@@ -27,7 +27,7 @@ def pb_get_publish_channels():
 
 @hive_pubsub.route('/api/v1/pubsub/sub/channels', methods=['GET'])
 def pb_get_subscribe_channels():
-    return h_pubsub.get_pub_channels()
+    return h_pubsub.get_sub_channels()
 
 
 @hive_pubsub.route('/api/v1/pubsub/subscribe', methods=['POST'])

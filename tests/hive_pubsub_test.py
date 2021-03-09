@@ -196,14 +196,10 @@ class HivePubsubTestCase(unittest.TestCase):
                              "amount material swim purse swallow gate pride series cannon patient dentist person")
         self.testapp2 = DApp("testapp2", test_common.app_id2,
                              "chimney limit involve fine absent topic catch chalk goat era suit leisure")
-        self.testapp3 = DApp("testapp3", "appid3",
-                             "license mango cluster candy payment prefer video rice desert pact february rabbit")
         token1, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp1)
         token2, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp2)
-        token3, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp3)
         self.subscribe_channel(self.did, self.app_id, "test_channel1", token1)
         self.subscribe_channel(self.did, self.app_id, "test_channel1", token2)
-        self.subscribe_channel(self.did, self.app_id, "test_channel1", token3)
         self.subscribe_channel(self.did, self.app_id, "test_channel2", token1)
 
         for i in range(0, 30):
@@ -228,12 +224,6 @@ class HivePubsubTestCase(unittest.TestCase):
         for m in messages2:
             messages2_list.append(m["message"])
         self.assertTrue(operator.eq(messages2_list, messages))
-
-        messages3 = self.pop_message(self.did, self.app_id, "test_channel1", 50, token3)
-        messages3_list = list()
-        for m in messages3:
-            messages3_list.append(m["message"])
-        self.assertTrue(operator.eq(messages3_list, messages))
 
     def test_publish_duplicate_channel(self):
         logging.getLogger("HivePubsubTestCase").debug("\nRunning test_1_publish_and_subscribe")
@@ -274,7 +264,6 @@ class HivePubsubTestCase(unittest.TestCase):
         )
         self.assert200(s)
 
-
     def test_unsubscribe_channel(self):
         self.publish_channel("test_channel1")
         self.user_did1 = DIDApp("didapp1",
@@ -283,14 +272,10 @@ class HivePubsubTestCase(unittest.TestCase):
                              "amount material swim purse swallow gate pride series cannon patient dentist person")
         self.testapp2 = DApp("testapp2", test_common.app_id2,
                              "chimney limit involve fine absent topic catch chalk goat era suit leisure")
-        self.testapp3 = DApp("testapp3", "appid3",
-                             "license mango cluster candy payment prefer video rice desert pact february rabbit")
         token1, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp1)
         token2, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp2)
-        token3, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp3)
         self.subscribe_channel(self.did, self.app_id, "test_channel1", token1)
         self.subscribe_channel(self.did, self.app_id, "test_channel1", token2)
-        self.subscribe_channel(self.did, self.app_id, "test_channel1", token3)
 
         data = {
             "pub_did": self.did,
@@ -337,14 +322,6 @@ class HivePubsubTestCase(unittest.TestCase):
         auth2 = self.get_auth(token2)
         r, s = self.parse_response(
             self.test_client.get('/api/v1/pubsub/sub/channels', headers=auth2)
-        )
-        self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
-        self.assertTrue(operator.eq(r["channels"], ["test_channel1"]))
-
-        auth3 = self.get_auth(token3)
-        r, s = self.parse_response(
-            self.test_client.get('/api/v1/pubsub/sub/channels', headers=auth3)
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")

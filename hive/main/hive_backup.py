@@ -31,8 +31,7 @@ from hive.util.vault_backup_info import *
 from hive.util.rclone_tool import RcloneTool
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_pre_proc
-
-logger = logging.getLogger("HiveBackup")
+from hive.settings import hive_setting
 
 
 class HiveBackup:
@@ -95,7 +94,7 @@ class HiveBackup:
             if not ret:
                 vault_backup_msg = VAULT_BACKUP_MSG_FAILED
         else:
-            logger.error("restore_vault_data not support backup type:" + info[VAULT_BACKUP_INFO_TYPE])
+            logging.getLogger("HiveBackup").error("restore_vault_data not support backup type:" + info[VAULT_BACKUP_INFO_TYPE])
             info = None
 
         if vault_backup_msg == VAULT_BACKUP_MSG_SUCCESS:
@@ -120,7 +119,7 @@ class HiveBackup:
         elif info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_HIVE_NODE:
             checksum_list = HiveBackup.get_file_checksum_list(did_folder)
             if not checksum_list:
-                logger.error(f"{did} vault data is empty, no need to backup")
+                logging.getLogger("HiveBackup").error(f"{did} vault data is empty, no need to backup")
                 HiveBackup.stop_internal_ftp(did, info[VAULT_BACKUP_INFO_DRIVE] + INTER_BACKUP_FTP_END_URL,
                                              info[VAULT_BACKUP_INFO_TOKEN])
                 vault_backup_msg = VAULT_BACKUP_MSG_FAILED
@@ -133,7 +132,7 @@ class HiveBackup:
                 if not ret:
                     vault_backup_msg = VAULT_BACKUP_MSG_FAILED
         else:
-            logger.error("restore_vault_data not support backup type:" + info[VAULT_BACKUP_INFO_TYPE])
+            logging.getLogger("HiveBackup").error("restore_vault_data not support backup type:" + info[VAULT_BACKUP_INFO_TYPE])
             info = None
 
         update_vault_backup_state(did, VAULT_BACKUP_STATE_STOP, vault_backup_msg)
@@ -279,12 +278,12 @@ class HiveBackup:
                               json=param,
                               headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
         except Exception as e:
-            logger.error(f"start_internal_backup exception:{str(e)}, host:{url} backup_token:{backup_token}")
+            logging.getLogger("HiveBackup").error(f"start_internal_backup exception:{str(e)}, host:{url} backup_token:{backup_token}")
             return None, self.response.response_err(BAD_REQUEST, "start node backup error")
 
         if r.status_code != SUCCESS:
             ret = r.json()
-            logger.error(
+            logging.getLogger("HiveBackup").error(
                 "start_internal_backup error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
                     r.status_code))
             if not ret["_error"]:
@@ -304,17 +303,17 @@ class HiveBackup:
                               json=param,
                               headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
         except Exception as e:
-            logger.error(f"stop_internal_backup exception:{str(e)}, host:{url} backup_token:{backup_token}")
+            logging.getLogger("HiveBackup").error(f"stop_internal_backup exception:{str(e)}, host:{url} backup_token:{backup_token}")
             return
 
         if r.status_code != SUCCESS:
             ret = r.json()
             if not ret["_error"]:
-                logger.error(
+                logging.getLogger("HiveBackup").error(
                     "stop_internal_backup error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
                         r.status_code) + " content:" + str(r.content))
             else:
-                logger.error(
+                logging.getLogger("HiveBackup").error(
                     "stop_internal_backup error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
                         r.status_code) + " message:" + ret["_error"]["message"])
 
@@ -334,11 +333,11 @@ class HiveBackup:
                               json=param,
                               headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
         except Exception as e:
-            logger.error(f"internal_save_app_list exception:{str(e)}, host:{url} backup_token:{backup_token}")
+            logging.getLogger("HiveBackup").error(f"internal_save_app_list exception:{str(e)}, host:{url} backup_token:{backup_token}")
             return False
 
         if r.status_code != SUCCESS:
-            logger.error(
+            logging.getLogger("HiveBackup").error(
                 "internal_save_app_list error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
                     r.status_code) + " content:" + str(r.content))
             return False
@@ -353,16 +352,16 @@ class HiveBackup:
                               json=param,
                               headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
         except Exception as e:
-            logger.error(f"internal_restore_data exception:{str(e)}, did:{did} host:{url}")
+            logging.getLogger("HiveBackup").error(f"internal_restore_data exception:{str(e)}, did:{did} host:{url}")
             return False
 
         if r.status_code != SUCCESS:
             ret = r.json()
             if not ret["_error"]:
-                logger.error(
+                logging.getLogger("HiveBackup").error(
                     f"internal_restore_data error, did:{did} host:{url} error code {str(r.status_code)} content {str(r.content)}")
             else:
-                logger.error(
+                logging.getLogger("HiveBackup").error(
                     f"internal_restore_data error, did:{did} host:{url} error code {str(r.status_code)}  message:{ret['_error']['message']}")
             return False
         else:
@@ -370,14 +369,14 @@ class HiveBackup:
             checksum_list = data["checksum_list"]
             vault_path = get_vault_path(did)
             if not vault_path.exists():
-                logger.error(
+                logging.getLogger("HiveBackup").error(
                     f"internal_restore_data error, did:{did} host:{url} vault not exist")
                 return False
 
             restore_checksum_list = HiveBackup.get_file_checksum_list(vault_path)
             for checksum in checksum_list:
                 if checksum not in restore_checksum_list:
-                    logger.error(
+                    logging.getLogger("HiveBackup").error(
                         f"internal_restore_data error, did:{did} host:{url} vault restore check failed")
                     return False
             return True
@@ -439,7 +438,9 @@ class HiveBackup:
         if HiveBackup.mode != HIVE_MODE_TEST:
             encode_password = HiveBackup.__get_rclone_obscure(password)
             ftp_host = get_host(host)
-            line = f"rclone sync {did_folder.as_posix()} :ftp: --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
+            line = f"rclone sync {did_folder.as_posix()} :ftp: --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password} --transfers 1 --checkers 1"
+            logging.getLogger("HiveBackup").info(line)
+            print(line)
             subprocess.call(line, shell=True)
         HiveBackup.stop_internal_ftp(did, host + INTER_BACKUP_FTP_END_URL, backup_token)
 
@@ -450,7 +451,9 @@ class HiveBackup:
         if HiveBackup.mode != HIVE_MODE_TEST:
             encode_password = HiveBackup.__get_rclone_obscure(password)
             ftp_host = get_host(host)
-            line = f"rclone sync :ftp: {did_folder.as_posix()} --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password}"
+            line = f"rclone sync :ftp: {did_folder.as_posix()} --ftp-host={ftp_host} --ftp-port={ftp_port} --ftp-user={user} --ftp-pass={encode_password} --transfers 1 --checkers 1"
+            logging.getLogger("HiveBackup").info(line)
+            print(line)
             subprocess.call(line, shell=True)
         HiveBackup.stop_internal_ftp(did, host + INTER_BACKUP_FTP_END_URL, backup_token)
 
@@ -530,7 +533,8 @@ class HiveBackup:
         user, passwd = gene_vault_backup_ftp_record(did)
 
         if self.mode != HIVE_MODE_TEST:
-            self.backup_ftp.add_user(user, passwd, backup_path, 'elradfmwMT')
+            logging.getLogger("HiveBackup").info("backup path is:"+backup_path.as_posix())
+            self.backup_ftp.add_user(user, passwd, backup_path.as_posix(), 'elradfmwMT')
 
         del info["_id"]
         if VAULT_BACKUP_SERVICE_FTP in info:

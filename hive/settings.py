@@ -73,6 +73,18 @@ class HiveSetting:
         return self.env_config('BACKUP_FTP_PORT', default=2121, cast=int)
 
     @property
+    def BACKUP_FTP_MASQUERADE_ADDRESS(self):
+        return self.env_config('BACKUP_FTP_MASQUERADE_ADDRESS', default="0.0.0.0", cast=str)
+
+    @property
+    def BACKUP_FTP_PASSIVE_PORTS_START(self):
+        return self.env_config('BACKUP_FTP_PASSIVE_PORTS_START', default=8301, cast=int)
+
+    @property
+    def BACKUP_FTP_PASSIVE_PORTS_END(self):
+        return self.env_config('BACKUP_FTP_PASSIVE_PORTS_END', default=8400, cast=int)
+
+    @property
     def MONGO_HOST(self):
         return self.env_config('MONGO_HOST', default="localhost", cast=str)
 
@@ -111,7 +123,6 @@ class HiveSetting:
     @property
     def LANGUAGE(self):
         return "english"
-
 
 
 

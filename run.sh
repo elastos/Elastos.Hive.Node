@@ -6,7 +6,7 @@ function start_db () {
         --network hive                                  \
         -v ${PWD}/.mongodb-data:/data/db                \
         -p 27020:27017                                  \
-        mongo
+        mongo:4.4.0
 }
 
 function start_test_db () {
@@ -15,7 +15,7 @@ function start_test_db () {
         --network hive                                  \
         -v ${PWD}/.mongodb-test-data:/data/db           \
         -p 27022:27017                                  \
-        mongo
+        mongo:4.4.0
 }
 
 function setup_venv () {

@@ -1,32 +1,7 @@
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
-
-
-
-# def create_backup_ftp():
-#     # Instantiate a dummy authorizer for managing 'virtual' users
-#     authorizer = DummyAuthorizer()
-#
-#     # Define a new user having full r/w permissions and a read-only
-#     # anonymous user
-#     # authorizer.add_user('user', '12345', '.', perm='elradfmwMT')
-#     authorizer.add_user(
-#         'user',
-#         '12345',
-#         '.',
-#         perm='lradfmwMT')
-#     authorizer.add_anonymous(os.getcwd())
-#
-#     handler = FTPHandler
-#     handler.authorizer = authorizer
-#
-#     handler.banner = "hive backup ftp ready."
-#     address = ('', 2121)
-#     server = FTPServer(address, handler)
-#     server.max_cons = 256
-#     server.max_cons_per_ip = 5
-#     server.serve_forever()
+from hive.settings import hive_setting
 
 
 class FtpServer:
@@ -35,6 +10,9 @@ class FtpServer:
         self.handler = FTPHandler
         self.handler.authorizer = self.authorizer
         self.handler.banner = "hive backup ftp ready."
+        self.handler.masquerade_address = hive_setting.BACKUP_FTP_MASQUERADE_ADDRESS
+        self.handler.passive_ports = range(hive_setting.BACKUP_FTP_PASSIVE_PORTS_START,
+                                           hive_setting.BACKUP_FTP_PASSIVE_PORTS_END)
         self.address = ('', port)
         self.server = FTPServer(self.address, self.handler)
         self.server.max_cons = 256

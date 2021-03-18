@@ -1,0 +1,28 @@
+FROM ubuntu:18.04
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update
+RUN apt-get install python3-pip tzdata curl wget unzip -y
+RUN apt-get install gnupg && \
+    wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
+    apt-get update && \
+    apt-get install mongodb-org-tools=4.4.0 -y
+RUN curl https://rclone.org/install.sh | bash
+
+ENV LD_LIBRARY_PATH="/src/hive/util/did/"
+
+ADD requirements.txt /src/
+WORKDIR /src
+RUN pip3 install --upgrade pip && pip3 install -r requirements.txt && pip3 install gunicorn
+
+EXPOSE 5000
+
+RUN mkdir -p /root/.config/rclone/
+RUN touch /root/.config/rclone/rclone.conf
+
+ADD . /src/
+
+CMD ["gunicorn", "-b","0.0.0.0:5000","hive:create_app()"]
+

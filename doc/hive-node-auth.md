@@ -36,7 +36,7 @@ return:
     Success:
         {
           "_status":"OK",
-          "token": access_token,
+          "access_token": access_token,
         }
     Failure:
         {

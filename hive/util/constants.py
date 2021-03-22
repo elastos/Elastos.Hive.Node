@@ -25,7 +25,6 @@ VAULT_BACKUP_INFO_MSG = "msg"
 VAULT_BACKUP_INFO_TIME = "time"
 VAULT_BACKUP_INFO_DRIVE = "drive"
 VAULT_BACKUP_INFO_TOKEN = "token"
-VAULT_BACKUP_INFO_FTP = "ftp"
 
 VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE = "google_drive"
 VAULT_BACKUP_INFO_TYPE_HIVE_NODE = "hive_node"
@@ -61,7 +60,6 @@ VAULT_BACKUP_SERVICE_MODIFY_TIME = "modify_time"
 VAULT_BACKUP_SERVICE_START_TIME = "start_time"
 VAULT_BACKUP_SERVICE_END_TIME = "end_time"
 VAULT_BACKUP_SERVICE_USING = "backup_using"
-VAULT_BACKUP_SERVICE_FTP = "ftp"
 VAULT_BACKUP_SERVICE_APPS = "apps"
 
 # scripting begin
@@ -128,7 +126,17 @@ HIVE_MODE_DEV = "dev"
 HIVE_MODE_PROD = "prod"
 HIVE_MODE_TEST = "test"
 
-INTER_BACKUP_FTP_START_URL = '/api/v1/inter/backup/ftp/start'
-INTER_BACKUP_FTP_END_URL = '/api/v1/inter/backup/ftp/end'
-INTER_BACKUP_SAVE_URL = '/api/v1/inter/backup/save'
-INTER_BACKUP_RESTORE_URL = '/api/v1/inter/backup/restore'
+INTER_BACKUP_SERVICE_URL = '/api/v1/inter/backup/service'
+INTER_BACKUP_SAVE_FINISH_URL = '/api/v1/inter/backup/save_finish'
+INTER_BACKUP_RESTORE_FINISH_URL = '/api/v1/inter/backup/restore_finish'
+
+INTER_BACKUP_TRANSFER_FILES_URL = '/api/v1/inter/backup/transfer_files'
+INTER_BACKUP_UPLOAD_FILE_URL = '/api/v1/inter/backup/upload'
+INTER_BACKUP_DOWNLOAD_FILE_URL = '/api/v1/inter/backup/download'
+INTER_BACKUP_MOVE_FILE_URL = '/api/v1/inter/backup/move'
+INTER_BACKUP_COPY_FILE_URL = '/api/v1/inter/backup/copy'
+INTER_BACKUP_PATCH_HASH_URL = '/api/v1/inter/backup/patch/hash'
+INTER_BACKUP_PATCH_DELTA_URL = '/api/v1/inter/backup/patch/delta'
+
+
+CHUNK_SIZE = 4096

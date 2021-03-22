@@ -12,7 +12,7 @@ from hive.util.error_code import INTERNAL_SERVER_ERROR, UNAUTHORIZED, NOT_FOUND,
     BAD_REQUEST
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
-from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL
+from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL, CHUNK_SIZE
 from hive.util.payment.vault_service_manage import can_access_vault, inc_vault_file_use_storage_byte
 
 
@@ -83,7 +83,7 @@ class HiveFile:
             return self.response.response_err(err["status_code"], err["description"])
         try:
             with open(full_path_name, "bw") as f:
-                chunk_size = 4096
+                chunk_size = CHUNK_SIZE
                 while True:
                     chunk = request.stream.read(chunk_size)
                     if len(chunk) == 0:

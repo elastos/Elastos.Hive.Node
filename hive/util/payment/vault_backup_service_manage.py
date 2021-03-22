@@ -12,7 +12,7 @@ from hive.util.common import did_tail_part, random_string, create_full_path_dir
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
     VAULT_BACKUP_SERVICE_USING, VAULT_ACCESS_WR, DID, APP_ID, VAULT_BACKUP_SERVICE_USE_STORAGE, \
-    VAULT_BACKUP_SERVICE_MODIFY_TIME, VAULT_BACKUP_SERVICE_FTP
+    VAULT_BACKUP_SERVICE_MODIFY_TIME
 
 from hive.util.did_file_info import get_dir_size, get_save_files_path
 from hive.util.did_mongo_db_resource import gene_mongo_db_name
@@ -37,8 +37,7 @@ def setup_vault_backup_service(did, max_storage, service_days, backup_name=VAULT
            VAULT_BACKUP_SERVICE_START_TIME: now,
            VAULT_BACKUP_SERVICE_END_TIME: end_time,
            VAULT_BACKUP_SERVICE_MODIFY_TIME: now,
-           VAULT_BACKUP_SERVICE_USING: backup_name,
-           VAULT_BACKUP_SERVICE_FTP: None
+           VAULT_BACKUP_SERVICE_USING: backup_name
            }
 
     query = {VAULT_BACKUP_SERVICE_DID: did}
@@ -93,42 +92,6 @@ def parse_ftp_record(ftp_data):
 
 def compose_ftp_record(user, passwd):
     return f"{user}:{passwd}"
-
-
-def gene_vault_backup_ftp_record(did):
-    user = random_string(5)
-    passwd = random_string(10)
-    now = datetime.utcnow().timestamp()
-
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[VAULT_BACKUP_SERVICE_COL]
-    query = {VAULT_BACKUP_SERVICE_DID: did}
-    dic = {VAULT_BACKUP_SERVICE_FTP: compose_ftp_record(user, passwd),
-           VAULT_BACKUP_SERVICE_MODIFY_TIME: now}
-    value = {"$set": dic}
-    ret = col.update_one(query, value)
-    return user, passwd
-
-
-def remove_vault_backup_ftp_record(did):
-    now = datetime.utcnow().timestamp()
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[VAULT_BACKUP_SERVICE_COL]
-    query = {VAULT_BACKUP_SERVICE_DID: did}
-    dic = {VAULT_BACKUP_SERVICE_FTP: None,
-           VAULT_BACKUP_SERVICE_MODIFY_TIME: now}
-    value = {"$set": dic}
-    ret = col.update_one(query, value)
-
-
-def get_vault_backup_ftp_record(did):
-    info = get_vault_backup_service(did)
-    if not info:
-        return None, None
-    else:
-        return parse_ftp_record(info[VAULT_BACKUP_SERVICE_FTP])
 
 
 def get_vault_backup_service(did):
@@ -206,7 +169,8 @@ def import_mongo_db_from_backup(did, app_id):
         return False
     db_name = gene_mongo_db_name(did, app_id)
     save_path = path / db_name
-    line2 = 'mongorestore -h %s --port %s  -d %s --drop %s' % (hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
+    line2 = 'mongorestore -h %s --port %s  -d %s --drop %s' % (
+    hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
     return True
 

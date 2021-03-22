@@ -17,8 +17,8 @@ from pymongo import MongoClient
 from hive.main import view
 from hive.main.hive_backup import HiveBackup
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
-    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_APPS, INTER_BACKUP_SAVE_URL, \
-    INTER_BACKUP_RESTORE_URL, APP_ID
+    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_APPS, INTER_BACKUP_SAVE_FINISH_URL, \
+    INTER_BACKUP_RESTORE_FINISH_URL, APP_ID
 from hive import create_app
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.payment.vault_backup_service_manage import setup_vault_backup_service, update_vault_backup_service_item
@@ -230,7 +230,7 @@ class HiveBackupTestCase(unittest.TestCase):
                  }
 
         rt, s = self.parse_response(
-            self.test_client.post(INTER_BACKUP_SAVE_URL,
+            self.test_client.post(INTER_BACKUP_SAVE_FINISH_URL,
                                   data=json.dumps(param),
                                   headers=self.auth)
         )

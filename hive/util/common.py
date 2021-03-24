@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 import hashlib
 
 from hive.util.constants import CHUNK_SIZE
+from hive.settings import hive_setting
 
 
 def did_tail_part(did):
@@ -30,7 +31,22 @@ def get_host(url):
     return data.hostname
 
 
-def get_file_md5(file_name):
+def get_temp_path():
+    path = Path(hive_setting.HIVE_DATA).resolve() / ".temp/"
+    if not path.exists():
+        create_full_path_dir(path)
+    return path
+
+
+def gene_temp_file_name():
+    temp_path = get_temp_path()
+    while True:
+        patch_delta_file = temp_path / random_string(10)
+        if not patch_delta_file.exists():
+            return patch_delta_file
+
+
+def get_file_md5_info(file_name):
     m = hashlib.md5()
     with open(file_name, 'rb') as f:
         while True:
@@ -38,7 +54,7 @@ def get_file_md5(file_name):
             if not chunk:
                 break
             m.update(chunk)
-    return {m.hexdigest(): file_name}
+    return [m.hexdigest(), file_name]
 
 
 def deal_dir(dir_path, deal_func):

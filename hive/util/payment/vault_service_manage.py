@@ -15,8 +15,9 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVI
 from hive.util.did_file_info import get_dir_size
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import delete_mongo_database, get_mongo_database_size
-from hive.util.error_code import NOT_FOUND, LOCKED, NOT_ENOUGH_SPACE, SUCCESS
+from hive.util.error_code import NOT_FOUND, LOCKED, NOT_ENOUGH_SPACE, SUCCESS, METHOD_NOT_ALLOWED
 from hive.util.payment.payment_config import PaymentConfig
+from hive.util.payment.vault_backup_service_manage import get_vault_backup_service
 
 VAULT_SERVICE_FREE = "Free"
 VAULT_SERVICE_STATE_RUNNING = "running"
@@ -135,6 +136,14 @@ def can_access_vault(did, access_vault):
             return LOCKED, "vault have been freeze, can not write"
         else:
             return SUCCESS, None
+    else:
+        return SUCCESS, None
+
+
+def can_access_backup(did):
+    info = get_vault_backup_service(did)
+    if not info:
+        return METHOD_NOT_ALLOWED, "No backup service."
     else:
         return SUCCESS, None
 

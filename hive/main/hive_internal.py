@@ -1,37 +1,46 @@
 import _thread
 import json
 import logging
+import os
 import pathlib
+import shutil
 import subprocess
 import re
 import sys
 
 import requests
 from pathlib import Path
+from hive.settings import hive_setting
+from flask import request, Response
 
 from hive.main import view
 from hive.util.auth import did_auth
-from hive.util.common import did_tail_part, create_full_path_dir, get_host
+from hive.util.common import did_tail_part, create_full_path_dir, get_host, deal_dir, get_file_md5_info, random_string, \
+    get_temp_path, gene_temp_file_name
 from hive.util.common import did_tail_part, create_full_path_dir, get_host
 from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MODE_DEV, INTER_BACKUP_FTP_START_URL, \
-    VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, INTER_BACKUP_FTP_END_URL, \
-    VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_SERVICE_MAX_STORAGE, VAULT_BACKUP_INFO_FTP, VAULT_BACKUP_SERVICE_APPS, \
-    INTER_BACKUP_SAVE_FINISH_URL, VAULT_BACKUP_SERVICE_FTP, INTER_BACKUP_RESTORE_FINISH_URL
+    VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, \
+    VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_APPS, \
+    INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, BACKUP_ACCESS, CHUNK_SIZE
+from hive.util.did_file_info import filter_path_root, query_download
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
-from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE, SUCCESS, NOT_FOUND, CHECKSUM_FAILED
+from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE, SUCCESS, NOT_FOUND, CHECKSUM_FAILED, \
+    METHOD_NOT_ALLOWED, SERVER_MKDIR_ERROR, INTERNAL_SERVER_ERROR, FORBIDDEN, SERVER_SAVE_FILE_ERROR, SERVER_PATCH_FILE_ERROR, \
+    SERVER_MOVE_FILE_ERROR
+from hive.util.flask_rangerequest import RangeRequest
 from hive.util.ftp_tool import FtpServer
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
-    gene_vault_backup_ftp_record, get_vault_backup_ftp_record, remove_vault_backup_ftp_record, import_files_from_backup, \
-    import_mongo_db_from_backup, update_vault_backup_service_item, get_backup_used_storage
+     import_files_from_backup, \
+    import_mongo_db_from_backup, update_vault_backup_service_item, get_backup_used_storage, inc_backup_use_storage_byte
 from hive.util.payment.vault_service_manage import get_vault_service, get_vault_used_storage, \
     update_vault_service_state, VAULT_SERVICE_STATE_FREEZE, freeze_vault, delete_user_vault, unfreeze_vault, \
-    get_vault_path, delete_user_vault_data
+    get_vault_path, delete_user_vault_data, can_access_backup
+from hive.util.pyrsync import gene_blockchecksums, patchstream
 from hive.util.vault_backup_info import *
 from hive.util.rclone_tool import RcloneTool
 from hive.util.server_response import ServerResponse
-from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_pre_proc
-from hive.settings import hive_setting
+from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_pre_proc, pre_proc
 
 
 class HiveInternal:
@@ -68,10 +77,9 @@ class HiveInternal:
         for did_info in did_info_list:
             delete_mongo_db_export(did_info[DID], did_info[APP_ID])
 
-
-
     # ------------------ internal start ----------------------------
     def backup_save_finish(self):
+        # todo, 记得结束时获取整个backup的size并且记录
         did, content, err = did_post_json_param_pre_proc(self.response, "app_id_list", "checksum_list")
         if err:
             return err
@@ -93,6 +101,7 @@ class HiveInternal:
         return self.response.response_ok()
 
     def backup_restore_finish(self):
+        # todo
         did, content, err = did_post_json_param_pre_proc(self.response)
         if err:
             return err
@@ -126,21 +135,201 @@ class HiveInternal:
         data = {"backup_service": info}
         return self.response.response_ok(data)
 
+    def get_backup_files(self):
+        did, content, err = did_post_json_param_pre_proc(self.response)
+        if err:
+            return self.response.response_err(UNAUTHORIZED, "Backup internal get_transfer_files auth failed")
 
-    def get_transfer_files(self):
-        pass
+        ret, message = can_access_backup(did)
+        if ret != SUCCESS:
+            return self.response.response_err(ret, "Backup internal get_transfer_files no backup failed")
 
-    def upload_file(self):
-        pass
+        backup_path = get_vault_backup_path(did)
+        if not backup_path.exists():
+            self.response.response_ok({"backup_files": list()})
 
-    def move_file(self):
-        pass
+        file_md5_gene = deal_dir(backup_path.as_posix(), get_file_md5_info)
+        file_md5_list = list()
+        for md5 in file_md5_gene:
+            md5_info = {md5[0], Path(md5[1]).relative_to(backup_path)}
+            file_md5_list.append(md5_info)
+        return self.response.response_ok({"backup_files": file_md5_list})
 
-    def copy_file(self):
-        pass
+    def put_file(self, file_name):
+        did, app_id, response = pre_proc(self.response, access_backup=BACKUP_ACCESS)
+        if response is not None:
+            return response
 
-    def get_file_hash(self):
-        pass
+        file_name = filter_path_root(file_name)
 
-    def post_file_delta(self):
-        pass
+        backup_path = get_vault_backup_path(did)
+        full_path_name = (backup_path / file_name).resolve()
+
+        if not full_path_name.parent.exists():
+            if not create_full_path_dir(full_path_name.parent):
+                return self.response.response_err(SERVER_MKDIR_ERROR,
+                                                  "internal put_file error to create dir:" + full_path_name.parent.as_posix())
+
+        temp_file = gene_temp_file_name()
+        try:
+            with open(temp_file, "bw") as f:
+                chunk_size = CHUNK_SIZE
+                while True:
+                    chunk = request.stream.read(chunk_size)
+                    if len(chunk) == 0:
+                        break
+                    f.write(chunk)
+        except Exception as e:
+            return self.response.response_err(SERVER_SAVE_FILE_ERROR, f"Exception: {str(e)}")
+
+        if full_path_name.exists():
+            full_path_name.unlink()
+        shutil.move(temp_file.as_posix(), full_path_name.as_posix())
+        return self.response.response_ok()
+
+    def __get_file_check(self, resp):
+        did, app_id = did_auth()
+        if (did is None) or (app_id is None):
+            resp.status_code = UNAUTHORIZED
+            return resp, None
+        r, msg = can_access_backup(did)
+        if r != SUCCESS:
+            resp.status_code = r
+            return resp, None
+
+        file_name = request.args.get('file')
+        file_name = filter_path_root(file_name)
+        backup_path = get_vault_backup_path(did)
+        file_full_name = (backup_path / file_name).resolve()
+
+        if not file_full_name.exists():
+            resp.status_code = NOT_FOUND
+            return resp, None
+
+        if not file_full_name.is_file():
+            resp.status_code = FORBIDDEN
+            return resp, None
+
+        return resp, file_full_name
+
+    def get_file(self):
+        resp = Response()
+        resp, file_full_name = self.__get_file_check(resp)
+        if not file_full_name:
+            return resp
+
+        size = file_full_name.stat().st_size
+        with open(file_full_name, 'rb') as f:
+            etag = RangeRequest.make_etag(f)
+        last_modified = datetime.utcnow()
+
+        data = RangeRequest(open(file_full_name, 'rb'),
+                            etag=etag,
+                            last_modified=last_modified,
+                            size=size).make_response()
+        return data
+
+    def move_file(self, is_copy):
+        did, app_id, content, response = post_json_param_pre_proc(self.response, "src_file", "dst_file",
+                                                                  access_backup=BACKUP_ACCESS)
+        if response is not None:
+            return response
+
+        src_name = content.get('src_file')
+        src_name = filter_path_root(src_name)
+
+        dst_name = content.get('dst_file')
+        dst_name = filter_path_root(dst_name)
+
+        backup_path = get_vault_backup_path(did)
+
+        src_full_path_name = (backup_path / src_name).resolve()
+        dst_full_path_name = (backup_path / dst_name).resolve()
+
+        if not src_full_path_name.exists():
+            return self.response.response_err(NOT_FOUND, "src_name not exists")
+
+        if dst_full_path_name.exists():
+            dst_full_path_name.unlink()
+
+        dst_parent_folder = dst_full_path_name.parent
+        if not dst_parent_folder.exists():
+            if not create_full_path_dir(dst_parent_folder):
+                return self.response.response_err(SERVER_MKDIR_ERROR, "move_file make dst parent path dir error")
+        try:
+            if is_copy:
+                shutil.copy2(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
+            else:
+                shutil.move(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
+        except Exception as e:
+            return self.response.response_err(SERVER_MOVE_FILE_ERROR, "Exception:" + str(e))
+
+        return self.response.response_ok()
+
+    def delete_file(self):
+        did, app_id, content, response = post_json_param_pre_proc(self.response, "file_name",
+                                                                  access_backup=BACKUP_ACCESS)
+        if response is not None:
+            return response
+
+        file_name = content.get('file_name')
+        file_name = filter_path_root(file_name)
+
+        backup_path = get_vault_backup_path(did)
+        full_path_name = (backup_path / file_name).resolve()
+
+        if full_path_name.exists():
+            full_path_name.unlink()
+        return self.response.response_ok()
+
+    def get_file_patch_hash(self):
+        resp = Response()
+        resp, file_full_name = self.__get_file_check(resp)
+        if not file_full_name:
+            return resp
+
+        open_file = open(file_full_name, 'rb')
+        resp = Response(gene_blockchecksums(open_file, blocksize=CHUNK_SIZE))
+        resp.status_code = SUCCESS
+        return resp
+
+    def post_file_patch_delta(self):
+        resp = Response()
+        resp, file_full_name = self.__get_file_check(resp)
+        if not file_full_name:
+            return resp
+
+        patch_delta_file = gene_temp_file_name()
+        try:
+            with open(patch_delta_file, "bw") as f:
+                chunk_size = CHUNK_SIZE
+                while True:
+                    chunk = request.stream.read(chunk_size)
+                    if len(chunk) == 0:
+                        break
+                    f.write(chunk)
+        except Exception as e:
+            resp.status_code = SERVER_SAVE_FILE_ERROR
+            return resp
+
+        delta_list = list()
+        #todo
+        # patch_delta_file to delta list
+
+        try:
+            new_file = gene_temp_file_name()
+            with open(file_full_name, "bw") as unpatched:
+                with open(new_file, "bw") as save_to:
+                    unpatched.seek(0)
+                    patchstream(unpatched, save_to, delta_list)
+            patch_delta_file.unlink()
+            if file_full_name.exists():
+                file_full_name.unlink()
+            shutil.move(new_file.as_posix(), file_full_name.as_posix())
+        except Exception as e:
+            resp.status_code = SERVER_PATCH_FILE_ERROR
+            return resp
+
+        resp.status_code = SUCCESS
+        return resp
+

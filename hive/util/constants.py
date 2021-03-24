@@ -114,8 +114,11 @@ VAULT_ACCESS_WR = "vault_write_read"
 VAULT_ACCESS_R = "vault_read"
 VAULT_ACCESS_DEL = "vault_delete"
 
+
 VAULT_STORAGE_DB = "vault_db"
 VAULT_STORAGE_FILE = "vault_file"
+
+BACKUP_ACCESS = "backup_access"
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -130,9 +133,8 @@ INTER_BACKUP_SERVICE_URL = '/api/v1/inter/backup/service'
 INTER_BACKUP_SAVE_FINISH_URL = '/api/v1/inter/backup/save_finish'
 INTER_BACKUP_RESTORE_FINISH_URL = '/api/v1/inter/backup/restore_finish'
 
-INTER_BACKUP_TRANSFER_FILES_URL = '/api/v1/inter/backup/transfer_files'
-INTER_BACKUP_UPLOAD_FILE_URL = '/api/v1/inter/backup/upload'
-INTER_BACKUP_DOWNLOAD_FILE_URL = '/api/v1/inter/backup/download'
+INTER_BACKUP_FILE_LIST_URL = '/api/v1/inter/backup/file_list'
+INTER_BACKUP_FILE_URL = '/api/v1/inter/backup/file'
 INTER_BACKUP_MOVE_FILE_URL = '/api/v1/inter/backup/move'
 INTER_BACKUP_COPY_FILE_URL = '/api/v1/inter/backup/copy'
 INTER_BACKUP_PATCH_HASH_URL = '/api/v1/inter/backup/patch/hash'

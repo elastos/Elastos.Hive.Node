@@ -1,9 +1,10 @@
 from flask import Blueprint
 
 from hive.main.hive_internal import HiveInternal
-from hive.util.constants import INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, INTER_BACKUP_TRANSFER_FILES_URL, \
-    INTER_BACKUP_UPLOAD_FILE_URL, INTER_BACKUP_MOVE_FILE_URL, INTER_BACKUP_COPY_FILE_URL, INTER_BACKUP_PATCH_HASH_URL, INTER_BACKUP_PATCH_DELTA_URL, \
-    INTER_BACKUP_SERVICE_URL
+from hive.util.constants import INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, \
+    INTER_BACKUP_FILE_LIST_URL, \
+    INTER_BACKUP_FILE_URL, INTER_BACKUP_MOVE_FILE_URL, INTER_BACKUP_COPY_FILE_URL, INTER_BACKUP_PATCH_HASH_URL, \
+    INTER_BACKUP_PATCH_DELTA_URL, INTER_BACKUP_SERVICE_URL
 
 h_internal = HiveInternal()
 hive_internal = Blueprint('hive_internal', __name__)
@@ -29,31 +30,41 @@ def inter_restore_finish():
     return h_internal.backup_restore_finish()
 
 
-@hive_internal.route(INTER_BACKUP_TRANSFER_FILES_URL, methods=['GET'])
-def inter_transfer_files():
-    return h_internal.get_transfer_files()
+@hive_internal.route(INTER_BACKUP_FILE_LIST_URL, methods=['GET'])
+def inter_get_backup_files():
+    return h_internal.get_backup_files()
 
 
-@hive_internal.route(INTER_BACKUP_UPLOAD_FILE_URL, methods=['POST'])
-def inter_upload():
-    return h_internal.upload_file()
+@hive_internal.route(INTER_BACKUP_FILE_URL + "/<path:file_name>", methods=['PUT'])
+def inter_put_file(file_name):
+    return h_internal.put_file(file_name)
+
+
+@hive_internal.route(INTER_BACKUP_FILE_URL, methods=['GET'])
+def inter_get_file():
+    return h_internal.get_file()
+
+
+@hive_internal.route(INTER_BACKUP_FILE_URL, methods=['DELETE'])
+def inter_delete_file():
+    return h_internal.delete_file()
 
 
 @hive_internal.route(INTER_BACKUP_MOVE_FILE_URL, methods=['POST'])
 def inter_move():
-    return h_internal.move_file()
+    return h_internal.move_file(is_copy=False)
 
 
 @hive_internal.route(INTER_BACKUP_COPY_FILE_URL, methods=['POST'])
 def inter_copy():
-    return h_internal.copy_file()
+    return h_internal.move_file(is_copy=True)
 
 
 @hive_internal.route(INTER_BACKUP_PATCH_HASH_URL, methods=['GET'])
 def inter_get_patch_hash():
-    return h_internal.get_file_hash()
+    return h_internal.get_file_patch_hash()
 
 
 @hive_internal.route(INTER_BACKUP_PATCH_DELTA_URL, methods=['POST'])
 def inter_post_patch_delta():
-    return h_internal.post_file_delta()
+    return h_internal.post_file_patch_delta()

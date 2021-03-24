@@ -6,7 +6,7 @@ from flask import request
 from hive.util.auth import did_auth
 from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED, SUCCESS
 from hive.util.server_response import ServerResponse
-from hive.util.payment.vault_service_manage import can_access_vault
+from hive.util.payment.vault_service_manage import can_access_vault, can_access_backup
 
 
 def init_app(app):
@@ -19,13 +19,18 @@ def handle_exception_500(e):
     return response.response_err(INTERNAL_SERVER_ERROR, f"Exception at {str(datetime.utcnow())} error is:{str(e)}")
 
 
-def pre_proc(response, access_vault=None):
+def pre_proc(response, access_vault=None, access_backup=None):
     did, app_id = did_auth()
     if (did is None) or (app_id is None):
         return did, app_id, response.response_err(UNAUTHORIZED, "auth failed")
 
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
+        if r != SUCCESS:
+            return did, app_id, response.response_err(r, msg)
+
+    if access_backup:
+        r, msg = can_access_backup(did)
         if r != SUCCESS:
             return did, app_id, response.response_err(r, msg)
 
@@ -49,13 +54,18 @@ def did_post_json_param_pre_proc(response, *args):
     return did, content, None
 
 
-def post_json_param_pre_proc(response, *args, access_vault=None):
+def post_json_param_pre_proc(response, *args, access_vault=None, access_backup=None):
     did, app_id = did_auth()
     if (did is None) or (app_id is None):
         return did, app_id, None, response.response_err(UNAUTHORIZED, "auth failed")
 
     if access_vault:
         r, msg = can_access_vault(did, access_vault)
+        if r != SUCCESS:
+            return did, app_id, None, response.response_err(r, msg)
+
+    if access_backup:
+        r, msg = can_access_backup(did)
         if r != SUCCESS:
             return did, app_id, None, response.response_err(r, msg)
 

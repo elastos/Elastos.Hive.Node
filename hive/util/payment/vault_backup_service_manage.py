@@ -8,13 +8,12 @@ from pathlib import Path
 from pymongo import MongoClient
 
 from hive.settings import hive_setting
-from hive.util.common import did_tail_part, random_string, create_full_path_dir
+from hive.util.common import did_tail_part
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
-    VAULT_BACKUP_SERVICE_USING, VAULT_ACCESS_WR, DID, APP_ID, VAULT_BACKUP_SERVICE_USE_STORAGE, \
-    VAULT_BACKUP_SERVICE_MODIFY_TIME
+    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_BACKUP_SERVICE_MODIFY_TIME
 
-from hive.util.did_file_info import get_dir_size, get_save_files_path
+from hive.util.did_file_info import get_dir_size, get_vault_path
 from hive.util.did_mongo_db_resource import gene_mongo_db_name
 from hive.util.payment.payment_config import PaymentConfig
 
@@ -134,44 +133,22 @@ def get_vault_backup_path(did):
     return path.resolve()
 
 
-def get_vault_backup_mongodb_path(did, app_id):
-    path = get_vault_backup_path(did)
-    return path / app_id / "mongo_db"
-
-
-def get_vault_backup_file_path(did, app_id):
-    path = get_vault_backup_path(did)
-    return path / app_id / "files"
-
-
 def get_vault_backup_relative_path(did):
     return did_tail_part(did)
 
 
-def delete_user_backup_vault(did):
+def delete_user_backup(did):
     path = get_vault_backup_path(did)
     if path.exists():
         shutil.rmtree(path)
 
 
-def import_files_from_backup(did, app_id):
-    src_path = get_vault_backup_file_path(did, app_id)
+def copy_local_backup_to_vault(did):
+    src_path = get_vault_backup_path(did)
     if not src_path.exists():
         return False
-    dst_path = get_save_files_path(did, app_id)
+    dst_path = get_vault_path(did)
     shutil.copytree(src_path.as_posix(), dst_path.as_posix())
-    return True
-
-
-def import_mongo_db_from_backup(did, app_id):
-    path = get_vault_backup_mongodb_path(did, app_id)
-    if not path.exists():
-        return False
-    db_name = gene_mongo_db_name(did, app_id)
-    save_path = path / db_name
-    line2 = 'mongorestore -h %s --port %s  -d %s --drop %s' % (
-    hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
-    subprocess.call(line2, shell=True)
     return True
 
 

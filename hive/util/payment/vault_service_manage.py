@@ -12,7 +12,7 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVI
     VAULT_ACCESS_WR, DID, APP_ID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, \
     VAULT_SERVICE_MODIFY_TIME, VAULT_ACCESS_DEL
 
-from hive.util.did_file_info import get_dir_size
+from hive.util.did_file_info import get_dir_size, get_vault_path
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import delete_mongo_database, get_mongo_database_size
 from hive.util.error_code import NOT_FOUND, LOCKED, NOT_ENOUGH_SPACE, SUCCESS, METHOD_NOT_ALLOWED
@@ -148,28 +148,16 @@ def can_access_backup(did):
         return SUCCESS, None
 
 
-def get_vault_path(did):
-    path = Path(hive_setting.VAULTS_BASE_DIR)
-    if path.is_absolute():
-        path = path / did_tail_part(did)
-    else:
-        path = path.resolve() / did_tail_part(did)
-    return path.resolve()
-
-
-def delete_user_vault(did):
-    path = get_vault_path(did)
-    if path.exists():
-        shutil.rmtree(path)
-    delete_db_storage(did)
-    remove_vault_service(did)
-
-
 def delete_user_vault_data(did):
     path = get_vault_path(did)
     if path.exists():
         shutil.rmtree(path)
     delete_db_storage(did)
+
+
+def delete_user_vault(did):
+    delete_user_vault_data(did)
+    remove_vault_service(did)
 
 
 def proc_expire_vault_job():

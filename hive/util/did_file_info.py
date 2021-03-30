@@ -12,6 +12,15 @@ from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, NOT_FOUND, 
 from hive.util.flask_rangerequest import RangeRequest
 
 
+def get_vault_path(did):
+    path = Path(hive_setting.VAULTS_BASE_DIR)
+    if path.is_absolute():
+        path = path / did_tail_part(did)
+    else:
+        path = path.resolve() / did_tail_part(did)
+    return path.resolve()
+
+
 def get_save_files_path(did, app_id):
     path = Path(hive_setting.VAULTS_BASE_DIR)
     if path.is_absolute():

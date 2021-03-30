@@ -1,44 +1,20 @@
-import _thread
-import json
-import logging
-import os
-import pathlib
 import shutil
-import subprocess
-import re
-import sys
-
-import requests
 from pathlib import Path
-from hive.settings import hive_setting
 from flask import request, Response
 
-from hive.main import view
 from hive.util.auth import did_auth
-from hive.util.common import did_tail_part, create_full_path_dir, get_host, deal_dir, get_file_md5_info, random_string, \
-    get_temp_path, gene_temp_file_name
-from hive.util.common import did_tail_part, create_full_path_dir, get_host
-from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MODE_DEV, INTER_BACKUP_FTP_START_URL, \
-    VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, \
-    VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_APPS, \
-    INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, BACKUP_ACCESS, CHUNK_SIZE
-from hive.util.did_file_info import filter_path_root, query_download
-from hive.util.did_info import get_all_did_info_by_did
-from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
-from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE, SUCCESS, NOT_FOUND, CHECKSUM_FAILED, \
-    METHOD_NOT_ALLOWED, SERVER_MKDIR_ERROR, INTERNAL_SERVER_ERROR, FORBIDDEN, SERVER_SAVE_FILE_ERROR, SERVER_PATCH_FILE_ERROR, \
-    SERVER_MOVE_FILE_ERROR
+from hive.util.common import deal_dir, get_file_md5_info, gene_temp_file_name, get_file_checksum_list, \
+    create_full_path_dir
+from hive.util.constants import HIVE_MODE_DEV, BACKUP_ACCESS, CHUNK_SIZE, VAULT_BACKUP_SERVICE_USE_STORAGE
+from hive.util.did_file_info import filter_path_root, get_dir_size
+from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, SUCCESS, NOT_FOUND, CHECKSUM_FAILED, \
+    SERVER_MKDIR_ERROR, FORBIDDEN, SERVER_SAVE_FILE_ERROR, SERVER_PATCH_FILE_ERROR, SERVER_MOVE_FILE_ERROR
 from hive.util.flask_rangerequest import RangeRequest
-from hive.util.ftp_tool import FtpServer
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
-     import_files_from_backup, \
-    import_mongo_db_from_backup, update_vault_backup_service_item, get_backup_used_storage, inc_backup_use_storage_byte
-from hive.util.payment.vault_service_manage import get_vault_service, get_vault_used_storage, \
-    update_vault_service_state, VAULT_SERVICE_STATE_FREEZE, freeze_vault, delete_user_vault, unfreeze_vault, \
-    get_vault_path, delete_user_vault_data, can_access_backup
+    update_vault_backup_service_item
+from hive.util.payment.vault_service_manage import can_access_backup
 from hive.util.pyrsync import gene_blockchecksums, patchstream
 from hive.util.vault_backup_info import *
-from hive.util.rclone_tool import RcloneTool
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_pre_proc, pre_proc
 
@@ -58,50 +34,27 @@ class HiveInternal:
         self.app = app
         HiveInternal.mode = mode
 
-    # ------------------ common start ----------------------------
-    @staticmethod
-    def import_did_mongodb_data(did):
-        did_info_list = get_all_did_info_by_did(did)
-        for did_info in did_info_list:
-            import_mongo_db(did_info[DID], did_info[APP_ID])
-
-    @staticmethod
-    def export_did_mongodb_data(did):
-        did_info_list = get_all_did_info_by_did(did)
-        for did_info in did_info_list:
-            export_mongo_db(did_info[DID], did_info[APP_ID])
-
-    @staticmethod
-    def delete_did_mongodb_export_data(did):
-        did_info_list = get_all_did_info_by_did(did)
-        for did_info in did_info_list:
-            delete_mongo_db_export(did_info[DID], did_info[APP_ID])
-
-    # ------------------ internal start ----------------------------
     def backup_save_finish(self):
-        # todo, 记得结束时获取整个backup的size并且记录
-        did, content, err = did_post_json_param_pre_proc(self.response, "app_id_list", "checksum_list")
+        did, content, err = did_post_json_param_pre_proc(self.response, "checksum_list")
         if err:
             return err
-
-        update_vault_backup_service_item(did, VAULT_BACKUP_SERVICE_APPS, content["app_id_list"])
-
-        get_backup_used_storage(did)
 
         checksum_list = content["checksum_list"]
         backup_path = get_vault_backup_path(did)
         if not backup_path.exists():
             return self.response.response_err(NOT_FOUND, f"{did} backup vault not found")
 
-        backup_checksum_list = HiveInternal.get_file_checksum_list(backup_path)
+        backup_checksum_list = get_file_checksum_list(backup_path)
         for checksum in checksum_list:
             if checksum not in backup_checksum_list:
                 return self.response.response_err(CHECKSUM_FAILED, f"{did} backup file checksum failed")
 
+        total_size = 0.0
+        total_size = get_dir_size(backup_path.as_posix(), total_size)
+        update_vault_backup_service_item(did, VAULT_BACKUP_SERVICE_USE_STORAGE, total_size)
         return self.response.response_ok()
 
     def backup_restore_finish(self):
-        # todo
         did, content, err = did_post_json_param_pre_proc(self.response)
         if err:
             return err
@@ -110,7 +63,7 @@ class HiveInternal:
         if not backup_path.exists():
             return self.response.response_err(NOT_FOUND, f"{did} backup vault not found")
 
-        backup_checksum_list = HiveInternal.get_file_checksum_list(backup_path)
+        backup_checksum_list = get_file_checksum_list(backup_path)
         data = {"checksum_list": backup_checksum_list}
         return self.response.response_ok(data)
 
@@ -129,8 +82,6 @@ class HiveInternal:
             create_full_path_dir(backup_path)
 
         del info["_id"]
-        if VAULT_BACKUP_SERVICE_APPS in info:
-            del info[VAULT_BACKUP_SERVICE_APPS]
 
         data = {"backup_service": info}
         return self.response.response_ok(data)
@@ -151,7 +102,7 @@ class HiveInternal:
         file_md5_gene = deal_dir(backup_path.as_posix(), get_file_md5_info)
         file_md5_list = list()
         for md5 in file_md5_gene:
-            md5_info = {md5[0], Path(md5[1]).relative_to(backup_path)}
+            md5_info = [md5[0], Path(md5[1]).relative_to(backup_path)]
             file_md5_list.append(md5_info)
         return self.response.response_ok({"backup_files": file_md5_list})
 
@@ -280,6 +231,7 @@ class HiveInternal:
 
         if full_path_name.exists():
             full_path_name.unlink()
+        # todo delete all empty path dir
         return self.response.response_ok()
 
     def get_file_patch_hash(self):
@@ -313,7 +265,7 @@ class HiveInternal:
             return resp
 
         delta_list = list()
-        #todo
+        # todo
         # patch_delta_file to delta list
 
         try:
@@ -332,4 +284,3 @@ class HiveInternal:
 
         resp.status_code = SUCCESS
         return resp
-

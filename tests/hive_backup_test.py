@@ -17,10 +17,10 @@ from pymongo import MongoClient
 from hive.main import view
 from hive.main.hive_backup import HiveBackup
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
-    INTER_BACKUP_FTP_START_URL, INTER_BACKUP_FTP_END_URL, VAULT_BACKUP_SERVICE_APPS, INTER_BACKUP_SAVE_FINISH_URL, \
-    INTER_BACKUP_RESTORE_FINISH_URL, APP_ID
+    INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, APP_ID
 from hive import create_app
 from hive.util.did_info import get_all_did_info_by_did
+from hive.util.did_mongo_db_resource import export_mongo_db_did
 from hive.util.payment.vault_backup_service_manage import setup_vault_backup_service, update_vault_backup_service_item
 from hive.util.payment.vault_order import check_wait_order_tx_job
 from hive.util.payment.vault_service_manage import delete_user_vault, setup_vault_service, get_vault_path
@@ -215,7 +215,7 @@ class HiveBackupTestCase(unittest.TestCase):
         setup_vault_backup_service(self.did, 500, -1)
         setup_vault_service(self.did, 500, -1)
         prepare_vault_data(self)
-        HiveBackup.export_did_mongodb_data(self.did)
+        export_mongo_db_did(self.did)
 
         app_id_list = list()
         did_info_list = get_all_did_info_by_did(self.did)

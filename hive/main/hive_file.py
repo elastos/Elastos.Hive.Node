@@ -62,7 +62,7 @@ class HiveFile:
                 else:
                     shutil.copytree(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
                     dir_size = 0.0
-                    get_dir_size(dst_full_path_name.as_posix(), dir_size)
+                    dir_size = get_dir_size(dst_full_path_name.as_posix(), dir_size)
                     inc_vault_file_use_storage_byte(did, dir_size)
             else:
                 shutil.move(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
@@ -192,7 +192,7 @@ class HiveFile:
         if file_full_name.exists():
             if file_full_name.is_dir():
                 dir_size = 0.0
-                get_dir_size(file_full_name.as_posix(), dir_size)
+                dir_size = get_dir_size(file_full_name.as_posix(), dir_size)
                 shutil.rmtree(file_full_name)
                 inc_vault_file_use_storage_byte(did, -dir_size)
             else:

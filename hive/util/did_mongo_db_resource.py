@@ -9,8 +9,9 @@ from bson import ObjectId, json_util
 from pymongo import MongoClient
 
 from hive.settings import hive_setting
-from hive.util.constants import DATETIME_FORMAT
+from hive.util.constants import DATETIME_FORMAT, DID, APP_ID
 from hive.util.common import did_tail_part, create_full_path_dir
+from hive.util.did_info import get_all_did_info_by_did
 
 
 def convert_oid(query, update=False):
@@ -192,40 +193,43 @@ def get_mongo_database_size(did, app_id):
     return storage_size + index_size
 
 
-def get_save_mongo_db_path(did, app_id):
+def get_save_mongo_db_path(did):
     path = Path(hive_setting.VAULTS_BASE_DIR)
     if path.is_absolute():
-        path = path / did_tail_part(did) / app_id / "mongo_db"
+        path = path / did_tail_part(did) / "mongo_db"
     else:
-        path = path.resolve() / did_tail_part(did) / app_id / "mongo_db"
+        path = path.resolve() / did_tail_part(did) / "mongo_db"
     return path.resolve()
 
 
+def export_mongo_db_did(did):
+    did_info_list = get_all_did_info_by_did(did)
+    for did_info in did_info_list:
+        export_mongo_db(did_info[DID], did_info[APP_ID])
+
+
 def export_mongo_db(did, app_id):
-    save_path = get_save_mongo_db_path(did, app_id)
+    save_path = get_save_mongo_db_path(did)
     if not save_path.exists():
         if not create_full_path_dir(save_path):
             return False
     db_name = gene_mongo_db_name(did, app_id)
-    line2 = 'mongodump -h %s --port %s  -d %s -o %s' % (hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
+    line2 = 'mongodump -h %s --port %s  -d %s -o %s' % (
+    hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
     return True
 
 
-def import_mongo_db(did, app_id):
-    path = get_save_mongo_db_path(did, app_id)
-    if not path.exists():
+def import_mongo_db(did):
+    save_path = get_save_mongo_db_path(did)
+    if not save_path.exists():
         return False
-    db_name = gene_mongo_db_name(did, app_id)
-    save_path = path / db_name
-    line2 = 'mongorestore -h %s --port %s  -d %s --drop %s' % (hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
+    line2 = 'mongorestore -h %s --port %s --drop %s' % (hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, save_path)
     subprocess.call(line2, shell=True)
     return True
 
 
-def delete_mongo_db_export(did, app_id):
-    save_path = get_save_mongo_db_path(did, app_id)
+def delete_mongo_db_export(did):
+    save_path = get_save_mongo_db_path(did)
     if save_path.exists():
         shutil.rmtree(save_path)
-
-

@@ -217,9 +217,5 @@ class HivePayment:
             del info["_id"]
             data = dict()
             info[VAULT_BACKUP_SERVICE_USE_STORAGE] = info[VAULT_BACKUP_SERVICE_USE_STORAGE] / (1024 * 1024)
-            if VAULT_BACKUP_SERVICE_FTP in info:
-                del info[VAULT_BACKUP_SERVICE_FTP]
-            if VAULT_BACKUP_SERVICE_APPS in info:
-                del info[VAULT_BACKUP_SERVICE_APPS]
             data["vault_service_info"] = info
             return self.response.response_ok(data)

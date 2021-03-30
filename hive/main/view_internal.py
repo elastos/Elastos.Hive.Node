@@ -45,7 +45,7 @@ def inter_get_file():
     return h_internal.get_file()
 
 
-@hive_internal.route(INTER_BACKUP_FILE_URL, methods=['DELETE'])
+@hive_internal.route(INTER_BACKUP_FILE_URL, methods=['POST'])
 def inter_delete_file():
     return h_internal.delete_file()
 

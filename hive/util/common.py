@@ -72,3 +72,11 @@ def deal_dir(dir_path, deal_func):
                 logging.getLogger("Hive_Node").error("Err: get_dir_size too much for get_file_size")
         else:
             yield deal_func(i_path.as_posix())
+
+
+def get_file_checksum_list(folder):
+    checksum_list = list()
+    local_file_gene = deal_dir(folder.as_posix(), get_file_md5_info)
+    for info in local_file_gene:
+        checksum_list.append(info[0])
+    return checksum_list

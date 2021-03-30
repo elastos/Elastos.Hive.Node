@@ -37,5 +37,5 @@ def restore_from_node():
 
 
 @hive_backup.route("/api/v1/backup/activate_to_vault", methods=['POST'])
-def backup_to_vault():
-    return h_backup.backup_to_vault()
+def activate_to_vault():
+    return h_backup.activate_to_vault()

@@ -1,3 +1,4 @@
+import pickle
 import shutil
 from pathlib import Path
 from flask import request, Response
@@ -13,7 +14,7 @@ from hive.util.flask_rangerequest import RangeRequest
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
     update_vault_backup_service_item
 from hive.util.payment.vault_service_manage import can_access_backup
-from hive.util.pyrsync import gene_blockchecksums, patchstream
+from hive.util.pyrsync import patchstream, gene_blockchecksums
 from hive.util.vault_backup_info import *
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_pre_proc, pre_proc
@@ -264,13 +265,12 @@ class HiveInternal:
             resp.status_code = SERVER_SAVE_FILE_ERROR
             return resp
 
-        delta_list = list()
-        # todo
-        # patch_delta_file to delta list
+        with open("test_patch.delta", "rb") as f:
+            delta_list = pickle.load(f)
 
         try:
             new_file = gene_temp_file_name()
-            with open(file_full_name, "bw") as unpatched:
+            with open(file_full_name, "br") as unpatched:
                 with open(new_file, "bw") as save_to:
                     unpatched.seek(0)
                     patchstream(unpatched, save_to, delta_list)

@@ -11,7 +11,6 @@ from pymongo import MongoClient
 from hive.settings import hive_setting
 from hive.util.constants import DATETIME_FORMAT, DID, APP_ID
 from hive.util.common import did_tail_part, create_full_path_dir
-from hive.util.did_info import get_all_did_info_by_did
 
 
 def convert_oid(query, update=False):
@@ -200,12 +199,6 @@ def get_save_mongo_db_path(did):
     else:
         path = path.resolve() / did_tail_part(did) / "mongo_db"
     return path.resolve()
-
-
-def export_mongo_db_did(did):
-    did_info_list = get_all_did_info_by_did(did)
-    for did_info in did_info_list:
-        export_mongo_db(did_info[DID], did_info[APP_ID])
 
 
 def export_mongo_db(did, app_id):

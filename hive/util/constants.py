@@ -140,4 +140,6 @@ INTER_BACKUP_PATCH_HASH_URL = '/api/v1/inter/backup/patch/hash'
 INTER_BACKUP_PATCH_DELTA_URL = '/api/v1/inter/backup/patch/delta'
 
 
-CHUNK_SIZE = 4096
+#todo
+CHUNK_SIZE = 4
+# CHUNK_SIZE = 4096

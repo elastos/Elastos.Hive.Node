@@ -7,7 +7,9 @@ import sys
 import unittest
 import logging
 import time
+from io import BytesIO
 from pathlib import Path
+import pickle
 
 import requests
 from flask import appcontext_pushed, g
@@ -17,13 +19,14 @@ from pymongo import MongoClient
 from hive.main import view
 from hive.main.hive_backup import HiveBackup
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
-    INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, APP_ID
+    INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, APP_ID, INTER_BACKUP_PATCH_HASH_URL, \
+    INTER_BACKUP_FILE_URL, INTER_BACKUP_PATCH_DELTA_URL, CHUNK_SIZE
 from hive import create_app
 from hive.util.did_info import get_all_did_info_by_did
-from hive.util.did_mongo_db_resource import export_mongo_db_did
 from hive.util.payment.vault_backup_service_manage import setup_vault_backup_service, update_vault_backup_service_item
 from hive.util.payment.vault_order import check_wait_order_tx_job
 from hive.util.payment.vault_service_manage import delete_user_vault, setup_vault_service, get_vault_path
+from hive.util.pyrsync import rsyncdelta, rsyncdelta
 from tests import test_common
 from hive import settings
 from tests.hive_auth_test import DIDApp, DApp
@@ -215,7 +218,7 @@ class HiveBackupTestCase(unittest.TestCase):
         setup_vault_backup_service(self.did, 500, -1)
         setup_vault_service(self.did, 500, -1)
         prepare_vault_data(self)
-        export_mongo_db_did(self.did)
+        HiveBackup.export_mongo_db_did(self.did)
 
         app_id_list = list()
         did_info_list = get_all_did_info_by_did(self.did)
@@ -271,6 +274,79 @@ class HiveBackupTestCase(unittest.TestCase):
     #     prepare_vault_data(self)
     #     did_folder = get_vault_path(self.did)
     #     HiveBackup.get_file_checksum_list(did_folder)
+
+    def delete_backup_file(self, file_name):
+        param = {
+            'file_name': file_name
+        }
+        r = self.test_client.post(INTER_BACKUP_FILE_URL,
+                                  json=param,
+                                  headers=self.auth)
+        self.assert200(r.status_code)
+
+    def put_backup_file(self, file_name, data):
+        temp = BytesIO()
+        temp.write(data.encode(encoding="utf-8"))
+        temp.seek(0)
+        temp.name = 'temp.txt'
+
+        put_file_url = INTER_BACKUP_FILE_URL + "/" + file_name
+        r2, s = self.parse_response(
+            self.test_client.put(put_file_url,
+                                 data=temp,
+                                 headers=self.upload_auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r2["_status"], "OK")
+
+    def get_backup_file(self, file_name):
+        get_file_url = INTER_BACKUP_FILE_URL + "?file=" + file_name
+        r = self.test_client.get(get_file_url, headers=self.upload_auth)
+        self.assert200(r.status_code)
+        return r.get_data()
+
+    def get_backup_file_hash(self, file_name):
+        get_file_hash_url = INTER_BACKUP_PATCH_HASH_URL + "?file=" + file_name
+        r = self.test_client.get(get_file_hash_url, headers=self.upload_auth)
+        self.assert200(r.status_code)
+        ret = list()
+        it = r.response
+        for i in it:
+            ret.append(i)
+        return ret
+
+    def post_backup_file_delta(self, file_name, delta):
+        post_delta_url = INTER_BACKUP_PATCH_DELTA_URL + "?file=" + file_name
+        r = self.test_client.post(post_delta_url,
+                                  data=delta,
+                                  headers=self.upload_auth)
+        self.assert200(r.status_code)
+
+    def test_patch_file(self):
+        file_name = "test_patch.txt"
+        self.delete_backup_file(file_name)
+
+        file_old_content = "Hello Temp test patch content 123456789!"
+        self.put_backup_file(file_name, file_old_content)
+        file_get_content = self.get_backup_file(file_name)
+        self.assertEqual(file_old_content, str(file_get_content, "utf-8"))
+
+        hashes = self.get_backup_file_hash(file_name)
+        file_new_content = "Hello 1 Temp 2 test 3 patch 4 content 5 123456789 6!"
+        new_file = BytesIO()
+        new_file.write(file_new_content.encode(encoding="utf-8"))
+        new_file.seek(0)
+        new_file.name = 'temp.txt'
+        delta_list = rsyncdelta(new_file, hashes, blocksize=CHUNK_SIZE)
+
+        with open("test_patch.delta", "wb") as f:
+            pickle.dump(delta_list, f)
+
+        with open("test_patch.delta", "rb") as f:
+            self.post_backup_file_delta(file_name, f)
+
+        file_get_content2 = self.get_backup_file(file_name)
+        self.assertEqual(file_new_content, str(file_get_content2, "utf-8"))
 
 
 if __name__ == '__main__':

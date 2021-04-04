@@ -20,10 +20,8 @@ from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MOD
     INTER_BACKUP_SERVICE_URL, INTER_BACKUP_FILE_LIST_URL, INTER_BACKUP_FILE_URL, CHUNK_SIZE
 from hive.util.did_file_info import filter_path_root, get_vault_path
 from hive.util.did_info import get_all_did_info_by_did
-from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export, \
-    export_mongo_db_did
+from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
 from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE, SUCCESS, NOT_FOUND, CHECKSUM_FAILED
-from hive.util.ftp_tool import FtpServer
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, copy_local_backup_to_vault
 from hive.util.payment.vault_service_manage import get_vault_service, get_vault_used_storage, \
     freeze_vault, unfreeze_vault, delete_user_vault_data
@@ -48,11 +46,6 @@ class HiveBackup:
             create_full_path_dir(backup_path)
         self.app = app
         HiveBackup.mode = mode
-        if mode != HIVE_MODE_TEST:
-            self.backup_ftp = FtpServer(hive_setting.BACKUP_VAULTS_BASE_DIR, hive_setting.BACKUP_FTP_PORT)
-            self.backup_ftp.max_cons = 256
-            self.backup_ftp.max_cons_per_ip = 10
-            _thread.start_new_thread(self.backup_ftp.run, ())
 
     # ------------------ common start ----------------------------
 
@@ -90,12 +83,18 @@ class HiveBackup:
         return info
 
     @staticmethod
+    def export_mongo_db_did(did):
+        did_info_list = get_all_did_info_by_did(did)
+        for did_info in did_info_list:
+            export_mongo_db(did_info[DID], did_info[APP_ID])
+
+    @staticmethod
     def save_vault_data(did):
         info = get_vault_backup_info(did)
         if not info:
             return None
         update_vault_backup_state(did, VAULT_BACKUP_STATE_BACKUP, VAULT_BACKUP_MSG_SUCCESS)
-        export_mongo_db_did(did)
+        HiveBackup.export_mongo_db_did(did)
         did_vault_folder = get_vault_path(did)
         vault_backup_msg = VAULT_BACKUP_MSG_SUCCESS
         if info[VAULT_BACKUP_INFO_TYPE] == VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE:

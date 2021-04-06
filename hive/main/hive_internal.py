@@ -19,6 +19,10 @@ from hive.util.vault_backup_info import *
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_pre_proc, pre_proc
 
+import logging
+
+logger = logging.getLogger("HiveInternal")
+
 
 class HiveInternal:
     mode = HIVE_MODE_DEV
@@ -132,6 +136,7 @@ class HiveInternal:
                         break
                     f.write(chunk)
         except Exception as e:
+            logger.error(f"exception of put_file error is {str(e)}")
             return self.response.response_err(SERVER_SAVE_FILE_ERROR, f"Exception: {str(e)}")
 
         if full_path_name.exists():
@@ -214,6 +219,7 @@ class HiveInternal:
             else:
                 shutil.move(src_full_path_name.as_posix(), dst_full_path_name.as_posix())
         except Exception as e:
+            logger.error(f"exception of move_file error is {str(e)}")
             return self.response.response_err(SERVER_MOVE_FILE_ERROR, "Exception:" + str(e))
 
         return self.response.response_ok()
@@ -246,7 +252,7 @@ class HiveInternal:
         resp.status_code = SUCCESS
         return resp
 
-    def post_file_patch_delta(self):
+    def patch_file_delta(self):
         resp = Response()
         resp, file_full_name = self.__get_file_check(resp)
         if not file_full_name:
@@ -262,10 +268,11 @@ class HiveInternal:
                         break
                     f.write(chunk)
         except Exception as e:
+            logger.error(f"exception of post_file_patch_delta read error is {str(e)}")
             resp.status_code = SERVER_SAVE_FILE_ERROR
             return resp
 
-        with open("test_patch.delta", "rb") as f:
+        with open(patch_delta_file, "rb") as f:
             delta_list = pickle.load(f)
 
         try:
@@ -279,6 +286,7 @@ class HiveInternal:
                 file_full_name.unlink()
             shutil.move(new_file.as_posix(), file_full_name.as_posix())
         except Exception as e:
+            logger.error(f"exception of post_file_patch_delta patch error is {str(e)}")
             resp.status_code = SERVER_PATCH_FILE_ERROR
             return resp
 

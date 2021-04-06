@@ -34,10 +34,8 @@ http://samba.anu.edu.au/rsync/.
 import collections
 import hashlib
 
-
 __all__ = ["rollingchecksum", "weakchecksum", "patchstream", "rsyncdelta",
            "blockchecksums", "gene_blockchecksums"]
-
 
 
 def rsyncdelta(datastream, remotesignatures, blocksize=4096):
@@ -51,7 +49,7 @@ def rsyncdelta(datastream, remotesignatures, blocksize=4096):
     remote_strong = list()
 
     for sig in remotesignatures:
-        remote_weak.append(sig[0])
+        remote_weak.append(int(sig[0]))
         remote_strong.append(sig[1])
 
     match = True
@@ -154,7 +152,7 @@ def gene_blockchecksums(instream, blocksize=4096):
     while read:
         weakhash = weakchecksum(bytes(read))[0]
         stronghash = hashlib.sha256(read).hexdigest()
-        yield (weakhash, stronghash)
+        yield ",".join([str(weakhash), str(stronghash)]) + "\n"
         read = instream.read(blocksize)
 
 

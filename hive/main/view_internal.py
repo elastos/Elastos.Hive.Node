@@ -66,5 +66,5 @@ def inter_get_patch_hash():
 
 
 @hive_internal.route(INTER_BACKUP_PATCH_DELTA_URL, methods=['POST'])
-def inter_post_patch_delta():
-    return h_internal.post_file_patch_delta()
+def inter_patch_delta():
+    return h_internal.patch_file_delta()

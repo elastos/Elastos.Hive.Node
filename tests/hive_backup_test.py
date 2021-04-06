@@ -18,6 +18,8 @@ from pymongo import MongoClient
 
 from hive.main import view
 from hive.main.hive_backup import HiveBackup
+from hive.main.hive_internal import HiveInternal
+from hive.util.common import gene_temp_file_name
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
     INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, APP_ID, INTER_BACKUP_PATCH_HASH_URL, \
     INTER_BACKUP_FILE_URL, INTER_BACKUP_PATCH_DELTA_URL, CHUNK_SIZE
@@ -309,11 +311,16 @@ class HiveBackupTestCase(unittest.TestCase):
         get_file_hash_url = INTER_BACKUP_PATCH_HASH_URL + "?file=" + file_name
         r = self.test_client.get(get_file_hash_url, headers=self.upload_auth)
         self.assert200(r.status_code)
-        ret = list()
-        it = r.response
-        for i in it:
-            ret.append(i)
-        return ret
+        hashes = list()
+        lines = r.data.split(b'\n')
+        print(lines)
+        for i in lines:
+            if not i:
+                continue
+            l = i.split(b',')
+            h = (int(l[0]), l[1].decode("utf-8"))
+            hashes.append(h)
+        return hashes
 
     def post_backup_file_delta(self, file_name, delta):
         post_delta_url = INTER_BACKUP_PATCH_DELTA_URL + "?file=" + file_name
@@ -348,6 +355,26 @@ class HiveBackupTestCase(unittest.TestCase):
         file_get_content2 = self.get_backup_file(file_name)
         self.assertEqual(file_new_content, str(file_get_content2, "utf-8"))
 
+    def test_get_patch_file(self):
+        dst_file_name = "test_patch.txt"
+        self.delete_backup_file(dst_file_name)
+
+        file_old_content = "Hello Temp test patch content 123456789!"
+        self.put_backup_file(dst_file_name, file_old_content)
+        file_get_content = self.get_backup_file(dst_file_name)
+        self.assertEqual(file_old_content, str(file_get_content, "utf-8"))
+
+        host = "http://127.0.0.1:5000"
+        token = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraWQiOiAiZGlkOmVsYXN0b3M6aWpVbkQ0S2VScGVCVUZtY0VEQ2JoeE1USlJ6VVlDUUNaTSNwcmltYXJ5In0.eyJpc3MiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwic3ViIjoiQWNjZXNzVG9rZW4iLCJhdWQiOiJkaWQ6ZWxhc3RvczppZGZwS0pKMXNvRHhUMkdjZ0NSbkR0M2N1OTRabkdmek5YIiwiZXhwIjoxNjE4NjQwMTE0LCJwcm9wcyI6IntcImFwcERpZFwiOiBcImFwcGlkXCIsIFwidXNlckRpZFwiOiBcImRpZDplbGFzdG9zOmlqOGtyQVZSSml0WktKbWNDdWZvTEhRanE3TWVmM1pqVE5cIiwgXCJub25jZVwiOiBcIjRjZjVjMzdlLTg3YjEtMTFlYi04M2U1LWFjZGU0ODAwMTEyMlwifSJ9.S5HRzTea45qix7VDChC44CLor0IQXBZmPOqi866NLus8stqcmYYDUTsraBMFZFvR9eNlXQf8aaYMpDSA8Fk9aA"
+        file_new_content = "Hello 1 Temp 2 test 3 patch 4 content 5 123456789 6!"
+        src_file = gene_temp_file_name()
+        with open(src_file.as_posix(), "wb") as f:
+            f.write(file_new_content.encode(encoding="utf-8"))
+
+        HiveBackup.patch_file(src_file.as_posix(), dst_file_name, host, token)
+
+        file_get_content2 = self.get_backup_file(dst_file_name)
+        self.assertEqual(file_new_content, str(file_get_content2, "utf-8"))
 
 if __name__ == '__main__':
     unittest.main()

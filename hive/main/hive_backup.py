@@ -2,6 +2,7 @@ import _thread
 import json
 import logging
 import pathlib
+import pickle
 import subprocess
 import re
 import sys
@@ -12,19 +13,22 @@ from pathlib import Path
 from hive.main import view
 from hive.util.auth import did_auth
 from hive.util.common import did_tail_part, create_full_path_dir, get_host, deal_dir, get_file_md5_info, \
-    get_file_checksum_list
+    get_file_checksum_list, gene_temp_file_name
 from hive.util.common import did_tail_part, create_full_path_dir, get_host
 from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MODE_DEV, \
     VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, \
-    INTER_BACKUP_SERVICE_URL, INTER_BACKUP_FILE_LIST_URL, INTER_BACKUP_FILE_URL, CHUNK_SIZE
+    INTER_BACKUP_SERVICE_URL, INTER_BACKUP_FILE_LIST_URL, INTER_BACKUP_FILE_URL, CHUNK_SIZE, \
+    INTER_BACKUP_PATCH_HASH_URL, INTER_BACKUP_PATCH_DELTA_URL
 from hive.util.did_file_info import filter_path_root, get_vault_path
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
-from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE, SUCCESS, NOT_FOUND, CHECKSUM_FAILED
+from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE, SUCCESS, NOT_FOUND, CHECKSUM_FAILED, \
+    SERVER_SAVE_FILE_ERROR, SERVER_PATCH_FILE_ERROR
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, copy_local_backup_to_vault
 from hive.util.payment.vault_service_manage import get_vault_service, get_vault_used_storage, \
     freeze_vault, unfreeze_vault, delete_user_vault_data
+from hive.util.pyrsync import rsyncdelta
 from hive.util.vault_backup_info import *
 from hive.util.rclone_tool import RcloneTool
 from hive.util.server_response import ServerResponse
@@ -419,9 +423,71 @@ class HiveBackup:
                 continue
 
     @staticmethod
+    def get_unpatch_file_hash(file_name, host, token):
+        get_file_hash_url = host + INTER_BACKUP_PATCH_HASH_URL + "?file=" + file_name
+        try:
+            r = requests.get(get_file_hash_url,
+                             headers={"Authorization": "token " + token},
+                             stream=True)
+        except Exception as e:
+            logging.getLogger("HiveBackup").error(
+                f"__get_unpatch_file_hash exception:{str(e)}, host:{host}")
+            return None
+        if r.status_code != SUCCESS:
+            logging.getLogger("HiveBackup").error(
+                f"__get_unpatch_file_hash error code is:" + str(r.status_code))
+            return None
+        hashes = list()
+        for line in r.iter_lines(chunk_size=CHUNK_SIZE):
+            if not line:
+                continue
+            data = line.split(b',')
+            h = (int(data[0]), data[1].decode("utf-8"))
+            hashes.append(h)
+        return hashes
+
+    @staticmethod
+    def patch_file(src_file_name, dst_file_name, host, token):
+        hashes = HiveBackup.get_unpatch_file_hash(dst_file_name, host, token)
+        with open(src_file_name, "rb") as f:
+            delta_list = rsyncdelta(f, hashes, blocksize=CHUNK_SIZE)
+
+        patch_delta_file = gene_temp_file_name()
+        try:
+            with open(patch_delta_file, "wb") as f:
+                pickle.dump(delta_list, f)
+        except Exception as e:
+            logging.getLogger("HiveBackup").error(
+                f"__patch_file dump {dst_file_name} delta exception:{str(e)}, host:{host}")
+            patch_delta_file.unlink()
+            return SERVER_SAVE_FILE_ERROR
+
+        post_delta_url = host + INTER_BACKUP_PATCH_DELTA_URL + "?file=" + dst_file_name
+        try:
+            with open(patch_delta_file.as_posix(), 'rb') as f:
+                r = requests.post(post_delta_url,
+                                  data=f,
+                                  headers={"Authorization": "token " + token})
+        except Exception as e:
+            logging.getLogger("HiveBackup").error(
+                f"__patch_file post {dst_file_name} exception:{str(e)}, host:{host}")
+            return SERVER_PATCH_FILE_ERROR
+        if r.status_code != SUCCESS:
+            return r.status_code
+        patch_delta_file.unlink()
+        return SUCCESS
+
+    @staticmethod
     def __patch_save_files(file_patch_list, host, token):
-        # todo
-        HiveBackup.__put_files(file_patch_list, host, token)
+        # todo done
+        if not file_patch_list:
+            return
+
+        for info in file_patch_list:
+            src_file = info[0]
+            dst_file = info[1]
+            HiveBackup.patch_file(src_file, dst_file, host, token)
+
 
     @staticmethod
     def __delete_files(file_delete_list, host, token):

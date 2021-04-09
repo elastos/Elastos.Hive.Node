@@ -329,7 +329,7 @@ class HiveBackupTestCase(unittest.TestCase):
                                   headers=self.upload_auth)
         self.assert200(r.status_code)
 
-    def test_patch_file(self):
+    def test_patch_remote_file(self):
         file_name = "test_patch.txt"
         self.delete_backup_file(file_name)
 
@@ -355,7 +355,7 @@ class HiveBackupTestCase(unittest.TestCase):
         file_get_content2 = self.get_backup_file(file_name)
         self.assertEqual(file_new_content, str(file_get_content2, "utf-8"))
 
-    def test_get_patch_file(self):
+    def requests_patch_remote_file(self):
         dst_file_name = "test_patch.txt"
         self.delete_backup_file(dst_file_name)
 
@@ -371,10 +371,37 @@ class HiveBackupTestCase(unittest.TestCase):
         with open(src_file.as_posix(), "wb") as f:
             f.write(file_new_content.encode(encoding="utf-8"))
 
-        HiveBackup.patch_file(src_file.as_posix(), dst_file_name, host, token)
+        HiveBackup.patch_remote_file(src_file.as_posix(), dst_file_name, host, token)
 
         file_get_content2 = self.get_backup_file(dst_file_name)
         self.assertEqual(file_new_content, str(file_get_content2, "utf-8"))
+
+    def requests_patch_local_file(self):
+        src_file_name = "test_patch.txt"
+        self.delete_backup_file(src_file_name)
+
+        file_old_content = "Hello Temp test patch content 123456789!"
+        self.put_backup_file(src_file_name, file_old_content)
+        file_get_content = self.get_backup_file(src_file_name)
+        self.assertEqual(file_old_content, str(file_get_content, "utf-8"))
+
+        host = "http://127.0.0.1:5000"
+        token = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraWQiOiAiZGlkOmVsYXN0b3M6aWpVbkQ0S2VScGVCVUZtY0VEQ2JoeE1USlJ6VVlDUUNaTSNwcmltYXJ5In0.eyJpc3MiOiJkaWQ6ZWxhc3RvczppalVuRDRLZVJwZUJVRm1jRURDYmh4TVRKUnpVWUNRQ1pNIiwic3ViIjoiQWNjZXNzVG9rZW4iLCJhdWQiOiJkaWQ6ZWxhc3RvczppZGZwS0pKMXNvRHhUMkdjZ0NSbkR0M2N1OTRabkdmek5YIiwiZXhwIjoxNjE4NjQwMTE0LCJwcm9wcyI6IntcImFwcERpZFwiOiBcImFwcGlkXCIsIFwidXNlckRpZFwiOiBcImRpZDplbGFzdG9zOmlqOGtyQVZSSml0WktKbWNDdWZvTEhRanE3TWVmM1pqVE5cIiwgXCJub25jZVwiOiBcIjRjZjVjMzdlLTg3YjEtMTFlYi04M2U1LWFjZGU0ODAwMTEyMlwifSJ9.S5HRzTea45qix7VDChC44CLor0IQXBZmPOqi866NLus8stqcmYYDUTsraBMFZFvR9eNlXQf8aaYMpDSA8Fk9aA"
+        file_new_content = "Hello 1 Temp 2 test 3 patch 4 content 5 123456789 6!"
+        dst_file = gene_temp_file_name()
+        with open(dst_file.as_posix(), "wb") as f:
+            f.write(file_new_content.encode(encoding="utf-8"))
+
+        with open(dst_file.as_posix(), "rb") as f:
+            file_local_content = f.read()
+        self.assertEqual(file_new_content, str(file_local_content, "utf-8"))
+
+        HiveBackup.patch_local_file(src_file_name, dst_file.as_posix(), host, token)
+
+        with open(dst_file.as_posix(), "rb") as f:
+            file_local_content = f.read()
+        self.assertEqual(file_old_content, str(file_local_content, "utf-8"))
+
 
 if __name__ == '__main__':
     unittest.main()

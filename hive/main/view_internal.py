@@ -4,7 +4,7 @@ from hive.main.hive_internal import HiveInternal
 from hive.util.constants import INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, \
     INTER_BACKUP_FILE_LIST_URL, \
     INTER_BACKUP_FILE_URL, INTER_BACKUP_MOVE_FILE_URL, INTER_BACKUP_COPY_FILE_URL, INTER_BACKUP_PATCH_HASH_URL, \
-    INTER_BACKUP_PATCH_DELTA_URL, INTER_BACKUP_SERVICE_URL
+    INTER_BACKUP_PATCH_DELTA_URL, INTER_BACKUP_SERVICE_URL, INTER_BACKUP_GENE_DELTA_URL
 
 h_internal = HiveInternal()
 hive_internal = Blueprint('hive_internal', __name__)
@@ -35,9 +35,9 @@ def inter_get_backup_files():
     return h_internal.get_backup_files()
 
 
-@hive_internal.route(INTER_BACKUP_FILE_URL + "/<path:file_name>", methods=['PUT'])
-def inter_put_file(file_name):
-    return h_internal.put_file(file_name)
+@hive_internal.route(INTER_BACKUP_FILE_URL, methods=['PUT'])
+def inter_put_file():
+    return h_internal.put_file()
 
 
 @hive_internal.route(INTER_BACKUP_FILE_URL, methods=['GET'])
@@ -45,7 +45,7 @@ def inter_get_file():
     return h_internal.get_file()
 
 
-@hive_internal.route(INTER_BACKUP_FILE_URL, methods=['POST'])
+@hive_internal.route(INTER_BACKUP_FILE_URL, methods=['DELETE'])
 def inter_delete_file():
     return h_internal.delete_file()
 
@@ -68,3 +68,8 @@ def inter_get_patch_hash():
 @hive_internal.route(INTER_BACKUP_PATCH_DELTA_URL, methods=['POST'])
 def inter_patch_delta():
     return h_internal.patch_file_delta()
+
+
+@hive_internal.route(INTER_BACKUP_GENE_DELTA_URL, methods=['POST'])
+def inter_get_delta():
+    return h_internal.get_file_delta()

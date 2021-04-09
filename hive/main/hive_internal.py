@@ -14,10 +14,11 @@ from hive.util.flask_rangerequest import RangeRequest
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, get_vault_backup_path, \
     update_vault_backup_service_item
 from hive.util.payment.vault_service_manage import can_access_backup
-from hive.util.pyrsync import patchstream, gene_blockchecksums
+from hive.util.pyrsync import patchstream, gene_blockchecksums, rsyncdelta
 from hive.util.vault_backup_info import *
 from hive.util.server_response import ServerResponse
-from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_pre_proc, pre_proc
+from hive.main.interceptor import post_json_param_pre_proc, did_post_json_param_pre_proc, pre_proc, \
+    did_get_param_pre_proc
 
 import logging
 
@@ -73,7 +74,7 @@ class HiveInternal:
         return self.response.response_ok(data)
 
     def get_backup_service(self):
-        did, content, err = did_post_json_param_pre_proc(self.response)
+        did, content, err = did_get_param_pre_proc(self.response)
         if err:
             return self.response.response_err(UNAUTHORIZED, "Backup internal backup_communication_start auth failed")
 
@@ -92,13 +93,9 @@ class HiveInternal:
         return self.response.response_ok(data)
 
     def get_backup_files(self):
-        did, content, err = did_post_json_param_pre_proc(self.response)
+        did, content, err = did_get_param_pre_proc(self.response,  access_backup=BACKUP_ACCESS)
         if err:
             return self.response.response_err(UNAUTHORIZED, "Backup internal get_transfer_files auth failed")
-
-        ret, message = can_access_backup(did)
-        if ret != SUCCESS:
-            return self.response.response_err(ret, "Backup internal get_transfer_files no backup failed")
 
         backup_path = get_vault_backup_path(did)
         if not backup_path.exists():
@@ -107,16 +104,16 @@ class HiveInternal:
         file_md5_gene = deal_dir(backup_path.as_posix(), get_file_md5_info)
         file_md5_list = list()
         for md5 in file_md5_gene:
-            md5_info = [md5[0], Path(md5[1]).relative_to(backup_path)]
+            md5_info = [md5[0], Path(md5[1]).relative_to(backup_path).as_posix()]
             file_md5_list.append(md5_info)
         return self.response.response_ok({"backup_files": file_md5_list})
 
-    def put_file(self, file_name):
-        did, app_id, response = pre_proc(self.response, access_backup=BACKUP_ACCESS)
+    def put_file(self):
+        did, content, response = did_get_param_pre_proc(self.response, "file", access_backup=BACKUP_ACCESS)
         if response is not None:
             return response
 
-        file_name = filter_path_root(file_name)
+        file_name = filter_path_root(content["file"])
 
         backup_path = get_vault_backup_path(did)
         full_path_name = (backup_path / file_name).resolve()
@@ -144,9 +141,9 @@ class HiveInternal:
         shutil.move(temp_file.as_posix(), full_path_name.as_posix())
         return self.response.response_ok()
 
-    def __get_file_check(self, resp):
+    def __get_backup_file_check(self, resp):
         did, app_id = did_auth()
-        if (did is None) or (app_id is None):
+        if did is None:
             resp.status_code = UNAUTHORIZED
             return resp, None
         r, msg = can_access_backup(did)
@@ -171,7 +168,7 @@ class HiveInternal:
 
     def get_file(self):
         resp = Response()
-        resp, file_full_name = self.__get_file_check(resp)
+        resp, file_full_name = self.__get_backup_file_check(resp)
         if not file_full_name:
             return resp
 
@@ -187,8 +184,8 @@ class HiveInternal:
         return data
 
     def move_file(self, is_copy):
-        did, app_id, content, response = post_json_param_pre_proc(self.response, "src_file", "dst_file",
-                                                                  access_backup=BACKUP_ACCESS)
+        did, content, response = did_post_json_param_pre_proc(self.response, "src_file", "dst_file",
+                                                              access_backup=BACKUP_ACCESS)
         if response is not None:
             return response
 
@@ -225,12 +222,11 @@ class HiveInternal:
         return self.response.response_ok()
 
     def delete_file(self):
-        did, app_id, content, response = post_json_param_pre_proc(self.response, "file_name",
-                                                                  access_backup=BACKUP_ACCESS)
+        did, content, response = did_get_param_pre_proc(self.response, "file", access_backup=BACKUP_ACCESS)
         if response is not None:
             return response
 
-        file_name = content.get('file_name')
+        file_name = content.get('file')
         file_name = filter_path_root(file_name)
 
         backup_path = get_vault_backup_path(did)
@@ -243,7 +239,7 @@ class HiveInternal:
 
     def get_file_patch_hash(self):
         resp = Response()
-        resp, file_full_name = self.__get_file_check(resp)
+        resp, file_full_name = self.__get_backup_file_check(resp)
         if not file_full_name:
             return resp
 
@@ -254,7 +250,7 @@ class HiveInternal:
 
     def patch_file_delta(self):
         resp = Response()
-        resp, file_full_name = self.__get_file_check(resp)
+        resp, file_full_name = self.__get_backup_file_check(resp)
         if not file_full_name:
             return resp
 
@@ -292,3 +288,47 @@ class HiveInternal:
 
         resp.status_code = SUCCESS
         return resp
+
+    def get_file_delta(self):
+        resp = Response()
+        resp, file_full_name = self.__get_backup_file_check(resp)
+        if not file_full_name:
+            return resp
+
+        data = request.get_data()
+        lines = data.split(b'\n')
+        hashes = list()
+        for line in lines:
+            if not line:
+                continue
+            data = line.split(b',')
+            h = (int(data[0]), data[1].decode("utf-8"))
+            hashes.append(h)
+
+        with open(file_full_name, "rb") as f:
+            delta_list = rsyncdelta(f, hashes, blocksize=CHUNK_SIZE)
+
+        patch_delta_file = gene_temp_file_name()
+        try:
+            with open(patch_delta_file, "wb") as f:
+                pickle.dump(delta_list, f)
+        except Exception as e:
+            logging.getLogger("HiveBackup").error(
+                f"get_file_delta dump {file_full_name} delta exception:{str(e)}")
+            patch_delta_file.unlink()
+            resp.status_code = SERVER_SAVE_FILE_ERROR
+            return resp
+
+        size = patch_delta_file.stat().st_size
+        with open(patch_delta_file, 'rb') as f:
+            etag = RangeRequest.make_etag(f)
+        last_modified = datetime.utcnow()
+
+        data = RangeRequest(open(patch_delta_file, 'rb'),
+                            etag=etag,
+                            last_modified=last_modified,
+                            size=size).make_response()
+
+        patch_delta_file.unlink()
+        print("patch file name:" + patch_delta_file.as_posix())
+        return data

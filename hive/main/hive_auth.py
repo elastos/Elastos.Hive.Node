@@ -59,11 +59,13 @@ class HiveAuth(Entity):
             return self.response.response_err(BAD_REQUEST, "Thd did document is vaild, can't get did.")
 
         spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
-        f = open(hive_setting.DID_DATA_LOCAL_DIDS+ os.sep + spec_did_str, "w")
         try:
-            f.write(doc_str)
-        finally:
-            f.close()
+            with open(hive_setting.DID_DATA_LOCAL_DIDS+ os.sep + spec_did_str, "w") as f:
+                f.write(doc_str)
+        except Exception as e:
+            logging.getLogger("HiveAuth").error(
+                f"Exception in sign_in:{str(e)}")
+
         did_str = "did:" + ffi.string(lib.DID_GetMethod(did)).decode() + ":" + spec_did_str
 
         # save to db
@@ -253,7 +255,7 @@ class HiveAuth(Entity):
             else:
                 update_did_info_by_app_instance_did(app_instance_did, nonce, exp)
         except Exception as e:
-            logging.error(f"Exception in __save_nonce_to_db:: {e}")
+            logging.getLogger("HiveAuth").error(f"Exception in __save_nonce_to_db:: {e}")
             return False
 
         return True
@@ -268,7 +270,7 @@ class HiveAuth(Entity):
         try:
             update_token_of_did_info(user_did, app_id, app_instance_did, nonce, token, exp)
         except Exception as e:
-            logging.error(f"Exception in __save_auth_info_to_db:: {e}")
+            logging.getLogger("HiveAuth").error(f"Exception in __save_auth_info_to_db:: {e}")
             return False
 
         return True

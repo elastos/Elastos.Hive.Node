@@ -10,8 +10,8 @@ DID_STOREPASS=password
 #HIVE_DATA =./data
 # in local
 HIVE_DATA =./data1
-#HIVE_SENTRY_DSN =
-HIVE_SENTRY_DSN =https://1dafd5d11608420aacbbf76f4288960f@o339076.ingest.sentry.io/5524839
+HIVE_SENTRY_DSN =
+#HIVE_SENTRY_DSN =https://1dafd5d11608420aacbbf76f4288960f@o339076.ingest.sentry.io/5524839
 
 
 # hive payment

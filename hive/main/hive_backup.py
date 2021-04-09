@@ -3,6 +3,7 @@ import json
 import logging
 import pathlib
 import pickle
+import shutil
 import subprocess
 import re
 import sys
@@ -19,16 +20,16 @@ from hive.util.constants import APP_ID, VAULT_ACCESS_R, HIVE_MODE_TEST, HIVE_MOD
     VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, \
     INTER_BACKUP_SERVICE_URL, INTER_BACKUP_FILE_LIST_URL, INTER_BACKUP_FILE_URL, CHUNK_SIZE, \
-    INTER_BACKUP_PATCH_HASH_URL, INTER_BACKUP_PATCH_DELTA_URL
+    INTER_BACKUP_PATCH_HASH_URL, INTER_BACKUP_PATCH_DELTA_URL, INTER_BACKUP_GENE_DELTA_URL
 from hive.util.did_file_info import filter_path_root, get_vault_path
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, import_mongo_db, delete_mongo_db_export
 from hive.util.error_code import BAD_REQUEST, UNAUTHORIZED, INSUFFICIENT_STORAGE, SUCCESS, NOT_FOUND, CHECKSUM_FAILED, \
-    SERVER_SAVE_FILE_ERROR, SERVER_PATCH_FILE_ERROR
+    SERVER_SAVE_FILE_ERROR, SERVER_PATCH_FILE_ERROR, INTERNAL_SERVER_ERROR, SERVER_OPEN_FILE_ERROR
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service, copy_local_backup_to_vault
 from hive.util.payment.vault_service_manage import get_vault_service, get_vault_used_storage, \
     freeze_vault, unfreeze_vault, delete_user_vault_data
-from hive.util.pyrsync import rsyncdelta
+from hive.util.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
 from hive.util.vault_backup_info import *
 from hive.util.rclone_tool import RcloneTool
 from hive.util.server_response import ServerResponse
@@ -131,13 +132,13 @@ class HiveBackup:
 
     # ------------------ backup to google start ----------------------------
     def __proc_google_drive_param(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response,
-                                                             'token',
-                                                             'refresh_token',
-                                                             'expiry',
-                                                             'client_id',
-                                                             'client_secret',
-                                                             access_vault=VAULT_ACCESS_R)
+        did, content, err = did_post_json_param_pre_proc(self.response,
+                                                         'token',
+                                                         'refresh_token',
+                                                         'expiry',
+                                                         'client_id',
+                                                         'client_secret',
+                                                         access_vault=VAULT_ACCESS_R)
         if err:
             return None, None, err
 
@@ -223,8 +224,8 @@ class HiveBackup:
 
     # ------------------ backup to node start ----------------------------
     def __proc_hive_node_param(self):
-        did, app_id, content, err = post_json_param_pre_proc(self.response, "backup_credential",
-                                                             access_vault=VAULT_ACCESS_R)
+        did, content, err = did_post_json_param_pre_proc(self.response, "backup_credential",
+                                                         access_vault=VAULT_ACCESS_R)
         if err:
             return None, None, err
         host, backup_token, err = view.h_auth.backup_auth_request(content)
@@ -248,52 +249,23 @@ class HiveBackup:
         return did, backup_service, None
 
     def get_backup_service(self, url, backup_token):
-        param = {}
         try:
-            r = requests.post(url,
-                              json=param,
-                              headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
+            r = requests.get(url,
+                             headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
         except Exception as e:
             logging.getLogger("HiveBackup").error(
                 f"start_internal_backup exception:{str(e)}, host:{url} backup_token:{backup_token}")
             return None, self.response.response_err(BAD_REQUEST, "start node backup error")
 
         if r.status_code != SUCCESS:
-            ret = r.json()
             logging.getLogger("HiveBackup").error(
                 "start_internal_backup error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
                     r.status_code))
-            if not ret["_error"]:
-                return None, self.response.response_err(r.status_code,
-                                                        "start internal backup error. content:" + str(r.content))
-            else:
-                return None, self.response.response_err(ret["_error"]["code"], ret["_error"]["message"])
+            return None, self.response.response_err(r.status_code,
+                                                    "start internal backup error. content:" + str(r.content))
         else:
             data = r.json()
             return data, None
-
-    @staticmethod
-    def stop_internal_ftp(did, url, backup_token):
-        param = {}
-        try:
-            r = requests.post(url,
-                              json=param,
-                              headers={"Content-Type": "application/json", "Authorization": "token " + backup_token})
-        except Exception as e:
-            logging.getLogger("HiveBackup").error(
-                f"stop_internal_backup exception:{str(e)}, host:{url} backup_token:{backup_token}")
-            return
-
-        if r.status_code != SUCCESS:
-            ret = r.json()
-            if not ret["_error"]:
-                logging.getLogger("HiveBackup").error(
-                    "stop_internal_backup error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
-                        r.status_code) + " content:" + str(r.content))
-            else:
-                logging.getLogger("HiveBackup").error(
-                    "stop_internal_backup error, host:" + url + " backup_token:" + backup_token + "error code:" + str(
-                        r.status_code) + " message:" + ret["_error"]["message"])
 
     @staticmethod
     def save_to_hive_node_finish(did, url, backup_token, checksum_list):
@@ -329,13 +301,7 @@ class HiveBackup:
             return False
 
         if r.status_code != SUCCESS:
-            ret = r.json()
-            if not ret["_error"]:
-                logging.getLogger("HiveBackup").error(
-                    f"internal_restore_data error, did:{did} host:{url} error code {str(r.status_code)} content {str(r.content)}")
-            else:
-                logging.getLogger("HiveBackup").error(
-                    f"internal_restore_data error, did:{did} host:{url} error code {str(r.status_code)}  message:{ret['_error']['message']}")
+            logging.getLogger("HiveBackup").error(f"internal_restore_data error, did:{did} host:{url} error code {str(r.status_code)} content {str(r.content)}")
             return False
         else:
             data = r.json()
@@ -367,13 +333,10 @@ class HiveBackup:
         return f"{ftp_port}:{user}:{password}"
 
     @staticmethod
-    def __classify_save_files(saved_file_list, local_file_list, vault_folder):
+    def classify_save_files(saved_file_list, local_file_list, vault_folder):
         file_put_list = list()
         file_delete_list = list()
         file_patch_list = list()
-
-        if not saved_file_list:
-            return file_put_list, file_patch_list, file_delete_list
 
         saved_file_dict = dict()
         for info in saved_file_list:
@@ -385,7 +348,7 @@ class HiveBackup:
         for info in local_file_list:
             file_checksum = info[0]
             file_full_name = info[1]
-            file_name = Path(info[1]).relative_to(vault_folder)
+            file_name = Path(info[1]).relative_to(vault_folder).as_posix()
             if file_name in saved_file_dict:
                 save_checksum = saved_file_dict[file_name]
                 if save_checksum != file_checksum:
@@ -400,7 +363,7 @@ class HiveBackup:
         return file_put_list, file_patch_list, file_delete_list
 
     @staticmethod
-    def __put_files(file_put_list, host, token):
+    def put_files(file_put_list, host, token):
         if not file_put_list:
             return
 
@@ -408,9 +371,10 @@ class HiveBackup:
             src_file = info[0]
             dst_file = info[1]
             try:
-                with open(src_file, "bw") as f:
+                with open(src_file, "br") as f:
                     f.seek(0)
-                    r = requests.put(host + INTER_BACKUP_FILE_URL + dst_file,
+                    url = host + INTER_BACKUP_FILE_URL + '?file=' + dst_file
+                    r = requests.put(url,
                                      data=f,
                                      headers={"Authorization": "token " + token})
             except Exception as e:
@@ -431,11 +395,11 @@ class HiveBackup:
                              stream=True)
         except Exception as e:
             logging.getLogger("HiveBackup").error(
-                f"__get_unpatch_file_hash exception:{str(e)}, host:{host}")
+                f"get_unpatch_file_hash exception:{str(e)}, host:{host}")
             return None
         if r.status_code != SUCCESS:
             logging.getLogger("HiveBackup").error(
-                f"__get_unpatch_file_hash error code is:" + str(r.status_code))
+                f"get_unpatch_file_hash error code is:" + str(r.status_code))
             return None
         hashes = list()
         for line in r.iter_lines(chunk_size=CHUNK_SIZE):
@@ -447,10 +411,16 @@ class HiveBackup:
         return hashes
 
     @staticmethod
-    def patch_file(src_file_name, dst_file_name, host, token):
+    def patch_remote_file(src_file_name, dst_file_name, host, token):
         hashes = HiveBackup.get_unpatch_file_hash(dst_file_name, host, token)
-        with open(src_file_name, "rb") as f:
-            delta_list = rsyncdelta(f, hashes, blocksize=CHUNK_SIZE)
+        try:
+            with open(src_file_name, "rb") as f:
+                delta_list = rsyncdelta(f, hashes, blocksize=CHUNK_SIZE)
+        except Exception as e:
+            print(f"patch_remote_file get {src_file_name} delta exception:{str(e)}, host:{host}")
+            logging.getLogger("HiveBackup").error(
+                f"patch_remote_file get {src_file_name} delta exception:{str(e)}, host:{host}")
+            return SERVER_OPEN_FILE_ERROR
 
         patch_delta_file = gene_temp_file_name()
         try:
@@ -458,7 +428,7 @@ class HiveBackup:
                 pickle.dump(delta_list, f)
         except Exception as e:
             logging.getLogger("HiveBackup").error(
-                f"__patch_file dump {dst_file_name} delta exception:{str(e)}, host:{host}")
+                f"patch_remote_file dump {dst_file_name} delta exception:{str(e)}, host:{host}")
             patch_delta_file.unlink()
             return SERVER_SAVE_FILE_ERROR
 
@@ -470,7 +440,7 @@ class HiveBackup:
                                   headers={"Authorization": "token " + token})
         except Exception as e:
             logging.getLogger("HiveBackup").error(
-                f"__patch_file post {dst_file_name} exception:{str(e)}, host:{host}")
+                f"patch_remote_file post {dst_file_name} exception:{str(e)}, host:{host}")
             return SERVER_PATCH_FILE_ERROR
         if r.status_code != SUCCESS:
             return r.status_code
@@ -478,29 +448,24 @@ class HiveBackup:
         return SUCCESS
 
     @staticmethod
-    def __patch_save_files(file_patch_list, host, token):
-        # todo done
+    def patch_save_files(file_patch_list, host, token):
         if not file_patch_list:
             return
 
         for info in file_patch_list:
             src_file = info[0]
             dst_file = info[1]
-            HiveBackup.patch_file(src_file, dst_file, host, token)
-
+            HiveBackup.patch_remote_file(src_file, dst_file, host, token)
 
     @staticmethod
-    def __delete_files(file_delete_list, host, token):
+    def delete_files(file_delete_list, host, token):
         if not file_delete_list:
             return
 
         for name in file_delete_list:
             try:
-                param = {"file_name": name}
-                r = requests.post(host + INTER_BACKUP_FILE_URL,
-                                  data=param,
-                                  headers={"Content-Type": "application/json",
-                                           "Authorization": "token " + token})
+                r = requests.delete(host + INTER_BACKUP_FILE_URL + "?file=" + name,
+                                    headers={"Authorization": "token " + token})
             except Exception as e:
                 logging.getLogger("HiveBackup").error(
                     f"__delete_files exception:{str(e)}, host:{host}")
@@ -530,17 +495,17 @@ class HiveBackup:
         data = r.json()
         saved_file_list = data["backup_files"]
         file_md5_gene = deal_dir(vault_folder.as_posix(), get_file_md5_info)
-        file_put_list, file_patch_list, file_delete_list = HiveBackup.__classify_save_files(saved_file_list,
-                                                                                            file_md5_gene,
-                                                                                            vault_folder)
+        file_put_list, file_patch_list, file_delete_list = HiveBackup.classify_save_files(saved_file_list,
+                                                                                          file_md5_gene,
+                                                                                          vault_folder)
 
         # 3. deal local file to backup node
-        HiveBackup.__put_files(file_put_list)
-        HiveBackup.__patch_save_files(file_patch_list)
-        HiveBackup.__delete_files(file_delete_list)
+        HiveBackup.put_files(file_put_list, host, backup_token)
+        HiveBackup.patch_save_files(file_patch_list, host, backup_token)
+        HiveBackup.delete_files(file_delete_list, host, backup_token)
 
     @staticmethod
-    def __classify_restore_files(saved_file_list, local_file_list, vault_folder):
+    def classify_restore_files(saved_file_list, local_file_list, vault_folder):
         file_get_list = list()
         file_patch_list = list()
         file_delete_list = list()
@@ -558,7 +523,7 @@ class HiveBackup:
         for info in saved_file_list:
             file_checksum = info[0]
             file_name = filter_path_root(info[1])
-            file_full_name = vault_folder / file_name
+            file_full_name = (vault_folder / file_name).as_posix()
             if file_full_name in local_file_dict:
                 save_checksum = local_file_dict[file_full_name]
                 if save_checksum != file_checksum:
@@ -573,7 +538,7 @@ class HiveBackup:
         return file_get_list, file_patch_list, file_delete_list
 
     @staticmethod
-    def __get_files(file_get_list, host, token):
+    def get_files(file_get_list, host, token):
         if not file_get_list:
             return
 
@@ -581,17 +546,18 @@ class HiveBackup:
             src_file = info[0]
             dst_file = Path(info[1])
             dst_file.resolve()
+            temp_file = gene_temp_file_name()
 
-            if not dst_file.parent().exists():
-                if not create_full_path_dir(dst_file.parent()):
+            if not dst_file.parent.exists():
+                if not create_full_path_dir(dst_file.parent):
                     logging.getLogger("HiveBackup").error(
-                        f"__get_files error mkdir :{dst_file.parent().as_posix()}, host:{host}")
+                        f"__get_files error mkdir :{dst_file.parent.as_posix()}, host:{host}")
                     continue
             try:
                 r = requests.get(host + INTER_BACKUP_FILE_URL + "?file=" + src_file,
                                  stream=True,
                                  headers={"Authorization": "token " + token})
-                with open(dst_file, 'bw') as f:
+                with open(temp_file, 'bw') as f:
                     f.seek(0)
                     for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
                         if chunk:
@@ -599,16 +565,73 @@ class HiveBackup:
             except Exception as e:
                 logging.getLogger("HiveBackup").error(
                     f"__get_files exception:{str(e)}, host:{host}")
+                temp_file.unlink()
                 continue
             if r.status_code != SUCCESS:
-                logging.getLogger("HiveBackup").error(
-                    f"__get_files err code:{r.status_code}, host:{host}")
+                logging.getLogger("HiveBackup").error(f"__get_files err code:{r.status_code}, host:{host}")
+                temp_file.unlink()
                 continue
 
+            if dst_file.exists():
+                dst_file.unlink()
+            shutil.move(temp_file.as_posix(), dst_file.as_posix())
+
     @staticmethod
-    def __patch_restore_files(file_patch_list, host, token):
-        # todo
-        HiveBackup.__get_files(file_patch_list, host, token)
+    def patch_local_file(src_file_name, dst_file_name, host, token):
+        full_dst_file_name = Path(dst_file_name).resolve()
+        try:
+            with open(full_dst_file_name, 'rb') as open_file:
+                gene = gene_blockchecksums(open_file, blocksize=CHUNK_SIZE)
+                hashes = ""
+                for h in gene:
+                    hashes += h
+                r = requests.post(host + INTER_BACKUP_GENE_DELTA_URL + "?file=" + src_file_name,
+                                  data=hashes,
+                                  stream=True,
+                                  headers={"content-type": "application/json",
+                                           "Authorization": "token " + token})
+        except Exception as e:
+            logging.getLogger("HiveBackup").error(
+                f"__delete_files exception:{str(e)}, host:{host}")
+            return INTERNAL_SERVER_ERROR
+        if r.status_code != SUCCESS:
+            logging.getLogger("HiveBackup").error(
+                f"__delete_files err code:{r.status_code}, host:{host}")
+            return r.status_code
+
+        patch_delta_file = gene_temp_file_name()
+        with open(patch_delta_file, 'wb') as f:
+            f.seek(0)
+            for chunk in r.iter_content(CHUNK_SIZE):
+                f.write(chunk)
+
+        with open(patch_delta_file, 'rb') as f:
+            delta_list = pickle.load(f)
+        try:
+            new_file = gene_temp_file_name()
+            with open(full_dst_file_name, "br") as unpatched:
+                with open(new_file, "bw") as save_to:
+                    unpatched.seek(0)
+                    patchstream(unpatched, save_to, delta_list)
+            patch_delta_file.unlink()
+            if full_dst_file_name.exists():
+                full_dst_file_name.unlink()
+            shutil.move(new_file.as_posix(), full_dst_file_name.as_posix())
+        except Exception as e:
+            logging.getLogger("HiveBackup").error(f"exception of post_file_patch_delta patch error is {str(e)}")
+            return SERVER_PATCH_FILE_ERROR
+
+        return SUCCESS
+
+    @staticmethod
+    def patch_restore_files(file_patch_list, host, token):
+        if not file_patch_list:
+            return
+
+        for info in file_patch_list:
+            src_file = info[0]
+            dst_file = info[1]
+            HiveBackup.patch_local_file(src_file, dst_file, host, token)
 
     @staticmethod
     def restore_from_hive_node_start(vault_folder, did, host, backup_token):
@@ -632,14 +655,14 @@ class HiveBackup:
         local_file_gene = deal_dir(vault_folder.as_posix(), get_file_md5_info)
 
         # 2. classfiy local file list
-        file_get_list, file_patch_list, file_delete_list = HiveBackup.__classify_restore_files(saved_file_list,
-                                                                                               local_file_gene,
-                                                                                               vault_folder)
+        file_get_list, file_patch_list, file_delete_list = HiveBackup.classify_restore_files(saved_file_list,
+                                                                                             local_file_gene,
+                                                                                             vault_folder)
 
         # 3. deal backup node file to local
-        HiveBackup.__get_files(file_get_list)
-        HiveBackup.__patch_restore_files(file_patch_list)
-        HiveBackup.__delete_files(file_delete_list)
+        HiveBackup.get_files(file_get_list, host, backup_token)
+        HiveBackup.patch_restore_files(file_patch_list, host, backup_token)
+        HiveBackup.delete_files(file_delete_list, host, backup_token)
 
     def save_to_hive_node(self):
         did, backup_service, err = self.__proc_hive_node_param()

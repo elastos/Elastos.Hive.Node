@@ -30,8 +30,6 @@ function start_docker_1() {
         -v ${PWD}/.env1:/src/.env \
         -v ${PWD}/payment_config.json:/src/payment_config.json \
         -p 5002:5000 \
-        -p 2121-2122:2121-2122 \
-        -p 8301-8400:8301-8400 \
         elastos/hive-node-linux
 }
 
@@ -43,8 +41,6 @@ function start_docker_2() {
         -v ${PWD}/.env2:/src/.env \
         -v ${PWD}/payment_config.json:/src/payment_config.json \
         -p 5003:5000 \
-        -p 2123-2124:2123-2124 \
-        -p 8401-8500:8401-8500 \
         elastos/hive-node-linux
 }
 
@@ -69,13 +65,13 @@ function start() {
 function start_local_1() {
     echo "Running local 1..."
     start_db_1
-    gunicorn -b 0.0.0.0:5002 --reload -p hive1.pid --chdir './..' 'hive:create_app(hive_config=".env1")'
+    gunicorn -b 0.0.0.0:5002 --reload -p hive1.pid --chdir './..' 'hive:create_app(hive_config="./run_two_node/.env1")'
 }
 
 function start_local_2() {
     echo "Running local 2..."
     start_db_2
-    gunicorn -b 0.0.0.0:5003 --reload -p hive2.pid --chdir './..' 'hive:create_app(hive_config=".env2")'
+    gunicorn -b 0.0.0.0:5003 --reload -p hive2.pid --chdir './..' 'hive:create_app(hive_config="./run_two_node/.env2")'
 }
 
 

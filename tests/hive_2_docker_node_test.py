@@ -54,6 +54,7 @@ class Hive2NodeTest(unittest.TestCase):
         self.user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
         self.user_app_did = DApp("testapp", self.app_id,
                                  "amount material swim purse swallow gate pride series cannon patient dentist person")
+        # self.host2 = "http://127.0.0.1:5000"
         self.host1 = "http://127.0.0.1:5002"
         self.host2 = "http://127.0.0.1:5003"
         # self.docker_host1 = "http://host.docker.internal:5002"
@@ -211,12 +212,12 @@ class Hive2NodeTest(unittest.TestCase):
                           },
                           headers=self.auth_header(token))
         self.assert200(r.status_code)
-        print(r.json())
+        # print(r.json())
 
         r1 = requests.get(host + '/api/v1/files/list/folder',
                           headers=self.auth_header(token))
         self.assert200(r1.status_code)
-        print(r1.json())
+        # print(r1.json())
 
     def clean_vault_data(self, host, token):
         r = requests.post(host + '/api/v1/db/delete_collection',
@@ -225,11 +226,15 @@ class Hive2NodeTest(unittest.TestCase):
                           },
                           headers=self.auth_header(token))
         self.assert200(r.status_code)
+
+        time.sleep(2)
+
         r = requests.post(host + '/api/v1/db/find_many',
                           json={
                               "collection": "works"
                           },
                           headers=self.auth_header(token))
+
         self.assertEqual(NOT_FOUND, r.status_code)
 
         r = requests.post(host + '/api/v1/files/delete',
@@ -238,7 +243,10 @@ class Hive2NodeTest(unittest.TestCase):
                           },
                           headers=self.auth_header(token))
         self.assert200(r.status_code)
-        r = requests.post(host + '/api/v1/files/list/folder', headers=self.auth_header(token))
+
+        time.sleep(2)
+
+        r = requests.get(host + '/api/v1/files/list/folder', headers=self.auth_header(token))
         self.assertEqual(NOT_FOUND, r.status_code)
 
     def save_to_backup(self, host, token, vc_json):
@@ -255,7 +263,7 @@ class Hive2NodeTest(unittest.TestCase):
             self.assert200(r1.status_code)
             rt = r1.json()
             if rt["hive_backup_state"] != "stop":
-                time.sleep(2)
+                time.sleep(10)
             else:
                 self.assertEqual(rt["result"], "success")
                 return
@@ -284,13 +292,16 @@ class Hive2NodeTest(unittest.TestCase):
 
         self.init_backup_service(self.host2, self.token2)
 
-        vc = self.user_did.issue_backup_auth(self.hive_did1, self.docker_host2, self.hive_did2)
+        vc = self.user_did.issue_backup_auth(self.hive_did1, self.host2, self.hive_did2)
         vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
 
         self.save_to_backup(self.host1, self.token1, vc_json)
 
         self.clean_vault_data(self.host1, self.token1)
         self.restore_from_backup(self.host1, self.token1, vc_json)
+
+        time.sleep(2)
+
         self.check_vault_data(self.host1, self.token1)
 
         # active test

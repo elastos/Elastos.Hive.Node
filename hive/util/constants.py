@@ -138,6 +138,7 @@ INTER_BACKUP_MOVE_FILE_URL = '/api/v1/inter/backup/move'
 INTER_BACKUP_COPY_FILE_URL = '/api/v1/inter/backup/copy'
 INTER_BACKUP_PATCH_HASH_URL = '/api/v1/inter/backup/patch/hash'
 INTER_BACKUP_PATCH_DELTA_URL = '/api/v1/inter/backup/patch/delta'
+INTER_BACKUP_GENE_DELTA_URL = '/api/v1/inter/backup/gene/delta'
 
 
 #todo

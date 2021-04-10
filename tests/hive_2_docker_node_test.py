@@ -4,11 +4,14 @@ import shutil
 import sys
 import time
 from io import BytesIO
+from pathlib import Path
 
 import requests
 import unittest
 
+from hive.main import view
 from hive.main.hive_backup import HiveBackup, VAULT_BACKUP_INFO_STATE, VAULT_BACKUP_MSG_SUCCESS, VAULT_BACKUP_INFO_MSG
+from hive.util.constants import INTER_BACKUP_FILE_URL
 from hive.util.error_code import NOT_FOUND
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import delete_user_vault, delete_user_vault_data, get_vault_path
@@ -308,4 +311,205 @@ class Hive2NodeTest(unittest.TestCase):
         self.init_vault_service(self.host2, self.token2)
         self.active_backup_vault(self.host2, self.token2)
         self.check_vault_data(self.host2, self.token2)
+
+    def test_2_classify_restore_files_same(self):
+        vault_folder = Path("~/vault/dir")
+
+        saved_file_list = list()
+        saved_file_list.append(["1234561", "testfile1"])
+        saved_file_list.append(["1234562", "testfile2"])
+        saved_file_list.append(["1234563", "testfile3"])
+        saved_file_list.append(["12345611", "f1/testfile_11"])
+        saved_file_list.append(["12345612", "f1/testfile_12"])
+        saved_file_list.append(["12345613", "f1/testfile_13"])
+        saved_file_list.append(["123456121", "f1/f2/testfile_121"])
+        saved_file_list.append(["123456122", "f1/f2/testfile_122"])
+        saved_file_list.append(["123456111", "f1/f_1/f2/testfile_111"])
+        saved_file_list.append(["123456112", "f1/f_1/f2/testfile_112"])
+        saved_file_list.append(["123456113", "f1/f_1/f2/testfile_113"])
+
+        local_file_list = list()
+        local_file_list.append(["1234561", "~/vault/dir/testfile1"])
+        local_file_list.append(["1234562", "~/vault/dir/testfile2"])
+        local_file_list.append(["1234563", "~/vault/dir/testfile3"])
+        local_file_list.append(["12345611", "~/vault/dir/f1/testfile_11"])
+        local_file_list.append(["12345612", "~/vault/dir/f1/testfile_12"])
+        local_file_list.append(["12345613", "~/vault/dir/f1/testfile_13"])
+        local_file_list.append(["123456121", "~/vault/dir/f1/f2/testfile_121"])
+        local_file_list.append(["123456122", "~/vault/dir/f1/f2/testfile_122"])
+        local_file_list.append(["123456111", "~/vault/dir/f1/f_1/f2/testfile_111"])
+        local_file_list.append(["123456112", "~/vault/dir/f1/f_1/f2/testfile_112"])
+        local_file_list.append(["123456113", "~/vault/dir/f1/f_1/f2/testfile_113"])
+
+        file_get_list, file_patch_list, file_delete_list = HiveBackup.classify_restore_files(saved_file_list,
+                                                                                             local_file_list,
+                                                                                             vault_folder)
+        self.assertFalse(file_get_list)
+        self.assertFalse(file_patch_list)
+        self.assertFalse(file_delete_list)
+
+    def test_2_classify_restore_files(self):
+        vault_folder = Path("~/vault/dir")
+
+        saved_file_list = list()
+        saved_file_list.append(["1234561", "testfile1"])
+        saved_file_list.append(["1234562", "testfile2"])
+        saved_file_list.append(["1234563", "testfile3"])
+        saved_file_list.append(["12345611", "f1/testfile_11"])
+        saved_file_list.append(["12345612", "f1/testfile_12"])
+        saved_file_list.append(["12345613", "f1/testfile_13"])
+        saved_file_list.append(["123456121", "f1/f2/testfile_121"])
+        saved_file_list.append(["123456122", "f1/f2/testfile_122"])
+        saved_file_list.append(["123456111", "f1/f_1/f2/testfile_111"])
+        saved_file_list.append(["123456112", "f1/f_1/f2/testfile_112"])
+        saved_file_list.append(["123456113", "f1/f_1/f2/testfile_113"])
+
+        local_file_list = list()
+        local_file_list.append(["1234561", "~/vault/dir/testfile1"])
+        local_file_list.append(["1234563", "~/vault/dir/testfile3"])
+        local_file_list.append(["12345611", "~/vault/dir/f1/testfile_11"])
+        local_file_list.append(["12345612xxx", "~/vault/dir/f1/testfile_12"])
+        local_file_list.append(["12345613", "~/vault/dir/f1/testfile_13"])
+        local_file_list.append(["123456121", "~/vault/dir/f1/f2/testfile_121"])
+        local_file_list.append(["123456122", "~/vault/dir/f1/f2/testfile_122"])
+        local_file_list.append(["123456111xxx", "~/vault/dir/f1/f_1/f2/testfile_111"])
+        local_file_list.append(["123456112", "~/vault/dir/f1/f_1/f2/testfile_112"])
+        local_file_list.append(["123456114", "~/vault/dir/f1/f_1/f2/testfile_114"])
+
+        file_get_list, file_patch_list, file_delete_list = HiveBackup.classify_restore_files(saved_file_list,
+                                                                                             local_file_list,
+                                                                                             vault_folder)
+        file_get_list_compare = list()
+        file_get_list_compare.append(["testfile2", "~/vault/dir/testfile2"])
+        file_get_list_compare.append(["f1/f_1/f2/testfile_113", "~/vault/dir/f1/f_1/f2/testfile_113"])
+
+        file_patch_list_compare = list()
+        file_patch_list_compare.append(["f1/testfile_12", "~/vault/dir/f1/testfile_12"])
+        file_patch_list_compare.append(["f1/f_1/f2/testfile_111", "~/vault/dir/f1/f_1/f2/testfile_111"])
+
+        file_delete_list_compare = list()
+        file_delete_list_compare.append("~/vault/dir/f1/f_1/f2/testfile_114")
+
+        self.assertEquals(file_get_list, file_get_list_compare)
+        self.assertEquals(file_patch_list, file_patch_list_compare)
+        self.assertEquals(file_delete_list, file_delete_list_compare)
+
+    def test_3_classify_save_files_same(self):
+        vault_folder = Path("~/vault/dir")
+
+        saved_file_list = list()
+        saved_file_list.append(["1234561", "testfile1"])
+        saved_file_list.append(["1234562", "testfile2"])
+        saved_file_list.append(["1234563", "testfile3"])
+        saved_file_list.append(["12345611", "f1/testfile_11"])
+        saved_file_list.append(["12345612", "f1/testfile_12"])
+        saved_file_list.append(["12345613", "f1/testfile_13"])
+        saved_file_list.append(["123456121", "f1/f2/testfile_121"])
+        saved_file_list.append(["123456122", "f1/f2/testfile_122"])
+        saved_file_list.append(["123456111", "f1/f_1/f2/testfile_111"])
+        saved_file_list.append(["123456112", "f1/f_1/f2/testfile_112"])
+        saved_file_list.append(["123456113", "f1/f_1/f2/testfile_113"])
+
+        local_file_list = list()
+        local_file_list.append(["1234561", "~/vault/dir/testfile1"])
+        local_file_list.append(["1234562", "~/vault/dir/testfile2"])
+        local_file_list.append(["1234563", "~/vault/dir/testfile3"])
+        local_file_list.append(["12345611", "~/vault/dir/f1/testfile_11"])
+        local_file_list.append(["12345612", "~/vault/dir/f1/testfile_12"])
+        local_file_list.append(["12345613", "~/vault/dir/f1/testfile_13"])
+        local_file_list.append(["123456121", "~/vault/dir/f1/f2/testfile_121"])
+        local_file_list.append(["123456122", "~/vault/dir/f1/f2/testfile_122"])
+        local_file_list.append(["123456111", "~/vault/dir/f1/f_1/f2/testfile_111"])
+        local_file_list.append(["123456112", "~/vault/dir/f1/f_1/f2/testfile_112"])
+        local_file_list.append(["123456113", "~/vault/dir/f1/f_1/f2/testfile_113"])
+
+        file_put_list, file_patch_list, file_delete_list = HiveBackup.classify_save_files(saved_file_list,
+                                                                                          local_file_list,
+                                                                                          vault_folder)
+        self.assertFalse(file_put_list)
+        self.assertFalse(file_patch_list)
+        self.assertFalse(file_delete_list)
+
+    def test_3_classify_save_files(self):
+        vault_folder = Path("~/vault/dir")
+
+        saved_file_list = list()
+        saved_file_list.append(["1234561", "testfile1"])
+        saved_file_list.append(["1234563", "testfile3"])
+        saved_file_list.append(["12345611", "f1/testfile_11"])
+        saved_file_list.append(["12345612x", "f1/testfile_12"])
+        saved_file_list.append(["12345613", "f1/testfile_13"])
+        saved_file_list.append(["123456121", "f1/f2/testfile_121"])
+        saved_file_list.append(["123456122", "f1/f2/testfile_122"])
+        saved_file_list.append(["123456111x", "f1/f_1/f2/testfile_111"])
+        saved_file_list.append(["123456112", "f1/f_1/f2/testfile_112"])
+        saved_file_list.append(["123456114", "f1/f_1/f2/testfile_114"])
+
+        local_file_list = list()
+        local_file_list.append(["1234561", "~/vault/dir/testfile1"])
+        local_file_list.append(["1234562", "~/vault/dir/testfile2"])
+        local_file_list.append(["1234563", "~/vault/dir/testfile3"])
+        local_file_list.append(["12345611", "~/vault/dir/f1/testfile_11"])
+        local_file_list.append(["12345612", "~/vault/dir/f1/testfile_12"])
+        local_file_list.append(["12345613", "~/vault/dir/f1/testfile_13"])
+        local_file_list.append(["123456121", "~/vault/dir/f1/f2/testfile_121"])
+        local_file_list.append(["123456122", "~/vault/dir/f1/f2/testfile_122"])
+        local_file_list.append(["123456111", "~/vault/dir/f1/f_1/f2/testfile_111"])
+        local_file_list.append(["123456112", "~/vault/dir/f1/f_1/f2/testfile_112"])
+        local_file_list.append(["123456113", "~/vault/dir/f1/f_1/f2/testfile_113"])
+
+        file_put_list, file_patch_list, file_delete_list = HiveBackup.classify_save_files(saved_file_list,
+                                                                                          local_file_list,
+                                                                                          vault_folder)
+        file_put_list_compare = list()
+        file_put_list_compare.append(["~/vault/dir/testfile2", "testfile2"])
+        file_put_list_compare.append(["~/vault/dir/f1/f_1/f2/testfile_113", "f1/f_1/f2/testfile_113"])
+
+        file_patch_list_compare = list()
+        file_patch_list_compare.append(["~/vault/dir/f1/testfile_12", "f1/testfile_12"])
+        file_patch_list_compare.append(["~/vault/dir/f1/f_1/f2/testfile_111", "f1/f_1/f2/testfile_111"])
+
+        file_delete_list_compare = list()
+        file_delete_list_compare.append("f1/f_1/f2/testfile_114")
+
+        self.assertEquals(file_put_list, file_put_list_compare)
+        self.assertEquals(file_patch_list, file_patch_list_compare)
+        self.assertEquals(file_delete_list, file_delete_list_compare)
+
+    def test_4_inter_put_file(self):
+        self.init_vault_service(self.host1, self.token1)
+        self.init_backup_service(self.host2, self.token2)
+        vc = self.user_did.issue_backup_auth(self.hive_did1, self.host2, self.hive_did2)
+        vc_json = ffi.string(lib.Credential_ToString(vc, True)).decode()
+
+        content = {"backup_credential": vc_json}
+
+        host, backup_token, err = view.h_auth.backup_auth_request(content)
+        self.assertIsNone(err)
+        input_text = "this is a test put file"
+        file_name = "test_put_file.txt"
+
+        temp = BytesIO()
+        temp.write(input_text.encode(encoding="utf-8"))
+        temp.seek(0)
+        temp.name = 'temp.txt'
+        url = self.host2 + INTER_BACKUP_FILE_URL + '?file=' + file_name
+        r = requests.put(url,
+                         data=temp,
+                         headers={"Authorization": "token " + backup_token})
+        self.assert200(r.status_code)
+
+        r = requests.get(host + INTER_BACKUP_FILE_URL + "?file=" + file_name,
+                         stream=True,
+                         headers={"Authorization": "token " + backup_token})
+        self.assertEquals(r.text, input_text)
+
+        r = requests.delete(host + INTER_BACKUP_FILE_URL + "?file=" + file_name,
+                            headers={"Authorization": "token " + backup_token})
+        self.assert200(r.status_code)
+
+        r = requests.get(host + INTER_BACKUP_FILE_URL + "?file=" + file_name,
+                         stream=True,
+                         headers={"Authorization": "token " + backup_token})
+        self.assertEquals(r.status_code, NOT_FOUND)
 

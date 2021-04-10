@@ -141,6 +141,4 @@ INTER_BACKUP_PATCH_DELTA_URL = '/api/v1/inter/backup/patch/delta'
 INTER_BACKUP_GENE_DELTA_URL = '/api/v1/inter/backup/gene/delta'
 
 
-#todo
-CHUNK_SIZE = 4
-# CHUNK_SIZE = 4096
+CHUNK_SIZE = 4096

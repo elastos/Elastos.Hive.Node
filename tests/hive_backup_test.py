@@ -167,54 +167,6 @@ class HiveBackupTestCase(unittest.TestCase):
                           headers={"Content-Type": "application/json", "Authorization": "token " + token})
         self.assert200(r.status_code)
 
-    def test_internal_ftp(self):
-        setup_vault_backup_service(self.did, 500, -1)
-
-        param = {
-            "backup_did": self.did
-        }
-
-        r, s = self.parse_response(
-            self.test_client.post(INTER_BACKUP_FTP_START_URL,
-                                  data=json.dumps(param),
-                                  headers=self.auth
-                                  )
-        )
-        self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
-
-        r, s = self.parse_response(
-            self.test_client.post(INTER_BACKUP_FTP_END_URL,
-                                  data=json.dumps(param),
-                                  headers=self.auth
-                                  )
-        )
-        self.assert200(s)
-        self.assertEqual(r["_status"], "OK")
-
-    # def test_internal_restore_data(self):
-    #     prepare_vault_data(self)
-    #     copy_to_backup_data(self)
-    #     param = {}
-    #     r, s = self.parse_response(
-    #         self.test_client.post(INTER_BACKUP_RESTORE_URL,
-    #                               json=param,
-    #                               headers=self.auth
-    #                               )
-    #     )
-    #     self.assert200(s)
-    #     self.assertEqual(r["_status"], "OK")
-    #
-    #     checksum_list = r["checksum_list"]
-    #     vault_path = get_vault_path(self.did)
-    #
-    #     restore_checksum_list = HiveBackup.get_file_checksum_list(vault_path)
-    #     print("vault_path:" + vault_path.as_posix())
-    #     print("restore_checksum_list:" + str(restore_checksum_list))
-    #     print("checksum_list:" + str(checksum_list))
-    #     for checksum in checksum_list:
-    #         if checksum not in restore_checksum_list:
-    #             self.assertTrue(False)
 
     def prepare_active_backup_hive_node(self):
         setup_vault_backup_service(self.did, 500, -1)
@@ -260,10 +212,6 @@ class HiveBackupTestCase(unittest.TestCase):
 
         self.assert200(s)
 
-    # def test_4_active_backup_hive_node(self):
-    #     self.init_vault_service()
-    #     self.prepare_active_backup_hive_node()
-    #     self.active_backup_hive_node()
 
     def test_5_get_backup_state(self):
         r, s = self.parse_response(
@@ -272,10 +220,6 @@ class HiveBackupTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
-    # def test_6_test_checksum_list(self):
-    #     prepare_vault_data(self)
-    #     did_folder = get_vault_path(self.did)
-    #     HiveBackup.get_file_checksum_list(did_folder)
 
     def delete_backup_file(self, file_name):
         param = {
@@ -284,7 +228,6 @@ class HiveBackupTestCase(unittest.TestCase):
         r = self.test_client.post(INTER_BACKUP_FILE_URL,
                                   json=param,
                                   headers=self.auth)
-        self.assert200(r.status_code)
 
     def put_backup_file(self, file_name, data):
         temp = BytesIO()
@@ -292,7 +235,7 @@ class HiveBackupTestCase(unittest.TestCase):
         temp.seek(0)
         temp.name = 'temp.txt'
 
-        put_file_url = INTER_BACKUP_FILE_URL + "/" + file_name
+        put_file_url = INTER_BACKUP_FILE_URL + "?file=" + file_name
         r2, s = self.parse_response(
             self.test_client.put(put_file_url,
                                  data=temp,

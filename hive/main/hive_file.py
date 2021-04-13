@@ -5,7 +5,7 @@ import shutil
 from flask import request, Response
 
 from hive.util.auth import did_auth
-from hive.util.common import create_full_path_dir
+from hive.util.common import create_full_path_dir, gene_temp_file_name
 from hive.util.did_file_info import get_save_files_path, filter_path_root, query_download, \
     query_properties, query_hash, query_upload_get_filepath, get_dir_size
 from hive.util.error_code import INTERNAL_SERVER_ERROR, UNAUTHORIZED, NOT_FOUND, METHOD_NOT_ALLOWED, SUCCESS, FORBIDDEN, \
@@ -81,18 +81,25 @@ class HiveFile:
         full_path_name, err = query_upload_get_filepath(did, app_id, file_name)
         if err:
             return self.response.response_err(err["status_code"], err["description"])
+
+        temp_file = gene_temp_file_name()
         try:
-            with open(full_path_name, "bw") as f:
+            with open(temp_file, "bw") as f:
                 chunk_size = CHUNK_SIZE
                 while True:
                     chunk = request.stream.read(chunk_size)
                     if len(chunk) == 0:
                         break
                     f.write(chunk)
-            file_size = os.path.getsize(full_path_name.as_posix())
-            inc_vault_file_use_storage_byte(did, file_size)
         except Exception as e:
             return self.response.response_err(INTERNAL_SERVER_ERROR, f"Exception: {str(e)}")
+
+        if full_path_name.exists():
+            full_path_name.unlink()
+        shutil.move(temp_file.as_posix(), full_path_name.as_posix())
+
+        file_size = os.path.getsize(full_path_name.as_posix())
+        inc_vault_file_use_storage_byte(did, file_size)
 
         return self.response.response_ok()
 

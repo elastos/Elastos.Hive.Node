@@ -25,7 +25,12 @@ VAULT_SERVICE_STATE_FREEZE = "freeze"
 
 
 def setup_vault_service(did, max_storage, service_days, pricing_name=VAULT_SERVICE_FREE):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     now = datetime.utcnow().timestamp()
@@ -53,7 +58,12 @@ def setup_vault_service(did, max_storage, service_days, pricing_name=VAULT_SERVI
 
 def update_vault_service(did, max_storage, service_days, pricing_name):
     # If there has a service, we just update it. complex process latter
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     now = datetime.utcnow().timestamp()
@@ -77,7 +87,12 @@ def update_vault_service(did, max_storage, service_days, pricing_name):
 
 
 def remove_vault_service(did):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_DID: did}
@@ -94,7 +109,12 @@ def unfreeze_vault(did):
 
 def update_vault_service_state(did, state):
     # If there has a service, we just update it. complex process latter
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     now = datetime.utcnow().timestamp()
@@ -111,7 +131,12 @@ def update_vault_service_state(did, state):
 
 
 def get_vault_service(did):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_DID: did}
@@ -161,7 +186,12 @@ def delete_user_vault(did):
 
 
 def proc_expire_vault_job():
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_PRICING_USING: {"$ne": VAULT_SERVICE_FREE}}
@@ -204,7 +234,12 @@ def delete_db_storage(did):
 
 
 def count_vault_storage_job():
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     info_list = col.find()
@@ -224,7 +259,12 @@ def get_vault_used_storage(did):
     file_size = count_file_system_storage_size(did)
     db_size = count_db_storage_size(did)
     now = datetime.utcnow().timestamp()
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_DID: did}
@@ -237,7 +277,12 @@ def get_vault_used_storage(did):
 
 
 def __less_than_max_storage(did):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_DID: did}
@@ -250,7 +295,12 @@ def __less_than_max_storage(did):
 
 
 def inc_vault_file_use_storage_byte(did, size):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_DID: did}
@@ -265,7 +315,12 @@ def inc_vault_file_use_storage_byte(did, size):
 
 
 def update_vault_db_use_storage_byte(did, size):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_DID: did}

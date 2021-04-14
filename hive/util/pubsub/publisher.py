@@ -12,7 +12,12 @@ from hive.util.constants import DID_INFO_DB_NAME, PUB_CHANNEL_COLLECTION, PUB_CH
 
 # publisher: create channel, list channels, subscribe, push messages
 def pub_setup_channel(pub_did, pub_appid, channel_name):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     _id = pubsub_get_channel_id(pub_did, pub_appid, channel_name)
@@ -33,7 +38,12 @@ def pub_setup_channel(pub_did, pub_appid, channel_name):
 
 
 def pub_remove_channel(pub_did, pub_appid, channel_name):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     query = {
@@ -51,7 +61,12 @@ def pubsub_get_channel_id(did, app_id, channel_name):
 
 
 def pub_get_channel(pub_did, pub_appid, channel_name):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     channel_id = pubsub_get_channel_id(pub_did, pub_appid, channel_name)
@@ -64,7 +79,12 @@ def pub_get_channel(pub_did, pub_appid, channel_name):
 
 
 def pub_get_pub_channels(pub_did, pub_appid):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     query = {
@@ -79,7 +99,12 @@ def pub_get_pub_channels(pub_did, pub_appid):
 
 
 def pub_get_sub_channels(sub_did, sub_appid):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     query = {
@@ -98,7 +123,12 @@ def pubsub_get_subscribe_id(pub_did, pub_appid, channel_name, sub_did, sub_appid
 
 
 def pub_add_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     _id = pubsub_get_subscribe_id(pub_did, pub_appid, channel_name, sub_did, sub_appid)
@@ -121,7 +151,12 @@ def pub_add_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
 
 
 def pub_remove_subscribe(pub_did, pub_appid, channel_name, sub_did, sub_appid):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     _id = pubsub_get_subscribe_id(pub_did, pub_appid, channel_name, sub_did, sub_appid)
@@ -132,7 +167,12 @@ def pub_remove_subscribe(pub_did, pub_appid, channel_name, sub_did, sub_appid):
 
 
 def pub_get_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     subscribe_id = pubsub_get_subscribe_id(pub_did, pub_appid, channel_name, sub_did, sub_appid)
@@ -145,7 +185,12 @@ def pub_get_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
 
 
 def pub_get_subscriber_list(pub_did, pub_appid, channel_name):
-    connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+    if hive_setting.MONGO_USER:
+        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
     query = {

@@ -33,7 +33,12 @@ class HiveMongoDb:
 
         collection_name = content.get('collection')
 
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        if hive_setting.MONGO_USER:
+            uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+            connection = MongoClient(uri)
+        else:
+            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
         try:
@@ -54,7 +59,12 @@ class HiveMongoDb:
         if collection_name is None:
             return self.response.response_err(BAD_REQUEST, "parameter is null")
 
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        if hive_setting.MONGO_USER:
+            uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+            connection = MongoClient(uri)
+        else:
+            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
         try:

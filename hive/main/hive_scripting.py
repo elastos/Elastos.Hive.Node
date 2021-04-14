@@ -39,7 +39,12 @@ class HiveScripting:
         self.app = app
 
     def __upsert_script_to_db(self, did, app_id, content):
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        if hive_setting.MONGO_USER:
+            uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+            connection = MongoClient(uri)
+        else:
+            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
 

@@ -17,8 +17,8 @@ DATA_SYNC_MSG_FAILED = "failed"
 
 
 def add_did_sync_info(did, time, drive):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -33,8 +33,8 @@ def add_did_sync_info(did, time, drive):
 
 
 def update_did_sync_info(did, state, info, sync_time, drive):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -49,8 +49,8 @@ def update_did_sync_info(did, state, info, sync_time, drive):
 
 
 def delete_did_sync_info(did):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -62,8 +62,8 @@ def delete_did_sync_info(did):
 
 
 def get_did_sync_info(did):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -76,8 +76,8 @@ def get_did_sync_info(did):
 
 
 def get_all_did_sync_info():
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)

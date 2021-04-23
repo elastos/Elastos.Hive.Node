@@ -85,16 +85,12 @@ class HiveSetting:
         return self.env_config('BACKUP_FTP_PASSIVE_PORTS_END', default=8400, cast=int)
 
     @property
-    def MONGO_USER(self):
-        return self.env_config('MONGO_USER', default="", cast=str)
+    def MONGO_URI(self):
+        return self.env_config('MONGO_URI', default="", cast=str)
 
     @property
     def MONGO_PASSWORD(self):
         return self.env_config('MONGO_PASSWORD', default="", cast=str)
-
-    @property
-    def MONGO_HOST(self):
-        return self.env_config('MONGO_HOST', default="localhost", cast=str)
 
     @property
     def MONGO_HOST(self):

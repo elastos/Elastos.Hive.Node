@@ -12,8 +12,8 @@ from hive.util.pubsub.publisher import pubsub_get_subscribe_id
 
 
 def sub_setup_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -40,8 +40,8 @@ def sub_setup_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_
 
 
 def sub_remove_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -59,8 +59,8 @@ def sub_remove_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub
 
 
 def sub_get_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -76,8 +76,8 @@ def sub_get_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_ap
 
 
 def sub_add_message(pub_did, pub_appid, channel_name, sub_did, sub_appid, message, message_time):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -100,8 +100,8 @@ def sub_add_message(pub_did, pub_appid, channel_name, sub_did, sub_appid, messag
 
 
 def sub_pop_messages(pub_did, pub_appid, channel_name, sub_did, sub_appid, limit):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -129,8 +129,8 @@ def sub_pop_messages(pub_did, pub_appid, channel_name, sub_did, sub_appid, limit
 
 
 def __remove_messages(message_ids):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)

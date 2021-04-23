@@ -167,8 +167,8 @@ def gene_mongo_db_name(did, app_id):
 
 
 def get_collection(did, app_id, collection):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -182,8 +182,8 @@ def get_collection(did, app_id, collection):
 
 
 def delete_mongo_database(did, app_id):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -193,8 +193,8 @@ def delete_mongo_database(did, app_id):
 
 
 def get_mongo_database_size(did, app_id):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)

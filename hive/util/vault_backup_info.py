@@ -17,8 +17,8 @@ VAULT_BACKUP_MSG_FAILED = "failed"
 
 
 def upsert_vault_backup_info(did, backup_type, drive, token=None):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -38,8 +38,8 @@ def upsert_vault_backup_info(did, backup_type, drive, token=None):
 
 
 def update_vault_backup_info_item(did, key, value):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -53,8 +53,8 @@ def update_vault_backup_info_item(did, key, value):
 
 
 def update_vault_backup_state(did, state, msg):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -69,8 +69,8 @@ def update_vault_backup_state(did, state, msg):
 
 
 def delete_vault_backup_info(did):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -82,8 +82,8 @@ def delete_vault_backup_info(did):
 
 
 def get_vault_backup_info(did):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)

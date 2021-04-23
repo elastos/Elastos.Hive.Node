@@ -66,8 +66,8 @@ class HivePaymentTestCase(unittest.TestCase):
         ]
 
     def init_vault_payment_db(self):
-        if hive_setting.MONGO_USER:
-            uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        if hive_setting.MONGO_URI:
+            uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
             connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -108,8 +108,8 @@ class HivePaymentTestCase(unittest.TestCase):
         self.test_order_id = str(ret.inserted_id)
 
     def init_vault_backup_payment_db(self):
-        if hive_setting.MONGO_USER:
-            uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        if hive_setting.MONGO_URI:
+            uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
             connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -162,8 +162,8 @@ class HivePaymentTestCase(unittest.TestCase):
                 VAULT_SERVICE_MAX_STORAGE: max_storage,
                 VAULT_SERVICE_PRICING_USING: pricing_name
                 }
-        if hive_setting.MONGO_USER:
-            uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        if hive_setting.MONGO_URI:
+            uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
             connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)

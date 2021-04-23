@@ -21,8 +21,8 @@ VAULT_BACKUP_SERVICE_FREE_STATE = "Free"
 
 
 def setup_vault_backup_service(did, max_storage, service_days, backup_name=VAULT_BACKUP_SERVICE_FREE_STATE):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -52,8 +52,8 @@ def setup_vault_backup_service(did, max_storage, service_days, backup_name=VAULT
 
 def update_vault_backup_service(did, max_storage, service_days, backup_name):
     # If there has a service, we just update it. complex process latter
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -81,8 +81,8 @@ def update_vault_backup_service(did, max_storage, service_days, backup_name):
 
 
 def update_vault_backup_service_item(did, item_name, item_value):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -109,8 +109,8 @@ def compose_ftp_record(user, passwd):
 
 
 def get_vault_backup_service(did):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -123,8 +123,8 @@ def get_vault_backup_service(did):
 
 
 def proc_expire_vault_backup_job():
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -185,8 +185,8 @@ def count_vault_backup_storage_size(did):
 
 
 def count_vault_backup_storage_job():
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -207,8 +207,8 @@ def count_vault_backup_storage_job():
 def get_backup_used_storage(did):
     use_size = count_vault_backup_storage_size(did)
     now = datetime.utcnow().timestamp()
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -224,8 +224,8 @@ def get_backup_used_storage(did):
 
 
 def less_than_max_storage(did):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -241,8 +241,8 @@ def less_than_max_storage(did):
 
 
 def inc_backup_use_storage_byte(did, size):
-    if hive_setting.MONGO_USER:
-        uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)

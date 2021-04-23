@@ -94,8 +94,8 @@ class HivePubsubTestCase(unittest.TestCase):
         self.assertEqual(status, 201)
 
     def clean_pub_channel_db(self, pub_did, pub_appid):
-        if hive_setting.MONGO_USER:
-            uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        if hive_setting.MONGO_URI:
+            uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
             connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
@@ -109,8 +109,8 @@ class HivePubsubTestCase(unittest.TestCase):
         col.delete_many(query)
 
     def clean_sub_message_db(self, pub_did, pub_appid):
-        if hive_setting.MONGO_USER:
-            uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
+        if hive_setting.MONGO_URI:
+            uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
             connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)

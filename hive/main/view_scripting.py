@@ -1,7 +1,6 @@
 import json
 
 from flask import Blueprint, request
-from hive.util.http_response import hive_restful_response
 
 from hive.main.hive_scripting import HiveScripting, HiveScriptingV2
 
@@ -48,6 +47,5 @@ def run_script_download(transaction_id):
 
 
 @hive_scripting.route('/api/v2/vault/scripting/<script_name>', methods=['DELETE'])
-@hive_restful_response
 def delete_script(script_name):
     return h_scripting_v2.delete_script(script_name)

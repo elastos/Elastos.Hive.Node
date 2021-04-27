@@ -16,7 +16,7 @@ class ErrorCode:
     SCRIPT_NOT_FOUND            = 120001
 
 
-class HiveException:
+class HiveException(BaseException):
     def __init__(self, http_code, code, msg):
         self.http_code = http_code
         self.code = code
@@ -32,7 +32,7 @@ class HiveException:
 
     @staticmethod
     def get_success_response(data):
-        return jsonify(data if data else dict()), HiveException.__get_success_http_code()
+        return jsonify(data) if data else '', HiveException.__get_success_http_code()
 
     @staticmethod
     def __get_success_http_code():
@@ -57,9 +57,10 @@ class NotFoundException(HiveException):
         super().__init__(404, code, msg)
 
 
-def hive_restful_response(f):
+def hive_restful_response(func):
     """
     Make sure the http response follows as version 2.
+    This decorator is ONLY for class method.
         SUCCESS: json data, success http code for http method
         ERROR: {
             "error": {
@@ -68,11 +69,11 @@ def hive_restful_response(f):
             }
         }, error http code for http method
     """
-    def wrapper(*args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         try:
-            return HiveException.get_success_response(f(args, kwargs))
+            return HiveException.get_success_response(func(self, *args, **kwargs))
         except HiveException as e:
             return e.get_error_response()
-        except Exception as e:  # uncaught exception
+        except Exception as e:
             return HiveException(500, ErrorCode.UNCAUGHT_EXCEPTION, traceback.format_exc())
     return wrapper

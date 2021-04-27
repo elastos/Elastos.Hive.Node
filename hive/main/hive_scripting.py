@@ -28,7 +28,7 @@ from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZE
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
-from hive.util.http_response import NotFoundException, ErrorCode
+from hive.util.http_response import NotFoundException, ErrorCode, hive_restful_response
 
 
 class HiveScripting:
@@ -505,6 +505,7 @@ class HiveScriptingV2:
     def __init__(self, app=None):
         self.app = app
 
+    @hive_restful_response
     def delete_script(self, script_name):
         did, app_id = check_auth()
 
@@ -512,7 +513,7 @@ class HiveScriptingV2:
         if not col:
             raise NotFoundException(ErrorCode.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
 
-        ret = col.delete_many({'filter': {'name': script_name}})
+        ret = col.delete_many({'name': script_name})
         if ret.deleted_count > 0:
             update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_id))
         else:

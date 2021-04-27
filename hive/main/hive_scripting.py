@@ -8,7 +8,7 @@ from flask import request
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
-from hive.main.interceptor import post_json_param_pre_proc
+from hive.main.interceptor import post_json_param_pre_proc, check_auth
 from hive.settings import hive_setting
 from hive.util.auth import did_auth
 from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
@@ -28,6 +28,7 @@ from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZE
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
+from hive.util.http_response import NotFoundException, ErrorCode
 
 
 class HiveScripting:
@@ -498,4 +499,22 @@ class HiveScripting:
             err_message = f"Error while executing file {fileapi_type} via scripting: Exception: {str(e)}"
             return err_message
         return None
+
+
+class HiveScriptingV2:
+    def __init__(self, app=None):
+        self.app = app
+
+    def delete_script(self, script_name):
+        did, app_id = check_auth()
+
+        col = get_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
+        if not col:
+            raise NotFoundException(ErrorCode.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
+
+        ret = col.delete_many({'filter': {'name': script_name}})
+        if ret.deleted_count > 0:
+            update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_id))
+        else:
+            raise NotFoundException(ErrorCode.SCRIPT_NOT_FOUND, 'The script tried to remove does not exist.')
 

@@ -13,6 +13,8 @@ class ErrorCode:
     UNCAUGHT_EXCEPTION          = 100001
     UNAUTHORIZED                = 100002
     VAULT_NOT_FOUND             = 100003
+    VAULT_NO_PERMISSION         = 100004
+    INVALID_PARAMETER           = 100005
     SCRIPT_NOT_FOUND            = 120001
 
 
@@ -45,6 +47,11 @@ class HiveException(BaseException):
         }
         assert request.method in codes
         return codes[request.method]
+
+
+class BadRequestException(HiveException):
+    def __init__(self, code=ErrorCode.INVALID_PARAMETER, msg='Invalid parameter'):
+        super().__init__(400, code, msg)
 
 
 class UnauthorizedException(HiveException):

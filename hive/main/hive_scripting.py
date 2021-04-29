@@ -16,7 +16,8 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS, SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, \
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_DOWNLOADABLE, \
-    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
+    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, VAULT_ACCESS_DEL,\
+    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from hive.util.did_file_info import filter_path_root, query_upload_get_filepath, query_download
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, \
     get_collection, get_mongo_database_size, query_delete_one, convert_oid
@@ -28,7 +29,8 @@ from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZE
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
-from hive.util.http_response import NotFoundException, ErrorCode, hive_restful_response
+from hive.util.http_response import NotFoundException, ErrorCode, hive_restful_response, BadRequestException
+from hive.util.database_client import cli
 
 
 class HiveScripting:
@@ -501,21 +503,153 @@ class HiveScripting:
         return None
 
 
+def validate_exists(json_data, parent_name, prop_list):
+    for prop in prop_list:
+        parts = prop.split('.')
+        prop_name = parent_name + '.' + parts[0] if parent_name else parts[0]
+        if parts.length > 1:
+            validate_exists(json_data[parts[0]], prop_name, '.'.join(parts[1:]))
+        else:
+            if not json_data.get(prop, None):
+                raise BadRequestException(msg=f'Parameter {prop_name} MUST be provided')
+
+
+class Condition:
+    def __init__(self, did, app_id, condition_data):
+        pass
+
+    @staticmethod
+    def validate_data(json_data):
+        if not json_data:
+            return
+
+        validate_exists(json_data, 'condition', ['name', 'type', 'body'])
+
+        condition_type = json_data['type']
+        if condition_type not in ['or', 'and', 'queryHasResults']:
+            raise BadRequestException(msg=f"Unsupported condition type {condition_type}")
+
+        if condition_type in ['and', 'or']:
+            if not isinstance(json_data['body'], list):
+                raise BadRequestException(msg=f"Condition ody MUST be list for the type '{condition_type}'")
+        else:
+            validate_exists(json_data['body'], 'condition.body', ['collection', 'filter'])
+
+
+class Executable:
+    def __init__(self, data):
+        pass
+
+    @staticmethod
+    def validate_data(json_data):
+        validate_exists(json_data, 'executable', ['name', 'type', 'body'])
+
+        if json_data['type'] not in [SCRIPTING_EXECUTABLE_TYPE_AGGREGATED,
+                                     SCRIPTING_EXECUTABLE_TYPE_FIND,
+                                     SCRIPTING_EXECUTABLE_TYPE_INSERT,
+                                     SCRIPTING_EXECUTABLE_TYPE_UPDATE,
+                                     SCRIPTING_EXECUTABLE_TYPE_DELETE,
+                                     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD,
+                                     SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD,
+                                     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES,
+                                     SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
+            raise BadRequestException(msg=f"Invalid type {json_data['type']} of the executable.")
+
+        if json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FIND,
+                                 SCRIPTING_EXECUTABLE_TYPE_INSERT,
+                                 SCRIPTING_EXECUTABLE_TYPE_UPDATE,
+                                 SCRIPTING_EXECUTABLE_TYPE_DELETE]:
+            validate_exists(json_data['body'], 'executable.body', ['collection', 'filter'])
+
+    @staticmethod
+    def create(executable_data):
+        if not executable_data:
+            pass
+
+
+class AggregatedExecutable(Executable):
+    def __init__(self):
+        super().__init__()
+
+
+class FindExecutable(Executable):
+    def __init__(self):
+        super().__init__()
+
+
+class Script:
+    def __init__(self, json_data):
+        self.name = json_data['name']
+
+    @staticmethod
+    def validate_data(json_data):
+        if not json_data:
+            raise BadRequestException(msg="Script definition can't be empty.")
+
+        validate_exists(json_data, '', ['executable', ])
+
+        Condition.validate_data(json_data.get('condition', None))
+        Executable.validate_data(json_data['executable'])
+
+
 class HiveScriptingV2:
     def __init__(self, app=None):
         self.app = app
 
     @hive_restful_response
+    def set_script(self, script_name):
+        did, app_id = check_auth()
+        cli.check_vault_access(did, VAULT_ACCESS_WR)
+        json_data = request.get_json(force=True, silent=True)
+        Script.validate_data(json_data)
+        result = self.__upsert_script_to_database(script_name, json_data, did, app_id)
+        update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_id))
+        return result
+
+    def __upsert_script_to_database(self, script_name, json_data, did, app_id):
+        col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION, True)
+        options = {
+            "upsert": True,
+            "bypass_document_validation": False
+        }
+        ret = col.replace_one({"name": script_name}, convert_oid(json_data), **options)
+        return {
+            "acknowledged": ret.acknowledged,
+            "matched_count": ret.matched_count,
+            "modified_count": ret.modified_count,
+            "upserted_id": str(ret.upserted_id),
+        }
+
+    @hive_restful_response
     def delete_script(self, script_name):
         did, app_id = check_auth()
+        cli.check_vault_access(did, VAULT_ACCESS_DEL)
 
-        col = get_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
+        col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
         if not col:
             raise NotFoundException(ErrorCode.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
 
         ret = col.delete_many({'name': script_name})
-        if ret.deleted_count > 0:
-            update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_id))
-        else:
+        if ret.deleted_count <= 0:
             raise NotFoundException(ErrorCode.SCRIPT_NOT_FOUND, 'The script tried to remove does not exist.')
+
+        update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_id))
+
+    @hive_restful_response
+    def run_script(self, script_name):
+        pass
+
+    @hive_restful_response
+    def run_script_url(self, script_name, target_did, target_app_did, params):
+        pass
+
+    @hive_restful_response
+    def upload_file(self, transaction_id):
+        pass
+
+    @hive_restful_response
+    def download_file(self, transaction_id):
+        pass
+
+
 

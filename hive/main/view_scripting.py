@@ -46,6 +46,31 @@ def run_script_download(transaction_id):
     return h_scripting.run_script_download(transaction_id)
 
 
+@hive_scripting.route('/api/v2/vault/scripting/<script_name>', methods=['PUT'])
+def register_script(script_name):
+    return h_scripting_v2.set_script(script_name)
+
+
 @hive_scripting.route('/api/v2/vault/scripting/<script_name>', methods=['DELETE'])
 def delete_script(script_name):
     return h_scripting_v2.delete_script(script_name)
+
+
+@hive_scripting.route('/api/v2/vault/scripting/<script_name>', methods=['PATCH'])
+def call_script(script_name):
+    return h_scripting_v2.run_script(script_name)
+
+
+@hive_scripting.route('/api/v2/vault/scripting/<script_name>/<target_did>@<target_app_did>/<params>', methods=['GET'])
+def call_script(script_name, target_did, target_app_did, params):
+    return h_scripting_v2.run_script_url(script_name, target_did, target_app_did, params)
+
+
+@hive_scripting.route('/api/v2/vault/scripting/stream/{transaction_id}', methods=['PUT'])
+def upload_file(transaction_id):
+    return h_scripting_v2.upload_file(transaction_id)
+
+
+@hive_scripting.route('/api/v2/vault/scripting/stream/{transaction_id}', methods=['GET'])
+def upload_file(transaction_id):
+    return h_scripting_v2.download_file(transaction_id)

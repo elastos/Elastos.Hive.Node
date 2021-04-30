@@ -31,6 +31,7 @@ from hive.util.payment.vault_service_manage import can_access_vault, update_vaul
 from hive.util.server_response import ServerResponse
 from hive.util.http_response import NotFoundException, ErrorCode, hive_restful_response, BadRequestException
 from hive.util.database_client import cli
+from hive.util.did_scripting import populate_with_params_values, populate_options_count_documents
 
 
 class HiveScripting:
@@ -515,13 +516,22 @@ def validate_exists(json_data, parent_name, prop_list):
 
 
 class Condition:
-    def __init__(self, did, app_id, condition_data):
-        pass
+    def __init__(self, json_data, params, did, app_id):
+        self.json_data = json_data
+        self.params = params
+        self.did = did
+        self.app_id = app_id
 
     @staticmethod
     def validate_data(json_data):
         if not json_data:
             return
+        Condition.__validate_type(json_data, 1)
+
+    @staticmethod
+    def __validate_type(json_data, layer):
+        if layer > 5:
+            raise BadRequestException(msg='Too more nested conditions.')
 
         validate_exists(json_data, 'condition', ['name', 'type', 'body'])
 
@@ -530,15 +540,77 @@ class Condition:
             raise BadRequestException(msg=f"Unsupported condition type {condition_type}")
 
         if condition_type in ['and', 'or']:
-            if not isinstance(json_data['body'], list):
-                raise BadRequestException(msg=f"Condition ody MUST be list for the type '{condition_type}'")
+            if not isinstance(json_data['body'], list)\
+                    or json_data['body'].length < 1:
+                raise BadRequestException(msg=f"Condition body MUST be list "
+                                              f"and at least contain one element for the type '{condition_type}'")
+            for data in json_data['body']:
+                Condition.__validate_type(data, layer + 1)
         else:
-            validate_exists(json_data['body'], 'condition.body', ['collection', 'filter'])
+            validate_exists(json_data['body'], 'condition.body', ['collection', ])
+
+    def is_satisfied(self) -> bool:
+        return self.__is_satisfied(self.json_data)
+
+    def __is_satisfied(self, json_data) -> bool:
+        ctype = json_data['type']
+        if ctype == 'or':
+            for data in json_data['body']:
+                is_sat = self.__is_satisfied(data)
+                if is_sat:
+                    return True
+            return False
+        elif ctype == 'and':
+            for data in json_data['body']:
+                is_sat = self.__is_satisfied(data)
+                if not is_sat:
+                    return False
+            return True
+        else:
+            return self.__is_satisfied_query_has_result(json_data)
+
+    def __is_satisfied_query_has_result(self, json_data):
+        col_name = json_data['collection']
+        col_filter = json_data.get('filter', {})
+        msg = populate_with_params_values(self.did, self.app_id, col_filter, self.params)
+        if msg:
+            raise BadRequestException(msg='Cannot find parameter: ' + msg)
+
+        col = cli.get_user_collection(self.did, self.app_id, col_name)
+        if not col:
+            raise BadRequestException(msg='Do not find condition collection with name ' + col_name)
+
+        options = populate_options_count_documents(json_data.get('body', {}))
+        return col.count_documents(convert_oid(col_filter), **options) > 0
+
+
+class Context:
+    def __init__(self, json_data, did, app_id):
+        self.target_did = did
+        self.target_app_did = app_id
+        if json_data:
+            self.target_did = json_data['target_did']
+            self.target_app_did = json_data['target_app_did']
+
+    @staticmethod
+    def validate_data(json_data):
+        if not json_data:
+            return
+
+        target_did = json_data.get('target_did')
+        target_app_did = json_data.get('target_app_did')
+        if not target_did or target_app_did:
+            raise BadRequestException(msg='target_did or target_app_did MUST be set.')
+
+    def get_script_data(self, script_name):
+        col = cli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
+        return col.find_one({'name': script_name})
 
 
 class Executable:
-    def __init__(self, data):
-        pass
+    def __init__(self, name, body):
+        self.name = name
+        self.body = body
 
     @staticmethod
     def validate_data(json_data):
@@ -555,34 +627,106 @@ class Executable:
                                      SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
             raise BadRequestException(msg=f"Invalid type {json_data['type']} of the executable.")
 
+        if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED \
+                and (not isinstance(json_data['body'], list) or json_data['body'].length < 1):
+            raise BadRequestException(msg=f"Executable body MUST be list for type "
+                                          f"'{SCRIPTING_EXECUTABLE_TYPE_AGGREGATED}'.")
+
         if json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FIND,
                                  SCRIPTING_EXECUTABLE_TYPE_INSERT,
                                  SCRIPTING_EXECUTABLE_TYPE_UPDATE,
                                  SCRIPTING_EXECUTABLE_TYPE_DELETE]:
             validate_exists(json_data['body'], 'executable.body', ['collection', 'filter'])
 
+    def execute(self):
+        pass
+
     @staticmethod
     def create(executable_data):
-        if not executable_data:
-            pass
+        result = []
+        Executable.__create(result, executable_data)
+        return result
 
-
-class AggregatedExecutable(Executable):
-    def __init__(self):
-        super().__init__()
+    @staticmethod
+    def __create(result, executable_data):
+        executable_name = executable_data['name']
+        executable_type = executable_data['type']
+        executable_body = executable_data['body']
+        if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
+            for data in executable_body:
+                Executable.__create(result, data)
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
+            result.append(FindExecutable(executable_name, executable_body))
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
+            result.append(InsertExecutable(executable_name, executable_body))
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
+            result.append(UpdateExecutable(executable_name, executable_body))
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
+            result.append(DeleteExecutable(executable_name, executable_body))
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD:
+            result.append(FileUploadExecutable(executable_name, executable_body))
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
+            result.append(FileDownloadExecutable(executable_name, executable_body))
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES:
+            result.append(FilePropertiesExecutable(executable_name, executable_body))
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_HASH:
+            result.append(FileHashExecutable(executable_name, executable_body))
 
 
 class FindExecutable(Executable):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name, body):
+        super().__init__(name, body)
+
+
+class InsertExecutable(Executable):
+    def __init__(self, name, body):
+        super().__init__(name, body)
+
+
+class UpdateExecutable(Executable):
+    def __init__(self, name, body):
+        super().__init__(name, body)
+
+
+class DeleteExecutable(Executable):
+    def __init__(self, name, body):
+        super().__init__(name, body)
+
+
+class FileUploadExecutable(Executable):
+    def __init__(self, name, body):
+        super().__init__(name, body)
+
+
+class FileDownloadExecutable(Executable):
+    def __init__(self, name, body):
+        super().__init__(name, body)
+
+
+class FilePropertiesExecutable(Executable):
+    def __init__(self, name, body):
+        super().__init__(name, body)
+
+
+class FileHashExecutable(Executable):
+    def __init__(self, name, body):
+        super().__init__(name, body)
 
 
 class Script:
-    def __init__(self, json_data):
-        self.name = json_data['name']
+    def __init__(self, script_name, run_data, did, app_id):
+        self.did = did
+        self.app_id = app_id
+        self.name = script_name
+        self.context = Context(run_data['context'], did, app_id)
+        self.params = run_data['params']
+        self.condition = None
+        self.executables = []
+        self.anonymous_user = False
+        self.anonymous_app = False
 
     @staticmethod
-    def validate_data(json_data):
+    def validate_script_data(json_data):
         if not json_data:
             raise BadRequestException(msg="Script definition can't be empty.")
 
@@ -591,23 +735,66 @@ class Script:
         Condition.validate_data(json_data.get('condition', None))
         Executable.validate_data(json_data['executable'])
 
+        anonymous_user = json_data.get('allowAnonymousUser', False)
+        anonymous_app = json_data.get('allowAnonymousApp', False)
+        if anonymous_user and not anonymous_app:
+            raise BadRequestException(msg="Do not support 'allowAnonymousUser' true and 'allowAnonymousApp' false.")
+
+    @staticmethod
+    def validate_run_data(json_data):
+        validate_exists(json_data, '', ['params', ])
+        Context.validate_data(json_data['context'])
+
+    def execute(self):
+        """
+        Run executables and return response data for the executable which output option is true.
+        """
+        is_success, msg = can_access_vault(self.context.target_did, VAULT_ACCESS_R)
+        if is_success != SUCCESS:
+            raise BadRequestException(msg="Owner's vault checking failed with message: " + msg)
+
+        script_data = self.context.get_script_data()
+        if not script_data:
+            raise BadRequestException(msg=f"Can't get the script with name '{self.name}'")
+        self.condition = Condition(script_data['condition'], self.did, self.app_id)
+        self.executables = Executable.create(script_data['executable'])
+        self.anonymous_user = script_data.get('allowAnonymousUser', False)
+        self.anonymous_app = script_data.get('allowAnonymousApp', False)
+
+        if not self.condition.is_satisfied():
+            raise BadRequestException(msg="Caller can't match the condition for the script.")
+
+        result = dict()
+        for executable in self.executables:
+            ret = executable.execute()
+            if ret:
+                result[executable['name']] = ret
+        return result
+
 
 class HiveScriptingV2:
     def __init__(self, app=None):
         self.app = app
 
+    def __check(self, permission):
+        did, app_id = check_auth()
+        cli.check_vault_access(did, permission)
+        return did, app_id
+
     @hive_restful_response
     def set_script(self, script_name):
-        did, app_id = check_auth()
-        cli.check_vault_access(did, VAULT_ACCESS_WR)
+        did, app_id = self.__check(VAULT_ACCESS_WR)
+
         json_data = request.get_json(force=True, silent=True)
-        Script.validate_data(json_data)
+        Script.validate_script_data(json_data)
+
         result = self.__upsert_script_to_database(script_name, json_data, did, app_id)
         update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_id))
         return result
 
     def __upsert_script_to_database(self, script_name, json_data, did, app_id):
         col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION, True)
+        json_data['name'] = script_name
         options = {
             "upsert": True,
             "bypass_document_validation": False
@@ -617,13 +804,12 @@ class HiveScriptingV2:
             "acknowledged": ret.acknowledged,
             "matched_count": ret.matched_count,
             "modified_count": ret.modified_count,
-            "upserted_id": str(ret.upserted_id),
+            "upserted_id": str(ret.upserted_id) if ret.upserted_id else '',
         }
 
     @hive_restful_response
     def delete_script(self, script_name):
-        did, app_id = check_auth()
-        cli.check_vault_access(did, VAULT_ACCESS_DEL)
+        did, app_id = self.__check(VAULT_ACCESS_DEL)
 
         col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
         if not col:
@@ -637,7 +823,12 @@ class HiveScriptingV2:
 
     @hive_restful_response
     def run_script(self, script_name):
-        pass
+        did, app_id = check_auth()
+
+        json_data = request.get_json(force=True, silent=True)
+        Script.validate_run_data(json_data)
+
+        return Script(script_name, json_data, did, app_id).execute()
 
     @hive_restful_response
     def run_script_url(self, script_name, target_did, target_app_did, params):

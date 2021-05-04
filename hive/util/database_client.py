@@ -69,11 +69,42 @@ class DatabaseClient:
         document['created'] = datetime.strptime(document["created"], DATETIME_FORMAT)\
             if 'created' in document else datetime.utcnow()
         document['modified'] = datetime.utcnow()
-        ret = col.insert_one(convert_oid(document, **options))
 
+        result = col.insert_one(convert_oid(document, **options))
         return {
-            "acknowledged": ret.acknowledged,
-            "inserted_id": str(ret.inserted_id)
+            "acknowledged": result.acknowledged,
+            "inserted_id": str(result.inserted_id) if result.inserted_id else ''
+        }
+
+    def update_one(self, did, app_id, collection_name, col_filter, col_update, options):
+        col = self.get_user_collection(did, app_id, collection_name)
+        if not col:
+            raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
+
+        if '$setOnInsert' in col_update:
+            col_update["$setOnInsert"]['created'] = datetime.utcnow()
+        else:
+            col_update["$setOnInsert"] = {"created": datetime.utcnow()}
+        if "$set" in col_update:
+            col_update["$set"]["modified"] = datetime.utcnow()
+
+        result = col.update_one(convert_oid(col_filter), convert_oid(col_update, update=True), **options)
+        return {
+            "acknowledged": result.acknowledged,
+            "matched_count": result.matched_count,
+            "modified_count": result.modified_count,
+            "upserted_id": str(result.upserted_id) if result.upserted_id else '',
+        }
+
+    def delete_one(self, did, app_id, collection_name, col_filter):
+        col = self.get_user_collection(did, app_id, collection_name)
+        if not col:
+            raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
+
+        result = col.delete_one(convert_oid(col_filter))
+        return {
+            "acknowledged": result.acknowledged,
+            "deleted_count": result.deleted_count,
         }
 
 

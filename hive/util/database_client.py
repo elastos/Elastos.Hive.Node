@@ -61,7 +61,7 @@ class DatabaseClient:
 
         return list(col.find(convert_oid(col_filter) if col_filter else None, **options))
 
-    def insert_one(self, did, app_id, collection_name, document, options):
+    def insert_one(self, did, app_id, collection_name, document, options=None):
         col = self.get_user_collection(did, app_id, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
@@ -70,7 +70,7 @@ class DatabaseClient:
             if 'created' in document else datetime.utcnow()
         document['modified'] = datetime.utcnow()
 
-        result = col.insert_one(convert_oid(document, **options))
+        result = col.insert_one(convert_oid(document, **options if options else []))
         return {
             "acknowledged": result.acknowledged,
             "inserted_id": str(result.inserted_id) if result.inserted_id else ''

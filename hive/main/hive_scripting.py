@@ -32,7 +32,7 @@ from hive.util.server_response import ServerResponse
 from hive.util.http_response import NotFoundException, ErrorCode, hive_restful_response, BadRequestException
 from hive.util.database_client import cli
 from hive.util.did_scripting import populate_with_params_values, populate_options_count_documents,\
-    populate_options_find_many, populate_options_insert_one
+    populate_options_find_many, populate_options_insert_one, populate_options_update_one
 
 
 class HiveScripting:
@@ -668,11 +668,21 @@ class Executable:
     def get_document(self):
         return self.body.get('document', {})
 
+    def get_update(self):
+        return self.body.get('update', {})
+
     def get_params(self):
         return self.body['params']
 
     def get_output_data(self, data):
         return data if self.is_output else None
+
+    def get_populated_filter(self):
+        col_filter = self.get_filter()
+        msg = populate_with_params_values(self.get_did(), self.get_app_id(), col_filter, self.get_params())
+        if msg:
+            raise BadRequestException(msg='Cannot get parameter value for the executable filter: ' + msg)
+        return col_filter
 
     @staticmethod
     def create(script, executable_data):
@@ -711,15 +721,9 @@ class FindExecutable(Executable):
 
     def execute(self):
         cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_R)
-
-        col_filter = self.get_filter()
-        msg = populate_with_params_values(self.get_did(), self.get_app_id(), col_filter, self.get_params())
-        if msg:
-            raise BadRequestException(msg='Cannot get parameter value for the find executable filter: ' + msg)
-
         return self.get_output_data({"items": cli.find_many(self.get_target_did(),
                                                             self.get_target_app_did(),
-                                                            col_filter,
+                                                            self.get_populated_filter(),
                                                             populate_options_find_many(self.body))})
 
 
@@ -733,7 +737,7 @@ class InsertExecutable(Executable):
         document = self.get_document()
         msg = populate_with_params_values(self.get_did(), self.get_app_id(), document, self.get_params())
         if msg:
-            raise BadRequestException(msg='Cannot get parameter value for the insert executable filter: ' + msg)
+            raise BadRequestException(msg='Cannot get parameter value for the executable document: ' + msg)
 
         data = cli.insert_one(self.get_target_did(),
                               self.get_target_app_did(),
@@ -751,10 +755,43 @@ class UpdateExecutable(Executable):
     def __init__(self, script, executable_data):
         super().__init__(script, executable_data)
 
+    def execute(self):
+        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_WR)
+
+        col_update = self.get_update()
+        msg = populate_with_params_values(self.get_did(), self.get_app_id(), col_update.get('$set'), self.get_params())
+        if msg:
+            raise BadRequestException(msg='Cannot get parameter value for the executable update: ' + msg)
+
+        data = cli.update_one(self.get_target_did(),
+                              self.get_target_app_did(),
+                              self.get_collection_name(),
+                              self.get_populated_filter(),
+                              col_update,
+                              populate_options_update_one(self.body))
+
+        update_vault_db_use_storage_byte(self.get_did(),
+                                         get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+
+        return self.get_output_data(data)
+
 
 class DeleteExecutable(Executable):
     def __init__(self, script, executable_data):
         super().__init__(script, executable_data)
+
+    def execute(self):
+        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_WR)
+
+        data = cli.delete_one(self.get_target_did(),
+                              self.get_target_app_did(),
+                              self.get_collection_name(),
+                              self.get_populated_filter())
+
+        update_vault_db_use_storage_byte(self.get_did(),
+                                         get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+
+        return self.get_output_data(data)
 
 
 class FileUploadExecutable(Executable):

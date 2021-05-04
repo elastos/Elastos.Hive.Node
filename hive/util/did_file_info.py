@@ -38,6 +38,9 @@ def filter_path_root(name):
 
 
 def query_upload_get_filepath(did, app_id, file_name):
+    """
+    Return: full file path
+    """
     err = {}
 
     path = get_save_files_path(did, app_id)
@@ -83,6 +86,9 @@ def query_download(did, app_id, file_name):
 
 
 def query_properties(did, app_id, name):
+    """
+    Return: file property information of relative file name.
+    """
     data, err = {}, {}
 
     name = filter_path_root(name)

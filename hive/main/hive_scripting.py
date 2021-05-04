@@ -18,7 +18,8 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_DOWNLOADABLE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, VAULT_ACCESS_DEL,\
     SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from hive.util.did_file_info import filter_path_root, query_upload_get_filepath, query_download
+from hive.util.did_file_info import filter_path_root, query_upload_get_filepath, query_download, query_properties,\
+    query_hash
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, \
     get_collection, get_mongo_database_size, query_delete_one, convert_oid
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
@@ -641,6 +642,12 @@ class Executable:
                                  SCRIPTING_EXECUTABLE_TYPE_DELETE]:
             validate_exists(json_data['body'], 'executable.body', ['collection', 'filter'])
 
+        if json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD,
+                                 SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD,
+                                 SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES,
+                                 SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
+            validate_exists(json_data['body'], 'executable.body', ['path', ])
+
     def execute(self):
         pass
 
@@ -683,6 +690,44 @@ class Executable:
         if msg:
             raise BadRequestException(msg='Cannot get parameter value for the executable filter: ' + msg)
         return col_filter
+
+    def get_populated_body(self):
+        body = self.body
+        msg = populate_with_params_values(self.get_did(), self.get_app_id(), body, self.get_params())
+        if msg:
+            raise BadRequestException(msg='Cannot get parameter value for the executable body: ' + msg)
+        return body
+
+    def _create_transaction(self, permission, action_type):
+        cli.check_vault_access(self.get_target_did(), permission)
+
+        body = self.get_populated_body()
+        full_path, err = query_upload_get_filepath(self.get_target_did(), self.get_target_app_did(), body['path'])
+        if err:
+            raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
+
+        data = cli.insert_one(self.get_target_did(),
+                              self.get_target_app_did(),
+                              SCRIPTING_SCRIPT_TEMP_TX_COLLECTION,
+                              {
+                                  "document": {
+                                      "file_name": body['path'],
+                                      "fileapi_type": action_type
+                                  }
+                              })
+        if not data.get('inserted_id', None):
+            raise BadRequestException('Cannot retrieve the transaction ID.')
+
+        update_vault_db_use_storage_byte(self.get_target_did(),
+                                         get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+
+        return {
+            "transaction_id": jwt.encode({
+                "row_id": data.get('inserted_id', None),
+                "target_did": self.get_target_did(),
+                "target_app_did": self.get_target_app_did()
+            }, hive_setting.DID_STOREPASS, algorithm='HS256')
+        }
 
     @staticmethod
     def create(script, executable_data):
@@ -781,7 +826,7 @@ class DeleteExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_WR)
+        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_DEL)
 
         data = cli.delete_one(self.get_target_did(),
                               self.get_target_app_did(),
@@ -798,20 +843,52 @@ class FileUploadExecutable(Executable):
     def __init__(self, script, executable_data):
         super().__init__(script, executable_data)
 
+    def execute(self):
+        return self._create_transaction(VAULT_ACCESS_WR, 'upload')
+
 
 class FileDownloadExecutable(Executable):
     def __init__(self, script, executable_data):
         super().__init__(script, executable_data)
+
+    def execute(self):
+        return self._create_transaction(VAULT_ACCESS_R, 'download')
 
 
 class FilePropertiesExecutable(Executable):
     def __init__(self, script, executable_data):
         super().__init__(script, executable_data)
 
+    def execute(self):
+        cli.check_vault_access(VAULT_ACCESS_R)
+
+        body = self.get_populated_body()
+        full_path, err = query_upload_get_filepath(self.get_target_did(), self.get_target_app_did(), body['path'])
+        if err:
+            raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
+
+        data, err = query_properties(self.get_target_did(), self.get_target_app_did(), body['path'])
+        if err:
+            raise BadRequestException('Failed to get file properties with error message: ' + str(err))
+        return self.get_output_data(data)
+
 
 class FileHashExecutable(Executable):
     def __init__(self, script, executable_data):
         super().__init__(script, executable_data)
+
+    def execute(self):
+        cli.check_vault_access(VAULT_ACCESS_R)
+
+        body = self.get_populated_body()
+        full_path, err = query_upload_get_filepath(self.get_target_did(), self.get_target_app_did(), body['path'])
+        if err:
+            raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
+
+        data, err = query_hash(self.get_target_did(), self.get_target_app_did(), body['path'])
+        if err:
+            raise BadRequestException('Failed to get file hash code with error message: ' + str(err))
+        return self.get_output_data(data)
 
 
 class Script:

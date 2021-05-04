@@ -31,7 +31,8 @@ from hive.util.payment.vault_service_manage import can_access_vault, update_vaul
 from hive.util.server_response import ServerResponse
 from hive.util.http_response import NotFoundException, ErrorCode, hive_restful_response, BadRequestException
 from hive.util.database_client import cli
-from hive.util.did_scripting import populate_with_params_values, populate_options_count_documents
+from hive.util.did_scripting import populate_with_params_values, populate_options_count_documents,\
+    populate_options_find_many, populate_options_insert_one
 
 
 class HiveScripting:
@@ -608,9 +609,11 @@ class Context:
 
 
 class Executable:
-    def __init__(self, name, body):
-        self.name = name
-        self.body = body
+    def __init__(self, script, executable_data):
+        self.script = script
+        self.name = executable_data['name']
+        self.body = executable_data['body']
+        self.is_output = executable_data.get('output', False)
 
     @staticmethod
     def validate_data(json_data):
@@ -641,76 +644,137 @@ class Executable:
     def execute(self):
         pass
 
+    def get_did(self):
+        return self.script.did
+
+    def get_app_id(self):
+        return self.script.app_id
+
+    def get_target_did(self):
+        return self.script.context.target_did
+
+    def get_target_app_did(self):
+        return self.script.context.target_app_did
+
+    def get_collection_name(self):
+        return self.body['collection']
+
+    def get_filter(self):
+        return self.body.get('filter', {})
+
+    def get_context(self):
+        return self.script.context
+
+    def get_document(self):
+        return self.body.get('document', {})
+
+    def get_params(self):
+        return self.body['params']
+
+    def get_output_data(self, data):
+        return data if self.is_output else None
+
     @staticmethod
-    def create(executable_data):
+    def create(script, executable_data):
         result = []
-        Executable.__create(result, executable_data)
+        Executable.__create(result, script, executable_data)
         return result
 
     @staticmethod
-    def __create(result, executable_data):
-        executable_name = executable_data['name']
+    def __create(result, script, executable_data):
         executable_type = executable_data['type']
         executable_body = executable_data['body']
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
             for data in executable_body:
-                Executable.__create(result, data)
+                Executable.__create(result, script, data)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
-            result.append(FindExecutable(executable_name, executable_body))
+            result.append(FindExecutable(script, executable_data))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
-            result.append(InsertExecutable(executable_name, executable_body))
+            result.append(InsertExecutable(script, executable_data))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
-            result.append(UpdateExecutable(executable_name, executable_body))
+            result.append(UpdateExecutable(script, executable_data))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
-            result.append(DeleteExecutable(executable_name, executable_body))
+            result.append(DeleteExecutable(script, executable_data))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD:
-            result.append(FileUploadExecutable(executable_name, executable_body))
+            result.append(FileUploadExecutable(script, executable_data))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
-            result.append(FileDownloadExecutable(executable_name, executable_body))
+            result.append(FileDownloadExecutable(script, executable_data))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES:
-            result.append(FilePropertiesExecutable(executable_name, executable_body))
+            result.append(FilePropertiesExecutable(script, executable_data))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_HASH:
-            result.append(FileHashExecutable(executable_name, executable_body))
+            result.append(FileHashExecutable(script, executable_data))
 
 
 class FindExecutable(Executable):
-    def __init__(self, name, body):
-        super().__init__(name, body)
+    def __init__(self, script, executable_data):
+        super().__init__(script, executable_data)
+
+    def execute(self):
+        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_R)
+
+        col_filter = self.get_filter()
+        msg = populate_with_params_values(self.get_did(), self.get_app_id(), col_filter, self.get_params())
+        if msg:
+            raise BadRequestException(msg='Cannot get parameter value for the find executable filter: ' + msg)
+
+        return self.get_output_data({"items": cli.find_many(self.get_target_did(),
+                                                            self.get_target_app_did(),
+                                                            col_filter,
+                                                            populate_options_find_many(self.body))})
 
 
 class InsertExecutable(Executable):
-    def __init__(self, name, body):
-        super().__init__(name, body)
+    def __init__(self, script, executable_data):
+        super().__init__(script, executable_data)
+
+    def execute(self):
+        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_WR)
+
+        document = self.get_document()
+        msg = populate_with_params_values(self.get_did(), self.get_app_id(), document, self.get_params())
+        if msg:
+            raise BadRequestException(msg='Cannot get parameter value for the insert executable filter: ' + msg)
+
+        data = cli.insert_one(self.get_target_did(),
+                              self.get_target_app_did(),
+                              self.get_collection_name(),
+                              document,
+                              populate_options_insert_one(self.body))
+
+        update_vault_db_use_storage_byte(self.get_did(),
+                                         get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+
+        return self.get_output_data(data)
 
 
 class UpdateExecutable(Executable):
-    def __init__(self, name, body):
-        super().__init__(name, body)
+    def __init__(self, script, executable_data):
+        super().__init__(script, executable_data)
 
 
 class DeleteExecutable(Executable):
-    def __init__(self, name, body):
-        super().__init__(name, body)
+    def __init__(self, script, executable_data):
+        super().__init__(script, executable_data)
 
 
 class FileUploadExecutable(Executable):
-    def __init__(self, name, body):
-        super().__init__(name, body)
+    def __init__(self, script, executable_data):
+        super().__init__(script, executable_data)
 
 
 class FileDownloadExecutable(Executable):
-    def __init__(self, name, body):
-        super().__init__(name, body)
+    def __init__(self, script, executable_data):
+        super().__init__(script, executable_data)
 
 
 class FilePropertiesExecutable(Executable):
-    def __init__(self, name, body):
-        super().__init__(name, body)
+    def __init__(self, script, executable_data):
+        super().__init__(script, executable_data)
 
 
 class FileHashExecutable(Executable):
-    def __init__(self, name, body):
-        super().__init__(name, body)
+    def __init__(self, script, executable_data):
+        super().__init__(script, executable_data)
 
 
 class Script:
@@ -749,26 +813,23 @@ class Script:
         """
         Run executables and return response data for the executable which output option is true.
         """
-        is_success, msg = can_access_vault(self.context.target_did, VAULT_ACCESS_R)
-        if is_success != SUCCESS:
-            raise BadRequestException(msg="Owner's vault checking failed with message: " + msg)
-
-        script_data = self.context.get_script_data()
+        script_data = self.context.get_script_data(self.name)
         if not script_data:
             raise BadRequestException(msg=f"Can't get the script with name '{self.name}'")
-        self.condition = Condition(script_data['condition'], self.did, self.app_id)
-        self.executables = Executable.create(script_data['executable'])
+        self.executables = Executable.create(self, script_data['executable'])
         self.anonymous_user = script_data.get('allowAnonymousUser', False)
         self.anonymous_app = script_data.get('allowAnonymousApp', False)
 
-        if not self.condition.is_satisfied():
-            raise BadRequestException(msg="Caller can't match the condition for the script.")
-
         result = dict()
         for executable in self.executables:
+            self.condition = Condition(script_data['condition'], executable.get_params(), self.did, self.app_id)
+            if not self.condition.is_satisfied():
+                raise BadRequestException(msg="Caller can't match the condition for the script.")
+
             ret = executable.execute()
             if ret:
                 result[executable['name']] = ret
+
         return result
 
 

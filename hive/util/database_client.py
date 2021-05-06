@@ -14,6 +14,8 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVI
 from hive.util.http_response import NotFoundException, ErrorCode, BadRequestException
 from datetime import datetime
 
+import os
+
 
 VAULT_SERVICE_FREE = "Free"
 VAULT_SERVICE_STATE_RUNNING = "running"
@@ -50,7 +52,7 @@ class DatabaseClient:
         if not info:
             raise NotFoundException(msg='The vault does not exist.')
 
-        if (access_vault == VAULT_ACCESS_WR or access_vault == VAULT_ACCESS_DEL)\
+        if (access_vault == VAULT_ACCESS_WR or access_vault == VAULT_ACCESS_DEL) \
                 and info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
             raise NotFoundException(ErrorCode.VAULT_NO_PERMISSION, "The vault can't be written.")
 
@@ -58,15 +60,20 @@ class DatabaseClient:
         col = self.get_user_collection(did, app_id, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
-
         return list(col.find(convert_oid(col_filter) if col_filter else None, **options))
+
+    def find_one(self, did, app_id, collection_name, col_filter, options):
+        col = self.get_user_collection(did, app_id, collection_name)
+        if not col:
+            raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
+        return col.find_one(convert_oid(col_filter) if col_filter else None, **options)
 
     def insert_one(self, did, app_id, collection_name, document, options=None):
         col = self.get_user_collection(did, app_id, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
 
-        document['created'] = datetime.strptime(document["created"], DATETIME_FORMAT)\
+        document['created'] = datetime.strptime(document["created"], DATETIME_FORMAT) \
             if 'created' in document else datetime.utcnow()
         document['modified'] = datetime.utcnow()
 
@@ -106,6 +113,19 @@ class DatabaseClient:
             "acknowledged": result.acknowledged,
             "deleted_count": result.deleted_count,
         }
+
+    def stream_to_file(self, stream, file_path):
+        try:
+            with open(file_path, 'bw') as f:
+                chunk_size = 4096
+                while True:
+                    chunk = stream.read(chunk_size)
+                    if len(chunk) == 0:
+                        break
+                    f.write(chunk)
+            return os.path.getsize(file_path.as_posix())
+        except Exception as e:
+            raise BadRequestException('Failed to save the file content to local.')
 
 
 cli = DatabaseClient()

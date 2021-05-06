@@ -998,16 +998,23 @@ class HiveScriptingV2:
 
     @hive_restful_response
     def run_script(self, script_name):
-        did, app_id = check_auth()
-
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
-
+        did, app_id = check_auth()
         return Script(script_name, json_data, did, app_id).execute()
 
     @hive_restful_response
     def run_script_url(self, script_name, target_did, target_app_did, params):
-        pass
+        json_data = {
+            'context': {
+                'target_did': target_did,
+                'target_app_did': target_app_did
+            },
+            'params': params
+        }
+        Script.validate_run_data(json_data)
+        did, app_id = check_auth()
+        return Script(script_name, json_data, did, app_id).execute()
 
     @hive_restful_response
     def upload_file(self, transaction_id):

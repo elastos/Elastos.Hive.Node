@@ -33,8 +33,9 @@ class HiveException(BaseException):
         }), self.http_code
 
     @staticmethod
-    def get_success_response(data):
-        return jsonify(data) if data else '', HiveException.__get_success_http_code()
+    def get_success_response(data, is_download=False):
+        json_data = data if is_download else (jsonify(data) if data else '')
+        return json_data, HiveException.__get_success_http_code()
 
     @staticmethod
     def __get_success_http_code():
@@ -64,6 +65,17 @@ class NotFoundException(HiveException):
         super().__init__(404, code, msg)
 
 
+def __get_restful_response_wrapper(func, is_download=False):
+    def wrapper(self, *args, **kwargs):
+        try:
+            return HiveException.get_success_response(func(self, *args, **kwargs), is_download)
+        except HiveException as e:
+            return e.get_error_response()
+        except Exception as e:
+            return HiveException(500, ErrorCode.UNCAUGHT_EXCEPTION, traceback.format_exc())
+    return wrapper
+
+
 def hive_restful_response(func):
     """
     Make sure the http response follows as version 2.
@@ -76,11 +88,8 @@ def hive_restful_response(func):
             }
         }, error http code for http method
     """
-    def wrapper(self, *args, **kwargs):
-        try:
-            return HiveException.get_success_response(func(self, *args, **kwargs))
-        except HiveException as e:
-            return e.get_error_response()
-        except Exception as e:
-            return HiveException(500, ErrorCode.UNCAUGHT_EXCEPTION, traceback.format_exc())
-    return wrapper
+    return __get_restful_response_wrapper(func)
+
+
+def hive_download_response(func):
+    return __get_restful_response_wrapper(func, True)

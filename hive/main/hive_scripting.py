@@ -30,7 +30,8 @@ from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZE
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
-from hive.util.http_response import NotFoundException, ErrorCode, hive_restful_response, BadRequestException
+from hive.util.http_response import NotFoundException, ErrorCode, hive_restful_response, hive_download_response,\
+    BadRequestException
 from hive.util.database_client import cli
 from hive.util.did_scripting import populate_with_params_values, populate_options_count_documents,\
     populate_options_find_many, populate_options_insert_one, populate_options_update_one
@@ -1018,11 +1019,46 @@ class HiveScriptingV2:
 
     @hive_restful_response
     def upload_file(self, transaction_id):
-        pass
+        return self.handle_transaction(transaction_id)
 
-    @hive_restful_response
+    def handle_transaction(self, transaction_id, is_download=False):
+        did, app_id = self.__check(VAULT_ACCESS_R if is_download else VAULT_ACCESS_WR)
+
+        row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)
+        col_filter = {"_id": ObjectId(row_id)}
+        trans = cli.find_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
+        if not trans:
+            raise BadRequestException("Cannot find the transaction by id.")
+
+        data = None
+        if is_download:
+            data, status_code = query_download(target_did, target_app_did, trans['file_name'])
+            if status_code == BAD_REQUEST:
+                raise BadRequestException(msg='Cannot get file name by transaction id')
+            elif status_code == NOT_FOUND:
+                raise BadRequestException(msg=f"The file '{trans['file_name']}' does not exist.")
+            elif status_code == FORBIDDEN:
+                raise BadRequestException(msg=f"Cannot access the file '{trans['file_name']}'.")
+            return data
+        else:
+            file_full_path, err = query_upload_get_filepath(target_did, target_app_did,
+                                                            filter_path_root(trans['file_name']))
+            if err:
+                raise BadRequestException('Failed get file full path with error message: ' + str(err))
+            inc_vault_file_use_storage_byte(target_did, cli.stream_to_file(request.stream, file_full_path))
+
+        cli.delete_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
+        update_vault_db_use_storage_byte(target_did, get_mongo_database_size(target_did, target_app_did))
+
+        return data
+
+    @hive_download_response
     def download_file(self, transaction_id):
-        pass
+        return self.handle_transaction(transaction_id, is_download=True)
 
-
-
+    def parse_transaction_id(self, transaction_id):
+        try:
+            trans = jwt.decode(transaction_id, hive_setting.DID_STOREPASS, algorithms=['HS256'])
+            return trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
+        except Exception as e:
+            raise BadRequestException(msg=f"Invalid transaction id '{transaction_id}'")

@@ -62,7 +62,7 @@ def call_script(script_name):
 
 
 @hive_scripting.route('/api/v2/vault/scripting/<script_name>/<target_did>@<target_app_did>/<params>', methods=['GET'])
-def call_script(script_name, target_did, target_app_did, params):
+def call_script_url(script_name, target_did, target_app_did, params):
     return h_scripting_v2.run_script_url(script_name, target_did, target_app_did, params)
 
 
@@ -72,5 +72,5 @@ def upload_file(transaction_id):
 
 
 @hive_scripting.route('/api/v2/vault/scripting/stream/{transaction_id}', methods=['GET'])
-def upload_file(transaction_id):
+def download_file(transaction_id):
     return h_scripting_v2.download_file(transaction_id)

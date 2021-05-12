@@ -78,7 +78,7 @@ function test () {
 
     setup_venv
 
-    # Run tests
+    # Run tests_v1
     pytest --disable-pytest-warnings -xs tests/hive_auth_test.py
     pytest --disable-pytest-warnings -xs tests/hive_mongo_test.py
     pytest --disable-pytest-warnings -xs tests/hive_file_test.py

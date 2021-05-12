@@ -7,7 +7,7 @@ from hive.util.auth import did_auth
 from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED, SUCCESS
 from hive.util.server_response import ServerResponse
 from hive.util.payment.vault_service_manage import can_access_vault, can_access_backup
-from hive.util.http_response import ErrorCode, UnauthorizedException
+from src.utils.http_response import UnauthorizedException
 
 
 def init_app(app):

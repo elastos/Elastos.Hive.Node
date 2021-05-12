@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-For /api/v2/vault/scripting .
+Testing file for scripting module.
 """
 
 import unittest

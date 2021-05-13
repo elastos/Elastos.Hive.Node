@@ -11,6 +11,11 @@ blueprint = Blueprint('scripting', __name__)
 scripting = Scripting()
 
 
+def init_app(app):
+    """ This will be called by application initializer. """
+    app.register_blueprint(blueprint)
+
+
 @blueprint.route('/api/v2/vault/scripting/<script_name>', methods=['PUT'])
 def register_script(script_name):
     return scripting.set_script(script_name)

@@ -8,11 +8,13 @@ from flask import Blueprint
 from src.modules.scripting.scripting import Scripting
 
 blueprint = Blueprint('scripting', __name__)
-scripting = Scripting()
+scripting = None
 
 
-def init_app(app):
+def init_app(app, hive_setting):
     """ This will be called by application initializer. """
+    global scripting
+    scripting = Scripting(app=app, hive_setting=hive_setting)
     app.register_blueprint(blueprint)
 
 

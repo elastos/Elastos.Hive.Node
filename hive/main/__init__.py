@@ -40,4 +40,4 @@ def init_app(app, mode):
         scheduler.scheduler_init(app, paused=False)
 
     # for version 2 apis.
-    scripting.init_app(app)
+    scripting.init_app(app, hive_setting)

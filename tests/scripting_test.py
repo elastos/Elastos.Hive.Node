@@ -5,42 +5,16 @@ Testing file for scripting module.
 """
 
 import unittest
-import requests
 import json
 
-
-class HttpClient:
-    def __init__(self):
-        self.base_url = 'http://localhost:5000/api/v2/vault/scripting'
-        self.token = 'eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraWQiOiAiZGlkOmVsYXN0b3M6aW9SbjNlRW9wUmpBN0NCUnJyV1FXenR0QWZYQWp6dktNeCNwcmltYXJ5In0.eyJpc3MiOiJkaWQ6ZWxhc3Rvczppb1JuM2VFb3BSakE3Q0JScnJXUVd6dHRBZlhBanp2S014Iiwic3ViIjoiQWNjZXNzVG9rZW4iLCJhdWQiOiJkaWQ6ZWxhc3RvczppWllEVVY3R3ZoWXB2UHAxYWljMXBlcU1WZDNyYXF0SGkyIiwiZXhwIjoxNjIyMTAxNTI5LCJwcm9wcyI6IntcImFwcERpZFwiOiBcImFwcElkXCIsIFwidXNlckRpZFwiOiBcImRpZDplbGFzdG9zOmlxazNLTGViZ2lpUDQ2dXlvS2V2WVFKQjdQWmNzMmlUTHpcIiwgXCJub25jZVwiOiBcIjcyOTRlMjE0LWE3MmMtMTFlYi1hOGU0LWFjZGU0ODAwMTEyMlwifSJ9.Xox6tzUd3FXIqtv8J1S_nylL0tdy-IaYTDAB5JoHLLdXxIA6h917KQm1s8l8Rx5lPh7PXVQu-p3Zkuu6ym5DfA'
-
-    def __get_url(self, relative_url):
-        return self.base_url + relative_url
-
-    def __get_headers(self):
-        return {'Authorization': 'token ' + self.token}
-
-    def get(self, relative_url):
-        return requests.get(self.__get_url(relative_url), headers=self.__get_headers())
-
-    def post(self, relative_url, body):
-        return requests.post(self.__get_url(relative_url), headers=self.__get_headers(), data=body)
-
-    def put(self, relative_url, body):
-        return requests.put(self.__get_url(relative_url), headers=self.__get_headers(), data=body)
-
-    def patch(self, relative_url, body):
-        return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(), data=body)
-
-    def delete(self, relative_url):
-        return requests.delete(self.__get_url(relative_url), headers=self.__get_headers())
+from tests.utils.http_client import HttpClient
 
 
 @unittest.skip
 class ScriptingTestCase(unittest.TestCase):
     def __init__(self):
         super().__init__()
-        self.cli = HttpClient()
+        self.cli = HttpClient('http://localhost:5000/api/v2/vault/scripting')
         self.file_content = 'File Content: 12345678'
 
     def __register_script(self, relative_url, body):

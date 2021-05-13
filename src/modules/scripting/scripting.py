@@ -8,7 +8,6 @@ import jwt
 from flask import request
 from bson import ObjectId
 
-from hive import hive_setting
 from hive.main.interceptor import check_auth
 from hive.util.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
@@ -469,8 +468,9 @@ class Script:
 
 
 class Scripting:
-    def __init__(self, app=None):
+    def __init__(self, app=None, hive_setting=None):
         self.app = app
+        self.hive_setting = hive_setting
 
     def __check(self, permission):
         did, app_id = check_auth()

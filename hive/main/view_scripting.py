@@ -5,7 +5,6 @@ from flask import Blueprint, request
 from hive.main.hive_scripting import HiveScripting
 
 h_scripting = HiveScripting()
-h_scripting_v2 = HiveScriptingV2()
 
 hive_scripting = Blueprint('hive_scripting', __name__)
 

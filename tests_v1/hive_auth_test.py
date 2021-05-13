@@ -15,7 +15,7 @@ from hive.util.did.entity import Entity
 from hive.util.did.eladid import ffi, lib
 
 from hive import create_app, HIVE_MODE_TEST
-from tests import test_common
+from tests_v1 import test_common
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -34,8 +34,8 @@ def name_set(app, name):
 class DIDApp(Entity):
     issuer = None
 
-    def __init__(self, name, mnemonic=None):
-        Entity.__init__(self, name, mnemonic)
+    def __init__(self, name, mnemonic=None, passphrase=None):
+        Entity.__init__(self, name, mnemonic, passphrase)
         self.issuer = lib.Issuer_Create(self.did, ffi.NULL, self.store)
 
     def __del__(self):

@@ -9,12 +9,14 @@ from contextlib import contextmanager
 
 from pymongo import MongoClient
 
-from hive import create_app, hive_setting
+# from hive import create_app, hive_setting
+from hive.settings import hive_setting
 from hive.util.constants import DID_INFO_DB_NAME, HIVE_MODE_TEST, SUB_MESSAGE_COLLECTION, SUB_MESSAGE_PUB_DID, \
     SUB_MESSAGE_PUB_APPID, PUB_CHANNEL_COLLECTION, PUB_CHANNEL_PUB_DID, PUB_CHANNEL_PUB_APPID
 from hive.util.error_code import ALREADY_EXIST, NOT_FOUND
-from tests import test_common
-from tests.hive_auth_test import DIDApp, DApp
+from src import create_app
+from tests_v1 import test_common
+from tests_v1.hive_auth_test import DIDApp, DApp
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG

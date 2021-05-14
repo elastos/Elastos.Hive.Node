@@ -3,7 +3,7 @@ import os
 import pathlib
 import json
 from datetime import datetime
-from eladid import ffi, lib
+from hive.util.did.eladid import ffi, lib
 import requests
 
 from hive.util.did.did_init import init_did

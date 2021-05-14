@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 from hive.util.did.did_init import init_did_backend
 
 

@@ -8,7 +8,7 @@ import jwt
 from flask import request
 from bson import ObjectId
 
-from hive.main.interceptor import check_auth
+from hive.util.auth import did_auth
 from hive.util.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
@@ -23,7 +23,17 @@ from hive.util.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte, inc_vault_file_use_storage_byte
 from src.utils.database_client import cli
 from src.utils.http_response import BadRequestException, hive_restful_response, NotFoundException, ErrorCode, \
-    hive_download_response
+    hive_download_response, UnauthorizedException
+
+
+def check_auth():
+    """
+    TODO: to be moved to other place.
+    """
+    did, app_id = did_auth()
+    if not did or not app_id:
+        raise UnauthorizedException()
+    return did, app_id
 
 
 def validate_exists(json_data, parent_name, prop_list):

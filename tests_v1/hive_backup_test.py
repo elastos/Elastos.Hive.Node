@@ -1,38 +1,26 @@
 import json
-import os
-import shutil
-import signal
-import subprocess
 import sys
 import unittest
 import logging
-import time
 from io import BytesIO
-from pathlib import Path
 import pickle
 
 import requests
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
-from pymongo import MongoClient
 
-from hive.main import view
 from hive.main.hive_backup import HiveBackup
-from hive.main.hive_internal import HiveInternal
 from hive.util.common import gene_temp_file_name
 from hive.util.constants import DID, HIVE_MODE_TEST, DID_INFO_DB_NAME, VAULT_ORDER_COL, VAULT_BACKUP_SERVICE_COL, \
     INTER_BACKUP_SAVE_FINISH_URL, INTER_BACKUP_RESTORE_FINISH_URL, APP_ID, INTER_BACKUP_PATCH_HASH_URL, \
     INTER_BACKUP_FILE_URL, INTER_BACKUP_PATCH_DELTA_URL, CHUNK_SIZE
-from hive import create_app
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.payment.vault_backup_service_manage import setup_vault_backup_service, update_vault_backup_service_item
-from hive.util.payment.vault_order import check_wait_order_tx_job
 from hive.util.payment.vault_service_manage import delete_user_vault, setup_vault_service, get_vault_path
 from hive.util.pyrsync import rsyncdelta, rsyncdelta
-from tests import test_common
-from hive import settings
-from tests.hive_auth_test import DIDApp, DApp
-from tests.test_common import upsert_collection, create_upload_file, prepare_vault_data, copy_to_backup_data, \
+from src import create_app
+from tests_v1 import test_common
+from tests_v1.test_common import upsert_collection, create_upload_file, prepare_vault_data, copy_to_backup_data, \
     move_to_backup_data
 
 logger = logging.getLogger()

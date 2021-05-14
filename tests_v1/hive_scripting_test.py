@@ -5,9 +5,11 @@ import unittest
 import logging
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
-from hive import create_app, HIVE_MODE_TEST
-from tests import test_common
-from tests.test_common import did
+# from hive import create_app, HIVE_MODE_TEST
+from hive.util.constants import HIVE_MODE_TEST
+from src import create_app
+from tests_v1 import test_common
+from tests_v1.test_common import did
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG

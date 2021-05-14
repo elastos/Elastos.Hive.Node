@@ -1,12 +1,12 @@
 import json
 import sys
-import time
 import unittest
 import logging
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
-from hive import create_app, HIVE_MODE_TEST
-from tests import test_common
+from tests_v1 import test_common
+from hive.util.constants import HIVE_MODE_TEST
+from src import create_app
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG

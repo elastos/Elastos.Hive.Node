@@ -4,8 +4,9 @@ import unittest
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
 
-from hive import create_app
-from tests import test_common
+# from hive import create_app
+from src import create_app
+from tests_v1 import test_common
 from hive.util.payment.vault_order import *
 from hive.util.payment.vault_service_manage import *
 

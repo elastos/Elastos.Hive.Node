@@ -3,7 +3,7 @@
 """
 The view of scripting module.
 """
-from flask import Blueprint, request
+from flask import Blueprint
 import json
 
 from src.modules.scripting.scripting import Scripting

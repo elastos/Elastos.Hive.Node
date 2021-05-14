@@ -10,11 +10,11 @@ from datetime import datetime
 # import sys
 # sys.path.append(os.getcwd())
 # sys.path.append(os.getcwd() + "/hive/util/did")
-
+from hive.util.constants import HIVE_MODE_TEST
 from hive.util.did.entity import Entity
 from hive.util.did.eladid import ffi, lib
 
-from hive import create_app, HIVE_MODE_TEST
+from src import create_app
 from tests_v1 import test_common
 
 logger = logging.getLogger()

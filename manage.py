@@ -1,7 +1,6 @@
-from flask import request
 from flask_script import Manager, Server
 
-from hive import create_app
+from src import create_app
 
 manager = Manager(create_app)
 manager.add_command("runserver", Server(host="0.0.0.0", port=5000))

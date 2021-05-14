@@ -7,6 +7,7 @@ For new exception, please define here.
 
 from flask import jsonify, request
 import traceback
+import logging
 
 
 class ErrorCode:
@@ -72,7 +73,8 @@ def __get_restful_response_wrapper(func, is_download=False):
         except HiveException as e:
             return e.get_error_response()
         except Exception as e:
-            return HiveException(500, ErrorCode.UNCAUGHT_EXCEPTION, traceback.format_exc())
+            logging.error(f'UNEXPECTED: {traceback.format_exc()}')
+            return HiveException(500, ErrorCode.UNCAUGHT_EXCEPTION, traceback.format_exc()).get_error_response()
     return wrapper
 
 

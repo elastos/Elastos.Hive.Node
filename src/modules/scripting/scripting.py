@@ -30,7 +30,7 @@ def validate_exists(json_data, parent_name, prop_list):
     for prop in prop_list:
         parts = prop.split('.')
         prop_name = parent_name + '.' + parts[0] if parent_name else parts[0]
-        if parts.length > 1:
+        if len(parts) > 1:
             validate_exists(json_data[parts[0]], prop_name, '.'.join(parts[1:]))
         else:
             if not json_data.get(prop, None):
@@ -39,7 +39,7 @@ def validate_exists(json_data, parent_name, prop_list):
 
 class Condition:
     def __init__(self, json_data, params, did, app_id):
-        self.json_data = json_data
+        self.json_data = json_data if json_data else {}
         self.params = params
         self.did = did
         self.app_id = app_id
@@ -75,6 +75,9 @@ class Condition:
         return self.__is_satisfied(self.json_data)
 
     def __is_satisfied(self, json_data) -> bool:
+        if not self.json_data:
+            return True
+
         ctype = json_data['type']
         if ctype == 'or':
             for data in json_data['body']:
@@ -160,7 +163,13 @@ class Executable:
                                  SCRIPTING_EXECUTABLE_TYPE_INSERT,
                                  SCRIPTING_EXECUTABLE_TYPE_UPDATE,
                                  SCRIPTING_EXECUTABLE_TYPE_DELETE]:
-            validate_exists(json_data['body'], 'executable.body', ['collection', 'filter'])
+            validate_exists(json_data['body'], 'executable.body', ['collection', ])
+
+        if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_INSERT:
+            validate_exists(json_data['body'], 'executable.body', ['document', ])
+
+        if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
+            validate_exists(json_data['body'], 'executable.body', ['update', ])
 
         if json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD,
                                  SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD,
@@ -199,7 +208,7 @@ class Executable:
         return self.body.get('update', {})
 
     def get_params(self):
-        return self.body['params']
+        return self.script.params
 
     def get_output_data(self, data):
         return data if self.is_output else None
@@ -246,7 +255,7 @@ class Executable:
                 "row_id": data.get('inserted_id', None),
                 "target_did": self.get_target_did(),
                 "target_app_did": self.get_target_app_did()
-            }, hive_setting.DID_STOREPASS, algorithm='HS256')
+            }, self.script.hive_setting.DID_STOREPASS, algorithm='HS256')
         }
 
     @staticmethod
@@ -412,16 +421,17 @@ class FileHashExecutable(Executable):
 
 
 class Script:
-    def __init__(self, script_name, run_data, did, app_id):
+    def __init__(self, script_name, run_data, did, app_id, hive_setting=None):
         self.did = did
         self.app_id = app_id
         self.name = script_name
-        self.context = Context(run_data['context'], did, app_id)
+        self.context = Context(run_data.get('context', None), did, app_id)
         self.params = run_data['params']
         self.condition = None
         self.executables = []
         self.anonymous_user = False
         self.anonymous_app = False
+        self.hive_setting = hive_setting
 
     @staticmethod
     def validate_script_data(json_data):
@@ -440,8 +450,11 @@ class Script:
 
     @staticmethod
     def validate_run_data(json_data):
+        if not json_data:
+            raise BadRequestException(msg="Script calling body can't be empty.")
+
         validate_exists(json_data, '', ['params', ])
-        Context.validate_data(json_data['context'])
+        Context.validate_data(json_data.get('context', None))
 
     def execute(self):
         """
@@ -456,13 +469,13 @@ class Script:
 
         result = dict()
         for executable in self.executables:
-            self.condition = Condition(script_data['condition'], executable.get_params(), self.did, self.app_id)
+            self.condition = Condition(script_data.get('condition'), executable.get_params(), self.did, self.app_id)
             if not self.condition.is_satisfied():
                 raise BadRequestException(msg="Caller can't match the condition for the script.")
 
             ret = executable.execute()
             if ret:
-                result[executable['name']] = ret
+                result[executable.name] = ret
 
         return result
 
@@ -522,20 +535,21 @@ class Scripting:
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
         did, app_id = check_auth()
-        return Script(script_name, json_data, did, app_id).execute()
+        return Script(script_name, json_data, did, app_id, self.hive_setting).execute()
 
     @hive_restful_response
     def run_script_url(self, script_name, target_did, target_app_did, params):
         json_data = {
-            'context': {
-                'target_did': target_did,
-                'target_app_did': target_app_did
-            },
             'params': params
         }
+        if target_did and target_app_did:
+            json_data['context'] = {
+                'target_did': target_did,
+                'target_app_did': target_app_did
+            }
         Script.validate_run_data(json_data)
         did, app_id = check_auth()
-        return Script(script_name, json_data, did, app_id).execute()
+        return Script(script_name, json_data, did, app_id, self.hive_setting).execute()
 
     @hive_restful_response
     def upload_file(self, transaction_id):
@@ -578,7 +592,7 @@ class Scripting:
 
     def parse_transaction_id(self, transaction_id):
         try:
-            trans = jwt.decode(transaction_id, hive_setting.DID_STOREPASS, algorithms=['HS256'])
+            trans = jwt.decode(transaction_id, self.hive_setting.DID_STOREPASS, algorithms=['HS256'])
             return trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
         except Exception as e:
             raise BadRequestException(msg=f"Invalid transaction id '{transaction_id}'")

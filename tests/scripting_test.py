@@ -19,18 +19,18 @@ class ScriptingTestCase(unittest.TestCase):
         self.cli = HttpClient('http://localhost:5000/api/v2/vault')
         self.file_content = 'File Content: 12345678'
 
-    def __register_script(self, relative_url, body):
-        response = self.cli.put(relative_url, body)
+    def __register_script(self, script_name, body):
+        response = self.cli.put(f'/scripting/{script_name}', body)
         self.assertEqual(response.status_code, 200)
         return json.loads(response.text)
 
-    def __call_script(self, relative_url, body, is_raw=False):
-        response = self.cli.patch(relative_url, body)
+    def __call_script(self, script_name, body, is_raw=False):
+        response = self.cli.patch(f'/scripting/{script_name}', body)
         self.assertEqual(response.status_code, 200)
         return response.text if is_raw else json.loads(response.text)
 
     def test01_register_script(self):
-        self.__register_script('/scripting/database_insert', {
+        self.__register_script('database_insert', {
             "executable": {
                 "output": True,
                 "name": "database_insert",
@@ -54,7 +54,7 @@ class ScriptingTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 204)
 
     def test02_call_script(self):
-        self.__call_script('/scripting/database_insert', {
+        self.__call_script('database_insert', {
             "params": {
                 "author": "John",
                 "content": "message"
@@ -90,7 +90,8 @@ class ScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-        response = self.cli.put(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}', self.file_content)
+        response = self.cli.put(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}',
+                                self.file_content.encode(), is_json=False)
         self.assertEqual(response.status_code, 200)
 
     def test05_file_download(self):

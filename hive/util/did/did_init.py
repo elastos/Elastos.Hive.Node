@@ -1,7 +1,7 @@
 import logging
 import os
 import pathlib
-from eladid import ffi, lib
+from hive.util.did.eladid import ffi, lib
 
 from hive.settings import hive_setting
 

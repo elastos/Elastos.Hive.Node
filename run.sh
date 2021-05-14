@@ -33,7 +33,9 @@ function setup_venv () {
         python3 -m venv .venv
         source .venv/bin/activate
         pip install --upgrade pip
-        pip install --global-option=build_ext --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" -r requirements.txt
+        # pip install --global-option=build_ext --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" -r requirements.txt
+        CPPFLAGS=-I/usr/local/opt/openssl/include LDFLAGS=-L/usr/local/opt/openssl/lib ARCHFLAGS="-arch x86_64" \
+          pip install --global-option=build_ext --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" -r requirements.txt
         ;;
     *)
     exit 1
@@ -79,14 +81,15 @@ function test () {
     setup_venv
 
     # Run tests_v1
-    pytest --disable-pytest-warnings -xs tests/hive_auth_test.py
-    pytest --disable-pytest-warnings -xs tests/hive_mongo_test.py
-    pytest --disable-pytest-warnings -xs tests/hive_file_test.py
-    pytest --disable-pytest-warnings -xs tests/hive_scripting_test.py
-    pytest --disable-pytest-warnings -xs tests/hive_payment_test.py
-    pytest --disable-pytest-warnings -xs tests/hive_backup_test.py
-    pytest --disable-pytest-warnings -xs tests/hive_internal_test.py
-    pytest --disable-pytest-warnings -xs tests/hive_pubsub_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_auth_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_mongo_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_file_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_scripting_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_payment_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_backup_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_internal_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_pubsub_test.py
+    pytest --disable-pytest-warnings -xs tests/scripting_test.py
 
     docker container stop hive-mongo && docker container rm -f hive-mongo
     docker container stop hive-test-mongo && docker container rm -f hive-test-mongo

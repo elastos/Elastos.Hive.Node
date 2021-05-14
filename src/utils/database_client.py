@@ -75,7 +75,7 @@ class DatabaseClient:
             if 'created' in document else datetime.utcnow()
         document['modified'] = datetime.utcnow()
 
-        result = col.insert_one(convert_oid(document, **options if options else []))
+        result = col.insert_one(convert_oid(document), **options if options else [])
         return {
             "acknowledged": result.acknowledged,
             "inserted_id": str(result.inserted_id) if result.inserted_id else ''

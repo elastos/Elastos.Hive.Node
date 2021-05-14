@@ -43,11 +43,11 @@ def call_script_url(script_name, context_str, params):
     return scripting.run_script_url(script_name, target_did, target_app_did, json.loads(params))
 
 
-@blueprint.route('/api/v2/vault/scripting/stream/{transaction_id}', methods=['PUT'])
+@blueprint.route('/api/v2/vault/scripting/stream/<transaction_id>', methods=['PUT'])
 def upload_file(transaction_id):
     return scripting.upload_file(transaction_id)
 
 
-@blueprint.route('/api/v2/vault/scripting/stream/{transaction_id}', methods=['GET'])
+@blueprint.route('/api/v2/vault/scripting/stream/<transaction_id>', methods=['GET'])
 def download_file(transaction_id):
     return scripting.download_file(transaction_id)

@@ -83,8 +83,10 @@ class HttpClient:
     def __get_url(self, relative_url):
         return self.base_url + relative_url
 
-    def __get_headers(self, need_token=True):
-        headers = {'Content-type': 'application/json'}
+    def __get_headers(self, need_token=True, is_json=True):
+        headers = {}
+        if is_json:
+            headers['Content-type'] = 'application/json'
         if need_token:
             headers['Authorization'] = 'token ' + RemoteResolver().get_token()
         return headers
@@ -98,7 +100,9 @@ class HttpClient:
         return requests.post(self.__get_url(relative_url), headers=self.__get_headers(need_token), data=body)
 
     @_log_http_request
-    def put(self, relative_url, body):
+    def put(self, relative_url, body, is_json=True):
+        if not is_json:
+            return requests.put(self.__get_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
         return requests.put(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request

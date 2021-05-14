@@ -566,17 +566,17 @@ class Scripting:
 
         data = None
         if is_download:
-            data, status_code = query_download(target_did, target_app_did, trans['file_name'])
+            data, status_code = query_download(target_did, target_app_did, trans['document']['file_name'])
             if status_code == BAD_REQUEST:
                 raise BadRequestException(msg='Cannot get file name by transaction id')
             elif status_code == NOT_FOUND:
-                raise BadRequestException(msg=f"The file '{trans['file_name']}' does not exist.")
+                raise BadRequestException(msg=f"The file '{trans['document']['file_name']}' does not exist.")
             elif status_code == FORBIDDEN:
-                raise BadRequestException(msg=f"Cannot access the file '{trans['file_name']}'.")
+                raise BadRequestException(msg=f"Cannot access the file '{trans['document']['file_name']}'.")
             return data
         else:
             file_full_path, err = query_upload_get_filepath(target_did, target_app_did,
-                                                            filter_path_root(trans['file_name']))
+                                                            filter_path_root(trans['document']['file_name']))
             if err:
                 raise BadRequestException('Failed get file full path with error message: ' + str(err))
             inc_vault_file_use_storage_byte(target_did, cli.stream_to_file(request.stream, file_full_path))

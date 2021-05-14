@@ -1,22 +1,8 @@
 # -*- coding: utf-8 -*-
 
-"""
-TODO: Add file comments here.
-"""
 
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import generators
-from __future__ import division
-
-import sys
-import os
+from hive.util.did.did_init import init_did_backend
 
 
-def main():
-    pass
-
-
-if __name__ == '__main__':
-    main()
+def init_test():
+    init_did_backend()

@@ -8,17 +8,19 @@ import unittest
 import json
 
 from tests.utils.http_client import HttpClient
+from tests import init_test
 
 
-@unittest.skip
+# @unittest.skip
 class ScriptingTestCase(unittest.TestCase):
-    def __init__(self):
-        super().__init__()
-        self.cli = HttpClient('http://localhost:5000/api/v2/vault/scripting')
+    def __init__(self, method_name='runTest'):
+        super().__init__(method_name)
+        init_test()
+        self.cli = HttpClient('http://localhost:5000/api/v2/vault')
         self.file_content = 'File Content: 12345678'
 
     def __register_script(self, relative_url, body):
-        response = self.cli.post(relative_url, body)
+        response = self.cli.put(relative_url, body)
         self.assertEqual(response.status_code, 200)
         return json.loads(response.text)
 
@@ -27,8 +29,8 @@ class ScriptingTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         return response.text if is_raw else json.loads(response.text)
 
-    def test_register_script(self):
-        self.__register_script('/database_insert', {
+    def test01_register_script(self):
+        self.__register_script('/scripting/database_insert', {
             "executable": {
                 "output": True,
                 "name": "database_insert",
@@ -47,21 +49,21 @@ class ScriptingTestCase(unittest.TestCase):
             }
         })
 
-    def test_delete_script(self):
-        response = self.cli.delete('/get_group_message2')
+    def test06_delete_script(self):
+        response = self.cli.delete('/scripting/database_insert')
         self.assertEqual(response.status_code, 204)
 
-    def test_call_script(self):
-        self.__call_script('/database_insert', {
+    def test02_call_script(self):
+        self.__call_script('/scripting/database_insert', {
             "params": {
                 "author": "John",
                 "content": "message"
             }
         })
 
-    def test_call_script_url(self):
-        response = self.cli.get('/database_insert/@'
-                                '/%7B%22params%22%3A%7B%22author%22%3A%22John%22%2C%22content%22%3A%22message%22%7D%7D')
+    def test03_call_script_url(self):
+        response = self.cli.get('/scripting/database_insert/@'
+                                '/%7B%22author%22%3A%22John%22%2C%22content%22%3A%22message%22%7D')
         self.assertEqual(response.status_code, 200)
 
     def __call_script_for_transaction_id(self, script_name):
@@ -76,7 +78,7 @@ class ScriptingTestCase(unittest.TestCase):
         self.assertTrue('transaction_id' in response_body[script_name])
         return response_body[script_name]['transaction_id']
 
-    def test_file_upload(self):
+    def test04_file_upload(self):
         name = 'upload_file'
         self.__register_script(name, {
             "executable": {
@@ -88,10 +90,10 @@ class ScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-        response = self.cli.put(f'/stream/{self.__call_script_for_transaction_id(name)}', self.file_content)
+        response = self.cli.put(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}', self.file_content)
         self.assertEqual(response.status_code, 200)
 
-    def test_file_download(self):
+    def test05_file_download(self):
         name = 'download_file'
         self.__register_script(name, {
             "executable": {
@@ -103,7 +105,7 @@ class ScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-        response = self.cli.get(f'/stream/{self.__call_script_for_transaction_id(name)}')
+        response = self.cli.get(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.file_content)
 

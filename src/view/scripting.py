@@ -3,12 +3,13 @@
 """
 The view of scripting module.
 """
-from flask import Blueprint
+from flask import Blueprint, request
+import json
 
 from src.modules.scripting.scripting import Scripting
 
 blueprint = Blueprint('scripting', __name__)
-scripting = None
+scripting = Scripting()
 
 
 def init_app(app, hive_setting):
@@ -33,9 +34,13 @@ def call_script(script_name):
     return scripting.run_script(script_name)
 
 
-@blueprint.route('/api/v2/vault/scripting/<script_name>/<target_did>@<target_app_did>/<params>', methods=['GET'])
-def call_script_url(script_name, target_did, target_app_did, params):
-    return scripting.run_script_url(script_name, target_did, target_app_did, params)
+@blueprint.route('/api/v2/vault/scripting/<script_name>/<context_str>/<params>', methods=['GET'])
+def call_script_url(script_name, context_str, params):
+    target_did, target_app_did = None, None
+    parts = context_str.split('@')
+    if len(parts) == 2 and parts[0] and parts[1]:
+        target_did, target_app_did = parts[0], parts[1]
+    return scripting.run_script_url(script_name, target_did, target_app_did, json.loads(params))
 
 
 @blueprint.route('/api/v2/vault/scripting/stream/{transaction_id}', methods=['PUT'])

@@ -16,6 +16,7 @@ class ErrorCode:
     VAULT_NOT_FOUND             = 100003
     VAULT_NO_PERMISSION         = 100004
     INVALID_PARAMETER           = 100005
+    ALREADY_EXISTS              = 100006
     SCRIPT_NOT_FOUND            = 120001
 
 
@@ -64,6 +65,11 @@ class UnauthorizedException(HiveException):
 class NotFoundException(HiveException):
     def __init__(self, code=ErrorCode.VAULT_NOT_FOUND, msg='Vault not found or not activate.'):
         super().__init__(404, code, msg)
+
+
+class NotImplementedException(HiveException):
+    def __init__(self, code=ErrorCode.VAULT_NOT_FOUND, msg='Not implemented or not supported.'):
+        super().__init__(501, code, msg)
 
 
 def __get_restful_response_wrapper(func, is_download=False):

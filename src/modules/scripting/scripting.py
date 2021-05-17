@@ -8,7 +8,6 @@ import jwt
 from flask import request
 from bson import ObjectId
 
-from hive.util.auth import did_auth
 from hive.util.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
@@ -22,18 +21,9 @@ from hive.util.did_scripting import populate_with_params_values
 from hive.util.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte, inc_vault_file_use_storage_byte
 from src.utils.database_client import cli
+from src.utils.http_auth import check_auth
 from src.utils.http_response import BadRequestException, hive_restful_response, NotFoundException, ErrorCode, \
-    hive_download_response, UnauthorizedException
-
-
-def check_auth():
-    """
-    TODO: to be moved to other place.
-    """
-    did, app_id = did_auth()
-    if not did or not app_id:
-        raise UnauthorizedException()
-    return did, app_id
+    hive_download_response
 
 
 def validate_exists(json_data, parent_name, prop_list):
@@ -111,7 +101,7 @@ class Condition:
         if msg:
             raise BadRequestException(msg='Cannot find parameter: ' + msg)
 
-        col = cli.get_user_collection(self.did, self.app_id, col_name)
+        col = cli.__get_user_collection(self.did, self.app_id, col_name)
         if not col:
             raise BadRequestException(msg='Do not find condition collection with name ' + col_name)
 
@@ -138,7 +128,7 @@ class Context:
             raise BadRequestException(msg='target_did or target_app_did MUST be set.')
 
     def get_script_data(self, script_name):
-        col = cli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
+        col = cli.__get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
         return col.find_one({'name': script_name})
 
 
@@ -512,7 +502,7 @@ class Scripting:
         return result
 
     def __upsert_script_to_database(self, script_name, json_data, did, app_id):
-        col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION, True)
+        col = cli.__get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION, True)
         json_data['name'] = script_name
         options = {
             "upsert": True,
@@ -530,7 +520,7 @@ class Scripting:
     def delete_script(self, script_name):
         did, app_id = self.__check(VAULT_ACCESS_DEL)
 
-        col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
+        col = cli.__get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
         if not col:
             raise NotFoundException(ErrorCode.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
 

@@ -10,7 +10,8 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVI
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
     VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING
 from hive.util.payment.payment_config import PaymentConfig
-from src.utils.database_client import cli, VAULT_SERVICE_STATE_RUNNING
+from hive.util.payment.vault_service_manage import delete_user_vault_data
+from src.utils.database_client import cli, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_STATE_FREEZE
 from src.utils.http_auth import check_auth
 from src.utils.http_response import hive_restful_response, NotImplementedException, BadRequestException, ErrorCode
 
@@ -22,17 +23,39 @@ class VaultSubscription:
     @hive_restful_response
     def subscribe(self, credential):
         if credential:
+            # TODO: Need support this with payment.
             raise NotImplementedException(msg='')
         return self._subscribe_free()
 
+    @hive_restful_response
     def unsubscribe(self):
-        pass
+        did, app_id = check_auth()
+        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
+        if not document:
+            raise BadRequestException(code=ErrorCode.ALREADY_EXISTS, msg='The vault does not exist.')
+        delete_user_vault_data(did)
+        cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
 
+    @hive_restful_response
     def activate(self):
-        pass
+        return self.update_vault_state(VAULT_SERVICE_STATE_RUNNING)
 
+    def update_vault_state(self, status):
+        did, app_id = check_auth()
+
+        col_filter = {VAULT_SERVICE_DID: did}
+        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter)
+        if not document:
+            raise BadRequestException(code=ErrorCode.ALREADY_EXISTS, msg='The vault does not exist.')
+
+        doc = {VAULT_SERVICE_DID: did,
+               VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp(),
+               VAULT_SERVICE_STATE: status}
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter, {"$set": doc})
+
+    @hive_restful_response
     def deactivate(self):
-        pass
+        self.update_vault_state(VAULT_SERVICE_STATE_FREEZE)
 
     def get_info(self):
         pass
@@ -65,7 +88,7 @@ class VaultSubscription:
                VAULT_SERVICE_START_TIME: now,
                VAULT_SERVICE_END_TIME: end_time,
                VAULT_SERVICE_MODIFY_TIME: now,
-               VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
+               VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_FREEZE,
                VAULT_SERVICE_PRICING_USING: price_plan['name']}
         cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {"$set": doc})
         return doc

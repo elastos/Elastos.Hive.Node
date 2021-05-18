@@ -101,7 +101,7 @@ class Condition:
         if msg:
             raise BadRequestException(msg='Cannot find parameter: ' + msg)
 
-        col = cli.__get_user_collection(self.did, self.app_id, col_name)
+        col = cli.get_user_collection(self.did, self.app_id, col_name)
         if not col:
             raise BadRequestException(msg='Do not find condition collection with name ' + col_name)
 
@@ -128,7 +128,7 @@ class Context:
             raise BadRequestException(msg='target_did or target_app_did MUST be set.')
 
     def get_script_data(self, script_name):
-        col = cli.__get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
+        col = cli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
         return col.find_one({'name': script_name})
 
 
@@ -502,7 +502,7 @@ class Scripting:
         return result
 
     def __upsert_script_to_database(self, script_name, json_data, did, app_id):
-        col = cli.__get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION, True)
+        col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION, True)
         json_data['name'] = script_name
         options = {
             "upsert": True,
@@ -520,7 +520,7 @@ class Scripting:
     def delete_script(self, script_name):
         did, app_id = self.__check(VAULT_ACCESS_DEL)
 
-        col = cli.__get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
+        col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
         if not col:
             raise NotFoundException(ErrorCode.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
 

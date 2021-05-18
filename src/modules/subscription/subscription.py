@@ -27,39 +27,6 @@ class VaultSubscription:
             raise NotImplementedException(msg='')
         return self._subscribe_free()
 
-    @hive_restful_response
-    def unsubscribe(self):
-        did, app_id = check_auth()
-        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
-        if not document:
-            raise BadRequestException(code=ErrorCode.ALREADY_EXISTS, msg='The vault does not exist.')
-        delete_user_vault_data(did)
-        cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
-
-    @hive_restful_response
-    def activate(self):
-        return self.update_vault_state(VAULT_SERVICE_STATE_RUNNING)
-
-    def update_vault_state(self, status):
-        did, app_id = check_auth()
-
-        col_filter = {VAULT_SERVICE_DID: did}
-        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter)
-        if not document:
-            raise BadRequestException(code=ErrorCode.ALREADY_EXISTS, msg='The vault does not exist.')
-
-        doc = {VAULT_SERVICE_DID: did,
-               VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp(),
-               VAULT_SERVICE_STATE: status}
-        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter, {"$set": doc})
-
-    @hive_restful_response
-    def deactivate(self):
-        self.update_vault_state(VAULT_SERVICE_STATE_FREEZE)
-
-    def get_info(self):
-        pass
-
     def _subscribe_free(self):
         did, app_id = check_auth()
 
@@ -67,16 +34,7 @@ class VaultSubscription:
         if document:
             raise BadRequestException(code=ErrorCode.ALREADY_EXISTS, msg='The vault already exists.')
 
-        price_plan = PaymentConfig.get_free_vault_info()
-        document = self.__create_vault(did, price_plan)
-        return {
-            'pricingPlan': price_plan['name'],
-            'serviceDid': h_auth.get_did_string(),
-            'quota': price_plan["maxStorage"] * 1000 * 1000,
-            'used': 0,
-            'created': document[VAULT_SERVICE_START_TIME],
-            'updated': document[VAULT_SERVICE_END_TIME],
-        }
+        return self.__get_vault_info(self.__create_vault(did, PaymentConfig.get_free_vault_info()))
 
     def __create_vault(self, did, price_plan):
         now = datetime.utcnow().timestamp()
@@ -92,6 +50,57 @@ class VaultSubscription:
                VAULT_SERVICE_PRICING_USING: price_plan['name']}
         cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {"$set": doc})
         return doc
+
+    def __get_vault_info(self, doc):
+        return {
+            'pricingPlan': doc[VAULT_SERVICE_PRICING_USING],
+            'serviceDid': h_auth.get_did_string(),
+            'quota': doc[VAULT_SERVICE_MAX_STORAGE] * 1000 * 1000,
+            'used': 0,
+            'created': doc[VAULT_SERVICE_START_TIME],
+            'updated': doc[VAULT_SERVICE_END_TIME],
+        }
+
+    @hive_restful_response
+    def unsubscribe(self):
+        did, app_id = check_auth()
+        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
+        if not document:
+            raise BadRequestException(code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
+        delete_user_vault_data(did)
+        cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
+
+    @hive_restful_response
+    def activate(self):
+        return self.update_vault_state(VAULT_SERVICE_STATE_RUNNING)
+
+    def update_vault_state(self, status):
+        did, app_id = check_auth()
+
+        col_filter = {VAULT_SERVICE_DID: did}
+        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter)
+        if not document:
+            raise BadRequestException(code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
+
+        doc = {VAULT_SERVICE_DID: did,
+               VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp(),
+               VAULT_SERVICE_STATE: status}
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter, {"$set": doc})
+
+    @hive_restful_response
+    def deactivate(self):
+        self.update_vault_state(VAULT_SERVICE_STATE_FREEZE)
+
+    @hive_restful_response
+    def get_info(self):
+        did, app_id = check_auth()
+
+        col_filter = {VAULT_SERVICE_DID: did}
+        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter)
+        if not document:
+            raise BadRequestException(code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
+
+        return self.__get_vault_info(document)
 
 
 class BackupSubscription:

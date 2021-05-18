@@ -33,7 +33,7 @@ class DatabaseClient:
             connection = MongoClient(host=self.host, port=self.port)
         return connection
 
-    def __get_user_collection(self, did, app_id, collection_name, is_create=False):
+    def get_user_collection(self, did, app_id, collection_name, is_create=False):
         return self.__get_origin_collection(gene_mongo_db_name(did, app_id), collection_name, is_create)
 
     def __get_origin_collection(self, db_name, collection_name, is_create=False):
@@ -58,7 +58,7 @@ class DatabaseClient:
             raise NotFoundException(ErrorCode.VAULT_NO_PERMISSION, "The vault can't be written.")
 
     def find_many(self, did, app_id, collection_name, col_filter, options):
-        col = self.__get_user_collection(did, app_id, collection_name)
+        col = self.get_user_collection(did, app_id, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **options))
@@ -91,7 +91,10 @@ class DatabaseClient:
         }
 
     def update_one(self, did, app_id, collection_name, col_filter, col_update, options):
-        col = self.__get_user_collection(did, app_id, collection_name)
+        return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter, col_update, options)
+
+    def update_one_origin(self, db_name, collection_name, col_filter, col_update, options):
+        col = self.__get_origin_collection(db_name, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
 
@@ -111,7 +114,10 @@ class DatabaseClient:
         }
 
     def delete_one(self, did, app_id, collection_name, col_filter):
-        col = self.__get_user_collection(did, app_id, collection_name)
+        return self.delete_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter)
+
+    def delete_one_origin(self, db_name, collection_name, col_filter):
+        col = self.__get_origin_collection(db_name, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
 

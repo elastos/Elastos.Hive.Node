@@ -33,7 +33,7 @@ def download_file(path):
     if not component:
         return files.download_file(path)
     elif component == 'children':
-        return files.list_children(path)
+        return files.list_folder(path)
     elif component == 'metadata':
         return files.get_properties(path)
     elif component == 'hash':

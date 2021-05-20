@@ -29,7 +29,8 @@ def before_request():
 
 def _init_log():
     print("init log")
-    logging.config.dictConfig(yaml.load(open('logging.conf'), Loader=yaml.FullLoader))
+    with open('logging.conf') as f:
+        logging.config.dictConfig(yaml.load(f, Loader=yaml.FullLoader))
     logfile = logging.getLogger('file')
     log_console = logging.getLogger('console')
     logfile.debug("Debug FILE")

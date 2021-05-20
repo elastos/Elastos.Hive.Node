@@ -1,20 +1,30 @@
 import json
 import logging
+import multiprocessing
+import shutil
+import sys
 
 import requests
 import unittest
 from flask_testing import LiveServerTestCase
 
+from hive.main.hive_backup import HiveBackup, VAULT_BACKUP_INFO_STATE, VAULT_BACKUP_MSG_SUCCESS, VAULT_BACKUP_INFO_MSG
 from hive.util.constants import HIVE_MODE_TEST
+from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
+from hive.util.payment.vault_service_manage import delete_user_vault, delete_user_vault_data, get_vault_path
+from src import create_app
 from tests_v1.hive_auth_test import DIDApp, DApp
 from hive.util.did.eladid import ffi, lib
 
 from tests_v1.test_common import upsert_collection, create_upload_file, prepare_vault_data, copy_to_backup_data
 
-# unittest.TestSuite
+unittest.TestSuite
 
-import src
+import hive
+# from hive import HIVE_MODE_TEST
 from tests_v1 import test_common
+
+from sys import platform
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -22,9 +32,17 @@ logger.level = logging.DEBUG
 
 PORT = 5002
 
+if platform == "darwin":
+    # mac os
+    multiprocessing.set_start_method("fork")
 
-# TODO: make this work.
-@unittest.skip
+
+def disabled(f):
+    def _decorator(self):
+        print(f.__name__ + ' has been disabled')
+    return _decorator
+
+
 class HiveInternalTest(LiveServerTestCase):
 
     def assert200(self, status):
@@ -38,7 +56,7 @@ class HiveInternalTest(LiveServerTestCase):
         return v, r.status_code
 
     def create_app(self):
-        app = src.create_app(hive_config='.env.test')
+        app = create_app(hive_config='.env.test')
         app.config['TESTING'] = True
         # Default port is 5000
         app.config['LIVESERVER_PORT'] = PORT
@@ -49,7 +67,7 @@ class HiveInternalTest(LiveServerTestCase):
     def setUp(self):
         logging.getLogger("HiveBackupTestCase").info("\n")
 
-        self.app = src.create_app(mode=HIVE_MODE_TEST, hive_config='.env')
+        self.app = create_app(mode=HIVE_MODE_TEST, hive_config='.env')
         self.app.config['TESTING'] = True
         self.test_client = self.app.test_client()
         self.content_type = ("Content-Type", "application/json")
@@ -106,6 +124,7 @@ class HiveInternalTest(LiveServerTestCase):
         # info = HiveBackup.restore_vault_data(did)
         # self.assertIsNotNone(info)
 
+    @disabled
     def test_1_save_restore_hive_node(self):
         host = self.get_server_url()
         self.init_vault_backup_service(host)

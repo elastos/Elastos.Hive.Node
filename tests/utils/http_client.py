@@ -79,6 +79,7 @@ class HttpClient:
     def __init__(self, base_url):
         self.base_url = base_url
         self.remote_resolver = None
+        logging.debug(f'HttpClient.base_url: {self.base_url}')
 
     def __get_url(self, relative_url):
         return self.base_url + relative_url
@@ -96,11 +97,11 @@ class HttpClient:
         return requests.get(self.__get_url(relative_url), headers=self.__get_headers())
 
     @_log_http_request
-    def post(self, relative_url, body, need_token=True):
+    def post(self, relative_url, body=None, need_token=True):
         return requests.post(self.__get_url(relative_url), headers=self.__get_headers(need_token), data=body)
 
     @_log_http_request
-    def put(self, relative_url, body, is_json=True):
+    def put(self, relative_url, body=None, is_json=True):
         if not is_json:
             return requests.put(self.__get_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
         return requests.put(self.__get_url(relative_url), headers=self.__get_headers(), json=body)

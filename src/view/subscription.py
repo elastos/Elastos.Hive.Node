@@ -32,8 +32,8 @@ def vault_unsubscribe():
 
 
 @blueprint.route('/api/v2/subscription/vault', methods=['POST'])
-def vault_activate_deactive():
-    op = None
+def vault_activate_deactivate():
+    op = request.args.get('op')
     if op == 'activation':
         return vault_subscription.activate()
     elif op == 'deactivation':

@@ -11,8 +11,8 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVI
     VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
+from src.modules.scripting.scripting import check_auth
 from src.utils.database_client import cli, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_STATE_FREEZE
-from src.utils.http_auth import check_auth
 from src.utils.http_response import hive_restful_response, NotImplementedException, BadRequestException, ErrorCode
 
 
@@ -48,7 +48,12 @@ class VaultSubscription:
                VAULT_SERVICE_MODIFY_TIME: now,
                VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_FREEZE,
                VAULT_SERVICE_PRICING_USING: price_plan['name']}
-        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {"$set": doc})
+        col = cli.get_origin_collection(DID_INFO_DB_NAME, VAULT_SERVICE_COL, True)
+        options = {
+            "upsert": True,
+            "bypass_document_validation": False
+        }
+        col.replace_one({VAULT_SERVICE_DID: did}, doc, **options)
         return doc
 
     def __get_vault_info(self, doc):

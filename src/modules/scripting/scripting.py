@@ -476,6 +476,10 @@ class Script:
         self.executables = Executable.create(self, script_data['executable'])
         self.anonymous_user = script_data.get('allowAnonymousUser', False)
         self.anonymous_app = script_data.get('allowAnonymousApp', False)
+        if self.anonymous_user:
+            self.did = None
+        if self.anonymous_app:
+            self.app_id = None
 
         result = dict()
         for executable in self.executables:

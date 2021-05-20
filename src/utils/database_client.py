@@ -34,9 +34,9 @@ class DatabaseClient:
         return connection
 
     def get_user_collection(self, did, app_id, collection_name, is_create=False):
-        return self.__get_origin_collection(gene_mongo_db_name(did, app_id), collection_name, is_create)
+        return self.get_origin_collection(gene_mongo_db_name(did, app_id), collection_name, is_create)
 
-    def __get_origin_collection(self, db_name, collection_name, is_create=False):
+    def get_origin_collection(self, db_name, collection_name, is_create=False):
         db = self.__get_connection()[db_name]
         if not is_create and collection_name not in db.list_collection_names():
             return None
@@ -67,7 +67,7 @@ class DatabaseClient:
         return self.find_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter, options)
 
     def find_one_origin(self, db_name, collection_name, col_filter, options=None):
-        col = self.__get_origin_collection(db_name, collection_name)
+        col = self.get_origin_collection(db_name, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
@@ -76,7 +76,7 @@ class DatabaseClient:
         return self.insert_one_origin(gene_mongo_db_name(did, app_id), collection_name, document, options)
 
     def insert_one_origin(self, db_name, collection_name, document, options=None):
-        col = self.__get_origin_collection(db_name, collection_name)
+        col = self.get_origin_collection(db_name, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
 
@@ -93,8 +93,8 @@ class DatabaseClient:
     def update_one(self, did, app_id, collection_name, col_filter, col_update, options):
         return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter, col_update, options)
 
-    def update_one_origin(self, db_name, collection_name, col_filter, col_update, options):
-        col = self.__get_origin_collection(db_name, collection_name)
+    def update_one_origin(self, db_name, collection_name, col_filter, col_update, options=None):
+        col = self.get_origin_collection(db_name, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
 
@@ -105,7 +105,7 @@ class DatabaseClient:
         if "$set" in col_update:
             col_update["$set"]["modified"] = datetime.utcnow()
 
-        result = col.update_one(convert_oid(col_filter), convert_oid(col_update, update=True), **options)
+        result = col.update_one(convert_oid(col_filter), convert_oid(col_update, update=True), **(options if options else {}))
         return {
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,
@@ -117,7 +117,7 @@ class DatabaseClient:
         return self.delete_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter)
 
     def delete_one_origin(self, db_name, collection_name, col_filter):
-        col = self.__get_origin_collection(db_name, collection_name)
+        col = self.get_origin_collection(db_name, collection_name)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
 

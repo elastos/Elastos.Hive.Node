@@ -36,6 +36,12 @@ def check_auth():
     return did, app_id
 
 
+def check_auth_and_vault(permission):
+    did, app_id = check_auth()
+    cli.check_vault_access(did, permission)
+    return did, app_id
+
+
 def validate_exists(json_data, parent_name, prop_list):
     for prop in prop_list:
         parts = prop.split('.')
@@ -499,14 +505,9 @@ class Scripting:
         self.app = app
         self.hive_setting = hive_setting
 
-    def __check(self, permission):
-        did, app_id = check_auth()
-        cli.check_vault_access(did, permission)
-        return did, app_id
-
     @hive_restful_response
     def set_script(self, script_name):
-        did, app_id = self.__check(VAULT_ACCESS_WR)
+        did, app_id = check_auth_and_vault(VAULT_ACCESS_WR)
 
         json_data = request.get_json(force=True, silent=True)
         Script.validate_script_data(json_data)
@@ -532,7 +533,7 @@ class Scripting:
 
     @hive_restful_response
     def delete_script(self, script_name):
-        did, app_id = self.__check(VAULT_ACCESS_DEL)
+        did, app_id = check_auth_and_vault(VAULT_ACCESS_DEL)
 
         col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
         if not col:
@@ -570,7 +571,7 @@ class Scripting:
         return self.handle_transaction(transaction_id)
 
     def handle_transaction(self, transaction_id, is_download=False):
-        did, app_id = self.__check(VAULT_ACCESS_R if is_download else VAULT_ACCESS_WR)
+        did, app_id = check_auth_and_vault(VAULT_ACCESS_R if is_download else VAULT_ACCESS_WR)
 
         row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)
         col_filter = {"_id": ObjectId(row_id)}

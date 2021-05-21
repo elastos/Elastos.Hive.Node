@@ -17,6 +17,7 @@ class ErrorCode:
     VAULT_NO_PERMISSION         = 100004
     INVALID_PARAMETER           = 100005
     ALREADY_EXISTS              = 100006
+    DOES_NOT_EXISTS             = 100007
     SCRIPT_NOT_FOUND            = 120001
 
 

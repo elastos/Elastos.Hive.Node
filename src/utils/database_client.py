@@ -3,6 +3,7 @@
 """
 Any database operations can be found here.
 """
+from pymongo.errors import CollectionInvalid
 
 from hive.settings import hive_setting
 from pymongo import MongoClient
@@ -139,6 +140,17 @@ class DatabaseClient:
             return os.path.getsize(file_path.as_posix())
         except Exception as e:
             raise BadRequestException('Failed to save the file content to local.')
+
+    def create_collection(self, did, app_did, collection_name):
+        try:
+            self.__get_connection()[gene_mongo_db_name(did, app_did)].create_collection(collection_name)
+        except CollectionInvalid:
+            raise BadRequestException(code=ErrorCode.ALREADY_EXISTS, msg='Collection already exists.')
+
+    def delete_collection(self, did, app_did, collection_name):
+        if self.get_user_collection(did, app_did, collection_name):
+            raise BadRequestException(code=ErrorCode.DOES_NOT_EXISTS, msg='Collection does not exist.')
+        self.__get_connection()[gene_mongo_db_name(did, app_did)].drop_collection(collection_name)
 
 
 cli = DatabaseClient()

@@ -31,10 +31,7 @@ def get_save_files_path(did, app_id):
 
 
 def filter_path_root(name):
-    if name[0] == "/":
-        return name[1:]
-    else:
-        return name
+    return name[1:] if len(name) > 0 and name[0] == "/" else name
 
 
 def query_upload_get_filepath(did, app_id, file_name):

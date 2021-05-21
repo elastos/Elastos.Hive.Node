@@ -8,7 +8,7 @@ from src.modules.database.database import Database
 
 from src.utils.http_response import BadRequestException
 
-blueprint = Blueprint('subscription', __name__)
+blueprint = Blueprint('database', __name__)
 # files = Files()
 database = Database()
 
@@ -49,14 +49,19 @@ def delete_document(collection_name):
 def count_document(collection_name):
     op = request.args.get('op')
     if op == 'count':
-        return database.find_document(collection_name,
-                                      request.args.get('filter'),
-                                      request.args.get('skip'),
-                                      request.args.get('limit'))
+        return database.count_document()
     else:
         raise BadRequestException(msg='Invalid parameter "op"')
 
 
+@blueprint.route('/api/v2/vault/db/<collection_name>', methods=['GET'])
+def find_document(collection_name):
+    return database.find_document(collection_name,
+                                  request.args.get('filter'),
+                                  request.args.get('skip'),
+                                  request.args.get('limit'))
+
+
 @blueprint.route('/api/v2/vault/db/query', methods=['POST'])
-def count_document(collection_name):
+def query_document(collection_name):
     return database.query_document(collection_name, request.get_json(force=True, silent=True))

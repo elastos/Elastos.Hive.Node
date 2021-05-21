@@ -35,6 +35,9 @@ class Database:
     def delete_document(self, collection_name, json_body):
         pass
 
+    def count_document(self):
+        pass
+
     def find_document(self, collection_name, col_filter, skip, limit):
         pass
 

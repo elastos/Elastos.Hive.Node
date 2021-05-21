@@ -15,7 +15,7 @@ from hive.util.did_file_info import query_upload_get_filepath, query_download, f
 from hive.util.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
 from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.modules.scripting.scripting import check_auth_and_vault
-from src.utils.http_response import BadRequestException
+from src.utils.http_response import BadRequestException, hive_restful_response, hive_download_response
 
 
 class Files:
@@ -26,6 +26,7 @@ class Files:
         fixed_path = filter_path_root(path)
         return (get_save_files_path(did, app_did) / fixed_path).resolve()
 
+    @hive_restful_response
     def upload_file(self, path):
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         full_path = self._upload_file_from_request_stream(did, app_did, path)
@@ -59,6 +60,7 @@ class Files:
             raise BadRequestException(msg='Failed to write to upload file.')
         return temp_file
 
+    @hive_download_response
     def download_file(self, path):
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         data, status_code = query_download(did, app_did, path)
@@ -70,6 +72,7 @@ class Files:
             raise BadRequestException(msg=f"Cannot access the file '{path}'.")
         return data
 
+    @hive_restful_response
     def delete_file(self, path):
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         full_path = self._get_file_full_path(did, app_did, path)
@@ -83,9 +86,11 @@ class Files:
                 full_path.unlink()
                 inc_vault_file_use_storage_byte(did, -file_size)
 
+    @hive_restful_response
     def move_file(self, src_path, dst_path):
         return self._move_file(src_path, dst_path)
 
+    @hive_restful_response
     def copy_file(self, src_path, dst_path):
         return self._move_file(src_path, dst_path, True)
 
@@ -95,7 +100,7 @@ class Files:
         full_dst_path = self._get_file_full_path(did, app_did, dst_path)
         if not full_src_path.exists():
             raise BadRequestException(msg='File to moved does not exist.')
-        if full_dst_path:
+        if full_dst_path.exists():
             raise BadRequestException(msg='Destination file exists.')
         if not is_copy:
             shutil.move(full_src_path.as_posix(), full_dst_path.as_posix())
@@ -112,6 +117,7 @@ class Files:
             'name': dst_path
         }
 
+    @hive_restful_response
     def list_folder(self, path):
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         full_path = self._get_file_full_path(did, app_did, path)
@@ -126,9 +132,10 @@ class Files:
             'is_file': (full_dir_path / file_meta).is_file()
         }
         if info['is_file']:
-            info['size'] = file_meta.stat.st_size
-        return file_meta
+            info['size'] = (full_dir_path / file_meta).stat().st_size
+        return info
 
+    @hive_restful_response
     def get_properties(self, path):
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         full_path = self._get_file_full_path(did, app_did, path)
@@ -144,6 +151,7 @@ class Files:
             'updated': stat.st_birthtime
         }
 
+    @hive_restful_response
     def get_hash(self, path):
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         data, err = query_hash(did, app_did, path)

@@ -8,7 +8,7 @@ from flask import Blueprint, request
 from src.modules.files.files import Files
 from src.utils.http_response import BadRequestException
 
-blueprint = Blueprint('subscription', __name__)
+blueprint = Blueprint('files', __name__)
 files = Files()
 
 
@@ -19,7 +19,7 @@ def init_app(app, hive_setting):
     app.register_blueprint(blueprint)
 
 
-@blueprint.route('/api/v2/vault/files/<path>', methods=['PUT'])
+@blueprint.route('/api/v2/vault/files/<path:path>', methods=['PUT'])
 def upload_file(path):
     dst_path = request.args.get('dst')
     if dst_path:
@@ -27,7 +27,7 @@ def upload_file(path):
     return files.upload_file(path)
 
 
-@blueprint.route('/api/v2/vault/files/<path>', methods=['GET'])
+@blueprint.route('/api/v2/vault/files/<regex("(|[0-9a-zA-Z_/]*)"):path>', methods=['GET'])
 def download_file(path):
     component = request.args.get('comp')
     if not component:
@@ -42,12 +42,12 @@ def download_file(path):
         return BadRequestException(msg='invalid parameter "comp"')
 
 
-@blueprint.route('/api/v2/vault/files/<path>', methods=['DELETE'])
+@blueprint.route('/api/v2/vault/files/<path:path>', methods=['DELETE'])
 def delete_file(path):
     return files.delete_file(path)
 
 
-@blueprint.route('/api/v2/vault/files/<path>', methods=['PATCH'])
+@blueprint.route('/api/v2/vault/files/<path:path>', methods=['PATCH'])
 def move_file(path):
     dst_path = request.args.get('to')
     return files.move_file(path, dst_path)

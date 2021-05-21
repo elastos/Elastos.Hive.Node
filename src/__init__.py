@@ -3,6 +3,7 @@ import logging.config
 import yaml
 from flask_cors import CORS
 from flask import Flask, request
+from werkzeug.routing import BaseConverter
 
 from hive import main
 from hive.settings import hive_setting
@@ -11,7 +12,16 @@ from hive.util.did.did_init import init_did_backend
 from src import view
 from src.utils.http_response import UnauthorizedException
 
+
+class RegexConverter(BaseConverter):
+    """ Support regex on url match """
+    def __init__(self, url_map, *items):
+        super().__init__(url_map)
+        self.regex = items[0]
+
+
 app = Flask('Hive Node V2')
+app.url_map.converters['regex'] = RegexConverter
 
 
 @app.before_request

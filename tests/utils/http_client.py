@@ -107,7 +107,7 @@ class HttpClient:
         return requests.put(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request
-    def patch(self, relative_url, body):
+    def patch(self, relative_url, body=None):
         return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request

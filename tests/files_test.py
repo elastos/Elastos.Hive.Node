@@ -11,6 +11,7 @@ from tests.utils.http_client import HttpClient
 from tests import init_test
 
 
+@unittest.skip
 class FilesTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)

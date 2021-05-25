@@ -13,7 +13,8 @@ from hive.util.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_SCRIPT_COLLECTION, \
-    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL
+    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL, \
+    SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_CALLER_APP_DID, SCRIPTING_EXECUTABLE_PARAMS
 from hive.util.did_file_info import query_upload_get_filepath, query_properties, query_hash, query_download, \
     filter_path_root
 from hive.util.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size, \
@@ -51,6 +52,25 @@ def validate_exists(json_data, parent_name, prop_list):
         else:
             if not json_data.get(prop, None):
                 raise BadRequestException(msg=f'Parameter {prop_name} MUST be provided')
+
+
+def fix_dollar_keys(data, is_save=True):
+    """ use this because of mongo not support key starts with $ """
+    if type(data) is not dict:
+        return
+
+    src = '$set' if is_save else '"$"set'
+    dst = '"$"set' if is_save else '$set'
+    for k, v in list(data.items()):
+        if k == src:
+            data[dst] = data.pop(k)
+
+    for k, v in data.items():
+        if type(v) is dict:
+            fix_dollar_keys(v, is_save)
+        elif type(v) is list:
+            for item in v:
+                fix_dollar_keys(item, is_save)
 
 
 class Condition:
@@ -108,7 +128,7 @@ class Condition:
                     return False
             return True
         else:
-            return self.__is_satisfied_query_has_result(json_data)
+            return self.__is_satisfied_query_has_result(json_data['body'])
 
     def __is_satisfied_query_has_result(self, json_data):
         col_name = json_data['collection']
@@ -140,7 +160,7 @@ class Context:
 
         target_did = json_data.get('target_did')
         target_app_did = json_data.get('target_app_did')
-        if not target_did or target_app_did:
+        if not target_did or not target_app_did:
             raise BadRequestException(msg='target_did or target_app_did MUST be set.')
 
     def get_script_data(self, script_name):
@@ -259,7 +279,7 @@ class Executable:
                                       "file_name": body['path'],
                                       "fileapi_type": action_type
                                   }
-                              })
+                              }, is_create=True)
         if not data.get('inserted_id', None):
             raise BadRequestException('Cannot retrieve the transaction ID.')
 
@@ -311,10 +331,12 @@ class FindExecutable(Executable):
 
     def execute(self):
         cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_R)
+        options = populate_options_find_many(self.body) if 'options' in self.body else {}
         return self.get_output_data({"items": cli.find_many(self.get_target_did(),
                                                             self.get_target_app_did(),
+                                                            self.get_collection_name(),
                                                             self.get_populated_filter(),
-                                                            populate_options_find_many(self.body))})
+                                                            options)})
 
 
 class InsertExecutable(Executable):
@@ -405,17 +427,16 @@ class FilePropertiesExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        cli.check_vault_access(VAULT_ACCESS_R)
-
+        cli.check_vault_access(self.script.did, VAULT_ACCESS_R)
         body = self.get_populated_body()
-        full_path, err = query_upload_get_filepath(self.get_target_did(), self.get_target_app_did(), body['path'])
-        if err:
-            raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
-
-        data, err = query_properties(self.get_target_did(), self.get_target_app_did(), body['path'])
-        if err:
-            raise BadRequestException('Failed to get file properties with error message: ' + str(err))
-        return self.get_output_data(data)
+        full_path, stat = self.script.scripting\
+            .get_files().get_file_stat_by_did(self.script.did, self.script.app_id, body['path'])
+        return self.get_output_data({
+            "type": "file" if full_path.is_file() else "folder",
+            "name": body['path'],
+            "size": stat.st_size,
+            "last_modify": stat.st_mtime,
+        })
 
 
 class FileHashExecutable(Executable):
@@ -423,13 +444,8 @@ class FileHashExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        cli.check_vault_access(VAULT_ACCESS_R)
-
+        cli.check_vault_access(self.script.did, VAULT_ACCESS_R)
         body = self.get_populated_body()
-        full_path, err = query_upload_get_filepath(self.get_target_did(), self.get_target_app_did(), body['path'])
-        if err:
-            raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
-
         data, err = query_hash(self.get_target_did(), self.get_target_app_did(), body['path'])
         if err:
             raise BadRequestException('Failed to get file hash code with error message: ' + str(err))
@@ -437,7 +453,7 @@ class FileHashExecutable(Executable):
 
 
 class Script:
-    def __init__(self, script_name, run_data, did, app_id, hive_setting=None):
+    def __init__(self, script_name, run_data, did, app_id, hive_setting=None, scripting=None):
         self.did = did
         self.app_id = app_id
         self.name = script_name
@@ -448,6 +464,7 @@ class Script:
         self.anonymous_user = False
         self.anonymous_app = False
         self.hive_setting = hive_setting
+        self.scripting = scripting
 
     @staticmethod
     def validate_script_data(json_data):
@@ -479,6 +496,7 @@ class Script:
         script_data = self.context.get_script_data(self.name)
         if not script_data:
             raise BadRequestException(msg=f"Can't get the script with name '{self.name}'")
+        fix_dollar_keys(script_data['executable'], False)
         self.executables = Executable.create(self, script_data['executable'])
         self.anonymous_user = script_data.get('allowAnonymousUser', False)
         self.anonymous_app = script_data.get('allowAnonymousApp', False)
@@ -504,6 +522,7 @@ class Scripting:
     def __init__(self, app=None, hive_setting=None):
         self.app = app
         self.hive_setting = hive_setting
+        self.files = None
 
     @hive_restful_response
     def set_script(self, script_name):
@@ -519,11 +538,9 @@ class Scripting:
     def __upsert_script_to_database(self, script_name, json_data, did, app_id):
         col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION, True)
         json_data['name'] = script_name
-        options = {
-            "upsert": True,
-            "bypass_document_validation": False
-        }
-        ret = col.replace_one({"name": script_name}, convert_oid(json_data), **options)
+        fix_dollar_keys(json_data['executable'])
+        ret = col.replace_one({"name": script_name}, convert_oid(json_data),
+                              upsert=True, bypass_document_validation=False)
         return {
             "acknowledged": ret.acknowledged,
             "matched_count": ret.matched_count,
@@ -550,7 +567,7 @@ class Scripting:
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
         did, app_id = check_auth()
-        return Script(script_name, json_data, did, app_id, self.hive_setting).execute()
+        return Script(script_name, json_data, did, app_id, self.hive_setting, scripting=self).execute()
 
     @hive_restful_response
     def run_script_url(self, script_name, target_did, target_app_did, params):
@@ -564,7 +581,13 @@ class Scripting:
             }
         Script.validate_run_data(json_data)
         did, app_id = check_auth()
-        return Script(script_name, json_data, did, app_id, self.hive_setting).execute()
+        return Script(script_name, json_data, did, app_id, self.hive_setting, scripting=self).execute()
+
+    def get_files(self):
+        if not self.files:
+            from src.modules.files.files import Files
+            self.files = Files()
+        return self.files
 
     @hive_restful_response
     def upload_file(self, transaction_id):
@@ -581,20 +604,9 @@ class Scripting:
 
         data = None
         if is_download:
-            data, status_code = query_download(target_did, target_app_did, trans['document']['file_name'])
-            if status_code == BAD_REQUEST:
-                raise BadRequestException(msg='Cannot get file name by transaction id')
-            elif status_code == NOT_FOUND:
-                raise BadRequestException(msg=f"The file '{trans['document']['file_name']}' does not exist.")
-            elif status_code == FORBIDDEN:
-                raise BadRequestException(msg=f"Cannot access the file '{trans['document']['file_name']}'.")
-            return data
+            data = self.get_files().download_file_by_did(did, app_id, trans['document']['file_name'])
         else:
-            file_full_path, err = query_upload_get_filepath(target_did, target_app_did,
-                                                            filter_path_root(trans['document']['file_name']))
-            if err:
-                raise BadRequestException('Failed get file full path with error message: ' + str(err))
-            inc_vault_file_use_storage_byte(target_did, cli.stream_to_file(request.stream, file_full_path))
+            self.get_files().upload_file_by_did(did, app_id, trans['document']['file_name'])
 
         cli.delete_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
         update_vault_db_use_storage_byte(target_did, get_mongo_database_size(target_did, target_app_did))

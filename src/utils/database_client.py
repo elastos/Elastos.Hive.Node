@@ -73,11 +73,11 @@ class DatabaseClient:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
-    def insert_one(self, did, app_id, collection_name, document, options=None):
-        return self.insert_one_origin(gene_mongo_db_name(did, app_id), collection_name, document, options)
+    def insert_one(self, did, app_id, collection_name, document, options=None, is_create=False):
+        return self.insert_one_origin(gene_mongo_db_name(did, app_id), collection_name, document, options, is_create)
 
-    def insert_one_origin(self, db_name, collection_name, document, options=None):
-        col = self.get_origin_collection(db_name, collection_name)
+    def insert_one_origin(self, db_name, collection_name, document, options=None, is_create=False):
+        col = self.get_origin_collection(db_name, collection_name, is_create)
         if not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
 

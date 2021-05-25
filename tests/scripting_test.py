@@ -9,6 +9,7 @@ import json
 
 from tests.utils.http_client import HttpClient
 from tests import init_test
+from tests_v1 import test_common
 
 
 @unittest.skip
@@ -17,7 +18,20 @@ class ScriptingTestCase(unittest.TestCase):
         super().__init__(method_name)
         init_test()
         self.cli = HttpClient('http://localhost:5000/api/v2/vault')
+        self.file_name = 'test.txt'
         self.file_content = 'File Content: 12345678'
+        self.collection_name = 'script_database'
+        # self.did = test_common.did
+        self.did = 'did:elastos:ioRn3eEopRjA7CBRrrWQWzttAfXAjzvKMx'
+        self.app_did = test_common.app_id
+
+    @classmethod
+    def setUpClass(cls):
+        pass
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
 
     def __register_script(self, script_name, body):
         response = self.cli.put(f'/scripting/{script_name}', body)
@@ -36,7 +50,7 @@ class ScriptingTestCase(unittest.TestCase):
                 "name": "database_insert",
                 "type": "insert",
                 "body": {
-                    "collection": "script_database",
+                    "collection": self.collection_name,
                     "document": {
                         "author": "$params.author",
                         "content": "$params.content"
@@ -48,10 +62,6 @@ class ScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-
-    def test06_delete_script(self):
-        response = self.cli.delete('/scripting/database_insert')
-        self.assertEqual(response.status_code, 204)
 
     def test02_call_script(self):
         self.__call_script('database_insert', {
@@ -69,7 +79,7 @@ class ScriptingTestCase(unittest.TestCase):
     def __call_script_for_transaction_id(self, script_name):
         response_body = self.__call_script(script_name, {
             "params": {
-                "path": "test.txt"
+                "path": self.file_name
             }
         })
         self.assertEqual(type(response_body), dict)
@@ -109,6 +119,107 @@ class ScriptingTestCase(unittest.TestCase):
         response = self.cli.get(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.file_content)
+
+    def test06_find(self):
+        name = 'database_find'
+        col_filter = {'author': '$params.author'}
+        body = self.__set_and_call_script(name, {'condition': {
+                'name': 'verify_user_permission',
+                'type': 'queryHasResults',
+                'body': {
+                    'collection': self.collection_name,
+                    'filter': col_filter
+                }
+            }, 'executable': {
+                'name': name,
+                'type': 'find',
+                'output': True,
+                'body': {
+                    'collection': self.collection_name,
+                    'filter': col_filter
+                }
+            }}, {'context': {
+                'target_did': self.did,
+                'target_app_did': self.app_did,
+            }, 'params': {
+                'author': 'John'}})
+        self.assertIsNotNone(body)
+
+    def test07_update(self):
+        name = 'database_update'
+        col_filter = {'author': '$params.author'}
+        body = self.__set_and_call_script(name, {'executable': {
+            'name': name,
+            'type': 'update',
+            'output': True,
+            'body': {
+                'collection': self.collection_name,
+                'filter': col_filter,
+                'update': {
+                    '$set': {
+                        'author': '$params.author',
+                        'content': '$params.content'
+                    }
+                }, 'options': {
+                    'bypass_document_validation': False,
+                    'upsert': True
+                }
+            }}}, {'context': {
+                'target_did': self.did,
+                'target_app_did': self.app_did,
+            }, 'params': {
+                'author': 'John',
+                'content': 'message2'}})
+        self.assertIsNotNone(body)
+
+    def test08_delete(self):
+        name = 'database_delete'
+        col_filter = {'author': '$params.author'}
+        body = self.__set_and_call_script(name, {'executable': {
+            'name': name,
+            'type': 'delete',
+            'output': True,
+            'body': {
+                'collection': self.collection_name,
+                'filter': col_filter
+            }}}, {'context': {
+                'target_did': self.did,
+                'target_app_did': self.app_did,
+            }, 'params': {
+                'author': 'John'}})
+        self.assertIsNotNone(body)
+
+    def test09_file_properties(self):
+        name = 'file_properties'
+        body = self.__set_and_call_script(name, {'executable': {
+            'name': name,
+            'type': 'fileProperties',
+            'output': True,
+            'body': {
+                'path': '$params.path'
+            }}}, {'params': {
+                'path': self.file_name}})
+        self.assertIsNotNone(body)
+
+    def test10_file_hash(self):
+        name = 'file_hash'
+        body = self.__set_and_call_script(name, {'executable': {
+            'name': name,
+            'type': 'fileHash',
+            'output': True,
+            'body': {
+                'path': '$params.path'
+            }}}, {'params': {
+                'path': self.file_name}})
+        self.assertIsNotNone(body)
+
+    def test11_delete_script(self):
+        response = self.cli.delete('/scripting/database_insert')
+        self.assertEqual(response.status_code, 204)
+
+    def __set_and_call_script(self, name, set_data, run_data):
+        self.__register_script(name, set_data)
+        return self.__call_script(name, run_data)
 
 
 if __name__ == '__main__':

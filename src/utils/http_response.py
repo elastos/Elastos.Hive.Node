@@ -4,10 +4,11 @@
 Defines all success and error http response code and body.
 For new exception, please define here.
 """
-
+from bson import ObjectId, json_util
 from flask import jsonify, request
 import traceback
 import logging
+import json
 
 
 class ErrorCode:
@@ -37,7 +38,7 @@ class HiveException(BaseException):
 
     @staticmethod
     def get_success_response(data, is_download=False):
-        json_data = data if is_download else (jsonify(data) if data else '')
+        json_data = data if is_download else (json.dumps(data, default=json_util.default) if data else '')
         return json_data, HiveException.__get_success_http_code()
 
     @staticmethod

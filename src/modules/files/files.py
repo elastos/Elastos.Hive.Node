@@ -14,8 +14,8 @@ from hive.util.did_file_info import query_upload_get_filepath, query_download, f
     get_dir_size, query_hash
 from hive.util.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
 from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
-from src.modules.scripting.scripting import check_auth_and_vault
 from src.utils.http_response import BadRequestException, hive_restful_response, hive_download_response
+from src.modules.scripting.scripting import check_auth_and_vault
 
 
 class Files:
@@ -29,11 +29,14 @@ class Files:
     @hive_restful_response
     def upload_file(self, path):
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        full_path = self._upload_file_from_request_stream(did, app_did, path)
-        inc_vault_file_use_storage_byte(did, os.path.getsize(full_path.as_posix()))
+        self.upload_file_by_did(did, app_did, path)
         return {
             'name': path
         }
+
+    def upload_file_by_did(self, did, app_did, path):
+        full_path = self._upload_file_from_request_stream(did, app_did, path)
+        inc_vault_file_use_storage_byte(did, os.path.getsize(full_path.as_posix()))
 
     def _upload_file_from_request_stream(self, did, app_did, path):
         full_path, err = query_upload_get_filepath(did, app_did, path)
@@ -63,6 +66,9 @@ class Files:
     @hive_download_response
     def download_file(self, path):
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
+        return self.download_file_by_did(did, app_did, path)
+
+    def download_file_by_did(self, did, app_did, path):
         data, status_code = query_download(did, app_did, path)
         if status_code == BAD_REQUEST:
             raise BadRequestException(msg='Cannot get file name by transaction id')
@@ -135,14 +141,16 @@ class Files:
             info['size'] = (full_dir_path / file_meta).stat().st_size
         return info
 
-    @hive_restful_response
-    def get_properties(self, path):
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+    def get_file_stat_by_did(self, did, app_did, path):
         full_path = self._get_file_full_path(did, app_did, path)
         if not full_path.exists():
             raise BadRequestException(msg='File path does not exist.')
+        return full_path, full_path.stat()
 
-        stat = full_path.stat()
+    @hive_restful_response
+    def get_properties(self, path):
+        did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
+        full_path, stat = self.get_file_stat_by_did(did, app_did, path)
         return {
             'name': path,
             'is_file': full_path.is_file(),

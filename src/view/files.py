@@ -18,17 +18,8 @@ def init_app(app, hive_setting):
     # scripting = Scripting(app=app, hive_setting=hive_setting)
     app.register_blueprint(blueprint)
 
-
-@blueprint.route('/api/v2/vault/files/<path:path>', methods=['PUT'])
-def upload_file(path):
-    dst_path = request.args.get('dst')
-    if dst_path:
-        return files.copy_file(path, dst_path)
-    return files.upload_file(path)
-
-
 @blueprint.route('/api/v2/vault/files/<regex("(|[0-9a-zA-Z_/]*)"):path>', methods=['GET'])
-def download_file(path):
+def reading_operation(path):
     component = request.args.get('comp')
     if not component:
         return files.download_file(path)
@@ -41,13 +32,18 @@ def download_file(path):
     else:
         return BadRequestException(msg='invalid parameter "comp"')
 
-
-@blueprint.route('/api/v2/vault/files/<path:path>', methods=['DELETE'])
-def delete_file(path):
-    return files.delete_file(path)
-
+@blueprint.route('/api/v2/vault/files/<path:path>', methods=['PUT'])
+def writing_operation(path):
+    dest_path = request.args.get('dest')
+    if dest_path:
+        return files.copy_file(path, dest_path)
+    return files.upload_file(path)
 
 @blueprint.route('/api/v2/vault/files/<path:path>', methods=['PATCH'])
 def move_file(path):
     dst_path = request.args.get('to')
     return files.move_file(path, dst_path)
+
+@blueprint.route('/api/v2/vault/files/<path:path>', methods=['DELETE'])
+def delete_file(path):
+    return files.delete_file(path)

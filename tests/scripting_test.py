@@ -120,7 +120,7 @@ class ScriptingTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.file_content)
 
-    def test06_find(self):
+    def test06_find_with_default_output(self):
         name = 'database_find'
         col_filter = {'author': '$params.author'}
         body = self.__set_and_call_script(name, {'condition': {
@@ -133,7 +133,6 @@ class ScriptingTestCase(unittest.TestCase):
             }, 'executable': {
                 'name': name,
                 'type': 'find',
-                'output': True,
                 'body': {
                     'collection': self.collection_name,
                     'filter': col_filter

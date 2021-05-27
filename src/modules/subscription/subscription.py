@@ -37,7 +37,7 @@ class VaultSubscription:
         return self.__get_vault_info(self.__create_vault(did, PaymentConfig.get_free_vault_info()))
 
     def __create_vault(self, did, price_plan):
-        now = datetime.utcnow().timestamp()
+        now = datetime.utcnow().timestamp()  # seconds in UTC
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
         doc = {VAULT_SERVICE_DID: did,
                VAULT_SERVICE_MAX_STORAGE: price_plan["maxStorage"],
@@ -60,11 +60,19 @@ class VaultSubscription:
         return {
             'pricingPlan': doc[VAULT_SERVICE_PRICING_USING],
             'serviceDid': h_auth.get_did_string(),
-            'quota': doc[VAULT_SERVICE_MAX_STORAGE] * 1000 * 1000,
-            'used': 0,
-            'created': doc[VAULT_SERVICE_START_TIME],
-            'updated': doc[VAULT_SERVICE_END_TIME],
+            'storageQuota': doc[VAULT_SERVICE_MAX_STORAGE] * 1000 * 1000,
+            'storageUsed': 0,
+            'created': self.__timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),
+            'updated': self.__timestamp_to_epoch(doc[VAULT_SERVICE_END_TIME]),
         }
+
+    def __timestamp_to_epoch(self, timestamp):
+        if timestamp < 0:
+            return timestamp
+        t = datetime.fromtimestamp(timestamp)
+        s = datetime(1970, 1, 1, 0, 0, 0)
+        return int((t - s).total_seconds())
+
 
     @hive_restful_response
     def unsubscribe(self):

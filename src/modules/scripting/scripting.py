@@ -173,7 +173,7 @@ class Executable:
         self.script = script
         self.name = executable_data['name']
         self.body = executable_data['body']
-        self.is_output = executable_data.get('output', False)
+        self.is_output = executable_data.get('output', True)
 
     @staticmethod
     def validate_data(json_data):

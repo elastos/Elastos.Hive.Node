@@ -59,6 +59,13 @@ def check_json_param(content, content_type, args):
 
 
 def populate_with_params_values(did, app_did, options, params):
+    """
+    replace $params to the real value.
+    :return error message
+    """
+    if not options or not params:
+        return None
+
     for key, value in options.items():
         if isinstance(value, dict):
             populate_with_params_values(did, app_did, value, params)

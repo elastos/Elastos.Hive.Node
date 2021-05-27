@@ -457,8 +457,8 @@ class Script:
         self.did = did
         self.app_id = app_id
         self.name = script_name
-        self.context = Context(run_data.get('context', None), did, app_id)
-        self.params = run_data['params']
+        self.context = Context(run_data.get('context', None) if run_data else None, did, app_id)
+        self.params = run_data.get('params', None) if run_data else None
         self.condition = None
         self.executables = []
         self.anonymous_user = False
@@ -483,10 +483,10 @@ class Script:
 
     @staticmethod
     def validate_run_data(json_data):
+        """ context, params may not exist. """
         if not json_data:
-            raise BadRequestException(msg="Script calling body can't be empty.")
+            return
 
-        validate_exists(json_data, '', ['params', ])
         Context.validate_data(json_data.get('context', None))
 
     def execute(self):

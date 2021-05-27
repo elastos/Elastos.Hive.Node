@@ -188,16 +188,15 @@ class ScriptingTestCase(unittest.TestCase):
                 'author': 'John'}})
         self.assertIsNotNone(body)
 
-    def test09_file_properties(self):
+    def test09_file_properties_without_params(self):
         name = 'file_properties'
         body = self.__set_and_call_script(name, {'executable': {
             'name': name,
             'type': 'fileProperties',
             'output': True,
             'body': {
-                'path': '$params.path'
-            }}}, {'params': {
-                'path': self.file_name}})
+                'path': self.file_name
+            }}}, None)
         self.assertIsNotNone(body)
 
     def test10_file_hash(self):

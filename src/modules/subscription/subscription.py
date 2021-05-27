@@ -62,17 +62,9 @@ class VaultSubscription:
             'serviceDid': h_auth.get_did_string(),
             'storageQuota': doc[VAULT_SERVICE_MAX_STORAGE] * 1000 * 1000,
             'storageUsed': 0,
-            'created': self.__timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),
-            'updated': self.__timestamp_to_epoch(doc[VAULT_SERVICE_END_TIME]),
+            'created': cli.timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),
+            'updated': cli.timestamp_to_epoch(doc[VAULT_SERVICE_END_TIME]),
         }
-
-    def __timestamp_to_epoch(self, timestamp):
-        if timestamp < 0:
-            return timestamp
-        t = datetime.fromtimestamp(timestamp)
-        s = datetime(1970, 1, 1, 0, 0, 0)
-        return int((t - s).total_seconds())
-
 
     @hive_restful_response
     def unsubscribe(self):

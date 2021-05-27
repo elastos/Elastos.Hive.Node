@@ -20,8 +20,8 @@ class FilesTestCase(unittest.TestCase):
         self.folder_name = ''  # root
         self.src_file_content = 'File Content: 12345678'
         self.dst_file_content = self.src_file_content
-        self.src_file_name = 'src_file'
-        self.src_file_name2 = r'children/src_file2'
+        self.src_file_name = 'src_file.txt'
+        self.src_file_name2 = r'children/src_file2.txt'
         self.dst_file_name = 'dst_file'
 
     def test01_upload_file(self):
@@ -54,6 +54,8 @@ class FilesTestCase(unittest.TestCase):
     def test05_list_folder(self):
         response = self.cli.get(f'/files/{self.folder_name}?comp=children')
         self.assertEqual(response.status_code, 200)
+        self.assertTrue('value' in response.json())
+        self.assertEqual(type(response.json()['value']), list)
 
     def test06_get_properties(self):
         response = self.cli.get(f'/files/{self.src_file_name}?comp=metadata')

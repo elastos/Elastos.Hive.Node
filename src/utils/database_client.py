@@ -152,6 +152,13 @@ class DatabaseClient:
             raise BadRequestException(code=ErrorCode.DOES_NOT_EXISTS, msg='Collection does not exist.')
         self.__get_connection()[gene_mongo_db_name(did, app_did)].drop_collection(collection_name)
 
+    def timestamp_to_epoch(self, timestamp):
+        if timestamp < 0:
+            return timestamp
+        t = datetime.fromtimestamp(timestamp)
+        s = datetime(1970, 1, 1, 0, 0, 0)
+        return int((t - s).total_seconds())
+
 
 cli = DatabaseClient()
 

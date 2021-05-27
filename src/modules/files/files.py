@@ -16,6 +16,7 @@ from hive.util.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
 from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.utils.http_response import BadRequestException, hive_restful_response, hive_download_response
 from src.modules.scripting.scripting import check_auth_and_vault
+from src.utils.database_client import cli
 
 
 class Files:
@@ -130,7 +131,9 @@ class Files:
         if not full_path.exists() or not full_path.is_dir():
             raise BadRequestException(msg='Folder does not exist.')
         files = os.listdir(full_path.as_posix())
-        return list(map(lambda f: self._get_file_info(full_path, f), files))
+        return {
+            'value': list(map(lambda f: self._get_file_info(full_path, f), files))
+        }
 
     def _get_file_info(self, full_dir_path, file_meta):
         info = {
@@ -155,8 +158,8 @@ class Files:
             'name': path,
             'is_file': full_path.is_file(),
             'size': stat.st_size,
-            'created': stat.st_mtime,
-            'updated': stat.st_birthtime
+            'created': cli.timestamp_to_epoch(int(stat.st_ctime)),
+            'updated': cli.timestamp_to_epoch(int(stat.st_mtime)),
         }
 
     @hive_restful_response

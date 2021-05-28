@@ -107,6 +107,24 @@ class VaultSubscription:
 
         return self.__get_vault_info(document)
 
+    def get_price_plans(self, subscription, name):
+        all_plans = PaymentConfig.get_all_package_info()
+        result = {'version': all_plans.get('version', '1.0')}
+        if subscription == 'all':
+            result['backupPlans'] = self.__filter_plans_by_name(all_plans.get('backupPlans', []), name)
+            result['pricingPlans'] = self.__filter_plans_by_name(all_plans.get('pricingPlans', []), name)
+        elif subscription == 'vault':
+            result['pricingPlans'] = self.__filter_plans_by_name(all_plans.get('pricingPlans', []), name)
+        elif subscription == 'backup':
+            result['backupPlans'] = self.__filter_plans_by_name(all_plans.get('backupPlans', []), name)
+        return result
+
+    def __filter_plans_by_name(self, plans, name):
+        if not name:
+            return plans
+
+        return list(filter(lambda p: p.get('name') == name, plans))
+
 
 class BackupSubscription:
     def __init__(self):

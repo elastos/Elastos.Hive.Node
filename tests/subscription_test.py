@@ -37,6 +37,12 @@ class SubscriptionTestCase(unittest.TestCase):
         response = self.cli.delete('/subscription/vault')
         self.assertEqual(response.status_code, 204)
 
+    def test05_price_plan(self):
+        response = self.cli.get('/subscription/pricing_plan?subscription=all&name=Free')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('backupPlans' in response.json())
+        self.assertTrue('pricingPlans' in response.json())
+
 
 if __name__ == '__main__':
     unittest.main()

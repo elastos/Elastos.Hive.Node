@@ -24,7 +24,7 @@ class RemoteResolver(metaclass=Singleton):
         self.app_did = DApp("testapp",
                             test_common.app_id,
                             "street shrug castle where muscle swift coin mirror exercise police toward boring", "")
-        self.http_client = HttpClient('http://localhost:5000/api/v1/did')
+        self.http_client = HttpClient('http://localhost:5000/api/v2/did')
 
     def get_token(self):
         if not self.token:
@@ -38,9 +38,8 @@ class RemoteResolver(metaclass=Singleton):
         doc_c = lib.DIDStore_LoadDID(self.app_did.store, self.app_did.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc_c, True)).decode()
         doc = json.loads(doc_str)
-        response = self.http_client.post('/sign_in', json.dumps({"document": doc}), need_token=False)
-        assert response.status_code == 200
-        assert response.json()["_status"] == 'OK'
+        response = self.http_client.post('/signin', json.dumps({"id": doc}), need_token=False)
+        assert response.status_code == 201
         return response.json()["challenge"]
 
     def __get_auth_token(self, challenge):
@@ -60,9 +59,8 @@ class RemoteResolver(metaclass=Singleton):
 
     def auth(self, challenge):
         auth_token = self.__get_auth_token(challenge)
-        response = self.http_client.post('/auth', json.dumps({"jwt": auth_token}), need_token=False)
-        assert response.status_code == 200
-        assert response.json()["_status"] == 'OK'
+        response = self.http_client.post('/auth', json.dumps({"challenge_response": auth_token}), need_token=False)
+        assert response.status_code == 201
         return response.json()["access_token"]
 
 

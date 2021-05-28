@@ -28,7 +28,7 @@ class Auth(Entity):
     def sign_in(self, doc):
         app_instance_did = self.__get_app_instance_did(doc)
         return {
-            "challenge": self.__create_challenge(app_instance_did, **self.__save_nonce_to_db(app_instance_did))
+            "challenge": self.__create_challenge(app_instance_did, *self.__save_nonce_to_db(app_instance_did))
         }
 
     def __get_app_instance_did(self, app_instance_doc):
@@ -60,6 +60,7 @@ class Auth(Entity):
         except Exception as e:
             logging.getLogger("HiveAuth").error(f"Exception in __save_nonce_to_db: {e}")
             raise e
+        return nonce, expire_time
 
     def __create_challenge(self, did, nonce, expire_time):
         """
@@ -81,6 +82,7 @@ class Auth(Entity):
             raise BadRequestException(msg="Failed to create challenge token.")
         return ffi.string(token).decode()
 
+    @hive_restful_response
     def auth(self, challenge_response):
         credential_info = self.__get_auth_info_from_challenge_response(challenge_response)
         access_token = self.__create_access_token(credential_info, "AccessToken")
@@ -126,9 +128,7 @@ class Auth(Entity):
             raise BadRequestException(msg='No presentation credential exists.')
 
         self.__validate_presentation_realm(presentation)
-
-        nonce, nonce_info = self.__get_presentation_nonce(presentation)
-        return json.loads(ffi.string(presentation_cstr).decode()), nonce, nonce_info
+        return json.loads(ffi.string(presentation_cstr).decode()), *self.__get_presentation_nonce(presentation)
 
     def __get_presentation_nonce(self, presentation):
         nonce = lib.Presentation_GetNonce(presentation)
@@ -171,8 +171,8 @@ class Auth(Entity):
         if not_exist_props:
             raise BadRequestException(f"The credentialSubject's prop ({not_exist_props}) does not exists.")
 
-        credential_info["userDid"] = vc_json["issuer"]
         credential_info["expTime"] = self.__get_presentation_credential_expire_time(vcs_json)
+        credential_info["userDid"] = vc_json["issuer"]
         return credential_info
 
     def __get_presentation_credential_expire_time(self, vcs_json):
@@ -214,3 +214,8 @@ class Auth(Entity):
             raise BadRequestException(msg='Can not build token in creating access token.')
 
         return ffi.string(token).decode()
+
+    def get_error_message(self, prompt=None):
+        """ helper method to get error message from did.so """
+        err_message = ffi.string(lib.DIDError_GetMessage()).decode()
+        return err_message if not prompt else f'[{prompt}] {err_message}'

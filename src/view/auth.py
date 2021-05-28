@@ -9,7 +9,7 @@ from src.modules.auth.auth import Auth
 from src.utils.http_response import BadRequestException
 
 blueprint = Blueprint('auth', __name__)
-auth = Auth(None, None)
+auth: Auth = None
 
 
 def init_app(app, hive_setting):
@@ -29,7 +29,7 @@ def sign_in():
 
 
 @blueprint.route('/api/v2/did/auth', methods=['POST'])
-def sign_in():
+def auth():
     json_data = request.get_json(force=True, silent=True)
     challenge = json_data.get('challenge_response')
     if not challenge:

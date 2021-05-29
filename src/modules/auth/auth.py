@@ -128,7 +128,8 @@ class Auth(Entity):
             raise BadRequestException(msg='No presentation credential exists.')
 
         self.__validate_presentation_realm(presentation)
-        return json.loads(ffi.string(presentation_cstr).decode()), *self.__get_presentation_nonce(presentation)
+        nonce, nonce_info = self.__get_presentation_nonce(presentation)
+        return json.loads(ffi.string(presentation_cstr).decode()), nonce, nonce_info
 
     def __get_presentation_nonce(self, presentation):
         nonce = lib.Presentation_GetNonce(presentation)

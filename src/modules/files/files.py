@@ -106,7 +106,7 @@ class Files:
         full_src_path = self._get_file_full_path(did, app_did, src_path)
         full_dst_path = self._get_file_full_path(did, app_did, dst_path)
         if not full_src_path.exists():
-            raise BadRequestException(msg='File to moved does not exist.')
+            raise BadRequestException(msg='Source file does not exist.')
         if full_dst_path.exists():
             raise BadRequestException(msg='Destination file exists.')
         if not is_copy:

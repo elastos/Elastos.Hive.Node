@@ -69,6 +69,7 @@ class UnauthorizedException(HiveException):
 class NotFoundException(HiveException):
     VAULT_NOT_FOUND = 1
     SCRIPT_NOT_FOUND = 2
+    COLLECTION_NOT_FOUND = 3
 
     def __init__(self, internal_code=VAULT_NOT_FOUND, msg='Vault not found or not activate.'):
         super().__init__(404, internal_code, msg)

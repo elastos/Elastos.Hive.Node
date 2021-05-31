@@ -48,7 +48,7 @@ def delete_document(collection_name):
 def count_document(collection_name):
     op = request.args.get('op')
     if op == 'count':
-        return database.count_document(collection_name)
+        return database.count_document(collection_name, request.get_json(force=True, silent=True))
     else:
         raise BadRequestException(msg='Invalid parameter "op"')
 
@@ -62,5 +62,7 @@ def find_document(collection_name):
 
 
 @blueprint.route('/api/v2/vault/db/query', methods=['POST'])
-def query_document(collection_name):
-    return database.query_document(collection_name, request.get_json(force=True, silent=True))
+def query_document():
+    json_body = request.get_json(force=True, silent=True)
+    collection_name = json_body.get('collection')
+    return database.query_document(collection_name, json_body)

@@ -13,14 +13,15 @@ from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
 from src.modules.scripting.scripting import check_auth
 from src.utils.database_client import cli, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_STATE_FREEZE
-from src.utils.http_response import hive_restful_response, NotImplementedException, BadRequestException, ErrorCode
+from src.utils.http_response import hive_restful_response, NotImplementedException, BadRequestException, ErrorCode, \
+    hive_restful_code_response
 
 
 class VaultSubscription:
     def __init__(self):
         pass
 
-    @hive_restful_response
+    @hive_restful_code_response
     def subscribe(self, credential):
         if credential:
             # TODO: Need support this with payment.
@@ -29,12 +30,9 @@ class VaultSubscription:
 
     def _subscribe_free(self):
         did, app_id = check_auth()
-
-        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
-        if document:
-            raise BadRequestException(code=ErrorCode.ALREADY_EXISTS, msg='The vault already exists.')
-
-        return self.__get_vault_info(self.__create_vault(did, PaymentConfig.get_free_vault_info()))
+        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_create=True)
+        result = self.__get_vault_info(self.__create_vault(did, PaymentConfig.get_free_vault_info()))
+        return result, 201 if not document else 200
 
     def __create_vault(self, did, price_plan):
         now = datetime.utcnow().timestamp()  # seconds in UTC

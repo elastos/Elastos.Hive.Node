@@ -62,7 +62,7 @@ class RemoteResolver(metaclass=Singleton):
         auth_token = self.__get_auth_token(challenge)
         response = self.http_client.post('/auth', json.dumps({"challenge_response": auth_token}), need_token=False)
         assert response.status_code == 201
-        return response.json()["access_token"]
+        return response.json()["token"]
 
 
 def _log_http_request(func):

@@ -9,7 +9,6 @@ from src.modules.database.database import Database
 from src.utils.http_response import BadRequestException
 
 blueprint = Blueprint('database', __name__)
-# files = Files()
 database = Database()
 
 
@@ -49,7 +48,7 @@ def delete_document(collection_name):
 def count_document(collection_name):
     op = request.args.get('op')
     if op == 'count':
-        return database.count_document()
+        return database.count_document(collection_name)
     else:
         raise BadRequestException(msg='Invalid parameter "op"')
 

@@ -37,9 +37,14 @@ class HiveException(BaseException):
         }), self.http_code
 
     @staticmethod
-    def get_success_response(data, is_download=False):
+    def get_success_response(data, is_download=False, is_code=False):
+        code = HiveException.__get_success_http_code()
+        if is_code:
+            # Support user-defined http status code.
+            assert type(data) is tuple and len(data) == 2
+            data, code = data[0], data[1]
         json_data = data if is_download else (json.dumps(data, default=json_util.default) if data else '')
-        return json_data, HiveException.__get_success_http_code()
+        return json_data, code
 
     @staticmethod
     def __get_success_http_code():
@@ -74,10 +79,12 @@ class NotImplementedException(HiveException):
         super().__init__(501, code, msg)
 
 
-def __get_restful_response_wrapper(func, is_download=False):
+def __get_restful_response_wrapper(func, is_download=False, is_code=False):
     def wrapper(self, *args, **kwargs):
         try:
-            return HiveException.get_success_response(func(self, *args, **kwargs), is_download)
+            return HiveException.get_success_response(func(self, *args, **kwargs),
+                                                      is_download=is_download,
+                                                      is_code=is_code)
         except HiveException as e:
             return e.get_error_response()
         except Exception as e:
@@ -101,5 +108,9 @@ def hive_restful_response(func):
     return __get_restful_response_wrapper(func)
 
 
+def hive_restful_code_response(func):
+    return __get_restful_response_wrapper(func, is_code=True)
+
+
 def hive_download_response(func):
-    return __get_restful_response_wrapper(func, True)
+    return __get_restful_response_wrapper(func, is_download=True)

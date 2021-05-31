@@ -3,6 +3,8 @@
 """
 Any database operations can be found here.
 """
+import logging
+
 from pymongo.errors import CollectionInvalid
 
 from hive.settings import hive_setting
@@ -67,9 +69,9 @@ class DatabaseClient:
     def find_one(self, did, app_id, collection_name, col_filter, options=None):
         return self.find_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter, options)
 
-    def find_one_origin(self, db_name, collection_name, col_filter, options=None):
-        col = self.get_origin_collection(db_name, collection_name)
-        if not col:
+    def find_one_origin(self, db_name, collection_name, col_filter, options=None, is_create=False):
+        col = self.get_origin_collection(db_name, collection_name, is_create=is_create)
+        if not is_create and not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
@@ -144,13 +146,20 @@ class DatabaseClient:
     def create_collection(self, did, app_did, collection_name):
         try:
             self.__get_connection()[gene_mongo_db_name(did, app_did)].create_collection(collection_name)
-        except CollectionInvalid:
-            raise BadRequestException(code=ErrorCode.ALREADY_EXISTS, msg='Collection already exists.')
+            return True
+        except CollectionInvalid as e:
+            logging.error('The collection already exists.')
+            return False
 
-    def delete_collection(self, did, app_did, collection_name):
-        if self.get_user_collection(did, app_did, collection_name):
+    def delete_collection(self, did, app_did, collection_name, is_check_exist=True):
+        if is_check_exist and not self.get_user_collection(did, app_did, collection_name):
             raise BadRequestException(code=ErrorCode.DOES_NOT_EXISTS, msg='Collection does not exist.')
         self.__get_connection()[gene_mongo_db_name(did, app_did)].drop_collection(collection_name)
+
+    def delete_collection_origin(self, db_name, collection_name):
+        if self.get_origin_collection(db_name, collection_name):
+            raise BadRequestException(code=ErrorCode.DOES_NOT_EXISTS, msg='Collection does not exist.')
+        self.__get_connection()[db_name].drop_collection(collection_name)
 
     def timestamp_to_epoch(self, timestamp):
         if timestamp < 0:

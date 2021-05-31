@@ -13,17 +13,14 @@ from hive.util.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_SCRIPT_COLLECTION, \
-    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL, \
-    SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_CALLER_APP_DID, SCRIPTING_EXECUTABLE_PARAMS
-from hive.util.did_file_info import query_upload_get_filepath, query_properties, query_hash, query_download, \
-    filter_path_root
+    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL
+from hive.util.did_file_info import query_upload_get_filepath, query_hash
 from hive.util.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size, \
     populate_options_find_many, populate_options_insert_one, populate_options_update_one
 from hive.util.did_scripting import populate_with_params_values
-from hive.util.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
-from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte, inc_vault_file_use_storage_byte
+from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
 from src.utils.database_client import cli
-from src.utils.http_response import BadRequestException, hive_restful_response, NotFoundException, ErrorCode, \
+from src.utils.http_response import BadRequestException, hive_restful_response, NotFoundException,\
     hive_download_response, UnauthorizedException
 
 
@@ -554,11 +551,11 @@ class Scripting:
 
         col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION)
         if not col:
-            raise NotFoundException(ErrorCode.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
+            raise NotFoundException(NotFoundException.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
 
         ret = col.delete_many({'name': script_name})
         if ret.deleted_count <= 0:
-            raise NotFoundException(ErrorCode.SCRIPT_NOT_FOUND, 'The script tried to remove does not exist.')
+            raise NotFoundException(NotFoundException.SCRIPT_NOT_FOUND, 'The script does not exist.')
 
         update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_id))
 

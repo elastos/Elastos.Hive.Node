@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, convert_oid
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_STATE, \
     VAULT_ACCESS_WR, VAULT_ACCESS_DEL, DATETIME_FORMAT
-from src.utils.http_response import NotFoundException, ErrorCode, BadRequestException
+from src.utils.http_response import NotFoundException, BadRequestException
 from datetime import datetime
 
 import os
@@ -58,7 +58,7 @@ class DatabaseClient:
 
         if (access_vault == VAULT_ACCESS_WR or access_vault == VAULT_ACCESS_DEL) \
                 and info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
-            raise NotFoundException(ErrorCode.VAULT_NO_PERMISSION, "The vault can't be written.")
+            raise NotFoundException(BadRequestException.VAULT_NO_PERMISSION, "The vault can't be written.")
 
     def find_many(self, did, app_id, collection_name, col_filter, options):
         col = self.get_user_collection(did, app_id, collection_name)
@@ -119,9 +119,9 @@ class DatabaseClient:
     def delete_one(self, did, app_id, collection_name, col_filter):
         return self.delete_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter)
 
-    def delete_one_origin(self, db_name, collection_name, col_filter):
+    def delete_one_origin(self, db_name, collection_name, col_filter, is_check_exist=True):
         col = self.get_origin_collection(db_name, collection_name)
-        if not col:
+        if is_check_exist and not col:
             raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
 
         result = col.delete_one(convert_oid(col_filter))
@@ -153,12 +153,12 @@ class DatabaseClient:
 
     def delete_collection(self, did, app_did, collection_name, is_check_exist=True):
         if is_check_exist and not self.get_user_collection(did, app_did, collection_name):
-            raise BadRequestException(internal_code=ErrorCode.DOES_NOT_EXISTS, msg='Collection does not exist.')
+            raise BadRequestException(internal_code=BadRequestException.DOES_NOT_EXISTS, msg='Collection does not exist.')
         self.__get_connection()[gene_mongo_db_name(did, app_did)].drop_collection(collection_name)
 
     def delete_collection_origin(self, db_name, collection_name):
         if self.get_origin_collection(db_name, collection_name):
-            raise BadRequestException(internal_code=ErrorCode.DOES_NOT_EXISTS, msg='Collection does not exist.')
+            raise BadRequestException(internal_code=BadRequestException.DOES_NOT_EXISTS, msg='Collection does not exist.')
         self.__get_connection()[db_name].drop_collection(collection_name)
 
     def timestamp_to_epoch(self, timestamp):

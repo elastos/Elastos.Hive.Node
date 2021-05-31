@@ -13,8 +13,8 @@ from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
 from src.modules.scripting.scripting import check_auth
 from src.utils.database_client import cli, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_STATE_FREEZE
-from src.utils.http_response import hive_restful_response, NotImplementedException, BadRequestException, ErrorCode, \
-    hive_restful_code_response
+from src.utils.http_response import hive_restful_response, NotImplementedException, \
+    hive_restful_code_response, NotFoundException, BadRequestException
 
 
 class VaultSubscription:
@@ -69,9 +69,9 @@ class VaultSubscription:
         did, app_id = check_auth()
         document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
         if not document:
-            raise BadRequestException(internal_code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
+            raise NotFoundException()
         delete_user_vault_data(did)
-        cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
+        cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_check_exist=False)
 
     @hive_restful_response
     def activate(self):
@@ -83,7 +83,7 @@ class VaultSubscription:
         col_filter = {VAULT_SERVICE_DID: did}
         document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter)
         if not document:
-            raise BadRequestException(internal_code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
+            raise NotFoundException()
 
         doc = {VAULT_SERVICE_DID: did,
                VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp(),
@@ -101,7 +101,7 @@ class VaultSubscription:
         col_filter = {VAULT_SERVICE_DID: did}
         document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter)
         if not document:
-            raise BadRequestException(internal_code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
+            raise NotFoundException()
 
         return self.__get_vault_info(document)
 

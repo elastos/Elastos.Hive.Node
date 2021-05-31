@@ -11,18 +11,9 @@ import logging
 import json
 
 
-class ErrorCode:
-    UNCAUGHT_EXCEPTION          = 100001
-    UNAUTHORIZED                = 100002
-    VAULT_NOT_FOUND             = 100003
-    VAULT_NO_PERMISSION         = 100004
-    INVALID_PARAMETER           = 100005
-    ALREADY_EXISTS              = 100006
-    DOES_NOT_EXISTS             = 100007
-    SCRIPT_NOT_FOUND            = 120001
-
-
 class HiveException(BaseException):
+    NO_INTERNAL_CODE = -1
+
     def __init__(self, code, internal_code, msg):
         self.code = code
         self.internal_code = internal_code
@@ -60,23 +51,32 @@ class HiveException(BaseException):
 
 
 class BadRequestException(HiveException):
-    def __init__(self, internal_code=ErrorCode.INVALID_PARAMETER, msg='Invalid parameter'):
+    UNCAUGHT_EXCEPTION = 1
+    INVALID_PARAMETER = 2
+    ALREADY_EXISTS = 3
+    VAULT_NO_PERMISSION = 4
+    DOES_NOT_EXISTS = 5
+
+    def __init__(self, internal_code=INVALID_PARAMETER, msg='Invalid parameter'):
         super().__init__(400, internal_code, msg)
 
 
 class UnauthorizedException(HiveException):
-    def __init__(self, internal_code=ErrorCode.UNAUTHORIZED, msg='You are unauthorized to make this request.'):
-        super().__init__(401, internal_code, msg)
+    def __init__(self, msg='You are unauthorized to make this request.'):
+        super().__init__(401, super().NO_INTERNAL_CODE, msg)
 
 
 class NotFoundException(HiveException):
-    def __init__(self, internal_code=ErrorCode.VAULT_NOT_FOUND, msg='Vault not found or not activate.'):
+    VAULT_NOT_FOUND = 1
+    SCRIPT_NOT_FOUND = 2
+
+    def __init__(self, internal_code=VAULT_NOT_FOUND, msg='Vault not found or not activate.'):
         super().__init__(404, internal_code, msg)
 
 
 class NotImplementedException(HiveException):
-    def __init__(self, internal_code=ErrorCode.VAULT_NOT_FOUND, msg='Not implemented or not supported.'):
-        super().__init__(501, internal_code, msg)
+    def __init__(self, msg='Not implemented yet.'):
+        super().__init__(501, super().NO_INTERNAL_CODE, msg)
 
 
 def __get_restful_response_wrapper(func, is_download=False, is_code=False):
@@ -89,7 +89,7 @@ def __get_restful_response_wrapper(func, is_download=False, is_code=False):
             return e.get_error_response()
         except Exception as e:
             logging.error(f'UNEXPECTED: {traceback.format_exc()}')
-            return HiveException(500, ErrorCode.UNCAUGHT_EXCEPTION, traceback.format_exc()).get_error_response()
+            return HiveException(500, BadRequestException.UNCAUGHT_EXCEPTION, traceback.format_exc()).get_error_response()
     return wrapper
 
 

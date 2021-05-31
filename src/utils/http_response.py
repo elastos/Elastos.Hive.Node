@@ -32,7 +32,7 @@ class HiveException(BaseException):
         return jsonify({
             "error": {
                 "message": self.msg,
-                "internalCode": self.code
+                "internal_code": self.internal_code
             }
         }), self.code
 

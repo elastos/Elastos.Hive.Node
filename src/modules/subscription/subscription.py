@@ -69,7 +69,7 @@ class VaultSubscription:
         did, app_id = check_auth()
         document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
         if not document:
-            raise BadRequestException(code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
+            raise BadRequestException(internal_code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
         delete_user_vault_data(did)
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
 
@@ -83,7 +83,7 @@ class VaultSubscription:
         col_filter = {VAULT_SERVICE_DID: did}
         document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter)
         if not document:
-            raise BadRequestException(code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
+            raise BadRequestException(internal_code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
 
         doc = {VAULT_SERVICE_DID: did,
                VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp(),
@@ -101,7 +101,7 @@ class VaultSubscription:
         col_filter = {VAULT_SERVICE_DID: did}
         document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter)
         if not document:
-            raise BadRequestException(code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
+            raise BadRequestException(internal_code=ErrorCode.VAULT_NOT_FOUND, msg='The vault does not exist.')
 
         return self.__get_vault_info(document)
 

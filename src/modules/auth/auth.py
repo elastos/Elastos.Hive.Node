@@ -99,7 +99,7 @@ class Auth(Entity):
             raise e
 
         return {
-            "access_token": access_token,
+            "token": access_token,
         }
 
     def __get_auth_info_from_challenge_response(self, challenge_response):

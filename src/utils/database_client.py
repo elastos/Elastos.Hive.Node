@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, convert_oid
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_STATE, \
     VAULT_ACCESS_WR, VAULT_ACCESS_DEL, DATETIME_FORMAT
-from src.utils.http_response import NotFoundException, BadRequestException
+from src.utils.http_response import NotFoundException, BadRequestException, AlreadyExistsException
 from datetime import datetime
 
 import os
@@ -146,10 +146,9 @@ class DatabaseClient:
     def create_collection(self, did, app_did, collection_name):
         try:
             self.__get_connection()[gene_mongo_db_name(did, app_did)].create_collection(collection_name)
-            return True
         except CollectionInvalid as e:
             logging.error('The collection already exists.')
-            return False
+            raise AlreadyExistsException()
 
     def delete_collection(self, did, app_did, collection_name, is_check_exist=True):
         if is_check_exist and not self.get_user_collection(did, app_did, collection_name):

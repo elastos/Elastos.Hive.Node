@@ -20,12 +20,10 @@ class HiveException(BaseException):
         self.msg = msg
 
     def get_error_response(self):
-        return jsonify({
-            "error": {
-                "message": self.msg,
-                "internal_code": self.internal_code
-            }
-        }), self.code
+        error = {"message": self.msg}
+        if self.internal_code > 0:
+            error['internal_code'] = self.internal_code
+        return jsonify({"error": error}), self.code
 
     @staticmethod
     def get_success_response(data, is_download=False, is_code=False):
@@ -71,8 +69,13 @@ class NotFoundException(HiveException):
     SCRIPT_NOT_FOUND = 2
     COLLECTION_NOT_FOUND = 3
 
-    def __init__(self, internal_code=VAULT_NOT_FOUND, msg='Vault not found or not activate.'):
+    def __init__(self, internal_code=VAULT_NOT_FOUND, msg='The vault not found or not activate.'):
         super().__init__(404, internal_code, msg)
+
+
+class AlreadyExistsException(HiveException):
+    def __init__(self, msg='Already exists.'):
+        super().__init__(455, -1, msg)
 
 
 class NotImplementedException(HiveException):

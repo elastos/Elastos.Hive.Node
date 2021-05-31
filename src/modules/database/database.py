@@ -21,10 +21,11 @@ class Database:
     def __init__(self):
         pass
 
-    @hive_restful_code_response
+    @hive_restful_response
     def create_collection(self, collection_name):
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        return {'name': collection_name}, 201 if cli.create_collection(did, app_did, collection_name) else 200
+        cli.create_collection(did, app_did, collection_name)
+        return {'name': collection_name}
 
     @hive_restful_response
     def delete_collection(self, collection_name):
@@ -89,12 +90,8 @@ class Database:
         if 'filter' in json_body and type(json_body.get('filter')) is not dict:
             raise BadRequestException(msg='Invalid parameter filter.')
 
-        ret = col.delete_many(convert_oid(json_body["filter"]))
+        col.delete_many(convert_oid(json_body["filter"]))
         update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))
-        return {
-            "acknowledged": ret.acknowledged,
-            "deleted_count": ret.deleted_count,
-        }
 
     @hive_restful_response
     def count_document(self, collection_name, json_body):

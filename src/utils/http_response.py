@@ -4,7 +4,7 @@
 Defines all success and error http response code and body.
 For new exception, please define here.
 """
-from bson import ObjectId, json_util
+from bson import json_util
 from flask import jsonify, request
 import traceback
 import logging
@@ -23,18 +23,18 @@ class ErrorCode:
 
 
 class HiveException(BaseException):
-    def __init__(self, http_code, code, msg):
-        self.http_code = http_code
+    def __init__(self, code, internal_code, msg):
         self.code = code
+        self.internal_code = internal_code
         self.msg = msg
 
     def get_error_response(self):
         return jsonify({
             "error": {
                 "message": self.msg,
-                "code": self.code
+                "internalCode": self.code
             }
-        }), self.http_code
+        }), self.code
 
     @staticmethod
     def get_success_response(data, is_download=False, is_code=False):
@@ -60,23 +60,23 @@ class HiveException(BaseException):
 
 
 class BadRequestException(HiveException):
-    def __init__(self, code=ErrorCode.INVALID_PARAMETER, msg='Invalid parameter'):
-        super().__init__(400, code, msg)
+    def __init__(self, internal_code=ErrorCode.INVALID_PARAMETER, msg='Invalid parameter'):
+        super().__init__(400, internal_code, msg)
 
 
 class UnauthorizedException(HiveException):
-    def __init__(self, code=ErrorCode.UNAUTHORIZED, msg='You are unauthorized to make this request.'):
-        super().__init__(401, code, msg)
+    def __init__(self, internal_code=ErrorCode.UNAUTHORIZED, msg='You are unauthorized to make this request.'):
+        super().__init__(401, internal_code, msg)
 
 
 class NotFoundException(HiveException):
-    def __init__(self, code=ErrorCode.VAULT_NOT_FOUND, msg='Vault not found or not activate.'):
-        super().__init__(404, code, msg)
+    def __init__(self, internal_code=ErrorCode.VAULT_NOT_FOUND, msg='Vault not found or not activate.'):
+        super().__init__(404, internal_code, msg)
 
 
 class NotImplementedException(HiveException):
-    def __init__(self, code=ErrorCode.VAULT_NOT_FOUND, msg='Not implemented or not supported.'):
-        super().__init__(501, code, msg)
+    def __init__(self, internal_code=ErrorCode.VAULT_NOT_FOUND, msg='Not implemented or not supported.'):
+        super().__init__(501, internal_code, msg)
 
 
 def __get_restful_response_wrapper(func, is_download=False, is_code=False):

@@ -45,6 +45,8 @@ class Database:
     def insert_document(self, collection_name, json_body):
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
 
+        if not json_body:
+            raise BadRequestException(msg='Invalid parameter.')
         if type(json_body.get('document')) not in (list, tuple):
             raise BadRequestException(msg='Invalid parameter document.')
 
@@ -87,20 +89,20 @@ class Database:
     def delete_document(self, collection_name, json_body):
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
 
-        if 'filter' in json_body and type(json_body.get('filter')) is not dict:
+        if json_body and 'filter' in json_body and type(json_body.get('filter')) is not dict:
             raise BadRequestException(msg='Invalid parameter filter.')
 
-        col.delete_many(convert_oid(json_body["filter"]))
+        col.delete_many(convert_oid(json_body["filter"] if json_body and 'filter' in json_body else {}))
         update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))
 
     @hive_restful_response
     def count_document(self, collection_name, json_body):
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
 
-        if 'filter' in json_body and type(json_body.get('filter')) is not dict:
+        if json_body and 'filter' in json_body and type(json_body.get('filter')) is not dict:
             raise BadRequestException(msg='Invalid parameter filter.')
 
-        count = col.count_documents(convert_oid(json_body["filter"]),
+        count = col.count_documents(convert_oid(json_body["filter"] if json_body and 'filter' in json_body else {}),
                                     **options_filter(json_body, ("skip", "limit", "maxTimeMS")))
         return {"count": count}
 

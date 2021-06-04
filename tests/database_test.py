@@ -6,6 +6,8 @@ Testing file for database module.
 
 import unittest
 
+import pymongo
+
 from tests.utils.http_client import HttpClient
 from tests import init_test
 
@@ -20,7 +22,7 @@ class DatabaseTestCase(unittest.TestCase):
 
     def test01_create_collection(self):
         response = self.cli.put(f'/db/collections/{self.collection_name}')
-        self.assertEqual(response.status_code in 200)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.collection_name)
 
     def test02_insert_document(self):
@@ -36,7 +38,7 @@ class DatabaseTestCase(unittest.TestCase):
             "options": {
                 "bypass_document_validation": False,
                 "ordered": True
-            }})
+            }}, is_json=True)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(len(response.json().get('inserted_ids')), 2)
 
@@ -60,7 +62,7 @@ class DatabaseTestCase(unittest.TestCase):
         response = self.cli.delete(f'/db/collection/{self.collection_name}', body={
             "filter": {
                 "author": "john doe1_1",
-            }})
+            }}, is_json=True)
         self.assertEqual(response.status_code, 204)
 
     def test05_count_document(self):
@@ -72,20 +74,20 @@ class DatabaseTestCase(unittest.TestCase):
                 "skip": 0,
                 "limit": 10,
                 "maxTimeMS": 1000000000
-            }})
+            }}, is_json=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('count'), 1)
 
     def test06_find_document(self):
         response = self.cli.get(f'/db/{self.collection_name}')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json().get('items')), 1)
+        self.assertTrue('items' in response.json())
 
     def test07_query_document(self):
         response = self.cli.post(f'/db/query', body={
-            "collection": "works",
+            "collection": self.collection_name,
             "filter": {
-                "author": "john doe1_1",
+                "author": "john doe2",
             },
             "options": {
                 "skip": 0,
@@ -93,16 +95,14 @@ class DatabaseTestCase(unittest.TestCase):
                 "projection": {
                     "_id": False
                 },
-                "sort": {
-                    "_id": "desc"
-                },
+                'sort': [('_id', pymongo.DESCENDING)],
                 "allow_partial_results": False,
                 "return_key": False,
                 "show_record_id": False,
                 "batch_size": 0
-            }})
+            }}, is_json=True)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(len(response.json().get('items')), 1)
+        self.assertTrue('items' in response.json())
 
     def test08_delete_collection(self):
         response = self.cli.delete(f'/db/{self.collection_name}')

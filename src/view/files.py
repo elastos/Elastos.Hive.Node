@@ -31,7 +31,7 @@ def reading_operation(path):
     elif component == 'hash':
         return files.get_hash(path)
     else:
-        return BadRequestException(msg='invalid parameter "comp"')
+        return BadRequestException(msg='invalid parameter "comp"').get_error_response()
 
 
 @blueprint.route('/api/v2/vault/files/<path:path>', methods=['PUT'])

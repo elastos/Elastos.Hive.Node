@@ -92,12 +92,17 @@ class HttpClient:
         return headers
 
     @_log_http_request
-    def get(self, relative_url):
-        return requests.get(self.__get_url(relative_url), headers=self.__get_headers())
+    def get(self, relative_url, body=None, is_json=False):
+        if not is_json:
+            return requests.get(self.__get_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
+        return requests.get(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request
-    def post(self, relative_url, body=None, need_token=True):
-        return requests.post(self.__get_url(relative_url), headers=self.__get_headers(need_token), data=body)
+    def post(self, relative_url, body=None, need_token=True, is_json=False):
+        if not is_json:
+            return requests.post(self.__get_url(relative_url),
+                                 headers=self.__get_headers(need_token=need_token, is_json=False), data=body)
+        return requests.post(self.__get_url(relative_url), headers=self.__get_headers(need_token=need_token), json=body)
 
     @_log_http_request
     def put(self, relative_url, body=None, is_json=True):
@@ -110,5 +115,7 @@ class HttpClient:
         return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request
-    def delete(self, relative_url):
-        return requests.delete(self.__get_url(relative_url), headers=self.__get_headers())
+    def delete(self, relative_url, body=None, is_json=False):
+        if not is_json:
+            return requests.delete(self.__get_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
+        return requests.delete(self.__get_url(relative_url), headers=self.__get_headers(), json=body)

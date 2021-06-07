@@ -51,6 +51,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 run2.sh
+/test_patch.delta
 
 # Translations
 *.mo

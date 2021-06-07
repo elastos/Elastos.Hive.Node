@@ -43,6 +43,7 @@ def disabled(f):
     return _decorator
 
 
+@unittest.skip
 class HiveInternalTest(LiveServerTestCase):
 
     def assert200(self, status):

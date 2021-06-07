@@ -12,7 +12,6 @@ from tests import init_test
 from tests_v1 import test_common
 
 
-@unittest.skip
 class ScriptingTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)

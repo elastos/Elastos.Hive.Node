@@ -89,12 +89,13 @@ function test () {
     pytest --disable-pytest-warnings -xs tests_v1/hive_backup_test.py
     pytest --disable-pytest-warnings -xs tests_v1/hive_internal_test.py
     pytest --disable-pytest-warnings -xs tests_v1/hive_pubsub_test.py
+    # pytest --disable-pytest-warnings -xs tests/subscription_test.py
     pytest --disable-pytest-warnings -xs tests/scripting_test.py
-    pytest --disable-pytest-warnings -xs tests/subscription_test.py
     pytest --disable-pytest-warnings -xs tests/files_test.py
+    pytest --disable-pytest-warnings -xs tests/database_test.py
 
-    docker container stop hive-mongo && docker container rm -f hive-mongo
-    docker container stop hive-test-mongo && docker container rm -f hive-test-mongo
+#    docker container stop hive-mongo && docker container rm -f hive-mongo
+#    docker container stop hive-test-mongo && docker container rm -f hive-test-mongo
 }
 
 export HIVE_NODE_HOME="."

@@ -23,7 +23,6 @@ def name_set(app, name):
         yield
 
 
-@unittest.skip
 class HivePaymentTestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):
         super(HivePaymentTestCase, self).__init__(methodName)

@@ -171,7 +171,11 @@ def init_did_backend():
     print("    DID Resolver: " + hive_setting.DID_RESOLVER)
     print("    DID Mnemonic: " + hive_setting.DID_MNEMONIC)
 
-    assert hive_setting.DID_RESOLVER == "http://api.elastos.io:20606" or hive_setting.DID_RESOLVER == "http://api.elastos.io:21606", "resolver is invalid!"
+    assert hive_setting.DID_RESOLVER in [
+        'http://api.elastos.io:20606',
+        'http://api.elastos.io:21606',
+        'https://api-testnet.elastos.io/did',
+    ], "resolver is invalid!"
 
     ret = lib.DIDBackend_InitializeDefault(hive_setting.DID_RESOLVER.encode(), hive_setting.DID_DATA_CACHE_PATH.encode())
     if ret == -1:

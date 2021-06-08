@@ -24,12 +24,18 @@ class ScriptingTestCase(unittest.TestCase):
         self.did = 'did:elastos:ioRn3eEopRjA7CBRrrWQWzttAfXAjzvKMx'
         self.app_did = test_common.app_id
 
-    @classmethod
-    def setUpClass(cls):
+    def __create_collection(self):
+        response = self.cli.put(f'/db/collections/{self.collection_name}')
+        self.assertEqual(response.status_code, 200)
+
+    def __delete_collection(self):
+        response = self.cli.delete(f'/db/{self.collection_name}')
+        self.assertEqual(response.status_code, 204)
+
+    def setUp(self) -> None:
         pass
 
-    @classmethod
-    def tearDownClass(cls):
+    def tearDown(self) -> None:
         pass
 
     def __register_script(self, script_name, body):
@@ -43,6 +49,7 @@ class ScriptingTestCase(unittest.TestCase):
         return response.text if is_raw else json.loads(response.text)
 
     def test01_register_script(self):
+        self.__create_collection()
         self.__register_script('database_insert', {
             "executable": {
                 "output": True,
@@ -72,7 +79,7 @@ class ScriptingTestCase(unittest.TestCase):
 
     def test03_call_script_url(self):
         response = self.cli.get('/scripting/database_insert/@'
-                                '/%7B%22author%22%3A%22John%22%2C%22content%22%3A%22message%22%7D')
+                                '/%7B%22author%22%3A%22John2%22%2C%22content%22%3A%22message2%22%7D')
         self.assertEqual(response.status_code, 200)
 
     def __call_script_for_transaction_id(self, script_name):
@@ -87,39 +94,7 @@ class ScriptingTestCase(unittest.TestCase):
         self.assertTrue('transaction_id' in response_body[script_name])
         return response_body[script_name]['transaction_id']
 
-    def test04_file_upload(self):
-        name = 'upload_file'
-        self.__register_script(name, {
-            "executable": {
-                "output": True,
-                "name": name,
-                "type": "fileUpload",
-                "body": {
-                    "path": "$params.path"
-                }
-            }
-        })
-        response = self.cli.put(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}',
-                                self.file_content.encode(), is_json=False)
-        self.assertEqual(response.status_code, 200)
-
-    def test05_file_download(self):
-        name = 'download_file'
-        self.__register_script(name, {
-            "executable": {
-                "output": True,
-                "name": name,
-                "type": "fileDownload",
-                "body": {
-                    "path": "$params.path"
-                }
-            }
-        })
-        response = self.cli.get(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.text, self.file_content)
-
-    def test06_find_with_default_output(self):
+    def test04_find_with_default_output(self):
         name = 'database_find'
         col_filter = {'author': '$params.author'}
         body = self.__set_and_call_script(name, {'condition': {
@@ -143,7 +118,7 @@ class ScriptingTestCase(unittest.TestCase):
                 'author': 'John'}})
         self.assertIsNotNone(body)
 
-    def test07_update(self):
+    def test05_update(self):
         name = 'database_update'
         col_filter = {'author': '$params.author'}
         body = self.__set_and_call_script(name, {'executable': {
@@ -169,6 +144,38 @@ class ScriptingTestCase(unittest.TestCase):
                 'author': 'John',
                 'content': 'message2'}})
         self.assertIsNotNone(body)
+
+    def test06_file_upload(self):
+        name = 'upload_file'
+        self.__register_script(name, {
+            "executable": {
+                "output": True,
+                "name": name,
+                "type": "fileUpload",
+                "body": {
+                    "path": "$params.path"
+                }
+            }
+        })
+        response = self.cli.put(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}',
+                                self.file_content.encode(), is_json=False)
+        self.assertEqual(response.status_code, 200)
+
+    def test07_file_download(self):
+        name = 'download_file'
+        self.__register_script(name, {
+            "executable": {
+                "output": True,
+                "name": name,
+                "type": "fileDownload",
+                "body": {
+                    "path": "$params.path"
+                }
+            }
+        })
+        response = self.cli.get(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, self.file_content)
 
     def test08_delete(self):
         name = 'database_delete'
@@ -213,6 +220,7 @@ class ScriptingTestCase(unittest.TestCase):
     def test11_delete_script(self):
         response = self.cli.delete('/scripting/database_insert')
         self.assertEqual(response.status_code, 204)
+        self.__delete_collection()
 
     def __set_and_call_script(self, name, set_data, run_data):
         self.__register_script(name, set_data)

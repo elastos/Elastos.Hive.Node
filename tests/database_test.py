@@ -57,14 +57,7 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('matched_count'), 1)
 
-    def test04_delete_document(self):
-        response = self.cli.delete(f'/db/collection/{self.collection_name}', body={
-            "filter": {
-                "author": "john doe1_1",
-            }}, is_json=True)
-        self.assertEqual(response.status_code, 204)
-
-    def test05_count_document(self):
+    def test04_count_document(self):
         response = self.cli.post(f'/db/collection/{self.collection_name}?op=count', body={
             "filter": {
                 "author": "john doe2",
@@ -77,12 +70,12 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json().get('count'), 1)
 
-    def test06_find_document(self):
+    def test05_find_document(self):
         response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"john doe2"}&skip=0')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('items' in response.json())
 
-    def test07_query_document(self):
+    def test06_query_document(self):
         response = self.cli.post(f'/db/query', body={
             "collection": self.collection_name,
             "filter": {
@@ -102,6 +95,13 @@ class DatabaseTestCase(unittest.TestCase):
             }}, is_json=True)
         self.assertEqual(response.status_code, 201)
         self.assertTrue('items' in response.json())
+
+    def test07_delete_document(self):
+        response = self.cli.delete(f'/db/collection/{self.collection_name}', body={
+            "filter": {
+                "author": "john doe1_1",
+            }}, is_json=True)
+        self.assertEqual(response.status_code, 204)
 
     def test08_delete_collection(self):
         response = self.cli.delete(f'/db/{self.collection_name}')

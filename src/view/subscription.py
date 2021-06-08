@@ -44,8 +44,6 @@ def vault_activate_deactivate():
         return vault_subscription.activate()
     elif op == 'deactivation':
         return vault_subscription.deactivate()
-    else:
-        return BadRequestException('invalid operation, please check.').get_error_response()
 
 
 @blueprint.route('/api/v2/subscription/vault', methods=['DELETE'])
@@ -71,8 +69,6 @@ def backup_activate_deactivate():
         return backup_subscription.activate()
     elif op == 'deactivation':
         return backup_subscription.deactivate()
-    # else:
-    #     raise BadRequestException('invalid operation, please check.')
 
 
 @blueprint.route('/api/v2/subscription/backup', methods=['DELETE'])

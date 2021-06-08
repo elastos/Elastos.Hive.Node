@@ -66,11 +66,22 @@ class UnauthorizedException(HiveException):
 
 class NotFoundException(HiveException):
     VAULT_NOT_FOUND = 1
-    SCRIPT_NOT_FOUND = 2
-    COLLECTION_NOT_FOUND = 3
+    BACKUP_NOT_FOUND = 2
+    SCRIPT_NOT_FOUND = 3
+    COLLECTION_NOT_FOUND = 4
 
-    def __init__(self, internal_code=VAULT_NOT_FOUND, msg='The vault not found or not activate.'):
+    def __init__(self, internal_code=VAULT_NOT_FOUND, msg='The vault does not found or not activate.'):
         super().__init__(404, internal_code, msg)
+
+
+class VaultNotFoundException(NotFoundException):
+    def __init__(self, msg='The vault does not found.'):
+        super().__init__(internal_code=NotFoundException.VAULT_NOT_FOUND, msg=msg)
+
+
+class BackupNotFoundException(NotFoundException):
+    def __init__(self, msg='The backup vault does not found.'):
+        super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND)
 
 
 class AlreadyExistsException(HiveException):

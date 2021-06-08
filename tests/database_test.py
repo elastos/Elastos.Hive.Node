@@ -65,7 +65,7 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 204)
 
     def test05_count_document(self):
-        response = self.cli.get(f'/db/collection/{self.collection_name}?op=count', body={
+        response = self.cli.post(f'/db/collection/{self.collection_name}?op=count', body={
             "filter": {
                 "author": "john doe2",
             },
@@ -74,11 +74,11 @@ class DatabaseTestCase(unittest.TestCase):
                 "limit": 10,
                 "maxTimeMS": 1000000000
             }}, is_json=True)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json().get('count'), 1)
 
     def test06_find_document(self):
-        response = self.cli.get(f'/db/{self.collection_name}')
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"john doe2"}&skip=0')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('items' in response.json())
 

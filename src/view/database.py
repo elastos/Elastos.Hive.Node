@@ -30,7 +30,10 @@ def delete_collection(collection_name):
 
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['POST'])
-def insert_document(collection_name):
+def insert_or_count_document(collection_name):
+    op = request.args.get('op')
+    if op == 'count':
+        return database.count_document(collection_name, request.get_json(force=True, silent=True))
     return database.insert_document(collection_name, request.get_json(force=True, silent=True))
 
 
@@ -42,15 +45,6 @@ def update_document(collection_name):
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['DELETE'])
 def delete_document(collection_name):
     return database.delete_document(collection_name, request.get_json(force=True, silent=True))
-
-
-@blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['GET'])
-def count_document(collection_name):
-    op = request.args.get('op')
-    if op == 'count':
-        return database.count_document(collection_name, request.get_json(force=True, silent=True))
-    else:
-        return BadRequestException(msg='Invalid parameter "op"').get_error_response()
 
 
 @blueprint.route('/api/v2/vault/db/<collection_name>', methods=['GET'])

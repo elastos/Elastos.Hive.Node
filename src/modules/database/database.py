@@ -110,15 +110,22 @@ class Database:
     def find_document(self, collection_name, col_filter, skip, limit):
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
 
+        col_filter = json.loads(col_filter) if col_filter else {}
         if col_filter and type(col_filter) is not dict:
             raise BadRequestException(msg='Invalid parameter filter.')
 
-        options = {}
-        if skip:
-            options['skip'] = skip
-        if limit:
-            options['limit'] = limit
+        options = dict()
+        options['skip'] = self.__get_int_by_str(skip)
+        options['limit'] = self.__get_int_by_str(limit)
         return self.__do_find(col, col_filter, options)
+
+    def __get_int_by_str(self, s, default=0):
+        if s:
+            try:
+                return int(s)
+            except ValueError:
+                pass
+        return default
 
     @hive_restful_response
     def query_document(self, collection_name, json_body):

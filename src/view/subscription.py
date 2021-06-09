@@ -58,7 +58,7 @@ def backup_get_info():
 
 @blueprint.route('/api/v2/subscription/backup', methods=['PUT'])
 def backup_subscribe():
-    credential = None
+    credential = request.args.get('credential')
     return backup_subscription.subscribe(credential)
 
 

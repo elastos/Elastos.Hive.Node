@@ -69,6 +69,7 @@ class NotFoundException(HiveException):
     BACKUP_NOT_FOUND = 2
     SCRIPT_NOT_FOUND = 3
     COLLECTION_NOT_FOUND = 4
+    PRICE_PLAN_NOT_FOUND = 5
 
     def __init__(self, internal_code=VAULT_NOT_FOUND, msg='The vault does not found or not activate.'):
         super().__init__(404, internal_code, msg)
@@ -81,7 +82,12 @@ class VaultNotFoundException(NotFoundException):
 
 class BackupNotFoundException(NotFoundException):
     def __init__(self, msg='The backup vault does not found.'):
-        super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND)
+        super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND, msg=msg)
+
+
+class PricePlanNotFoundException(NotFoundException):
+    def __init__(self, msg='The price plan does not found.'):
+        super().__init__(internal_code=NotFoundException.PRICE_PLAN_NOT_FOUND, msg=msg)
 
 
 class AlreadyExistsException(HiveException):

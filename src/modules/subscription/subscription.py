@@ -17,7 +17,8 @@ from hive.util.payment.vault_service_manage import delete_user_vault_data
 from src.modules.scripting.scripting import check_auth
 from src.utils.database_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.http_response import hive_restful_response, NotImplementedException, \
-    NotFoundException, AlreadyExistsException, BackupNotFoundException, VaultNotFoundException
+    NotFoundException, AlreadyExistsException, BackupNotFoundException, VaultNotFoundException, \
+    PricePlanNotFoundException
 
 
 class VaultSubscription:
@@ -116,8 +117,10 @@ class VaultSubscription:
     def __filter_plans_by_name(self, plans, name):
         if not name:
             return plans
-
-        return list(filter(lambda p: p.get('name') == name, plans))
+        plans = list(filter(lambda p: p.get('name') == name, plans))
+        if not plans:
+            raise PricePlanNotFoundException()
+        return plans
 
 
 class BackupSubscription:

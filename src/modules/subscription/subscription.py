@@ -28,7 +28,7 @@ class VaultSubscription:
     def subscribe(self, credential):
         if credential:
             # TODO: Need support this with payment.
-            raise NotImplementedException(msg='')
+            raise NotImplementedException(msg='Not support with credential.')
         return self.__subscribe_free()
 
     def __subscribe_free(self):
@@ -128,7 +128,7 @@ class BackupSubscription:
     def subscribe(self, credential):
         if credential:
             # TODO: Need support this with payment.
-            raise NotImplementedException(msg='')
+            raise NotImplementedException(msg='Not support with credential.')
         return self.__subscribe_free()
 
     def __subscribe_free(self):

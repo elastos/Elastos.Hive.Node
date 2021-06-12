@@ -29,7 +29,7 @@ def backup_restore():
     to = request.args.get('to')
     fr = request.args.get('from')
     if to == 'hive_node':
-        return backup.backup(to)
+        return backup.backup(request.get_json(silent=True, force=True).get('credential'))
     elif fr == 'hive_node':
         return backup.restore(fr)
     elif to == 'google_drive':

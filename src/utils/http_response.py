@@ -51,12 +51,25 @@ class HiveException(BaseException):
 class BadRequestException(HiveException):
     UNCAUGHT_EXCEPTION = 1
     INVALID_PARAMETER = 2
+    # TODO:
     ALREADY_EXISTS = 3
     VAULT_NO_PERMISSION = 4
+    # TODO:
     DOES_NOT_EXISTS = 5
+    BACKUP_IS_IN_PROCESSING = 6
 
     def __init__(self, internal_code=INVALID_PARAMETER, msg='Invalid parameter'):
         super().__init__(400, internal_code, msg)
+
+
+class InvalidParameterException(BadRequestException):
+    def __init__(self, msg='Invalid parameter'):
+        super().__init__(super().INVALID_PARAMETER, msg=msg)
+
+
+class BackupIsInProcessingException(BadRequestException):
+    def __init__(self, msg='Backup is in processing.'):
+        super().__init__(super().BACKUP_IS_IN_PROCESSING, msg=msg)
 
 
 class UnauthorizedException(HiveException):
@@ -98,6 +111,11 @@ class AlreadyExistsException(HiveException):
 class NotImplementedException(HiveException):
     def __init__(self, msg='Not implemented yet.'):
         super().__init__(501, super().NO_INTERNAL_CODE, msg)
+
+
+class InsufficientStorageException(HiveException):
+    def __init__(self, msg='Insufficient storage.'):
+        super().__init__(507, super().NO_INTERNAL_CODE, msg)
 
 
 def __get_restful_response_wrapper(func, is_download=False, is_code=False):

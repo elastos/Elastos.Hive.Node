@@ -7,6 +7,7 @@ from flask import Blueprint, request
 from src.modules.auth.auth import Auth
 
 from src.utils.http_response import BadRequestException
+from src.view import URL_DID_SIGN_IN, URL_DID_AUTH
 
 blueprint = Blueprint('auth', __name__)
 auth: Auth = None
@@ -19,8 +20,8 @@ def init_app(app, hive_setting):
     app.register_blueprint(blueprint)
 
 
-@blueprint.route('/api/v2/did/signin', methods=['POST'])
-def sign_in():
+@blueprint.route(URL_DID_SIGN_IN, methods=['POST'])
+def did_sign_in():
     json_data = request.get_json(force=True, silent=True)
     doc = json_data.get('id')
     if not doc:
@@ -28,8 +29,8 @@ def sign_in():
     return auth.sign_in(doc)
 
 
-@blueprint.route('/api/v2/did/auth', methods=['POST'])
-def auth():
+@blueprint.route(URL_DID_AUTH, methods=['POST'])
+def did_auth():
     json_data = request.get_json(force=True, silent=True)
     challenge = json_data.get('challenge_response')
     if not challenge:

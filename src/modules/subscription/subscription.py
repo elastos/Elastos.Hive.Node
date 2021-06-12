@@ -138,7 +138,7 @@ class BackupSubscription:
         did, app_id = check_auth()
         doc = cli.find_one_origin(DID_INFO_DB_NAME,
                                   VAULT_BACKUP_SERVICE_COL,
-                                  {VAULT_SERVICE_DID: did},
+                                  {VAULT_BACKUP_SERVICE_DID: did},
                                   is_create=True)
         if doc:
             raise AlreadyExistsException('The backup vault is already subscribed.')

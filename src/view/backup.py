@@ -14,8 +14,8 @@ backup = Backup()
 
 def init_app(app, hive_setting):
     """ This will be called by application initializer. """
-    # global scripting
-    # scripting = Scripting(app=app, hive_setting=hive_setting)
+    global backup
+    backup = Backup(app=app, hive_setting=hive_setting)
     app.register_blueprint(blueprint)
 
 
@@ -31,7 +31,7 @@ def backup_restore():
     if to == 'hive_node':
         return backup.backup(request.get_json(silent=True, force=True).get('credential'))
     elif fr == 'hive_node':
-        return backup.restore(fr)
+        return backup.restore(request.get_json(silent=True, force=True).get('credential'))
     elif to == 'google_drive':
         raise NotImplementedException()
     elif fr == 'google_drive':

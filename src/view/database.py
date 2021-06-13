@@ -5,6 +5,7 @@ The view of database module.
 """
 from flask import Blueprint, request
 from src.modules.database.database import Database
+from src.utils.http_request import params
 
 from src.utils.http_response import BadRequestException
 
@@ -57,8 +58,5 @@ def find_document(collection_name):
 
 @blueprint.route('/api/v2/vault/db/query', methods=['POST'])
 def query_document():
-    json_body = request.get_json(force=True, silent=True)
-    if not json_body:
-        return BadRequestException(msg='Request body empty.').get_error_response()
-    collection_name = json_body.get('collection')
+    json_body, collection_name = params.get2('collection')
     return database.query_document(collection_name, json_body)

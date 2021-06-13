@@ -32,9 +32,9 @@ def backup_restore():
     to = request.args.get('to')
     fr = request.args.get('from')
     if to == 'hive_node':
-        return backup.backup(request.get_json(silent=True, force=True).get('credential'))
+        return backup.backup(params.get('credential'))
     elif fr == 'hive_node':
-        return backup.restore(request.get_json(silent=True, force=True).get('credential'))
+        return backup.restore(params.get('credential'))
     elif to == 'google_drive':
         raise NotImplementedException()
     elif fr == 'google_drive':

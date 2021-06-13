@@ -8,17 +8,14 @@ from datetime import datetime
 from hive.main.view import h_auth
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
-    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, VAULT_BACKUP_SERVICE_COL, \
-    VAULT_BACKUP_SERVICE_DID, VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_USE_STORAGE, \
-    VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, VAULT_BACKUP_SERVICE_MODIFY_TIME, \
-    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_STATE
+    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
+from src.modules.backup.backup_server import BackupServer
 from src.modules.scripting.scripting import check_auth
 from src.utils.database_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.http_response import hive_restful_response, NotImplementedException, \
-    NotFoundException, AlreadyExistsException, BackupNotFoundException, VaultNotFoundException, \
-    PricePlanNotFoundException
+    AlreadyExistsException, VaultNotFoundException, PricePlanNotFoundException
 
 
 class VaultSubscription:
@@ -125,62 +122,18 @@ class VaultSubscription:
 
 class BackupSubscription:
     def __init__(self):
-        pass
+        self.server = BackupServer()
 
     @hive_restful_response
     def subscribe(self, credential):
         if credential:
             # TODO: Need support this with payment.
             raise NotImplementedException(msg='Not support with credential.')
-        return self.__subscribe_free()
-
-    def __subscribe_free(self):
-        did, app_id = check_auth()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME,
-                                  VAULT_BACKUP_SERVICE_COL,
-                                  {VAULT_BACKUP_SERVICE_DID: did},
-                                  is_create=True)
-        if doc:
-            raise AlreadyExistsException('The backup vault is already subscribed.')
-        return self.__get_vault_info(self.__create_backup(did, PaymentConfig.get_free_backup_info()))
-
-    def __create_backup(self, did, price_plan):
-        now = datetime.utcnow().timestamp()  # seconds in UTC
-        end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
-        # there is no use of database for backup vault.
-        doc = {VAULT_BACKUP_SERVICE_DID: did,
-               VAULT_BACKUP_SERVICE_MAX_STORAGE: price_plan["maxStorage"] * 1000 * 1000,
-               VAULT_BACKUP_SERVICE_USE_STORAGE: 0,
-               VAULT_BACKUP_SERVICE_START_TIME: now,
-               VAULT_BACKUP_SERVICE_END_TIME: end_time,
-               VAULT_BACKUP_SERVICE_MODIFY_TIME: now,
-               VAULT_BACKUP_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
-               VAULT_BACKUP_SERVICE_USING: price_plan['name']
-               }
-        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, doc, is_create=True)
-        return doc
-
-    def __get_vault_info(self, doc):
-        return {
-            'pricing_plan': doc[VAULT_BACKUP_SERVICE_USING],
-            'service_did': h_auth.get_did_string(),
-            'storage_quota': int(doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]),
-            'storage_used': int(doc[VAULT_BACKUP_SERVICE_USE_STORAGE]),
-            'created': cli.timestamp_to_epoch(doc[VAULT_BACKUP_SERVICE_START_TIME]),
-            'updated': cli.timestamp_to_epoch(doc[VAULT_BACKUP_SERVICE_MODIFY_TIME]),
-        }
+        return self.server.subscribe_free()
 
     @hive_restful_response
     def unsubscribe(self):
-        did, app_id = check_auth()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did})
-        if not doc:
-            return
-        # TODO: delete backup storage for backup files.
-        cli.delete_one_origin(DID_INFO_DB_NAME,
-                              VAULT_BACKUP_SERVICE_COL,
-                              {VAULT_BACKUP_SERVICE_DID: did},
-                              is_check_exist=False)
+        self.server.unsubscribe()
 
     @hive_restful_response
     def activate(self):
@@ -192,8 +145,4 @@ class BackupSubscription:
 
     @hive_restful_response
     def get_info(self):
-        did, app_id = check_auth()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did})
-        if not doc:
-            raise BackupNotFoundException()
-        return self.__get_vault_info(doc)
+        return self.server.get_info()

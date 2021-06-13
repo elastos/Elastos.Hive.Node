@@ -39,3 +39,35 @@ class Backup:
     @hive_restful_response
     def promotion(self):
         raise NotImplementedException()
+
+    @hive_restful_response
+    def backup_service(self):
+        pass
+
+    @hive_restful_response
+    def backup_finish(self, file_name):
+        pass
+
+    @hive_restful_response
+    def backup_files(self):
+        pass
+
+    @hive_restful_response
+    def backup_get_file(self, file_name):
+        pass
+
+    @hive_restful_response
+    def backup_upload_file(self, file_name):
+        pass
+
+    @hive_restful_response
+    def backup_delete_file(self, file_name):
+        pass
+
+    @hive_restful_response
+    def backup_get_file_hash(self, file_name):
+        pass
+
+    @hive_restful_response
+    def backup_patch_file(self, file_name):
+        pass

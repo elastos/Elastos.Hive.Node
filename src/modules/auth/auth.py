@@ -87,7 +87,7 @@ class Auth(Entity):
 
     @hive_restful_response
     def auth(self, challenge_response):
-        credential_info = self.__get_auth_info_from_challenge_response(challenge_response)
+        credential_info = self.__get_auth_info_from_challenge_response(challenge_response, ['appDid', ])
         access_token = self.__create_access_token(credential_info, "AccessToken")
 
         try:
@@ -105,11 +105,11 @@ class Auth(Entity):
             "token": access_token,
         }
 
-    def __get_auth_info_from_challenge_response(self, challenge_response):
+    def __get_auth_info_from_challenge_response(self, challenge_response, props=None):
         presentation_json, nonce, nonce_info = self.__get_values_from_challenge_response(challenge_response)
         if nonce_info[DID_INFO_NONCE_EXPIRED] < int(datetime.now().timestamp()):
             raise BadRequestException(msg='The nonce expired.')
-        credential_info = self.__get_presentation_credential_info(presentation_json)
+        credential_info = self.__get_presentation_credential_info(presentation_json, props)
         if credential_info["id"] != nonce_info[APP_INSTANCE_DID]:
             raise BadRequestException(msg='The app instance did of the credential does not match.')
         credential_info["nonce"] = nonce
@@ -154,7 +154,7 @@ class Auth(Entity):
         if not realm or realm != self.get_did_string():
             raise BadRequestException(msg='Invalid presentation realm or not match.')
 
-    def __get_presentation_credential_info(self, presentation_json):
+    def __get_presentation_credential_info(self, presentation_json, props=None):
         if "verifiableCredential" not in presentation_json:
             raise BadRequestException(msg='Verifiable credentials do not exist.')
 
@@ -170,7 +170,9 @@ class Auth(Entity):
             raise BadRequestException('The credential subject is invalid or the issuer does not exist.')
         credential_info = vc_json["credentialSubject"]
 
-        required_props = ['appDid', 'id']
+        required_props = ['id', ]
+        if props:
+            required_props.extend(props)
         not_exist_props = list(filter(lambda p: p not in credential_info, required_props))
         if not_exist_props:
             raise BadRequestException(f"The credentialSubject's prop ({not_exist_props}) does not exists.")
@@ -221,7 +223,9 @@ class Auth(Entity):
 
     @hive_restful_response
     def backup_auth(self, challenge_response):
-        pass
+        credential_info = self.__get_auth_info_from_challenge_response(challenge_response, ["targetHost", "targetDID"])
+        access_token = self.__create_access_token(credential_info, "BackupToken")
+        return {'token': access_token}
 
     def get_error_message(self, prompt=None):
         """ helper method to get error message from did.so """
@@ -237,7 +241,7 @@ class Auth(Entity):
             raise InvalidParameterException(msg=err)
         return credential_info
 
-    def backup_sign_in(self, host_url, credential, subject):
+    def backup_client_sign_in(self, host_url, credential, subject):
         """
         for vault /backup & /restore
         :return challenge_response, backup_service_instance_did
@@ -284,7 +288,7 @@ class Auth(Entity):
                 msg=f'backup_sign_in: failed to create the challenge response.')
         return challenge_response, issuer
 
-    def backup_auth(self, host_url, challenge_response, backup_service_instance_did):
+    def backup_client_auth(self, host_url, challenge_response, backup_service_instance_did):
         """
         for vault /backup & /restore
         :return backup access token

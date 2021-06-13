@@ -84,9 +84,9 @@ class BackupClient:
 
     def get_backup_service_info(self, credential, credential_info):
         target_host = credential_info['targetHost']
-        challenge_response, backup_service_instance_did = auth.backup_sign_in(target_host, credential,
+        challenge_response, backup_service_instance_did = auth.backup_client_sign_in(target_host, credential,
                                                                               'DIDBackupAuthResponse')
-        access_token = auth.backup_auth(target_host, challenge_response, backup_service_instance_did)
+        access_token = auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
         return self.http_get(target_host + URL_BACKUP_SERVICE, access_token), access_token
 
     def execute_backup(self, did, credential_info, backup_service_info, access_token):

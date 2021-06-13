@@ -219,6 +219,10 @@ class Auth(Entity):
 
         return ffi.string(token).decode()
 
+    @hive_restful_response
+    def backup_auth(self, challenge_response):
+        pass
+
     def get_error_message(self, prompt=None):
         """ helper method to get error message from did.so """
         err_message = ffi.string(lib.DIDError_GetMessage()).decode()

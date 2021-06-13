@@ -228,7 +228,7 @@ class BackupClient:
 
     def backup_patch_files(self, host_url, access_token, patch_files):
         for full_name, name in patch_files:
-            hashes = self.get_remote_file_hashes(host_url, access_token)
+            hashes = self.get_remote_file_hashes(host_url, access_token, name)
             with open(full_name, "rb") as f:
                 patch_data = rsyncdelta(f, hashes, blocksize=CHUNK_SIZE)
 
@@ -236,7 +236,8 @@ class BackupClient:
             with open(temp_file, "wb") as f:
                 pickle.dump(patch_data, f)
 
-            self.http_post(host_url + URL_BACKUP_PATCH_FILE + f'?file={full_name}')
+            with open(temp_file.as_posix(), 'rb') as f:
+                self.http_post(host_url + URL_BACKUP_PATCH_FILE + f'?file={full_name}', body=f, is_json=False)
 
             temp_file.unlink()
 
@@ -244,8 +245,8 @@ class BackupClient:
         for full_name in delete_files:
             full_name.unlink()
 
-    def get_remote_file_hashes(self, host_url, access_token):
-        r = self.http_get(host_url + URL_BACKUP_PATCH_HASH, access_token, is_body=False)
+    def get_remote_file_hashes(self, host_url, access_token, name):
+        r = self.http_get(host_url + URL_BACKUP_PATCH_HASH + f'?file={name}', access_token, is_body=False)
         hashes = list()
         for line in r.iter_lines(chunk_size=CHUNK_SIZE):
             parts = line.split(b',')

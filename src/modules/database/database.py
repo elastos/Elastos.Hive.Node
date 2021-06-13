@@ -129,6 +129,9 @@ class Database:
 
     @hive_restful_response
     def query_document(self, collection_name, json_body):
+        if not json_body or not collection_name:
+            raise BadRequestException(msg='Request body empty or not collection name.')
+
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
 
         if 'filter' in json_body and type(json_body.get('filter')) is not dict:

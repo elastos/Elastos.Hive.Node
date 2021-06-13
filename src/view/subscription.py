@@ -6,7 +6,6 @@ The view of subscription module.
 from flask import Blueprint, request
 
 from src.modules.subscription.subscription import VaultSubscription, BackupSubscription
-from src.utils.http_response import BadRequestException
 
 blueprint = Blueprint('subscription', __name__)
 vault_subscription = VaultSubscription()

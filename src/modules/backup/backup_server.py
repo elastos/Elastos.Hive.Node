@@ -8,21 +8,28 @@ from pathlib import Path
 
 import requests
 
+from hive.main.view import h_auth
 from hive.util.common import get_file_checksum_list, deal_dir, get_file_md5_info, gene_temp_file_name, \
     create_full_path_dir
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, DID, \
     VAULT_BACKUP_INFO_TIME, VAULT_BACKUP_INFO_TYPE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, VAULT_BACKUP_INFO_MSG, \
-    VAULT_BACKUP_INFO_DRIVE, VAULT_BACKUP_INFO_TOKEN, VAULT_BACKUP_SERVICE_MAX_STORAGE, APP_ID, CHUNK_SIZE
+    VAULT_BACKUP_INFO_DRIVE, VAULT_BACKUP_INFO_TOKEN, VAULT_BACKUP_SERVICE_MAX_STORAGE, APP_ID, CHUNK_SIZE, \
+    VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, VAULT_BACKUP_SERVICE_USE_STORAGE, \
+    VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, VAULT_BACKUP_SERVICE_MODIFY_TIME, \
+    VAULT_BACKUP_SERVICE_STATE, VAULT_BACKUP_SERVICE_USING
 from hive.util.did_file_info import get_vault_path
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, get_save_mongo_db_path
-from hive.util.payment.vault_service_manage import get_vault_used_storage
+from hive.util.payment.payment_config import PaymentConfig
+from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
+from hive.util.payment.vault_service_manage import get_vault_used_storage, VAULT_SERVICE_STATE_RUNNING
 from hive.util.pyrsync import rsyncdelta
 from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
     VAULT_BACKUP_MSG_FAILED, VAULT_BACKUP_STATE_RESTORE
+from src.modules.scripting.scripting import check_auth
 from src.utils.database_client import cli
 from src.utils.http_response import BackupIsInProcessingException, InsufficientStorageException, \
-    InvalidParameterException, BadRequestException
+    InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException
 from src.view import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH
 from src.view.auth import auth
@@ -294,4 +301,73 @@ class BackupClient:
 
 
 class BackupServer:
-    pass
+    def __init__(self):
+        pass
+
+    def subscribe_free(self):
+        did, app_id = check_auth()
+        doc = cli.find_one_origin(DID_INFO_DB_NAME,
+                                  VAULT_BACKUP_SERVICE_COL,
+                                  {VAULT_BACKUP_SERVICE_DID: did},
+                                  is_create=True)
+        if doc:
+            raise AlreadyExistsException('The backup vault is already subscribed.')
+        return self.__get_vault_info(self.__create_backup(did, PaymentConfig.get_free_backup_info()))
+
+    def __create_backup(self, did, price_plan):
+        now = datetime.utcnow().timestamp()  # seconds in UTC
+        end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
+        # there is no use of database for backup vault.
+        doc = {VAULT_BACKUP_SERVICE_DID: did,
+               VAULT_BACKUP_SERVICE_MAX_STORAGE: price_plan["maxStorage"] * 1000 * 1000,
+               VAULT_BACKUP_SERVICE_USE_STORAGE: 0,
+               VAULT_BACKUP_SERVICE_START_TIME: now,
+               VAULT_BACKUP_SERVICE_END_TIME: end_time,
+               VAULT_BACKUP_SERVICE_MODIFY_TIME: now,
+               VAULT_BACKUP_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
+               VAULT_BACKUP_SERVICE_USING: price_plan['name']
+               }
+        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, doc, is_create=True)
+        return doc
+
+    def __get_vault_info(self, doc):
+        return {
+            'pricing_plan': doc[VAULT_BACKUP_SERVICE_USING],
+            'service_did': h_auth.get_did_string(),
+            'storage_quota': int(doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]),
+            'storage_used': int(doc[VAULT_BACKUP_SERVICE_USE_STORAGE]),
+            'created': cli.timestamp_to_epoch(doc[VAULT_BACKUP_SERVICE_START_TIME]),
+            'updated': cli.timestamp_to_epoch(doc[VAULT_BACKUP_SERVICE_MODIFY_TIME]),
+        }
+
+    def unsubscribe(self):
+        did, app_id = check_auth()
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did})
+        if not doc:
+            return
+        # TODO: delete backup storage for backup files.
+        cli.delete_one_origin(DID_INFO_DB_NAME,
+                              VAULT_BACKUP_SERVICE_COL,
+                              {VAULT_BACKUP_SERVICE_DID: did},
+                              is_check_exist=False)
+
+    def get_info(self):
+        did, app_id = check_auth()
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did})
+        if not doc:
+            raise BackupNotFoundException()
+        return self.__get_vault_info(doc)
+
+    def get_backup_service(self):
+        did, app_did = check_auth()
+
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did})
+        if not doc:
+            raise BackupNotFoundException()
+
+        backup_root = get_vault_backup_path(did)
+        if not backup_root.exists():
+            create_full_path_dir(backup_root)
+
+        del doc["_id"]
+        return doc

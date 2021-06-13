@@ -46,8 +46,8 @@ class Backup:
         self.server.get_backup_service()
 
     @hive_restful_response
-    def backup_finish(self, file_name):
-        pass
+    def backup_finish(self, checksum_list):
+        self.server.backup_finish(checksum_list)
 
     @hive_restful_response
     def backup_files(self):

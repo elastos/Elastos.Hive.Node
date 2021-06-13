@@ -17,7 +17,7 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_B
     VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, VAULT_BACKUP_SERVICE_USE_STORAGE, \
     VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, VAULT_BACKUP_SERVICE_MODIFY_TIME, \
     VAULT_BACKUP_SERVICE_STATE, VAULT_BACKUP_SERVICE_USING
-from hive.util.did_file_info import get_vault_path
+from hive.util.did_file_info import get_vault_path, get_dir_size
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, get_save_mongo_db_path
 from hive.util.payment.payment_config import PaymentConfig
@@ -371,3 +371,20 @@ class BackupServer:
 
         del doc["_id"]
         return doc
+
+    def backup_finish(self, checksum_list):
+        if not checksum_list:
+            raise InvalidParameterException(msg='checksum_list must provide.')
+
+        did, app_did = check_auth()
+        backup_root = get_vault_backup_path(did)
+        if not backup_root.exists():
+            create_full_path_dir(backup_root)
+
+        local_checksum_list = get_file_checksum_list(backup_root)
+        for checksum in checksum_list:
+            if checksum not in local_checksum_list:
+                raise BadRequestException(msg='Failed to finish backup process.')
+
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
+                              {"$set": {VAULT_BACKUP_SERVICE_USE_STORAGE: get_dir_size(backup_root.as_posix(), 0)}})

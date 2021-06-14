@@ -86,6 +86,6 @@ def internal_backup_patch_file():
     return backup.backup_patch_file(request.args.get('file'))
 
 
-@blueprint.route(URL_RESTORE_FINISH, methods=['POST'])
+@blueprint.route(URL_RESTORE_FINISH, methods=['GET'])
 def internal_restore_finish():
-    pass
+    return backup.restore_finish()

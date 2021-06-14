@@ -25,7 +25,7 @@ from hive.util.flask_rangerequest import RangeRequest
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import get_vault_used_storage, VAULT_SERVICE_STATE_RUNNING
-from hive.util.pyrsync import rsyncdelta, gene_blockchecksums
+from hive.util.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
 from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
     VAULT_BACKUP_MSG_FAILED, VAULT_BACKUP_STATE_RESTORE
 from src.modules.scripting.scripting import check_auth
@@ -461,3 +461,41 @@ class BackupServer:
         full_name = (backup_root / file_name).resolve()
         with open(full_name, 'rb') as f:
             return gene_blockchecksums(f, blocksize=CHUNK_SIZE)
+
+    def backup_patch_file(self, file_name):
+        if not file_name:
+            raise InvalidParameterException()
+
+        did, _, _ = self.__check_auth_backup()
+        backup_root = get_vault_backup_path(did)
+        full_name = (backup_root / file_name).resolve()
+
+        temp_file = gene_temp_file_name()
+        with open(temp_file, "bw") as f:
+            chunk_size = CHUNK_SIZE
+            while True:
+                chunk = request.stream.read(chunk_size)
+                if len(chunk) == 0:
+                    break
+                f.write(chunk)
+
+        with open(temp_file, "rb") as f:
+            delta_list = pickle.load(f)
+        temp_file.unlink()
+
+        temp_file2 = gene_temp_file_name()
+        with open(full_name, "br") as unpatched:
+            with open(temp_file2, "bw") as save_to:
+                unpatched.seek(0)
+                patchstream(unpatched, save_to, delta_list)
+        if full_name.exists():
+            full_name.unlink()
+        shutil.move(temp_file2.as_posix(), full_name.as_posix())
+
+    def restore_finish(self):
+        did, _, _ = self.__check_auth_backup()
+        backup_root = get_vault_backup_path(did)
+        checksum_list = list()
+        if backup_root.exists():
+            checksum_list = get_file_checksum_list(backup_root)
+        return {'checksum_list': checksum_list}

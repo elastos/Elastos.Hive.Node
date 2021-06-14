@@ -388,3 +388,12 @@ class BackupServer:
 
         cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
                               {"$set": {VAULT_BACKUP_SERVICE_USE_STORAGE: get_dir_size(backup_root.as_posix(), 0)}})
+
+    def backup_files(self):
+        did, app_did = check_auth()
+        result = dict()
+        backup_root = get_vault_backup_path(did)
+        if backup_root.exists():
+            md5_list = deal_dir(backup_root.as_posix(), get_file_md5_info)
+            result['backup_files'] = [(md5[0], Path(md5[1]).relative_to(backup_root).as_posix()) for md5 in md5_list]
+        return result

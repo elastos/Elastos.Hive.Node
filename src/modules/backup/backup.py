@@ -51,7 +51,7 @@ class Backup:
 
     @hive_restful_response
     def backup_files(self):
-        pass
+        self.server.backup_files()
 
     @hive_restful_response
     def backup_get_file(self, file_name):

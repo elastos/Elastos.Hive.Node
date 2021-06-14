@@ -20,6 +20,7 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_B
 from hive.util.did_file_info import get_vault_path, get_dir_size
 from hive.util.did_info import get_all_did_info_by_did
 from hive.util.did_mongo_db_resource import export_mongo_db, get_save_mongo_db_path
+from hive.util.flask_rangerequest import RangeRequest
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import get_vault_used_storage, VAULT_SERVICE_STATE_RUNNING
@@ -29,7 +30,8 @@ from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MS
 from src.modules.scripting.scripting import check_auth
 from src.utils.database_client import cli
 from src.utils.http_response import BackupIsInProcessingException, InsufficientStorageException, \
-    InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException
+    InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \
+    FileNotFoundException
 from src.view import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH
 from src.view.auth import auth
@@ -304,12 +306,16 @@ class BackupServer:
     def __init__(self):
         pass
 
+    def __check_auth_backup(self, is_raise=True, is_create=False):
+        did, app_did = check_auth()
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
+                                  is_create=is_create)
+        if is_raise and not doc:
+            raise BackupNotFoundException()
+        return did, app_did, doc
+
     def subscribe_free(self):
-        did, app_id = check_auth()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME,
-                                  VAULT_BACKUP_SERVICE_COL,
-                                  {VAULT_BACKUP_SERVICE_DID: did},
-                                  is_create=True)
+        did, app_did, doc = self.__check_auth_backup(is_raise=False, is_create=True)
         if doc:
             raise AlreadyExistsException('The backup vault is already subscribed.')
         return self.__get_vault_info(self.__create_backup(did, PaymentConfig.get_free_backup_info()))
@@ -341,8 +347,7 @@ class BackupServer:
         }
 
     def unsubscribe(self):
-        did, app_id = check_auth()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did})
+        did, _, doc = self.__check_auth_backup(is_raise=False)
         if not doc:
             return
         # TODO: delete backup storage for backup files.
@@ -352,22 +357,15 @@ class BackupServer:
                               is_check_exist=False)
 
     def get_info(self):
-        did, app_id = check_auth()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did})
-        if not doc:
-            raise BackupNotFoundException()
+        _, _, doc = self.__check_auth_backup()
         return self.__get_vault_info(doc)
 
     def get_backup_service(self):
-        did, app_did = check_auth()
+        did, _, doc = self.__check_auth_backup()
 
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did})
-        if not doc:
-            raise BackupNotFoundException()
-
-        backup_root = get_vault_backup_path(did)
-        if not backup_root.exists():
-            create_full_path_dir(backup_root)
+        # backup_root = get_vault_backup_path(did)
+        # if not backup_root.exists():
+        #     create_full_path_dir(backup_root)
 
         del doc["_id"]
         return doc
@@ -376,7 +374,8 @@ class BackupServer:
         if not checksum_list:
             raise InvalidParameterException(msg='checksum_list must provide.')
 
-        did, app_did = check_auth()
+        did, _, doc = self.__check_auth_backup()
+
         backup_root = get_vault_backup_path(did)
         if not backup_root.exists():
             create_full_path_dir(backup_root)
@@ -386,14 +385,35 @@ class BackupServer:
             if checksum not in local_checksum_list:
                 raise BadRequestException(msg='Failed to finish backup process.')
 
-        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
+        cli.update_one_origin(DID_INFO_DB_NAME,
+                              VAULT_BACKUP_SERVICE_COL,
+                              {VAULT_BACKUP_SERVICE_DID: did},
                               {"$set": {VAULT_BACKUP_SERVICE_USE_STORAGE: get_dir_size(backup_root.as_posix(), 0)}})
 
     def backup_files(self):
-        did, app_did = check_auth()
+        did, _, _ = self.__check_auth_backup()
+
         result = dict()
         backup_root = get_vault_backup_path(did)
         if backup_root.exists():
             md5_list = deal_dir(backup_root.as_posix(), get_file_md5_info)
             result['backup_files'] = [(md5[0], Path(md5[1]).relative_to(backup_root).as_posix()) for md5 in md5_list]
         return result
+
+    def backup_get_file(self, file_name):
+        if not file_name:
+            raise InvalidParameterException()
+
+        did, _, _ = self.__check_auth_backup()
+
+        backup_root = get_vault_backup_path(did)
+        full_name = (backup_root / file_name).resolve()
+        if not full_name.exists() or not full_name.is_file():
+            raise FileNotFoundException()
+
+        with open(full_name, 'rb') as f:
+            etag = RangeRequest.make_etag(f)
+        return RangeRequest(open(full_name, 'rb'),
+                            etag=etag,
+                            last_modified=datetime.utcnow(),
+                            size=full_name.stat().st_size).make_response()

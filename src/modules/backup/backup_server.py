@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+from flask import request
 
 from hive.main.view import h_auth
 from hive.util.common import get_file_checksum_list, deal_dir, get_file_md5_info, gene_temp_file_name, \
@@ -417,3 +418,25 @@ class BackupServer:
                             etag=etag,
                             last_modified=datetime.utcnow(),
                             size=full_name.stat().st_size).make_response()
+
+    def backup_upload_file(self, file_name):
+        if not file_name:
+            raise InvalidParameterException()
+
+        did, _, _ = self.__check_auth_backup()
+        backup_root = get_vault_backup_path(did)
+        full_name = (backup_root / file_name).resolve()
+        if not full_name.parent.exists():
+            create_full_path_dir(full_name.parent)
+
+        temp_file = gene_temp_file_name()
+        with open(temp_file, "bw") as f:
+            while True:
+                chunk = request.stream.read(CHUNK_SIZE)
+                if len(chunk) == 0:
+                    break
+                f.write(chunk)
+
+        if full_name.exists():
+            full_name.unlink()
+        shutil.move(temp_file.as_posix(), full_name.as_posix())

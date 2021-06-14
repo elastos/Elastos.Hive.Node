@@ -25,7 +25,7 @@ from hive.util.flask_rangerequest import RangeRequest
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import get_vault_used_storage, VAULT_SERVICE_STATE_RUNNING
-from hive.util.pyrsync import rsyncdelta
+from hive.util.pyrsync import rsyncdelta, gene_blockchecksums
 from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
     VAULT_BACKUP_MSG_FAILED, VAULT_BACKUP_STATE_RESTORE
 from src.modules.scripting.scripting import check_auth
@@ -440,3 +440,24 @@ class BackupServer:
         if full_name.exists():
             full_name.unlink()
         shutil.move(temp_file.as_posix(), full_name.as_posix())
+
+    def backup_delete_file(self, file_name):
+        if not file_name:
+            raise InvalidParameterException()
+
+        did, _, _ = self.__check_auth_backup()
+        backup_root = get_vault_backup_path(did)
+        full_name = (backup_root / file_name).resolve()
+
+        if full_name.exists() and full_name.is_file():
+            full_name.unlink()
+
+    def backup_get_file_hash(self, file_name):
+        if not file_name:
+            raise InvalidParameterException()
+
+        did, _, _ = self.__check_auth_backup()
+        backup_root = get_vault_backup_path(did)
+        full_name = (backup_root / file_name).resolve()
+        with open(full_name, 'rb') as f:
+            return gene_blockchecksums(f, blocksize=CHUNK_SIZE)

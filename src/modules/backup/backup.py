@@ -63,11 +63,11 @@ class Backup:
 
     @hive_restful_response
     def backup_delete_file(self, file_name):
-        pass
+        self.server.backup_delete_file(file_name)
 
     @hive_restful_response
     def backup_get_file_hash(self, file_name):
-        pass
+        self.server.backup_get_file_hash(file_name)
 
     @hive_restful_response
     def backup_patch_file(self, file_name):

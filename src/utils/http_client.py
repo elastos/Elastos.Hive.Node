@@ -51,8 +51,7 @@ class HttpClient:
         try:
             headers = {"Authorization": "token " + access_token}
             r = requests.delete(url, headers=headers)
-            if r.status_code != 200:
+            if r.status_code != 204:
                 raise InvalidParameterException(f'Failed to PUT with status code: {r.status_code}')
-            return r.json()
         except Exception as e:
             raise InvalidParameterException(f'Failed to PUT with exception: {str(e)}')

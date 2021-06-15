@@ -11,7 +11,7 @@ import logging
 import json
 
 
-class HiveException(BaseException):
+class HiveException(Exception):
     NO_INTERNAL_CODE = -1
 
     def __init__(self, code, internal_code, msg):

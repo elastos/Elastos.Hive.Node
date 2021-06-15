@@ -3,7 +3,7 @@ from flask_script import Manager, Server
 from src import create_app
 
 manager = Manager(create_app)
-manager.add_command("runserver", Server(host="0.0.0.0", port=5000, threaded=False, processes=2))
+manager.add_command("runserver", Server(host="0.0.0.0", port=5000, threaded=True))
 manager.add_option('-c', '--config', dest='mode', required=False)
 
 if __name__ == "__main__":

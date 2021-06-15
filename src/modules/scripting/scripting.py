@@ -8,7 +8,7 @@ import jwt
 from flask import request
 from bson import ObjectId
 
-from hive.util.auth import did_auth
+from hive.util.auth import did_auth, did_auth2
 from hive.util.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
@@ -31,6 +31,16 @@ def check_auth():
     did, app_id = did_auth()
     if not did or not app_id:
         raise UnauthorizedException()
+    return did, app_id
+
+
+def check_auth2():
+    """
+    TODO: to be moved to other place.
+    """
+    did, app_id, err = did_auth2()
+    if not did:
+        raise UnauthorizedException(msg=err)
     return did, app_id
 
 

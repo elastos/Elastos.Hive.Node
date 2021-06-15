@@ -15,17 +15,20 @@ from hive.util.did.entity import Entity
 from hive.util.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
     update_did_info_by_app_instance_did, get_did_info_by_nonce, update_token_of_did_info
 from hive.main import view
+from src.utils.http_client import HttpClient
 
 from src.utils.http_response import hive_restful_response, BadRequestException, InvalidParameterException
-from src.view import URL_DID_SIGN_IN, URL_DID_BACKUP_AUTH
+from src.utils.consts import URL_DID_SIGN_IN, URL_DID_BACKUP_AUTH
+from src.utils.singleton import Singleton
 
 
-class Auth(Entity):
+class Auth(Entity, metaclass=Singleton):
     def __init__(self, app, hive_setting):
         self.app = app
         self.hive_setting = hive_setting
         self.storepass = hive_setting.DID_STOREPASS
         Entity.__init__(self, "hive.auth", mnemonic=hive_setting.DID_MNEMONIC, passphrase=hive_setting.DID_PASSPHRASE)
+        self.http = HttpClient()
 
     @hive_restful_response
     def sign_in(self, doc):
@@ -241,10 +244,10 @@ class Auth(Entity):
     def get_backup_credential_info(self, credential):
         """ for vault /backup """
         if not credential:
-            raise InvalidParameterException()
+            raise InvalidParameterException('The credential must provide.')
         credential_info, err = view.h_auth.get_credential_info(credential, ["targetHost", "targetDID"])
         if credential_info is None:
-            raise InvalidParameterException(msg=err)
+            raise InvalidParameterException(msg=f'Failed to get credential info: {err}')
         return credential_info
 
     def backup_client_sign_in(self, host_url, credential, subject):
@@ -258,11 +261,11 @@ class Auth(Entity):
 
         doc_str = ffi.string(lib.DIDDocument_ToJson(lib.DIDStore_LoadDID(self.store, self.did), True)).decode()
         doc = json.loads(doc_str)
-        rt, status_code, err = self.post(host_url + URL_DID_SIGN_IN, {"id": doc})
-        if err or 'challenge' not in rt or not rt["challenge"]:
+        body = self.http.post(host_url + URL_DID_SIGN_IN, None, {"id": doc})
+        if 'challenge' not in body or not body["challenge"]:
             raise InvalidParameterException(msg='backup_sign_in: failed to sign in to backup node.')
 
-        jws = lib.DefaultJWSParser_Parse(rt["challenge"].encode())
+        jws = lib.DefaultJWSParser_Parse(body["challenge"].encode())
         if not jws:
             raise InvalidParameterException(
                 msg=f'backup_sign_in: failed to parse challenge with error {self.get_error_message()}.')
@@ -299,11 +302,11 @@ class Auth(Entity):
         for vault /backup & /restore
         :return backup access token
         """
-        rt, _, err = self.post(host_url + URL_DID_BACKUP_AUTH, {"challenge_response": challenge_response})
-        if err or 'token' not in rt or not rt["backup_token"]:
+        body = self.http.post(host_url + URL_DID_BACKUP_AUTH, None, {"challenge_response": challenge_response})
+        if 'token' not in body or not body["token"]:
             raise InvalidParameterException(msg='backup_auth: failed to backup auth to backup node.')
 
-        jws = lib.DefaultJWSParser_Parse(rt["token"].encode())
+        jws = lib.DefaultJWSParser_Parse(body["token"].encode())
         if not jws:
             raise InvalidParameterException(
                 msg=f'backup_auth: failed to parse token with error {self.get_error_message()}.')
@@ -318,4 +321,4 @@ class Auth(Entity):
         if issuer != backup_service_instance_did:
             raise InvalidParameterException(msg=f'backup_auth: failed to get the issuer of the challenge.')
 
-        return rt["backup_token"]
+        return body["token"]

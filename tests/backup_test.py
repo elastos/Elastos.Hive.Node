@@ -18,9 +18,9 @@ class BackupTestCase(unittest.TestCase):
         self.remote_resolver = RemoteResolver()
 
     def test01_backup(self):
-        self.create_backup_vault()
-        self.prepare_backup_files()
-        self.backup(self.remote_resolver.get_backup_credential())
+        # self.create_backup_vault()
+        # self.prepare_backup_files()
+        self.backup(self.remote_resolver.get_backup_credential(self.host_url))
 
     def test02_restore(self):
         self.create_backup_vault()
@@ -64,7 +64,7 @@ class BackupTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 204)
 
     def upload_file(self, name, content):
-        response = self.cli.put(f'/vault/files/name',
+        response = self.cli.put(f'/vault/files/{name}',
                                 content.encode(), is_json=False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), name)
@@ -77,9 +77,9 @@ class BackupTestCase(unittest.TestCase):
         return response.json()
 
     def backup(self, credential):
-        r = self.cli.post('/api/v2/vault/content?to=hive_node', body={'credential': credential})
+        r = self.cli.post('/vault/content?to=hive_node', body={'credential': credential}, is_json=True)
         self.assertEqual(r.status_code, 201)
 
     def restore(self, credential):
-        r = self.cli.post('/api/v2/vault/content?from=hive_node', body={'credential': credential})
+        r = self.cli.post('/vault/content?from=hive_node', body={'credential': credential}, is_json=True)
         self.assertEqual(r.status_code, 201)

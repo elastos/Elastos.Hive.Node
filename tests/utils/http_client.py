@@ -26,6 +26,7 @@ class RemoteResolver(metaclass=Singleton):
                             test_common.app_id,
                             "street shrug castle where muscle swift coin mirror exercise police toward boring", "")
         self.http_client = HttpClient('http://localhost:5000/api/v2/did')
+        self.node_did = None
 
     def get_token(self):
         if not self.token:
@@ -34,6 +35,12 @@ class RemoteResolver(metaclass=Singleton):
 
     def __get_remote_token(self):
         return self.auth(self.sign_in())
+
+    def __get_issuer_by_challenge(self, challenge):
+        jws = lib.DefaultJWSParser_Parse(challenge.encode())
+        node_did = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+        lib.JWT_Destroy(jws)
+        return node_did
 
     def sign_in(self):
         doc_c = lib.DIDStore_LoadDID(self.app_did.store, self.app_did.did)
@@ -64,6 +71,18 @@ class RemoteResolver(metaclass=Singleton):
         assert response.status_code == 201
         return response.json()["token"]
 
+    def get_user_did_str(self):
+        return self.user_did.get_did_string()
+
+    def __get_node_did(self):
+        if not self.node_did:
+            self.node_did = self.__get_issuer_by_challenge(self.sign_in())
+        return self.node_did
+
+    def get_backup_credential(self, host_url):
+        node_did = self.__get_node_did()
+        vc = self.user_did.issue_backup_auth(node_did, host_url, node_did)
+        return ffi.string(lib.Credential_ToString(vc, True)).decode()
 
 def _log_http_request(func):
     def wrapper(self, *args, **kwargs):

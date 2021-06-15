@@ -48,11 +48,11 @@ class Backup:
 
     @hive_restful_response
     def backup_finish(self, checksum_list):
-        self.server.backup_finish(checksum_list)
+        return self.server.backup_finish(checksum_list)
 
     @hive_restful_response
     def backup_files(self):
-        self.server.backup_files()
+        return self.server.backup_files()
 
     @hive_restful_response
     def backup_get_file(self, file_name):

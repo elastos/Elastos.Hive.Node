@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 import _thread
+import logging
 import pickle
 import shutil
 import subprocess
+import threading
+import traceback
 from datetime import datetime
 from pathlib import Path
 
@@ -38,12 +41,23 @@ from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_F
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH
 
 
+def clog():
+    return logging.getLogger('BACKUP_CLIENT')
+
+
+def slog():
+    return logging.getLogger('BACKUP_SERVER')
+
+
 class BackupClient:
-    def __init__(self, app, hive_setting):
-        self.hive_setting = hive_setting
-        self.mongo_host, self.mongo_port = self.hive_setting.MONGO_HOST, self.hive_setting.MONGO_PORT
-        self.auth = Auth(app, hive_setting)
+    def __init__(self, app=None, hive_setting=None):
         self.http = HttpClient()
+        self.backup_thread = None
+        self.hive_setting = hive_setting
+        self.mongo_host, self.mongo_port = None, None
+        if hive_setting:
+            self.mongo_host, self.mongo_port = self.hive_setting.MONGO_HOST, self.hive_setting.MONGO_PORT
+        self.auth = Auth(app, hive_setting)
 
     def check_backup_status(self, did):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
@@ -75,7 +89,10 @@ class BackupClient:
         if use_storage > backup_service_info[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
             raise InsufficientStorageException(msg='Insufficient storage to execute backup.')
 
-        _thread.start_new_thread(self.__class__.backup_main, (did, self))
+        clog().debug('start new thread for backup processing.')
+
+        self.backup_thread = threading.Thread(target=BackupClient.backup_main, args=(did, self))
+        self.backup_thread.start()
 
     def update_backup_state(self, did, state, msg):
         cli.update_one_origin(DID_INFO_DB_NAME,
@@ -102,20 +119,29 @@ class BackupClient:
     @staticmethod
     def backup_main(did, client):
         try:
+            clog().info(f'[backup_main] enter backup thread, {did}, {client}.')
             client.backup(did)
-        except Exception as e:
+        except BaseException as e:
+            clog().error(f'Failed to backup really: {traceback.format_exc()}')
             client.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_FAILED)
+        clog().info('[backup_main] leave backup thread.')
 
     def backup(self, did):
+        clog().info('[backup_main] enter backup().')
         self.export_mongodb_data(did)
+        clog().info('[backup_main] success to export mongodb data.')
         vault_root = get_vault_path(did)
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
+        clog().info('[backup_main] success to get backup info.')
         self.backup_really(vault_root, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
+        clog().info('[backup_main] success to execute backup.')
 
         checksum_list = get_file_checksum_list(vault_root)
         self.backup_finish(doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN], checksum_list)
+        clog().info('[backup_main] success to finish backup.')
         self.delete_mongodb_data(did)
         self.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
+        clog().info('[backup_main] success to backup really.')
 
     def restore(self, did):
         vault_root = get_vault_path(did)
@@ -148,7 +174,7 @@ class BackupClient:
         self.restore_delete_files(host_url, access_token, delete_files)
 
     def backup_finish(self, host_url, access_token, checksum_list):
-        self.http.post(host_url + URL_BACKUP_FINISH, access_token, {'checksum_list': checksum_list})
+        self.http.post(host_url + URL_BACKUP_FINISH, access_token, {'checksum_list': checksum_list}, is_body=False)
 
     def diff_backup_files(self, remote_files, local_files, vault_root):
         remote_files_d = dict((d[1], d[0]) for d in remote_files)  # name: checksum
@@ -169,10 +195,9 @@ class BackupClient:
         return new_files, patch_files, delete_files
 
     def backup_new_files(self, host_url, access_token, new_files):
-        for info in new_files:
-            src_file, dst_file = info[0], info[1]
-            with open(src_file, 'br') as f:
-                self.http.put(host_url + URL_BACKUP_FILE + f'?file={dst_file}', access_token, f)
+        for full_name, name in new_files:
+            with open(full_name, 'br') as f:
+                self.http.put(host_url + URL_BACKUP_FILE + f'?file={name}', access_token, f, is_body=False)
 
     def restore_new_files(self, host_url, access_token, new_files):
         for info in new_files:
@@ -206,7 +231,8 @@ class BackupClient:
                 pickle.dump(patch_data, f)
 
             with open(temp_file.as_posix(), 'rb') as f:
-                self.http.post(host_url + URL_BACKUP_PATCH_FILE + f'?file={full_name}', body=f, is_json=False)
+                self.http.post(host_url + URL_BACKUP_PATCH_FILE + f'?file={full_name}',
+                               body=f, is_json=False, is_body=False)
 
             temp_file.unlink()
 
@@ -255,6 +281,7 @@ class BackupClient:
         try:
             client.restore(did)
         except Exception as e:
+            clog().error(f'Failed to restore really: {traceback.format_exc()}')
             client.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_FAILED)
 
     def restore_finish(self, did, host_url, access_token):
@@ -354,12 +381,12 @@ class BackupServer:
     def backup_files(self):
         did, _, _ = self.__check_auth_backup()
 
-        result = dict()
+        backup_files = list()
         backup_root = get_vault_backup_path(did)
         if backup_root.exists():
             md5_list = deal_dir(backup_root.as_posix(), get_file_md5_info)
-            result['backup_files'] = [(md5[0], Path(md5[1]).relative_to(backup_root).as_posix()) for md5 in md5_list]
-        return result
+            backup_files = [(md5[0], Path(md5[1]).relative_to(backup_root).as_posix()) for md5 in md5_list]
+        return {'backup_files': backup_files}
 
     def backup_get_file(self, file_name):
         if not file_name:

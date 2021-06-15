@@ -231,7 +231,7 @@ class BackupClient:
                 pickle.dump(patch_data, f)
 
             with open(temp_file.as_posix(), 'rb') as f:
-                self.http.post(host_url + URL_BACKUP_PATCH_FILE + f'?file={full_name}',
+                self.http.post(host_url + URL_BACKUP_PATCH_FILE + f'?file={name}', access_token,
                                body=f, is_json=False, is_body=False)
 
             temp_file.unlink()

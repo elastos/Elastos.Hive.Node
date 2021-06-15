@@ -6,7 +6,6 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-import requests
 from flask import request
 
 from hive.main.view import h_auth
@@ -28,76 +27,36 @@ from hive.util.payment.vault_service_manage import get_vault_used_storage, VAULT
 from hive.util.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
 from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
     VAULT_BACKUP_MSG_FAILED, VAULT_BACKUP_STATE_RESTORE
-from src.modules.scripting.scripting import check_auth
+from src.modules.auth.auth import Auth
+from src.modules.scripting.scripting import check_auth, check_auth2
 from src.utils.database_client import cli
+from src.utils.http_client import HttpClient
 from src.utils.http_response import BackupIsInProcessingException, InsufficientStorageException, \
     InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \
     FileNotFoundException
-from src.view import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
+from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH
-from src.view.auth import auth
 
 
 class BackupClient:
-    def __init__(self, hive_setting):
+    def __init__(self, app, hive_setting):
         self.hive_setting = hive_setting
         self.mongo_host, self.mongo_port = self.hive_setting.MONGO_HOST, self.hive_setting.MONGO_PORT
-
-    def http_get(self, url, access_token, is_body=True, options=None):
-        try:
-            headers = {"Content-Type": "application/json", "Authorization": "token " + access_token}
-            r = requests.get(url, headers=headers, **(options if options else {}))
-            if r.status_code != 200:
-                raise InvalidParameterException(msg=f'Failed to GET with status code: {r.status_code}')
-            return r.json() if is_body else r
-        except Exception as e:
-            raise InvalidParameterException(msg=f'Failed to GET with exception: {str(e)}')
-
-    def http_post(self, url, access_token, body, is_json=True):
-        try:
-            headers = {"Authorization": "token " + access_token}
-            if is_json:
-                headers['Content-Type'] = 'application/json'
-            r = requests.post(url, headers=headers, json=body) \
-                if is_json else requests.post(url, headers=headers, data=body)
-            if r.status_code != 201:
-                raise InvalidParameterException(f'Failed to POST with status code: {r.status_code}')
-            return r.json()
-        except Exception as e:
-            raise InvalidParameterException(f'Failed to POST with exception: {str(e)}')
-
-    def http_put(self, url, access_token, body):
-        try:
-            headers = {"Authorization": "token " + access_token}
-            r = requests.put(url, headers=headers, data=body)
-            if r.status_code != 200:
-                raise InvalidParameterException(f'Failed to PUT with status code: {r.status_code}')
-            return r.json()
-        except Exception as e:
-            raise InvalidParameterException(f'Failed to PUT with exception: {str(e)}')
-
-    def http_delete(self, url, access_token):
-        try:
-            headers = {"Authorization": "token " + access_token}
-            r = requests.delete(url, headers=headers)
-            if r.status_code != 200:
-                raise InvalidParameterException(f'Failed to PUT with status code: {r.status_code}')
-            return r.json()
-        except Exception as e:
-            raise InvalidParameterException(f'Failed to PUT with exception: {str(e)}')
+        self.auth = Auth(app, hive_setting)
+        self.http = HttpClient()
 
     def check_backup_status(self, did):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
         if doc and doc[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP:
             # if doc[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow().timestamp() - 60 * 60 * 24):
-            raise BackupIsInProcessingException()
+            raise BackupIsInProcessingException('The backup/restore is in process.')
 
     def get_backup_service_info(self, credential, credential_info):
         target_host = credential_info['targetHost']
-        challenge_response, backup_service_instance_did = auth.backup_client_sign_in(target_host, credential,
-                                                                              'DIDBackupAuthResponse')
-        access_token = auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
-        return self.http_get(target_host + URL_BACKUP_SERVICE, access_token), access_token
+        challenge_response, backup_service_instance_did = \
+            self.auth.backup_client_sign_in(target_host, credential, 'DIDBackupAuthResponse')
+        access_token = self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
+        return self.http.get(target_host + URL_BACKUP_SERVICE, access_token), access_token
 
     def execute_backup(self, did, credential_info, backup_service_info, access_token):
         cli.update_one_origin(DID_INFO_DB_NAME,
@@ -173,7 +132,7 @@ class BackupClient:
         self.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
 
     def backup_really(self, vault_root, host_url, access_token):
-        remote_files = self.http_get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
+        remote_files = self.http.get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
         local_files = deal_dir(vault_root.as_posix(), get_file_md5_info)
         new_files, patch_files, delete_files = self.diff_backup_files(remote_files, local_files, vault_root)
         self.backup_new_files(host_url, access_token, new_files)
@@ -181,7 +140,7 @@ class BackupClient:
         self.backup_delete_files(host_url, access_token, delete_files)
 
     def restore_really(self, vault_root, host_url, access_token):
-        remote_files = self.http_get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
+        remote_files = self.http.get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
         local_files = deal_dir(vault_root.as_posix(), get_file_md5_info)
         new_files, patch_files, delete_files = self.diff_restore_files(remote_files, local_files, vault_root)
         self.restore_new_files(host_url, access_token, new_files)
@@ -189,7 +148,7 @@ class BackupClient:
         self.restore_delete_files(host_url, access_token, delete_files)
 
     def backup_finish(self, host_url, access_token, checksum_list):
-        self.http_post(host_url + URL_BACKUP_FINISH, access_token, {'checksum_list': checksum_list})
+        self.http.post(host_url + URL_BACKUP_FINISH, access_token, {'checksum_list': checksum_list})
 
     def diff_backup_files(self, remote_files, local_files, vault_root):
         remote_files_d = dict((d[1], d[0]) for d in remote_files)  # name: checksum
@@ -213,7 +172,7 @@ class BackupClient:
         for info in new_files:
             src_file, dst_file = info[0], info[1]
             with open(src_file, 'br') as f:
-                self.http_put(host_url + URL_BACKUP_FILE + f'?file={dst_file}', access_token, f)
+                self.http.put(host_url + URL_BACKUP_FILE + f'?file={dst_file}', access_token, f)
 
     def restore_new_files(self, host_url, access_token, new_files):
         for info in new_files:
@@ -224,7 +183,7 @@ class BackupClient:
                 # TODO: fix this
                 pass
 
-            r = self.http_get(host_url + URL_BACKUP_FILE + f'?file={name}', access_token, is_body=False,
+            r = self.http.get(host_url + URL_BACKUP_FILE + f'?file={name}', access_token, is_body=False,
                               options={'stream': True})
             with open(temp_file, 'bw') as f:
                 f.seek(0)
@@ -247,7 +206,7 @@ class BackupClient:
                 pickle.dump(patch_data, f)
 
             with open(temp_file.as_posix(), 'rb') as f:
-                self.http_post(host_url + URL_BACKUP_PATCH_FILE + f'?file={full_name}', body=f, is_json=False)
+                self.http.post(host_url + URL_BACKUP_PATCH_FILE + f'?file={full_name}', body=f, is_json=False)
 
             temp_file.unlink()
 
@@ -256,7 +215,7 @@ class BackupClient:
             full_name.unlink()
 
     def get_remote_file_hashes(self, host_url, access_token, name):
-        r = self.http_get(host_url + URL_BACKUP_PATCH_HASH + f'?file={name}', access_token, is_body=False)
+        r = self.http.get(host_url + URL_BACKUP_PATCH_HASH + f'?file={name}', access_token, is_body=False)
         hashes = list()
         for line in r.iter_lines(chunk_size=CHUNK_SIZE):
             parts = line.split(b',')
@@ -265,7 +224,7 @@ class BackupClient:
 
     def backup_delete_files(self, host_url, access_token, delete_files):
         for name in delete_files:
-            self.http_delete(host_url + URL_BACKUP_FILE + f'?file={name}', access_token)
+            self.http.delete(host_url + URL_BACKUP_FILE + f'?file={name}', access_token)
 
     def delete_mongodb_data(self, did):
         mongodb_root = get_save_mongo_db_path(did)
@@ -308,7 +267,8 @@ class BackupServer:
         pass
 
     def __check_auth_backup(self, is_raise=True, is_create=False):
-        did, app_did = check_auth()
+        # TODO: why no app did in backup internal server.
+        did, app_did = check_auth2()
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
                                   is_create=is_create)
         if is_raise and not doc:

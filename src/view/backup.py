@@ -8,11 +8,11 @@ from flask import Blueprint, request
 from src.modules.backup.backup import Backup
 from src.utils.http_request import params
 from src.utils.http_response import NotImplementedException
-from src.view import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, URL_BACKUP_PATCH_HASH, \
-    URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH
+from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
+    URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH
 
 blueprint = Blueprint('backup', __name__)
-backup = Backup()
+backup: Backup = None
 
 
 def init_app(app, hive_setting):

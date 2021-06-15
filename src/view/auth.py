@@ -7,7 +7,7 @@ from flask import Blueprint
 from src.modules.auth.auth import Auth
 from src.utils.http_request import params
 
-from src.view import URL_DID_SIGN_IN, URL_DID_AUTH, URL_DID_BACKUP_AUTH
+from src.utils.consts import URL_DID_SIGN_IN, URL_DID_AUTH, URL_DID_BACKUP_AUTH
 
 blueprint = Blueprint('auth', __name__)
 auth: Auth = None

@@ -5,17 +5,10 @@ import json
 import logging
 
 from hive.util.did.eladid import ffi, lib
+
+from src.utils.singleton import Singleton
 from tests_v1.hive_auth_test import DApp, DIDApp
 from tests_v1 import test_common
-
-
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
 
 
 class RemoteResolver(metaclass=Singleton):
@@ -83,6 +76,7 @@ class RemoteResolver(metaclass=Singleton):
         node_did = self.__get_node_did()
         vc = self.user_did.issue_backup_auth(node_did, host_url, node_did)
         return ffi.string(lib.Credential_ToString(vc, True)).decode()
+
 
 def _log_http_request(func):
     def wrapper(self, *args, **kwargs):

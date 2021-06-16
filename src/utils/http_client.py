@@ -22,17 +22,18 @@ class HttpClient:
         except Exception as e:
             raise InvalidParameterException(msg=f'[HttpClient] Failed to GET ({url}) with exception: {str(e)}')
 
-    def post(self, url, access_token, body, is_json=True, is_body=True):
+    def post(self, url, access_token, body, is_json=True, is_body=True, options=None):
         try:
             headers = dict()
             if access_token:
                 headers["Authorization"] = "token " + access_token
             if is_json:
                 headers['Content-Type'] = 'application/json'
-            r = requests.post(url, headers=headers, json=body) \
-                if is_json else requests.post(url, headers=headers, data=body)
+            r = requests.post(url, headers=headers, json=body, **(options if options else {})) \
+                if is_json else requests.post(url, headers=headers, data=body, **(options if options else {}))
             if r.status_code != 201:
-                raise InvalidParameterException(f'Failed to POST with status code: {r.status_code}')
+                raise InvalidParameterException(
+                    f'Failed to POST with status code: {r.status_code}, ' + str(r.json() if is_body else 'N/A'))
             return r.json() if is_body else r
         except Exception as e:
             raise InvalidParameterException(f'Failed to POST with exception: {str(e)}')

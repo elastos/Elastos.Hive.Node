@@ -44,6 +44,8 @@ class FileManager:
     def get_hashes_by_lines(self, lines):
         hashes = list()
         for line in lines:
+            if not line:
+                continue
             parts = line.split(b',')
             hashes.append((int(parts[0].decode("utf-8")), parts[1].decode("utf-8")))
         return hashes
@@ -53,7 +55,7 @@ class FileManager:
             patch_data = rsyncdelta(f, target_hashes, blocksize=CHUNK_SIZE)
         return pickle.dumps(patch_data)
 
-    def apply_rsync_data(self, data, file_path: Path):
+    def apply_rsync_data(self, file_path: Path, data):
         def on_save_to_temp(temp_file):
             with open(file_path.as_posix(), "br") as f:
                 with open(temp_file.as_posix(), "bw") as tmp_f:

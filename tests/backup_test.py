@@ -17,14 +17,20 @@ class BackupTestCase(unittest.TestCase):
         self.cli = HttpClient(f'{self.host_url}/api/v2')
         self.remote_resolver = RemoteResolver()
 
-    def test01_backup(self):
+    def test01_get_state(self):
+        r = self.cli.get('/vault/content')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['state'], 'stop')
+        self.assertEqual(r.json()['result'], 'success')
+
+    def test02_backup(self):
         # self.create_backup_vault()
         # self.prepare_backup_files()
         self.backup(self.remote_resolver.get_backup_credential(self.host_url))
 
-    def test02_restore(self):
-        self.create_backup_vault()
-        self.prepare_restore_files()
+    def test03_restore(self):
+        # self.create_backup_vault()
+        # self.prepare_restore_files()
         self.restore(self.remote_resolver.get_backup_credential())
 
     def create_backup_vault(self):

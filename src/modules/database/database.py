@@ -13,8 +13,8 @@ from hive.util.did_mongo_db_resource import get_mongo_database_size, convert_oid
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
 from src.modules.scripting.scripting import check_auth_and_vault
 from src.utils.database_client import cli
-from src.utils.http_response import hive_restful_response, hive_restful_code_response, NotFoundException, \
-    BadRequestException
+from src.utils.http_exception import NotFoundException, BadRequestException
+from src.utils.http_response import hive_restful_response
 
 
 class Database:

@@ -14,8 +14,9 @@ from hive.util.payment.vault_service_manage import delete_user_vault_data
 from src.modules.backup.backup_server import BackupServer
 from src.modules.scripting.scripting import check_auth
 from src.utils.database_client import cli, VAULT_SERVICE_STATE_RUNNING
-from src.utils.http_response import hive_restful_response, NotImplementedException, \
-    AlreadyExistsException, VaultNotFoundException, PricePlanNotFoundException
+from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
+    PricePlanNotFoundException
+from src.utils.http_response import hive_restful_response
 
 
 class VaultSubscription:

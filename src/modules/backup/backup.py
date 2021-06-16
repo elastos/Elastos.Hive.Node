@@ -7,7 +7,8 @@ from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR
 from src.modules.auth.auth import Auth
 from src.modules.backup.backup_server import BackupClient, BackupServer
 from src.modules.scripting.scripting import check_auth_and_vault
-from src.utils.http_response import hive_restful_response, NotImplementedException, hive_download_response
+from src.utils.http_exception import NotImplementedException
+from src.utils.http_response import hive_restful_response, hive_stream_response
 
 
 class Backup:
@@ -55,7 +56,7 @@ class Backup:
     def backup_files(self):
         return self.server.backup_files()
 
-    @hive_download_response
+    @hive_stream_response
     def backup_get_file(self, file_name):
         return self.server.backup_get_file(file_name)
 
@@ -71,7 +72,7 @@ class Backup:
     def backup_get_file_hash(self, file_name):
         self.server.backup_get_file_hash(file_name)
 
-    @hive_download_response
+    @hive_stream_response
     def backup_get_file_delta(self, file_name):
         return self.server.backup_get_file_delta(file_name)
 

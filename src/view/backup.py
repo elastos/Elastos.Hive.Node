@@ -7,7 +7,7 @@ from flask import Blueprint, request
 
 from src.modules.backup.backup import Backup
 from src.utils.http_request import params
-from src.utils.http_response import NotImplementedException
+from src.utils.http_exception import NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
 

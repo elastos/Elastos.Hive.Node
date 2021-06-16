@@ -10,7 +10,6 @@ from hive.settings import hive_setting
 from hive.util.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from hive.util.did.did_init import init_did_backend
 from src import view
-from src.utils.http_response import UnauthorizedException
 
 
 class RegexConverter(BaseConverter):

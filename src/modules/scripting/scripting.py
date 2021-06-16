@@ -20,8 +20,8 @@ from hive.util.did_mongo_db_resource import populate_options_count_documents, co
 from hive.util.did_scripting import populate_with_params_values
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
 from src.utils.database_client import cli
-from src.utils.http_response import BadRequestException, hive_restful_response, NotFoundException,\
-    hive_download_response, UnauthorizedException
+from src.utils.http_exception import NotFoundException, UnauthorizedException
+from src.utils.http_response import BadRequestException, hive_restful_response, hive_stream_response
 
 
 def check_auth():
@@ -620,7 +620,7 @@ class Scripting:
 
         return data
 
-    @hive_download_response
+    @hive_stream_response
     def download_file(self, transaction_id):
         return self.handle_transaction(transaction_id, is_download=True)
 

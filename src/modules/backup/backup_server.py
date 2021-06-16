@@ -30,10 +30,10 @@ from hive.util.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
 from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
     VAULT_BACKUP_MSG_FAILED, VAULT_BACKUP_STATE_RESTORE
 from src.modules.auth.auth import Auth
-from src.modules.scripting.scripting import check_auth, check_auth2
+from src.modules.scripting.scripting import check_auth2
 from src.utils.database_client import cli
 from src.utils.http_client import HttpClient
-from src.utils.http_response import BackupIsInProcessingException, InsufficientStorageException, \
+from src.utils.http_exception import BackupIsInProcessingException, InsufficientStorageException, \
     InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \
     FileNotFoundException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \

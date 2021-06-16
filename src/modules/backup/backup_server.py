@@ -288,6 +288,13 @@ class BackupClient:
         # INFO: skip this step.
         pass
 
+    def get_state(self, did):
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
+        state, result = 'stop', 'success'
+        if doc:
+            state, result = doc[VAULT_BACKUP_INFO_STATE], doc[VAULT_BACKUP_INFO_MSG]
+        return {'state': state, 'result': result}
+
 
 class BackupServer:
     def __init__(self):

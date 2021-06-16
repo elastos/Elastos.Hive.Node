@@ -20,7 +20,8 @@ class Backup:
 
     @hive_restful_response
     def get_state(self):
-        pass
+        did, _ = check_auth_and_vault(VAULT_ACCESS_R)
+        return self.client.get_state(did)
 
     @hive_restful_response
     def backup(self, credential):

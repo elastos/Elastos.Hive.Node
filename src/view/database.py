@@ -7,8 +7,6 @@ from flask import Blueprint, request
 from src.modules.database.database import Database
 from src.utils.http_request import params
 
-from src.utils.http_response import BadRequestException
-
 blueprint = Blueprint('database', __name__)
 database = Database()
 

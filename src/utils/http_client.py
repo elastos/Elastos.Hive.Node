@@ -5,7 +5,7 @@ Http client for backup or other modules.
 """
 import requests
 
-from src.utils.http_response import InvalidParameterException
+from src.utils.http_exception import InvalidParameterException
 
 
 class HttpClient:

@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, convert_oid
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_STATE, \
     VAULT_ACCESS_WR, VAULT_ACCESS_DEL, DATETIME_FORMAT
-from src.utils.http_response import NotFoundException, BadRequestException, AlreadyExistsException
+from src.utils.http_exception import NotFoundException, BadRequestException, AlreadyExistsException
 from datetime import datetime
 
 import os

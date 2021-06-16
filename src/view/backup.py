@@ -9,7 +9,7 @@ from src.modules.backup.backup import Backup
 from src.utils.http_request import params
 from src.utils.http_response import NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
-    URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH
+    URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
 
 blueprint = Blueprint('backup', __name__)
 backup: Backup = None
@@ -79,6 +79,11 @@ def internal_backup_delete_file():
 @blueprint.route(URL_BACKUP_PATCH_HASH, methods=['GET'])
 def internal_backup_get_file_hash():
     return backup.backup_get_file_hash(request.args.get('file'))
+
+
+@blueprint.route(URL_BACKUP_PATCH_DELTA, methods=['POST'])
+def internal_backup_get_file_delta():
+    return backup.backup_get_file_delta(request.args.get('file'))
 
 
 @blueprint.route(URL_BACKUP_PATCH_FILE, methods=['POST'])

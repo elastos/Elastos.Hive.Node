@@ -4,7 +4,6 @@ import logging
 import pickle
 import shutil
 import subprocess
-import threading
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -38,7 +37,7 @@ from src.utils.http_response import BackupIsInProcessingException, InsufficientS
     InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \
     FileNotFoundException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
-    URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH
+    URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
 
 
 def clog():
@@ -91,8 +90,7 @@ class BackupClient:
 
         clog().debug('start new thread for backup processing.')
 
-        self.backup_thread = threading.Thread(target=BackupClient.backup_main, args=(did, self))
-        self.backup_thread.start()
+        _thread.start_new_thread(self.__class__.backup_main, (did, self))
 
     def update_backup_state(self, did, state, msg):
         cli.update_one_origin(DID_INFO_DB_NAME,
@@ -121,10 +119,19 @@ class BackupClient:
         try:
             clog().info(f'[backup_main] enter backup thread, {did}, {client}.')
             client.backup(did)
-        except BaseException as e:
+        except Exception as e:
             clog().error(f'Failed to backup really: {traceback.format_exc()}')
             client.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_FAILED)
         clog().info('[backup_main] leave backup thread.')
+
+    @staticmethod
+    def restore_main(did, client):
+        try:
+            clog().info(f'[restore_main] enter restore thread, {did}, {client}.')
+            client.restore(did)
+        except Exception as e:
+            clog().error(f'[restore_main] Failed to restore really: {traceback.format_exc()}')
+            client.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_FAILED)
 
     def backup(self, did):
         clog().info('[backup_main] enter backup().')
@@ -144,18 +151,21 @@ class BackupClient:
         clog().info('[backup_main] success to backup really.')
 
     def restore(self, did):
+        clog().info('[backup_main] enter restore().')
         vault_root = get_vault_path(did)
         if not vault_root.exists():
             create_full_path_dir(vault_root)
-
+        clog().info(f'[restore_main] success to get vault root path.')
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
         self.restore_really(vault_root, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
-        self.restore_finish(did, doc[VAULT_BACKUP_INFO_DRIVE] + URL_RESTORE_FINISH,
-                            doc[VAULT_BACKUP_INFO_TOKEN])
+        clog().info(f'[restore_main] success to execute restore.')
+        self.restore_finish(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
+        clog().info(f'[restore_main] success to restore finish.')
 
         self.import_mongodb(did)
         self.delete_mongodb_data(did)
         self.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
+        clog().info('[restore_main] success to backup really.')
 
     def backup_really(self, vault_root, host_url, access_token):
         remote_files = self.http.get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
@@ -169,7 +179,7 @@ class BackupClient:
         remote_files = self.http.get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
         local_files = deal_dir(vault_root.as_posix(), get_file_md5_info)
         new_files, patch_files, delete_files = self.diff_restore_files(remote_files, local_files, vault_root)
-        self.restore_new_files(host_url, access_token, new_files)
+        self.restore_new_files(host_url, access_token, new_files, vault_root)
         self.restore_patch_files(host_url, access_token, patch_files)
         self.restore_delete_files(host_url, access_token, delete_files)
 
@@ -189,7 +199,7 @@ class BackupClient:
         # name: checksum, full_name
         remote_files_d = dict((d[1], (d[0], (vault_root / d[1]).as_posix())) for d in remote_files)
         local_files_d = dict((Path(d[1]).relative_to(vault_root).as_posix(), (d[0], d[1])) for d in local_files)
-        new_files = [[d[1], n] for n, d in remote_files_d.items() if n not in local_files_d]
+        new_files = [n for n, d in remote_files_d.items() if n not in local_files_d]
         patch_files = [[d[1], n] for n, d in remote_files_d.items() if n in local_files_d and local_files_d[n][0] != d[0]]
         delete_files = [d[1] for n, d in local_files_d.items() if n not in remote_files_d]
         return new_files, patch_files, delete_files
@@ -199,10 +209,9 @@ class BackupClient:
             with open(full_name, 'br') as f:
                 self.http.put(host_url + URL_BACKUP_FILE + f'?file={name}', access_token, f, is_body=False)
 
-    def restore_new_files(self, host_url, access_token, new_files):
-        for info in new_files:
-            name, full_name = info[0], Path(info[1])
-            full_name.resolve()
+    def restore_new_files(self, host_url, access_token, new_files, vault_root):
+        for name in new_files:
+            full_name = (vault_root / name).resolve()
             temp_file = gene_temp_file_name()
             if not full_name.parent.exists() and not create_full_path_dir(full_name.parent):
                 # TODO: fix this
@@ -236,9 +245,39 @@ class BackupClient:
 
             temp_file.unlink()
 
+    def restore_patch_files(self, host_url, access_token, patch_files):
+        for full_name, name in patch_files:
+            full_name = Path(full_name).resolve()
+
+            hashes = ''
+            with open(full_name, 'rb') as open_file:
+                for h in gene_blockchecksums(open_file, blocksize=CHUNK_SIZE):
+                    hashes += h
+            r = self.http.post(host_url + URL_BACKUP_PATCH_DELTA + f'?file={name}', access_token, hashes,
+                               is_json=False, is_body=False, options={'stream': True})
+
+            temp_file = gene_temp_file_name()
+            with open(temp_file, 'wb') as f:
+                f.seek(0)
+                for chunk in r.iter_content(CHUNK_SIZE):
+                    f.write(chunk)
+
+            with open(temp_file, 'rb') as f:
+                delta_list = pickle.load(f)
+            temp_file.unlink()
+
+            patched_file_name = gene_temp_file_name()
+            with open(full_name, "br") as unpatched_f:
+                with open(patched_file_name, "bw") as src_f:
+                    unpatched_f.seek(0)
+                    patchstream(unpatched_f, src_f, delta_list)
+            if full_name.exists():
+                full_name.unlink()
+            shutil.move(patched_file_name.as_posix(), full_name.as_posix())
+
     def restore_delete_files(self, host_url, access_token, delete_files):
         for full_name in delete_files:
-            full_name.unlink()
+            Path(full_name).resolve().unlink()
 
     def get_remote_file_hashes(self, host_url, access_token, name):
         r = self.http.get(host_url + URL_BACKUP_PATCH_HASH + f'?file={name}', access_token, is_body=False)
@@ -270,23 +309,24 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
                               options={'upsert': True})
 
+        # TODO: check the vault storage has enough space to restore.
         # use_storage = get_vault_used_storage(did)
         # if use_storage > backup_service_info[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
         #     raise InsufficientStorageException(msg='Insufficient storage to execute backup.')
 
         _thread.start_new_thread(self.__class__.restore_main, (did, self))
 
-    @staticmethod
-    def restore_main(did, client):
-        try:
-            client.restore(did)
-        except Exception as e:
-            clog().error(f'Failed to restore really: {traceback.format_exc()}')
-            client.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_FAILED)
-
     def restore_finish(self, did, host_url, access_token):
-        # INFO: skip this step.
-        pass
+        body = self.http.get(host_url + URL_RESTORE_FINISH, access_token)
+        checksum_list = body["checksum_list"]
+        vault_root = get_vault_path(did)
+        if not vault_root.exists():
+            create_full_path_dir(vault_root)
+
+        local_checksum_list = get_file_checksum_list(vault_root)
+        for checksum in checksum_list:
+            if checksum not in local_checksum_list:
+                raise BadRequestException(msg='Failed to finish restore.')
 
     def get_state(self, did):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
@@ -455,6 +495,42 @@ class BackupServer:
         full_name = (backup_root / file_name).resolve()
         with open(full_name, 'rb') as f:
             return gene_blockchecksums(f, blocksize=CHUNK_SIZE)
+
+    def backup_get_file_delta(self, file_name):
+        if not file_name:
+            raise InvalidParameterException(msg='The file name must provide.')
+
+        did, _, _ = self.__check_auth_backup()
+        backup_root = get_vault_backup_path(did)
+        full_name = (backup_root / file_name).resolve()
+
+        lines = list()
+        data = request.get_data()
+        if data:
+            lines = data.split(b'\n')
+        hashes = list()
+        for line in lines:
+            if not line:
+                continue
+            info = line.split(b',')
+            hashes.append((int(info[0].decode("utf-8")), info[1].decode("utf-8")))
+
+        with open(full_name, "rb") as f:
+            delta_list = rsyncdelta(f, hashes, blocksize=CHUNK_SIZE)
+
+        temp_file = gene_temp_file_name()
+        with open(temp_file, "wb") as f:
+            pickle.dump(delta_list, f)
+        size = temp_file.stat().st_size
+
+        with open(temp_file, 'rb') as f:
+            etag = RangeRequest.make_etag(f)
+        data = RangeRequest(open(temp_file, 'rb'),
+                            etag=etag,
+                            last_modified=datetime.utcnow(),
+                            size=size).make_response()
+        temp_file.unlink()
+        return data
 
     def backup_patch_file(self, file_name):
         if not file_name:

@@ -31,7 +31,7 @@ class BackupTestCase(unittest.TestCase):
     def test03_restore(self):
         # self.create_backup_vault()
         # self.prepare_restore_files()
-        self.restore(self.remote_resolver.get_backup_credential())
+        self.restore(self.remote_resolver.get_backup_credential(self.host_url))
 
     def create_backup_vault(self):
         response = self.cli.put('/subscription/backup')

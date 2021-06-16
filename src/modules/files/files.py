@@ -17,7 +17,7 @@ from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_by
 from src.utils.http_exception import BadRequestException
 from src.utils.http_response import hive_restful_response, hive_stream_response
 from src.modules.scripting.scripting import check_auth_and_vault
-from src.utils.database_client import cli
+from src.utils.db_client import cli
 
 
 class Files:

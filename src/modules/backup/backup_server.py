@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import _thread
 import logging
-import pickle
 import shutil
-import subprocess
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -11,7 +9,7 @@ from pathlib import Path
 from flask import request
 
 from hive.main.view import h_auth
-from hive.util.common import get_file_checksum_list, deal_dir, get_file_md5_info, gene_temp_file_name, \
+from hive.util.common import get_file_checksum_list, gene_temp_file_name, \
     create_full_path_dir
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, DID, \
     VAULT_BACKUP_INFO_TIME, VAULT_BACKUP_INFO_TYPE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, VAULT_BACKUP_INFO_MSG, \
@@ -20,24 +18,21 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_B
     VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, VAULT_BACKUP_SERVICE_MODIFY_TIME, \
     VAULT_BACKUP_SERVICE_STATE, VAULT_BACKUP_SERVICE_USING
 from hive.util.did_file_info import get_vault_path, get_dir_size
-from hive.util.did_info import get_all_did_info_by_did
-from hive.util.did_mongo_db_resource import export_mongo_db, get_save_mongo_db_path
-from hive.util.flask_rangerequest import RangeRequest
+from hive.util.did_mongo_db_resource import get_save_mongo_db_path
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
-from hive.util.payment.vault_service_manage import get_vault_used_storage, VAULT_SERVICE_STATE_RUNNING
-from hive.util.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
+from hive.util.payment.vault_service_manage import VAULT_SERVICE_STATE_RUNNING
 from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
     VAULT_BACKUP_MSG_FAILED, VAULT_BACKUP_STATE_RESTORE
 from src.modules.auth.auth import Auth
 from src.modules.scripting.scripting import check_auth2
-from src.utils.database_client import cli
-from src.utils.http_client import HttpClient
+from src.utils.db_client import cli
+from src.utils.http_client import HttpClient, HttpServer
 from src.utils.http_exception import BackupIsInProcessingException, InsufficientStorageException, \
-    InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \
-    FileNotFoundException
+    InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
+from src.utils.file_manager import fm
 
 
 def clog():
@@ -84,8 +79,8 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
                               options={'upsert': True})
 
-        use_storage = get_vault_used_storage(did)
-        if use_storage > backup_service_info[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
+        vault_size = fm.get_vault_storage_size(did)
+        if vault_size > backup_service_info[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
             raise InsufficientStorageException(msg='Insufficient storage to execute backup.')
 
         clog().debug('start new thread for backup processing.')
@@ -99,20 +94,6 @@ class BackupClient:
                               {"$set": {VAULT_BACKUP_INFO_STATE: state,
                                         VAULT_BACKUP_INFO_MSG: msg,
                                         VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp()}})
-
-    def export_mongodb_data(self, did):
-        did_info_list = get_all_did_info_by_did(did)
-        for did_info in did_info_list:
-            export_mongo_db(did_info[DID], did_info[APP_ID])
-
-    def import_mongodb(self, did):
-        mongodb_root = get_save_mongo_db_path(did)
-        if not mongodb_root.exists():
-            return False
-        line2 = f'mongorestore -h {self.mongo_host} --port {self.mongo_port} --drop {mongodb_root}'
-        return_code = subprocess.call(line2, shell=True)
-        if return_code != 0:
-            raise BadRequestException(msg='Failed to restore mongodb data.')
 
     @staticmethod
     def backup_main(did, client):
@@ -135,7 +116,7 @@ class BackupClient:
 
     def backup(self, did):
         clog().info('[backup_main] enter backup().')
-        self.export_mongodb_data(did)
+        cli.export_mongodb(did)
         clog().info('[backup_main] success to export mongodb data.')
         vault_root = get_vault_path(did)
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
@@ -162,134 +143,76 @@ class BackupClient:
         self.restore_finish(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
         clog().info(f'[restore_main] success to restore finish.')
 
-        self.import_mongodb(did)
+        cli.import_mongodb(did)
         self.delete_mongodb_data(did)
         self.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
         clog().info('[restore_main] success to backup really.')
 
     def backup_really(self, vault_root, host_url, access_token):
         remote_files = self.http.get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
-        local_files = deal_dir(vault_root.as_posix(), get_file_md5_info)
-        new_files, patch_files, delete_files = self.diff_backup_files(remote_files, local_files, vault_root)
-        self.backup_new_files(host_url, access_token, new_files)
-        self.backup_patch_files(host_url, access_token, patch_files)
-        self.backup_delete_files(host_url, access_token, delete_files)
+        local_files = fm.get_file_checksum_list(vault_root)
+        new_files, patch_files, delete_files = self.diff_files(local_files, remote_files)
+        self.backup_new_files(host_url, access_token, vault_root, new_files)
+        self.backup_patch_files(host_url, access_token, vault_root, patch_files)
+        self.backup_delete_files(host_url, access_token, vault_root, delete_files)
 
     def restore_really(self, vault_root, host_url, access_token):
         remote_files = self.http.get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
-        local_files = deal_dir(vault_root.as_posix(), get_file_md5_info)
-        new_files, patch_files, delete_files = self.diff_restore_files(remote_files, local_files, vault_root)
-        self.restore_new_files(host_url, access_token, new_files, vault_root)
-        self.restore_patch_files(host_url, access_token, patch_files)
-        self.restore_delete_files(host_url, access_token, delete_files)
+        local_files = fm.get_file_checksum_list(vault_root)
+        new_files, patch_files, delete_files = self.diff_files(remote_files, local_files)
+        self.restore_new_files(host_url, access_token, vault_root, new_files)
+        self.restore_patch_files(host_url, access_token, vault_root, patch_files)
+        self.restore_delete_files(host_url, access_token, vault_root, delete_files)
 
     def backup_finish(self, host_url, access_token, checksum_list):
         self.http.post(host_url + URL_BACKUP_FINISH, access_token, {'checksum_list': checksum_list}, is_body=False)
 
-    def diff_backup_files(self, remote_files, local_files, vault_root):
-        remote_files_d = dict((d[1], d[0]) for d in remote_files)  # name: checksum
-        # name: checksum, full_name
-        local_files_d = dict((Path(d[1]).relative_to(vault_root).as_posix(), (d[0], d[1])) for d in local_files)
-        new_files = [[d[1], n] for n, d in local_files_d.items() if n not in remote_files_d]
-        patch_files = [[d[1], n] for n, d in local_files_d.items() if n in remote_files_d and remote_files_d[n] != d[0]]
-        delete_files = [n for n in remote_files_d.keys() if n not in local_files_d]
+    def diff_files(self, base_files, target_files):
+        """
+        Diff two file list from base to target. Every files list contains item (name, checksum).
+        """
+        b_files, t_files = dict((n, c) for n, c in base_files), dict((n, c) for n, c in target_files)
+        new_files = [n for n, c in t_files if n not in b_files]
+        patch_files = [n for n, c in b_files if n in t_files and c != t_files[n]]
+        delete_files = [n for n, c in b_files if n not in t_files]
         return new_files, patch_files, delete_files
 
-    def diff_restore_files(self, remote_files, local_files, vault_root):
-        # name: checksum, full_name
-        remote_files_d = dict((d[1], (d[0], (vault_root / d[1]).as_posix())) for d in remote_files)
-        local_files_d = dict((Path(d[1]).relative_to(vault_root).as_posix(), (d[0], d[1])) for d in local_files)
-        new_files = [n for n, d in remote_files_d.items() if n not in local_files_d]
-        patch_files = [[d[1], n] for n, d in remote_files_d.items() if n in local_files_d and local_files_d[n][0] != d[0]]
-        delete_files = [d[1] for n, d in local_files_d.items() if n not in remote_files_d]
-        return new_files, patch_files, delete_files
-
-    def backup_new_files(self, host_url, access_token, new_files):
-        for full_name, name in new_files:
-            with open(full_name, 'br') as f:
-                self.http.put(host_url + URL_BACKUP_FILE + f'?file={name}', access_token, f, is_body=False)
-
-    def restore_new_files(self, host_url, access_token, new_files, vault_root):
+    def backup_new_files(self, host_url, access_token, vault_root: Path, new_files):
         for name in new_files:
-            full_name = (vault_root / name).resolve()
-            temp_file = gene_temp_file_name()
-            if not full_name.parent.exists() and not create_full_path_dir(full_name.parent):
-                # TODO: fix this
-                pass
+            self.http.put_file(host_url + URL_BACKUP_FILE + f'?file={name}', access_token,
+                               (vault_root / name).resolve())
 
-            r = self.http.get(host_url + URL_BACKUP_FILE + f'?file={name}', access_token, is_body=False,
-                              options={'stream': True})
-            with open(temp_file, 'bw') as f:
-                f.seek(0)
-                for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
-                    if chunk:
-                        f.write(chunk)
+    def restore_new_files(self, host_url, access_token, vault_root: Path, new_files):
+        for name in new_files:
+            self.http.get_to_file(host_url + URL_BACKUP_FILE + f'?file={name}', access_token,
+                                  (vault_root / name).resolve())
 
-            if full_name.exists():
-                full_name.unlink()
-            shutil.move(temp_file.as_posix(), full_name.as_posix())
-
-    def backup_patch_files(self, host_url, access_token, patch_files):
-        for full_name, name in patch_files:
+    def backup_patch_files(self, host_url, access_token, vault_root: Path, patch_files):
+        for name in patch_files:
             hashes = self.get_remote_file_hashes(host_url, access_token, name)
-            with open(full_name, "rb") as f:
-                patch_data = rsyncdelta(f, hashes, blocksize=CHUNK_SIZE)
+            rsync_data = fm.get_rsync_data((vault_root / name).resolve(), hashes)
+            self.http.post(host_url + URL_BACKUP_PATCH_FILE + f'?file={name}', access_token, rsync_data,
+                           is_json=False, is_body=False)
 
-            temp_file = gene_temp_file_name()
-            with open(temp_file, "wb") as f:
-                pickle.dump(patch_data, f)
+    def restore_patch_files(self, host_url, access_token, vault_root: Path, patch_files):
+        for name in patch_files:
+            full_name = (vault_root / name).resolve()
+            hashes = fm.get_hashes_by_file(full_name)
+            pickle_data = self.http.post_to_pickle_data(host_url + URL_BACKUP_PATCH_DELTA + f'?file={name}',
+                                                        access_token, hashes)
+            fm.apply_rsync_data(pickle_data, full_name)
 
-            with open(temp_file.as_posix(), 'rb') as f:
-                self.http.post(host_url + URL_BACKUP_PATCH_FILE + f'?file={name}', access_token,
-                               body=f, is_json=False, is_body=False)
+    def backup_delete_files(self, host_url, access_token, vault_root: Path, delete_files):
+        for name in delete_files:
+            self.http.delete(host_url + URL_BACKUP_FILE + f'?file={name}', access_token)
 
-            temp_file.unlink()
-
-    def restore_patch_files(self, host_url, access_token, patch_files):
-        for full_name, name in patch_files:
-            full_name = Path(full_name).resolve()
-
-            hashes = ''
-            with open(full_name, 'rb') as open_file:
-                for h in gene_blockchecksums(open_file, blocksize=CHUNK_SIZE):
-                    hashes += h
-            r = self.http.post(host_url + URL_BACKUP_PATCH_DELTA + f'?file={name}', access_token, hashes,
-                               is_json=False, is_body=False, options={'stream': True})
-
-            temp_file = gene_temp_file_name()
-            with open(temp_file, 'wb') as f:
-                f.seek(0)
-                for chunk in r.iter_content(CHUNK_SIZE):
-                    f.write(chunk)
-
-            with open(temp_file, 'rb') as f:
-                delta_list = pickle.load(f)
-            temp_file.unlink()
-
-            patched_file_name = gene_temp_file_name()
-            with open(full_name, "br") as unpatched_f:
-                with open(patched_file_name, "bw") as src_f:
-                    unpatched_f.seek(0)
-                    patchstream(unpatched_f, src_f, delta_list)
-            if full_name.exists():
-                full_name.unlink()
-            shutil.move(patched_file_name.as_posix(), full_name.as_posix())
-
-    def restore_delete_files(self, host_url, access_token, delete_files):
-        for full_name in delete_files:
-            Path(full_name).resolve().unlink()
+    def restore_delete_files(self, host_url, access_token, vault_root: Path, delete_files):
+        for name in delete_files:
+            fm.delete_file((vault_root / name).resolve())
 
     def get_remote_file_hashes(self, host_url, access_token, name):
         r = self.http.get(host_url + URL_BACKUP_PATCH_HASH + f'?file={name}', access_token, is_body=False)
-        hashes = list()
-        for line in r.iter_lines(chunk_size=CHUNK_SIZE):
-            parts = line.split(b',')
-            hashes.append((int(parts[0]), parts[1].decode("utf-8")))
-        return hashes
-
-    def backup_delete_files(self, host_url, access_token, delete_files):
-        for name in delete_files:
-            self.http.delete(host_url + URL_BACKUP_FILE + f'?file={name}', access_token)
+        return fm.get_hashes_by_lines(r.iter_lines(chunk_size=CHUNK_SIZE))
 
     def delete_mongodb_data(self, did):
         mongodb_root = get_save_mongo_db_path(did)
@@ -338,7 +261,7 @@ class BackupClient:
 
 class BackupServer:
     def __init__(self):
-        pass
+        self.http_server = HttpServer()
 
     def __check_auth_backup(self, is_raise=True, is_create=False):
         # TODO: why no app did in backup internal server.
@@ -396,12 +319,7 @@ class BackupServer:
         return self.__get_vault_info(doc)
 
     def get_backup_service(self):
-        did, _, doc = self.__check_auth_backup()
-
-        # backup_root = get_vault_backup_path(did)
-        # if not backup_root.exists():
-        #     create_full_path_dir(backup_root)
-
+        _, _, doc = self.__check_auth_backup()
         del doc["_id"]
         return doc
 
@@ -412,6 +330,7 @@ class BackupServer:
         did, _, doc = self.__check_auth_backup()
 
         backup_root = get_vault_backup_path(did)
+        # TODO: remove this check.
         if not backup_root.exists():
             create_full_path_dir(backup_root)
 
@@ -427,140 +346,66 @@ class BackupServer:
 
     def backup_files(self):
         did, _, _ = self.__check_auth_backup()
-
-        backup_files = list()
-        backup_root = get_vault_backup_path(did)
-        if backup_root.exists():
-            md5_list = deal_dir(backup_root.as_posix(), get_file_md5_info)
-            backup_files = [(md5[0], Path(md5[1]).relative_to(backup_root).as_posix()) for md5 in md5_list]
-        return {'backup_files': backup_files}
+        return {'backup_files': fm.get_file_checksum_list(get_vault_backup_path(did))}
 
     def backup_get_file(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
         did, _, _ = self.__check_auth_backup()
-
-        backup_root = get_vault_backup_path(did)
-        full_name = (backup_root / file_name).resolve()
-        if not full_name.exists() or not full_name.is_file():
-            raise FileNotFoundException()
-
-        with open(full_name, 'rb') as f:
-            etag = RangeRequest.make_etag(f)
-        return RangeRequest(open(full_name, 'rb'),
-                            etag=etag,
-                            last_modified=datetime.utcnow(),
-                            size=full_name.stat().st_size).make_response()
+        return self.http_server.create_range_request((get_vault_backup_path(did) / file_name).resolve())
 
     def backup_upload_file(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
         did, _, _ = self.__check_auth_backup()
-        backup_root = get_vault_backup_path(did)
-        full_name = (backup_root / file_name).resolve()
-        if not full_name.parent.exists():
-            create_full_path_dir(full_name.parent)
-
-        temp_file = gene_temp_file_name()
-        with open(temp_file, "bw") as f:
-            while True:
-                chunk = request.stream.read(CHUNK_SIZE)
-                if len(chunk) == 0:
-                    break
-                f.write(chunk)
-
-        if full_name.exists():
-            full_name.unlink()
-        shutil.move(temp_file.as_posix(), full_name.as_posix())
+        fm.write_file_by_request_stream((get_vault_backup_path(did) / file_name).resolve())
 
     def backup_delete_file(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
         did, _, _ = self.__check_auth_backup()
-        backup_root = get_vault_backup_path(did)
-        full_name = (backup_root / file_name).resolve()
-
-        if full_name.exists() and full_name.is_file():
-            full_name.unlink()
+        fm.delete_vault_file(did, file_name)
 
     def backup_get_file_hash(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
         did, _, _ = self.__check_auth_backup()
-        backup_root = get_vault_backup_path(did)
-        full_name = (backup_root / file_name).resolve()
-        with open(full_name, 'rb') as f:
-            return gene_blockchecksums(f, blocksize=CHUNK_SIZE)
+        # TODO:
+        # with open(full_name, 'rb') as f:
+        #     return gene_blockchecksums(f, blocksize=CHUNK_SIZE)
+        return fm.get_hashes_by_file((get_vault_backup_path(did) / file_name).resolve())
 
     def backup_get_file_delta(self, file_name):
         if not file_name:
             raise InvalidParameterException(msg='The file name must provide.')
 
         did, _, _ = self.__check_auth_backup()
-        backup_root = get_vault_backup_path(did)
-        full_name = (backup_root / file_name).resolve()
 
-        lines = list()
         data = request.get_data()
-        if data:
-            lines = data.split(b'\n')
-        hashes = list()
-        for line in lines:
-            if not line:
-                continue
-            info = line.split(b',')
-            hashes.append((int(info[0].decode("utf-8")), info[1].decode("utf-8")))
-
-        with open(full_name, "rb") as f:
-            delta_list = rsyncdelta(f, hashes, blocksize=CHUNK_SIZE)
-
+        hashes = fm.get_hashes_by_lines(list() if not data else data.split(b'\n'))
+        rsync_data = fm.get_rsync_data((get_vault_backup_path(did) / file_name).resolve(), hashes)
         temp_file = gene_temp_file_name()
-        with open(temp_file, "wb") as f:
-            pickle.dump(delta_list, f)
-        size = temp_file.stat().st_size
+        fm.write_file_by_rsync_data(rsync_data, temp_file)
+        r = self.http_server.create_range_request(temp_file)
 
-        with open(temp_file, 'rb') as f:
-            etag = RangeRequest.make_etag(f)
-        data = RangeRequest(open(temp_file, 'rb'),
-                            etag=etag,
-                            last_modified=datetime.utcnow(),
-                            size=size).make_response()
         temp_file.unlink()
-        return data
+        return r
 
     def backup_patch_file(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
         did, _, _ = self.__check_auth_backup()
-        backup_root = get_vault_backup_path(did)
-        full_name = (backup_root / file_name).resolve()
 
         temp_file = gene_temp_file_name()
-        with open(temp_file, "bw") as f:
-            chunk_size = CHUNK_SIZE
-            while True:
-                chunk = request.stream.read(chunk_size)
-                if len(chunk) == 0:
-                    break
-                f.write(chunk)
-
-        with open(temp_file, "rb") as f:
-            delta_list = pickle.load(f)
+        fm.write_file_by_request_stream(temp_file)
+        rsync_data = fm.read_rsync_data_from_file(temp_file)
         temp_file.unlink()
-
-        temp_file2 = gene_temp_file_name()
-        with open(full_name, "br") as unpatched:
-            with open(temp_file2, "bw") as save_to:
-                unpatched.seek(0)
-                patchstream(unpatched, save_to, delta_list)
-        if full_name.exists():
-            full_name.unlink()
-        shutil.move(temp_file2.as_posix(), full_name.as_posix())
+        fm.apply_rsync_data(rsync_data, (get_vault_backup_path(did) / file_name).resolve())
 
     def restore_finish(self):
         did, _, _ = self.__check_auth_backup()

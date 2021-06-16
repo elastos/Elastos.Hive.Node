@@ -4,14 +4,17 @@
 Any database operations can be found here.
 """
 import logging
+import subprocess
 
 from pymongo.errors import CollectionInvalid
 
 from hive.settings import hive_setting
 from pymongo import MongoClient
-from hive.util.did_mongo_db_resource import gene_mongo_db_name, convert_oid
+
+from hive.util.did_info import get_all_did_info_by_did
+from hive.util.did_mongo_db_resource import gene_mongo_db_name, convert_oid, export_mongo_db, get_save_mongo_db_path
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_STATE, \
-    VAULT_ACCESS_WR, VAULT_ACCESS_DEL, DATETIME_FORMAT
+    VAULT_ACCESS_WR, VAULT_ACCESS_DEL, DATETIME_FORMAT, DID, APP_ID
 from src.utils.http_exception import NotFoundException, BadRequestException, AlreadyExistsException
 from datetime import datetime
 
@@ -168,6 +171,19 @@ class DatabaseClient:
         t = datetime.fromtimestamp(timestamp)
         s = datetime(1970, 1, 1, 0, 0, 0)
         return int((t - s).total_seconds())
+
+    def export_mongodb(self, did):
+        did_info_list = get_all_did_info_by_did(did)
+        for did_info in did_info_list:
+            export_mongo_db(did_info[DID], did_info[APP_ID])
+
+    def import_mongodb(self, did):
+        mongodb_root = get_save_mongo_db_path(did)
+        if mongodb_root.exists():
+            cmd_line = f'mongorestore -h {self.host} --port {self.port} --drop {mongodb_root}'
+            return_code = subprocess.call(cmd_line, shell=True)
+            if return_code != 0:
+                raise BadRequestException(msg='Failed to restore mongodb data.')
 
 
 cli = DatabaseClient()

@@ -68,9 +68,9 @@ class Backup:
     def backup_delete_file(self, file_name):
         self.server.backup_delete_file(file_name)
 
-    @hive_restful_response
+    @hive_stream_response
     def backup_get_file_hash(self, file_name):
-        self.server.backup_get_file_hash(file_name)
+        return self.server.backup_get_file_hash(file_name)
 
     @hive_stream_response
     def backup_get_file_delta(self, file_name):

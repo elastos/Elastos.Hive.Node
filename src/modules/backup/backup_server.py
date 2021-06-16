@@ -171,10 +171,10 @@ class BackupClient:
         """
         Diff two file list from base to target. Every files list contains item (name, checksum).
         """
-        b_files, t_files = dict((n, c) for n, c in base_files), dict((n, c) for n, c in target_files)
-        new_files = [n for n, c in t_files if n not in b_files]
-        patch_files = [n for n, c in b_files if n in t_files and c != t_files[n]]
-        delete_files = [n for n, c in b_files if n not in t_files]
+        b_files, t_files = dict((n, c) for c, n in base_files), dict((n, c) for c, n in target_files)
+        new_files = [n for n, c in b_files.items() if n not in t_files]
+        patch_files = [n for n, c in b_files.items() if n in t_files and c != t_files[n]]
+        delete_files = [n for n, c in t_files.items() if n not in b_files]
         return new_files, patch_files, delete_files
 
     def backup_new_files(self, host_url, access_token, vault_root: Path, new_files):
@@ -190,8 +190,8 @@ class BackupClient:
     def backup_patch_files(self, host_url, access_token, vault_root: Path, patch_files):
         for name in patch_files:
             hashes = self.get_remote_file_hashes(host_url, access_token, name)
-            rsync_data = fm.get_rsync_data((vault_root / name).resolve(), hashes)
-            self.http.post(host_url + URL_BACKUP_PATCH_FILE + f'?file={name}', access_token, rsync_data,
+            pickle_data = fm.get_rsync_data((vault_root / name).resolve(), hashes)
+            self.http.post(host_url + URL_BACKUP_PATCH_FILE + f'?file={name}', access_token, pickle_data,
                            is_json=False, is_body=False)
 
     def restore_patch_files(self, host_url, access_token, vault_root: Path, patch_files):
@@ -200,7 +200,7 @@ class BackupClient:
             hashes = fm.get_hashes_by_file(full_name)
             pickle_data = self.http.post_to_pickle_data(host_url + URL_BACKUP_PATCH_DELTA + f'?file={name}',
                                                         access_token, hashes)
-            fm.apply_rsync_data(pickle_data, full_name)
+            fm.apply_rsync_data(full_name, pickle_data)
 
     def backup_delete_files(self, host_url, access_token, vault_root: Path, delete_files):
         for name in delete_files:
@@ -224,7 +224,7 @@ class BackupClient:
                               VAULT_BACKUP_INFO_COL,
                               {DID: did},
                               {"$set": {DID: did,
-                                        VAULT_BACKUP_INFO_STATE: VAULT_BACKUP_STATE_RESTORE,
+                                        VAULT_BACKUP_INFO_STATE: VAULT_BACKUP_STATE_STOP,
                                         VAULT_BACKUP_INFO_TYPE: VAULT_BACKUP_INFO_TYPE_HIVE_NODE,
                                         VAULT_BACKUP_INFO_MSG: VAULT_BACKUP_MSG_SUCCESS,
                                         VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp(),
@@ -374,9 +374,6 @@ class BackupServer:
             raise InvalidParameterException()
 
         did, _, _ = self.__check_auth_backup()
-        # TODO:
-        # with open(full_name, 'rb') as f:
-        #     return gene_blockchecksums(f, blocksize=CHUNK_SIZE)
         return fm.get_hashes_by_file((get_vault_backup_path(did) / file_name).resolve())
 
     def backup_get_file_delta(self, file_name):
@@ -387,13 +384,7 @@ class BackupServer:
 
         data = request.get_data()
         hashes = fm.get_hashes_by_lines(list() if not data else data.split(b'\n'))
-        rsync_data = fm.get_rsync_data((get_vault_backup_path(did) / file_name).resolve(), hashes)
-        temp_file = gene_temp_file_name()
-        fm.write_file_by_rsync_data(rsync_data, temp_file)
-        r = self.http_server.create_range_request(temp_file)
-
-        temp_file.unlink()
-        return r
+        return fm.get_rsync_data((get_vault_backup_path(did) / file_name).resolve(), hashes)
 
     def backup_patch_file(self, file_name):
         if not file_name:
@@ -403,9 +394,9 @@ class BackupServer:
 
         temp_file = gene_temp_file_name()
         fm.write_file_by_request_stream(temp_file)
-        rsync_data = fm.read_rsync_data_from_file(temp_file)
+        pickle_data = fm.read_rsync_data_from_file(temp_file)
         temp_file.unlink()
-        fm.apply_rsync_data(rsync_data, (get_vault_backup_path(did) / file_name).resolve())
+        fm.apply_rsync_data((get_vault_backup_path(did) / file_name).resolve(), pickle_data)
 
     def restore_finish(self):
         did, _, _ = self.__check_auth_backup()

@@ -49,6 +49,7 @@ class ScriptingTestCase(unittest.TestCase):
         return response.text if is_raw else json.loads(response.text)
 
     def test01_register_script(self):
+        self.__delete_collection()
         self.__create_collection()
         self.__register_script('database_insert', {
             "executable": {

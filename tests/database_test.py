@@ -20,6 +20,7 @@ class DatabaseTestCase(unittest.TestCase):
         self.collection_name = 'test_collection'
 
     def test01_create_collection(self):
+        self.__delete_collection()
         response = self.cli.put(f'/db/collections/{self.collection_name}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.collection_name)
@@ -104,6 +105,9 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 204)
 
     def test08_delete_collection(self):
+        self.__delete_collection()
+
+    def __delete_collection(self):
         response = self.cli.delete(f'/db/{self.collection_name}')
         self.assertEqual(response.status_code, 204)
 

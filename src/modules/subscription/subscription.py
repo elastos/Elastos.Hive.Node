@@ -65,7 +65,7 @@ class VaultSubscription:
     @hive_restful_response
     def unsubscribe(self):
         did, app_id = check_auth()
-        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
+        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_raise=False)
         if not document:
             return
         delete_user_vault_data(did)
@@ -95,7 +95,7 @@ class VaultSubscription:
     @hive_restful_response
     def get_info(self):
         did, app_id = check_auth()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did})
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_raise=False)
         if not doc:
             raise VaultNotFoundException()
         return self.__get_vault_info(doc)
@@ -106,19 +106,22 @@ class VaultSubscription:
         if subscription == 'all':
             result['backupPlans'] = self.__filter_plans_by_name(all_plans.get('backupPlans', []), name)
             result['pricingPlans'] = self.__filter_plans_by_name(all_plans.get('pricingPlans', []), name)
+            if not result['backupPlans'] and not result['pricingPlans']:
+                raise PricePlanNotFoundException()
         elif subscription == 'vault':
             result['pricingPlans'] = self.__filter_plans_by_name(all_plans.get('pricingPlans', []), name)
+            if not result['pricingPlans']:
+                raise PricePlanNotFoundException()
         elif subscription == 'backup':
             result['backupPlans'] = self.__filter_plans_by_name(all_plans.get('backupPlans', []), name)
+            if not result['backupPlans']:
+                raise PricePlanNotFoundException()
         return result
 
     def __filter_plans_by_name(self, plans, name):
         if not name:
             return plans
-        plans = list(filter(lambda p: p.get('name') == name, plans))
-        if not plans:
-            raise PricePlanNotFoundException()
-        return plans
+        return list(filter(lambda p: p.get('name') == name, plans))
 
 
 class BackupSubscription:

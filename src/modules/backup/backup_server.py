@@ -264,10 +264,9 @@ class BackupServer:
         self.http_server = HttpServer()
 
     def __check_auth_backup(self, is_raise=True, is_create=False):
-        # TODO: why no app did in backup internal server.
         did, app_did = check_auth2()
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
-                                  is_create=is_create)
+                                  is_create=is_create, is_raise=False)
         if is_raise and not doc:
             raise BackupNotFoundException()
         return did, app_did, doc
@@ -308,7 +307,7 @@ class BackupServer:
         did, _, doc = self.__check_auth_backup(is_raise=False)
         if not doc:
             return
-        # TODO: delete backup storage for backup files.
+        shutil.rmtree(get_vault_backup_path(did))
         cli.delete_one_origin(DID_INFO_DB_NAME,
                               VAULT_BACKUP_SERVICE_COL,
                               {VAULT_BACKUP_SERVICE_DID: did},

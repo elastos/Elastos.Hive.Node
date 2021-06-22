@@ -67,7 +67,7 @@ class DatabaseClient:
     def find_many(self, did, app_id, collection_name, col_filter, options):
         col = self.get_user_collection(did, app_id, collection_name)
         if not col:
-            raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **options))
 
     def find_one(self, did, app_id, collection_name, col_filter, options=None):
@@ -78,7 +78,7 @@ class DatabaseClient:
         if not is_create and not col:
             if not is_raise:
                 return None
-            raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
     def insert_one(self, did, app_id, collection_name, document, options=None, is_create=False):
@@ -87,7 +87,7 @@ class DatabaseClient:
     def insert_one_origin(self, db_name, collection_name, document, options=None, is_create=False):
         col = self.get_origin_collection(db_name, collection_name, is_create)
         if not col:
-            raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
         document['created'] = datetime.strptime(document["created"], DATETIME_FORMAT) \
             if 'created' in document else datetime.utcnow()
@@ -105,7 +105,7 @@ class DatabaseClient:
     def update_one_origin(self, db_name, collection_name, col_filter, col_update, options=None):
         col = self.get_origin_collection(db_name, collection_name)
         if not col:
-            raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
         if '$setOnInsert' in col_update:
             col_update["$setOnInsert"]['created'] = datetime.utcnow()
@@ -128,7 +128,7 @@ class DatabaseClient:
     def delete_one_origin(self, db_name, collection_name, col_filter, is_check_exist=True):
         col = self.get_origin_collection(db_name, collection_name)
         if is_check_exist and not col:
-            raise BadRequestException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
         result = col.delete_one(convert_oid(col_filter))
         return {

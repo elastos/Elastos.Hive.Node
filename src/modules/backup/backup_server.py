@@ -55,9 +55,9 @@ class BackupClient:
 
     def check_backup_status(self, did):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
-        if doc and doc[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP:
-            if doc[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow().timestamp() - 60 * 60 * 24):
-                raise BackupIsInProcessingException('The backup/restore is in process.')
+        if doc and doc[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP \
+                and doc[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow().timestamp() - 60 * 60 * 24):
+            raise BackupIsInProcessingException('The backup/restore is in process.')
 
     def get_backup_service_info(self, credential, credential_info):
         target_host = credential_info['targetHost']

@@ -564,10 +564,8 @@ class Scripting:
             raise NotFoundException(NotFoundException.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
 
         ret = col.delete_many({'name': script_name})
-        if ret.deleted_count <= 0:
-            raise NotFoundException(NotFoundException.SCRIPT_NOT_FOUND, 'The script does not exist.')
-
-        update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_id))
+        if ret.deleted_count > 0:
+            update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_id))
 
     @hive_restful_response
     def run_script(self, script_name):

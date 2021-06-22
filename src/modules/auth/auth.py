@@ -69,7 +69,7 @@ class Auth(Entity, metaclass=Singleton):
                 update_did_info_by_app_instance_did(app_instance_did, nonce, expire_time)
         except Exception as e:
             logging.getLogger("HiveAuth").error(f"Exception in __save_nonce_to_db: {e}")
-            raise e
+            raise BadRequestException(msg='Failed to generate nonce.')
         return nonce, expire_time
 
     def __create_challenge(self, did, nonce, expire_time):

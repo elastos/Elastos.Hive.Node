@@ -47,6 +47,7 @@ class HiveException(Exception):
 
 
 # BadRequestException
+# TODO: refine default and INVALID_PARAMETER for more specific ones.
 
 
 class BadRequestException(HiveException):
@@ -76,6 +77,7 @@ class UnauthorizedException(HiveException):
 
 
 # ForbiddenException
+# TODO: remove for vault accessing because no need active before using vault.
 
 
 class ForbiddenException(HiveException):

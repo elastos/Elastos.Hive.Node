@@ -73,7 +73,7 @@ class Entity:
         return self.storepass
 
     def get_error_message(self, prompt):
-        err_message = ffi.string(lib.DIDError_GetMessage()).decode()
+        err_message = ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
         if not prompt is None:
             err_message = prompt + " error: " + err_message
         return err_message
@@ -88,14 +88,21 @@ class Entity:
         credid = lib.DIDURL_NewByDid(owner, self.name.encode())
         vc = lib.Issuer_CreateCredentialByString(self.issuer, owner, credid, types, 1,
                                                  json.dumps(props).encode(), expires, self.storepass)
+        lib.DIDURL_Destroy(credid)
         # vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
         # logging.debug(f"vcJson: {vcJson}")
         # print(vcJson)
         return vc
 
     def create_presentation(self, vc, nonce, realm):
-        vp = lib.Presentation_Create(self.did, ffi.NULL, self.store, self.storepass, nonce.encode(),
-                                     realm.encode(), 1, vc)
+        vpid = lib.DIDURL_NewByDid(self.did, "jwtvp".encode())
+        type0 = ffi.new("char[]", "VerifiablePresentation".encode())
+        types = ffi.new("char **", type0)
+
+        vp = lib.Presentation_Create(vpid, self.did, types, 1, nonce.encode(),
+                realm.encode(), ffi.NULL, self.store, self.storepass, 1, vc)
+        lib.DIDURL_Destroy(vpid)
+
         # print_err()
         vp_json = ffi.string(lib.Presentation_ToJson(vp, True)).decode()
         # print(vp_json)
@@ -148,7 +155,7 @@ class Entity:
         # print(jwt)
         jws = lib.DefaultJWSParser_Parse(jwt.encode())
         if not jws:
-            return None, None, "Challenge DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetMessage()).decode()
+            return None, None, "Challenge DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
 
         aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
         if aud != self.get_did_string():
@@ -185,7 +192,7 @@ class Entity:
 
         jws = lib.DefaultJWSParser_Parse(token.encode())
         if not jws:
-            return None, "Backup token DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetMessage()).decode()
+            return None, "Backup token DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
 
         aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
         if aud != self.get_did_string():

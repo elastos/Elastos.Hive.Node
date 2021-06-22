@@ -46,15 +46,12 @@ class HiveException(Exception):
         return codes[request.method]
 
 
+# BadRequestException
+
+
 class BadRequestException(HiveException):
-    UNCAUGHT_EXCEPTION = 1
-    INVALID_PARAMETER = 2
-    # TODO:
-    ALREADY_EXISTS = 3
-    VAULT_NO_PERMISSION = 4
-    # TODO:
-    DOES_NOT_EXISTS = 5
-    BACKUP_IS_IN_PROCESSING = 6
+    INVALID_PARAMETER = 1
+    BACKUP_IS_IN_PROCESSING = 2
 
     def __init__(self, internal_code=INVALID_PARAMETER, msg='Invalid parameter'):
         super().__init__(400, internal_code, msg)
@@ -70,9 +67,23 @@ class BackupIsInProcessingException(BadRequestException):
         super().__init__(super().BACKUP_IS_IN_PROCESSING, msg=msg)
 
 
+# UnauthorizedException
+
+
 class UnauthorizedException(HiveException):
     def __init__(self, msg='You are unauthorized to make this request.'):
         super().__init__(401, super().NO_INTERNAL_CODE, msg)
+
+
+# ForbiddenException
+
+
+class ForbiddenException(HiveException):
+    def __init__(self, msg='Forbidden.'):
+        super().__init__(403, super().NO_INTERNAL_CODE, msg)
+
+
+# NotFoundException
 
 
 class NotFoundException(HiveException):
@@ -97,6 +108,16 @@ class BackupNotFoundException(NotFoundException):
         super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND, msg=msg)
 
 
+class ScriptNotFoundException(NotFoundException):
+    def __init__(self, msg='The script does not found.'):
+        super().__init__(internal_code=NotFoundException.SCRIPT_NOT_FOUND, msg=msg)
+
+
+class CollectionNotFoundException(NotFoundException):
+    def __init__(self, msg='The collection does not found.'):
+        super().__init__(internal_code=NotFoundException.COLLECTION_NOT_FOUND, msg=msg)
+
+
 class PricePlanNotFoundException(NotFoundException):
     def __init__(self, msg='The price plan does not found.'):
         super().__init__(internal_code=NotFoundException.PRICE_PLAN_NOT_FOUND, msg=msg)
@@ -107,14 +128,31 @@ class FileNotFoundException(NotFoundException):
         super().__init__(internal_code=NotFoundException.FILE_NOT_FOUND, msg=msg)
 
 
+# AlreadyExistsException
+
+
 class AlreadyExistsException(HiveException):
     def __init__(self, msg='Already exists.'):
-        super().__init__(455, -1, msg)
+        super().__init__(455, super().NO_INTERNAL_CODE, msg)
+
+
+# InternalServerErrorException
+
+
+class InternalServerErrorException(HiveException):
+    def __init__(self, msg='Internal server error.'):
+        super().__init__(500, super().NO_INTERNAL_CODE, msg)
+
+
+# NotImplementedException
 
 
 class NotImplementedException(HiveException):
     def __init__(self, msg='Not implemented yet.'):
         super().__init__(501, super().NO_INTERNAL_CODE, msg)
+
+
+# InsufficientStorageException
 
 
 class InsufficientStorageException(HiveException):

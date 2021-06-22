@@ -7,7 +7,7 @@ For new exception, please define here.
 import traceback
 import logging
 
-from src.utils.http_exception import HiveException, BadRequestException
+from src.utils.http_exception import HiveException, BadRequestException, InternalServerErrorException
 
 
 def __get_restful_response_wrapper(func, is_download=False, is_code=False):
@@ -20,7 +20,7 @@ def __get_restful_response_wrapper(func, is_download=False, is_code=False):
             return e.get_error_response()
         except Exception as e:
             logging.error(f'UNEXPECTED: {traceback.format_exc()}')
-            return HiveException(500, BadRequestException.UNCAUGHT_EXCEPTION, traceback.format_exc()).get_error_response()
+            return InternalServerErrorException(msg=traceback.format_exc()).get_error_response()
     return wrapper
 
 

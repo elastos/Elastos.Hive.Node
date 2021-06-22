@@ -14,7 +14,7 @@ from hive.util.did_file_info import query_upload_get_filepath, query_download, f
     get_dir_size, query_hash
 from hive.util.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
 from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
-from src.utils.http_exception import BadRequestException
+from src.utils.http_exception import BadRequestException, FileNotFoundException, InvalidParameterException
 from src.utils.http_response import hive_restful_response, hive_stream_response
 from src.modules.scripting.scripting import check_auth_and_vault
 from src.utils.db_client import cli
@@ -30,6 +30,9 @@ class Files:
 
     @hive_restful_response
     def upload_file(self, path):
+        if not path:
+            raise InvalidParameterException()
+
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         self.upload_file_by_did(did, app_did, path)
         return {
@@ -67,21 +70,27 @@ class Files:
 
     @hive_stream_response
     def download_file(self, path):
+        if not path:
+            raise InvalidParameterException()
+
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         return self.download_file_by_did(did, app_did, path)
 
     def download_file_by_did(self, did, app_did, path):
         data, status_code = query_download(did, app_did, path)
         if status_code == BAD_REQUEST:
-            raise BadRequestException(msg='Cannot get file name by transaction id')
+            raise FileNotFoundException(msg='Cannot get file name by transaction id')
         elif status_code == NOT_FOUND:
-            raise BadRequestException(msg=f"The file '{path}' does not exist.")
+            raise FileNotFoundException(msg=f"The file '{path}' does not exist.")
         elif status_code == FORBIDDEN:
-            raise BadRequestException(msg=f"Cannot access the file '{path}'.")
+            raise FileNotFoundException(msg=f"Cannot access the file '{path}'.")
         return data
 
     @hive_restful_response
     def delete_file(self, path):
+        if not path:
+            raise InvalidParameterException()
+
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         full_path = self._get_file_full_path(did, app_did, path)
         if full_path.exists():
@@ -96,10 +105,20 @@ class Files:
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
+        if not src_path or not dst_path:
+            raise InvalidParameterException()
+        elif src_path == dst_path:
+            raise InvalidParameterException(msg='The source file and the destination file can not be the same.')
+
         return self._move_file(src_path, dst_path)
 
     @hive_restful_response
     def copy_file(self, src_path, dst_path):
+        if not src_path or not dst_path:
+            raise InvalidParameterException()
+        elif src_path == dst_path:
+            raise InvalidParameterException(msg='The source file and the destination file can not be the same.')
+
         return self._move_file(src_path, dst_path, True)
 
     def _move_file(self, src_path, dst_path, is_copy=False):
@@ -107,9 +126,9 @@ class Files:
         full_src_path = self._get_file_full_path(did, app_did, src_path)
         full_dst_path = self._get_file_full_path(did, app_did, dst_path)
         if not full_src_path.exists():
-            raise BadRequestException(msg='Source file does not exist.')
+            raise FileNotFoundException(msg='Source file does not exist.')
         if full_dst_path.exists():
-            raise BadRequestException(msg='Destination file exists.')
+            raise FileNotFoundException(msg='Destination file exists.')
         if not is_copy:
             shutil.move(full_src_path.as_posix(), full_dst_path.as_posix())
         else:
@@ -127,10 +146,13 @@ class Files:
 
     @hive_restful_response
     def list_folder(self, path):
+        if not path:
+            raise InvalidParameterException()
+
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         full_path = self._get_file_full_path(did, app_did, path)
         if not full_path.exists() or not full_path.is_dir():
-            raise BadRequestException(msg='Folder does not exist.')
+            raise FileNotFoundException(msg='Folder does not exist.')
         files = os.listdir(full_path.as_posix())
         return {
             'value': list(map(lambda f: self._get_file_info(full_path, f), files))
@@ -148,11 +170,14 @@ class Files:
     def get_file_stat_by_did(self, did, app_did, path):
         full_path = self._get_file_full_path(did, app_did, path)
         if not full_path.exists():
-            raise BadRequestException(msg='File path does not exist.')
+            raise FileNotFoundException(msg='File path does not exist.')
         return full_path, full_path.stat()
 
     @hive_restful_response
     def get_properties(self, path):
+        if not path:
+            raise InvalidParameterException()
+
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         full_path, stat = self.get_file_stat_by_did(did, app_did, path)
         return {
@@ -165,10 +190,13 @@ class Files:
 
     @hive_restful_response
     def get_hash(self, path):
+        if not path:
+            raise InvalidParameterException()
+
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         data, err = query_hash(did, app_did, path)
         if err:
-            raise BadRequestException(f'Failed getting file hash code: {str(err)}')
+            raise FileNotFoundException(f'Failed getting file hash code: {str(err)}')
         return {
             'name': path,
             'algorithm': 'SHA256',

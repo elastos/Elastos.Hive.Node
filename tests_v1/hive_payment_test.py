@@ -86,7 +86,7 @@ class HivePaymentTestCase(unittest.TestCase):
         order_dic = {VAULT_ORDER_DID: self.did,
                      VAULT_ORDER_APP_ID: self.app_id,
                      VAULT_ORDER_PACKAGE_INFO: package_info,
-                     VAULT_ORDER_TXIDS: ["4813ba481d0e18c4fa03ddc35c32ffbd88080fba14fec8c0c31e5843e6399940"],
+                     VAULT_ORDER_TXIDS: ["5554d0af281ccce78bb9c2b8b77baad630a51bc67420a601566f8fa4106cfa92"],
                      VAULT_ORDER_TYPE: VAULT_ORDER_TYPE_VAULT,
                      VAULT_ORDER_STATE: VAULT_ORDER_STATE_CANCELED,
                      VAULT_ORDER_CREATE_TIME: 1591000001,
@@ -196,8 +196,8 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assertEqual(status, 201)
 
     def test_0_get_tx(self):
-        tx = "4813ba481d0e18c4fa03ddc35c32ffbd88080fba14fec8c0c31e5843e6399940"
-        address = "ETJqK7o7gBhzypmNJ1MstAHU2q77fo78jg"
+        tx = "085ec55b07fe1c779eddfe256e6a5304b3663adf0c4bfa825a67b0ae400c1509"
+        address = "EN9YK69ScA6WFgVQW3UZcmSRLSCStaU2pQ"
         value, time = get_tx_info(tx, address)
         self.assertNotEqual(value, None)
 
@@ -283,7 +283,7 @@ class HivePaymentTestCase(unittest.TestCase):
         self.init_vault_payment_db()
         pay_param = {
             "order_id": self.test_order_id,
-            "pay_txids": ["4813ba481d0e18c4fa03ddc35c32ffbd88080fba14fec8c0c31e5843e6399940"]
+            "pay_txids": ["5554d0af281ccce78bb9c2b8b77baad630a51bc67420a601566f8fa4106cfa92"]
         }
 
         r, s = self.parse_response(

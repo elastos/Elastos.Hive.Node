@@ -47,7 +47,7 @@
     }
   ],
   "paymentSettings": {
-    "receivingELAAddress": "ETJqK7o7gBhzypmNJ1MstAHU2q77fo78jg",
+    "receivingELAAddress": "EN9YK69ScA6WFgVQW3UZcmSRLSCStaU2pQ",
     "wait_payment_timeout": 30,
     "wait_tx_timeout": 120
   }

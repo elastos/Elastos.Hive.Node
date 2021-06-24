@@ -24,7 +24,7 @@ To the general applications, it would support the following types of data storag
 - Structured data object access and store onto MongoDB;
 - Customized Scripting to select other users to read or contribute the data.
 
-Elastos Hive will keep the promise that **users remain in full control of their own data** and committing the practice on it.
+Elastos Hive will keep the promise that **users remain in total control of their own data** and committing the practice on it.
 
 ## Deploy Hive with Docker on Ubuntu/Debian system
 
@@ -51,7 +51,7 @@ Enter into the source code folder, directly run the command to install the Hive 
 ```shell
 $ /bin/bash -c "$(curl -fsSL https://www.trinity-tech.io/hivenode/scripts/run.sh)" -s docker
 ```
-After all the stuff has been finished, use the next command to check whether the Hive Node can work or not.  In the case of success, it will display two container instances. One is hive-node, and the other is mongodb.
+After all the stuff has been finished, use the following command to check whether the Hive Node can work or not.  In the case of success, it will display two container instances. One is hive-node, and the other is MongoDB.
 ```shell
 $ docker ps
 ```
@@ -63,8 +63,9 @@ Run the next command to launch test-cases to verify the deployed node at the sam
 ```
 
 ## Develop mode support cors
-Run the hive node server in dev mode, it will support CORS for developer.
-In product condition, we suggest develop hive node behind some http server like nginx.
+Run the hive node server in dev mode. It will support CORS for the developer.
+In product condition, we suggest developing a hive node behind some HTTP server like Nginx.
+
 ```shell
 python manage.py -c dev runserver
 ```
@@ -81,11 +82,11 @@ After you deployed the Hive node in either way above, you can use curl to check 
 ```shell
 $ curl -XPOST  -H "Content-Type: application/json" -d '{"key":"value"}' http://your-hive-node-ipaddress:5000/api/v1/echo
 ```
-which would return something below in case that it's been running.
+Which would return something below in case that it's been running.
 ```json
 {"key":"value"}
 ```
-You also can open the Browser to input the following URL to see the version of Hive node:
+You also can open the Browser to input the following URL to see the version of the Hive node:
 ```http
 http://your-hive-node-ip-address:5000/api/v1/hive/version
 ```
@@ -95,7 +96,7 @@ http://your-hive-node-ip-address:5000/api/v1/hive/version
 
 Sincerely thanks to all teams and projects that we rely on directly or indirectly.
 ## Contribution
-Welcome contributions to the Elastos Hive Node Project.
+Welcome your contributions to the Elastos Hive Node Project.
 ## License
 MIT
 

@@ -53,11 +53,15 @@ class BackupClient:
             self.mongo_host, self.mongo_port = self.hive_setting.MONGO_HOST, self.hive_setting.MONGO_PORT
         self.auth = Auth(app, hive_setting)
 
-    def check_backup_status(self, did):
+    def check_backup_status(self, did, is_restore=False):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
         if doc and doc[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP \
                 and doc[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow().timestamp() - 60 * 60 * 24):
             raise BackupIsInProcessingException('The backup/restore is in process.')
+
+        if is_restore and not (doc[VAULT_BACKUP_INFO_STATE] == VAULT_BACKUP_STATE_STOP
+                               and doc[VAULT_BACKUP_INFO_MSG] == VAULT_BACKUP_MSG_SUCCESS):
+            raise BadRequestException(msg='No successfully backup for restore.')
 
     def get_backup_service_info(self, credential, credential_info):
         target_host = credential_info['targetHost']

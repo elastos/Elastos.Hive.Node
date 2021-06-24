@@ -128,7 +128,7 @@ class HivePaymentTestCase(unittest.TestCase):
         order_dic = {VAULT_ORDER_DID: self.did,
                      VAULT_ORDER_APP_ID: self.app_id,
                      VAULT_ORDER_PACKAGE_INFO: package_info,
-                     VAULT_ORDER_TXIDS: ["4813ba481d0e18c4fa03ddc35c32ffbd88080fba14fec8c0c31e5843e6399940"],
+                     VAULT_ORDER_TXIDS: ["5554d0af281ccce78bb9c2b8b77baad630a51bc67420a601566f8fa4106cfa92"],
                      VAULT_ORDER_STATE: VAULT_ORDER_STATE_CANCELED,
                      VAULT_ORDER_TYPE: VAULT_ORDER_TYPE_BACKUP,
                      VAULT_ORDER_CREATE_TIME: 1591000001,
@@ -378,7 +378,7 @@ class HivePaymentTestCase(unittest.TestCase):
         self.init_vault_backup_payment_db()
         pay_param = {
             "order_id": self.test_order_id,
-            "pay_txids": ["4813ba481d0e18c4fa03ddc35c32ffbd88080fba14fec8c0c31e5843e6399940"]
+            "pay_txids": ["5554d0af281ccce78bb9c2b8b77baad630a51bc67420a601566f8fa4106cfa92"]
         }
 
         r, s = self.parse_response(
@@ -436,7 +436,7 @@ class HivePaymentTestCase(unittest.TestCase):
         self.init_vault_backup_payment_db()
         pay_param = {
             "order_id": self.test_order_id,
-            "pay_txids": ["4813ba481d0e18c4fa03ddc35c32ffbd88080fba14fec8c0c31e5843e6399940"]
+            "pay_txids": ["5554d0af281ccce78bb9c2b8b77baad630a51bc67420a601566f8fa4106cfa92"]
         }
 
         r, s = self.parse_response(
@@ -487,7 +487,7 @@ class HivePaymentTestCase(unittest.TestCase):
         self.init_vault_backup_payment_db()
         pay_param = {
             "order_id": self.test_order_id,
-            "pay_txids": ["4813ba481d0e18c4fa03ddc35c32ffbd88080fba14fec8c0c31e5843e6399940"]
+            "pay_txids": ["5554d0af281ccce78bb9c2b8b77baad630a51bc67420a601566f8fa4106cfa92"]
         }
 
         r, s = self.parse_response(

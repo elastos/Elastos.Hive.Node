@@ -15,9 +15,8 @@ class RemoteResolver(metaclass=Singleton):
     def __init__(self):
         self.token = None
         self.user_did = DIDApp("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap", "")
-        self.app_did = DApp("testapp",
-                            test_common.app_id,
-                            "street shrug castle where muscle swift coin mirror exercise police toward boring", "")
+        self.app_did = DApp("testapp", test_common.app_id,
+                            "amount material swim purse swallow gate pride series cannon patient dentist person")
         self.http_client = HttpClient('http://localhost:5000/api/v2/did')
         self.node_did = None
 

@@ -20,11 +20,11 @@ class HiveSetting:
 
     @property
     def DID_RESOLVER(self):
-        return self.env_config('DID_RESOLVER', default="http://api.elastos.io:21606", cast=str)
+        return self.env_config('DID_RESOLVER', default="https://api-testnet.elastos.io/newid", cast=str)
 
     @property
     def ELA_RESOLVER(self):
-        return self.env_config('ELA_RESOLVER', default="http://api.elastos.io:21606", cast=str)
+        return self.env_config('ELA_RESOLVER', default="https://api-testnet.elastos.io/ela", cast=str)
 
     @property
     def DID_MNEMONIC(self):

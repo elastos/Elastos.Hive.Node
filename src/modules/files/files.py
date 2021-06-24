@@ -146,9 +146,6 @@ class Files:
 
     @hive_restful_response
     def list_folder(self, path):
-        if not path:
-            raise InvalidParameterException()
-
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         full_path = self._get_file_full_path(did, app_did, path)
         if not full_path.exists() or not full_path.is_dir():

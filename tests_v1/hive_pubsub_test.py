@@ -204,34 +204,36 @@ class HivePubsubTestCase(unittest.TestCase):
 
         self.user_did1 = DIDApp("didapp1",
                                 "clever bless future fuel obvious black subject cake art pyramid member clump")
-        self.testapp1 = DApp("testapp1", test_common.app_id,
+        self.testapp1 = DApp("testapp", test_common.app_id,
                              "amount material swim purse swallow gate pride series cannon patient dentist person")
-        self.testapp2 = DApp("testapp2", test_common.app_id2,
-                             "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+        self.testapp2 = DApp("testapp", test_common.app_id,
+                             "amount material swim purse swallow gate pride series cannon patient dentist person")
         token1, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp1)
         token2, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp2)
+        # token1 -> channel1 and channel2, token2 -> channel1
         self.subscribe_channel(self.did, self.app_id, "test_channel1", token1)
         self.subscribe_channel(self.did, self.app_id, "test_channel1", token2)
         self.subscribe_channel(self.did, self.app_id, "test_channel2", token1)
 
+        # push msg 1-30 to channel1
         for i in range(0, 30):
             self.push_message("test_channel1", f"message_{str(i)}")
-
+        # contains msg 1-10
         messages = list()
         for i in range(0, 10):
             messages.append(f"message_{str(i)}")
-
+        # channel1 out 10 with token1
         messages1 = self.pop_message(self.did, self.app_id, "test_channel1", 10, token1)
         messages1_list = list()
         for m in messages1:
             messages1_list.append(m["message"])
         self.assertTrue(operator.eq(messages1_list, messages))
-
+        # last 20 msgs.
         messages = list()
-        for i in range(0, 30):
+        for i in range(10, 30):
             messages.append(f"message_{str(i)}")
 
-        messages2 = self.pop_message(self.did, self.app_id, "test_channel1", 30, token2)
+        messages2 = self.pop_message(self.did, self.app_id, "test_channel1", 20, token2)
         messages2_list = list()
         for m in messages2:
             messages2_list.append(m["message"])
@@ -280,10 +282,10 @@ class HivePubsubTestCase(unittest.TestCase):
         self.publish_channel("test_channel1")
         self.user_did1 = DIDApp("didapp1",
                                 "clever bless future fuel obvious black subject cake art pyramid member clump")
-        self.testapp1 = DApp("testapp1", test_common.app_id,
+        self.testapp1 = DApp("testapp", test_common.app_id,
                              "amount material swim purse swallow gate pride series cannon patient dentist person")
-        self.testapp2 = DApp("testapp2", test_common.app_id2,
-                             "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+        self.testapp2 = DApp("testapp", test_common.app_id2,
+                             "amount material swim purse swallow gate pride series cannon patient dentist person")
         token1, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp1)
         token2, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp2)
         self.subscribe_channel(self.did, self.app_id, "test_channel1", token1)
@@ -343,7 +345,7 @@ class HivePubsubTestCase(unittest.TestCase):
         channel_name = "test_channel1"
         self.user_did1 = DIDApp("didapp1",
                                 "clever bless future fuel obvious black subject cake art pyramid member clump")
-        self.testapp1 = DApp("testapp1", test_common.app_id,
+        self.testapp1 = DApp("testapp", test_common.app_id,
                              "amount material swim purse swallow gate pride series cannon patient dentist person")
         token, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp1)
         auth = self.get_auth(token)
@@ -374,7 +376,7 @@ class HivePubsubTestCase(unittest.TestCase):
     def test_pop_an_empty_channel(self):
         self.user_did1 = DIDApp("didapp1",
                                 "clever bless future fuel obvious black subject cake art pyramid member clump")
-        self.testapp1 = DApp("testapp1", test_common.app_id,
+        self.testapp1 = DApp("testapp", test_common.app_id,
                              "amount material swim purse swallow gate pride series cannon patient dentist person")
         token1, hive_did = test_common.test_auth_common(self, self.user_did1, self.testapp1)
         messages1 = self.pop_message(self.did, self.app_id, "test_channel1", 10, token1)

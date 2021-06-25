@@ -127,8 +127,11 @@ class DatabaseClient:
 
     def delete_one_origin(self, db_name, collection_name, col_filter, is_check_exist=True):
         col = self.get_origin_collection(db_name, collection_name)
-        if is_check_exist and not col:
-            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+        if not col:
+            if is_check_exist:
+                raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+            else:
+                return {"acknowledged": False, "deleted_count": 0}
 
         result = col.delete_one(convert_oid(col_filter))
         return {

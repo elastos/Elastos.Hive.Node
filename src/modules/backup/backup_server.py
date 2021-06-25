@@ -311,7 +311,9 @@ class BackupServer:
         did, _, doc = self.__check_auth_backup(is_raise=False)
         if not doc:
             return
-        shutil.rmtree(get_vault_backup_path(did))
+        backup_root = get_vault_backup_path(did)
+        if backup_root.exists():
+            shutil.rmtree(backup_root)
         cli.delete_one_origin(DID_INFO_DB_NAME,
                               VAULT_BACKUP_SERVICE_COL,
                               {VAULT_BACKUP_SERVICE_DID: did},

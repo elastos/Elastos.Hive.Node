@@ -54,7 +54,7 @@ class BackupClient:
         self.auth = Auth(app, hive_setting)
 
     def check_backup_status(self, did, is_restore=False):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did}, is_create=True)
         if doc and doc[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP \
                 and doc[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow().timestamp() - 60 * 60 * 24):
             raise BackupIsInProcessingException('The backup/restore is in process.')
@@ -256,7 +256,7 @@ class BackupClient:
                 raise BadRequestException(msg='Failed to finish restore.')
 
     def get_state(self, did):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did}, is_create=True)
         state, result = 'stop', 'success'
         if doc:
             state, result = doc[VAULT_BACKUP_INFO_STATE], doc[VAULT_BACKUP_INFO_MSG]
@@ -320,11 +320,11 @@ class BackupServer:
                               is_check_exist=False)
 
     def get_info(self):
-        _, _, doc = self.__check_auth_backup()
+        _, _, doc = self.__check_auth_backup(is_create=True)
         return self.__get_vault_info(doc)
 
     def get_backup_service(self):
-        _, _, doc = self.__check_auth_backup()
+        _, _, doc = self.__check_auth_backup(is_create=True)
         del doc["_id"]
         return doc
 

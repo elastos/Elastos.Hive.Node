@@ -102,8 +102,8 @@ class DatabaseClient:
     def update_one(self, did, app_id, collection_name, col_filter, col_update, options):
         return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter, col_update, options)
 
-    def update_one_origin(self, db_name, collection_name, col_filter, col_update, options=None):
-        col = self.get_origin_collection(db_name, collection_name)
+    def update_one_origin(self, db_name, collection_name, col_filter, col_update, options=None, is_create=False):
+        col = self.get_origin_collection(db_name, collection_name, is_create=is_create)
         if not col:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 

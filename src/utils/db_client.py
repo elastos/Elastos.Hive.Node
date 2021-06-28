@@ -45,8 +45,11 @@ class DatabaseClient:
 
     def get_origin_collection(self, db_name, collection_name, is_create=False):
         db = self.__get_connection()[db_name]
-        if not is_create and collection_name not in db.list_collection_names():
-            return None
+        if collection_name not in db.list_collection_names():
+            if not is_create:
+                return None
+            else:
+                db.create_collection(collection_name)
         return db[collection_name]
 
     def __get_vault_service(self, did):

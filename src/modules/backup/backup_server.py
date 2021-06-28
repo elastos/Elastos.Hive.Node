@@ -81,7 +81,7 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp(),
                                         VAULT_BACKUP_INFO_DRIVE: credential_info['targetHost'],
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
-                              options={'upsert': True})
+                              options={'upsert': True}, is_create=True)
 
         vault_size = fm.get_vault_storage_size(did)
         if vault_size > backup_service_info[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
@@ -234,7 +234,7 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp(),
                                         VAULT_BACKUP_INFO_DRIVE: credential_info['targetHost'],
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
-                              options={'upsert': True})
+                              options={'upsert': True}, is_create=True)
 
         # TODO: check the vault storage has enough space to restore.
         # use_storage = get_vault_used_storage(did)

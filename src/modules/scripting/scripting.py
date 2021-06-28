@@ -543,7 +543,7 @@ class Scripting:
         return result
 
     def __upsert_script_to_database(self, script_name, json_data, did, app_id):
-        col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION, True)
+        col = cli.get_user_collection(did, app_id, SCRIPTING_SCRIPT_COLLECTION, is_create=True)
         json_data['name'] = script_name
         fix_dollar_keys(json_data['executable'])
         ret = col.replace_one({"name": script_name}, convert_oid(json_data),

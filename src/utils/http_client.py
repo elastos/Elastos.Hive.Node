@@ -43,7 +43,7 @@ class HttpClient:
                 if is_json else requests.post(url, headers=headers, data=body, **(options if options else {}))
             if r.status_code != 201:
                 raise InvalidParameterException(
-                    f'Failed to POST with status code: {r.status_code}, ' + str(r.json() if is_body else 'N/A'))
+                    f'Failed to POST with status code: {r.status_code}, {r.text}')
             return r.json() if is_body else r
         except Exception as e:
             raise InvalidParameterException(f'Failed to POST with exception: {str(e)}')

@@ -329,9 +329,6 @@ class BackupServer:
         return doc
 
     def backup_finish(self, checksum_list):
-        if not checksum_list:
-            raise InvalidParameterException(msg='checksum_list must provide.')
-
         did, _, doc = self.__check_auth_backup()
 
         backup_root = get_vault_backup_path(did)

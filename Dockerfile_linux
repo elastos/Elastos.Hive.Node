@@ -24,5 +24,5 @@ RUN touch /root/.config/rclone/rclone.conf
 
 ADD . /src/
 
-CMD ["gunicorn", "-b","0.0.0.0:5000","hive:create_app()"]
+CMD ["gunicorn","-b","0.0.0.0:5000","-k","gevent","src:create_app()"]
 

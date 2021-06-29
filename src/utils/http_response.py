@@ -7,11 +7,14 @@ For new exception, please define here.
 import traceback
 import logging
 
+from flask import request
+
 from src.utils.http_exception import HiveException, BadRequestException, InternalServerErrorException
 
 
 def __get_restful_response_wrapper(func, is_download=False, is_code=False):
     def wrapper(self, *args, **kwargs):
+        logging.getLogger('http response').info(f'enter {request.full_path}, {request.method}')
         try:
             return HiveException.get_success_response(func(self, *args, **kwargs),
                                                       is_download=is_download,

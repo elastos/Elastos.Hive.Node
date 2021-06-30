@@ -172,6 +172,9 @@ class DatabaseClient:
             raise CollectionNotFoundException()
         self.__get_connection()[db_name].drop_collection(collection_name)
 
+    def remove_database(self, did, app_did):
+        self.__get_connection().drop_database(gene_mongo_db_name(did, app_did))
+
     def timestamp_to_epoch(self, timestamp):
         if timestamp < 0:
             return timestamp

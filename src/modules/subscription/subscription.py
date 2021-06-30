@@ -9,13 +9,15 @@ from hive.main.view import h_auth
 from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
     VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING
+from hive.util.did_file_info import get_vault_path
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
 from src.modules.backup.backup_server import BackupServer
 from src.modules.scripting.scripting import check_auth
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
+from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
-    PricePlanNotFoundException
+    PricePlanNotFoundException, BadRequestException
 from src.utils.http_response import hive_restful_response
 
 
@@ -50,6 +52,9 @@ class VaultSubscription:
                VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
                VAULT_SERVICE_PRICING_USING: price_plan['name']}
         cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, doc, is_create=True)
+        # INFO: user database will create with first collection creation.
+        if not fm.create_dir(get_vault_path(did)):
+            raise BadRequestException('Failed to create folder for the user.')
         return doc
 
     def __get_vault_info(self, doc):
@@ -69,6 +74,7 @@ class VaultSubscription:
         if not document:
             return
         delete_user_vault_data(did)
+        cli.remove_database(did, app_id)
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_check_exist=False)
 
     @hive_restful_response

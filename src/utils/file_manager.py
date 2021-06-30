@@ -14,7 +14,7 @@ from hive.util.constants import CHUNK_SIZE
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import get_vault_used_storage
 from hive.util.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
-from src.utils.http_exception import InvalidParameterException
+from src.utils.http_exception import BadRequestException
 
 
 class FileManager:
@@ -64,7 +64,9 @@ class FileManager:
         self.__save_with_temp_file(file_path, on_save_to_temp)
 
     def write_file_by_response(self, response, file_path: Path, is_temp=False):
-        self.create_parent_dir(file_path)
+        if not self.create_parent_dir(file_path):
+            raise BadRequestException(msg=f'Failed to create parent folder for file {file_path.name}')
+
         if is_temp:
             def on_save_to_temp(temp_file):
                 self.write_file_by_response(response, temp_file)
@@ -77,7 +79,8 @@ class FileManager:
                         f.write(chunk)
 
     def write_file_by_request_stream(self, file_path: Path):
-        self.create_parent_dir(file_path)
+        if not self.create_parent_dir(file_path):
+            raise BadRequestException(msg=f'Failed to create parent folder for file {file_path.name}.')
 
         def on_save_to_temp(temp_file):
             with open(temp_file.as_posix(), "bw") as f:
@@ -98,8 +101,12 @@ class FileManager:
             return pickle.load(f)
 
     def create_parent_dir(self, file_path: Path):
-        if not file_path.parent.exists() and not create_full_path_dir(file_path.parent):
-            raise InvalidParameterException(msg='Can not create folder for save response data to file.')
+        return self.create_dir(file_path.parent)
+
+    def create_dir(self, path: Path):
+        if not path.exists() and not create_full_path_dir(path):
+            return False
+        return True
 
     def __save_with_temp_file(self, file_path: Path, on_save_to_temp):
         temp_file = gene_temp_file_name()

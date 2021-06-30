@@ -18,15 +18,22 @@ class HttpClient:
     def __init__(self):
         pass
 
+    def _check_status_code(self, r, expect_code):
+        if r.status_code != expect_code:
+            raise InvalidParameterException(msg=f'[HttpClient] Failed to {r.request.method} ({r.request.url}) '
+                                                f'with status code: {r.status_code}, {r.text}')
+
+    def _raise_http_exception(self, url, method, e):
+        raise InvalidParameterException(msg=f'[HttpClient] Failed to {method} ({url}) with exception: {str(e)}')
+
     def get(self, url, access_token, is_body=True, options=None):
         try:
             headers = {"Content-Type": "application/json", "Authorization": "token " + access_token}
             r = requests.get(url, headers=headers, **(options if options else {}))
-            if r.status_code != 200:
-                raise InvalidParameterException(msg=f'[HttpClient] Failed to GET ({url}) with status code: {r.status_code}')
+            self._check_status_code(r, 200)
             return r.json() if is_body else r
         except Exception as e:
-            raise InvalidParameterException(msg=f'[HttpClient] Failed to GET ({url}) with exception: {str(e)}')
+            self._raise_http_exception(url, 'GET', e)
 
     def get_to_file(self, url, access_token, file_path: Path):
         r = self.get(url, access_token, is_body=False, options={'stream': True})
@@ -41,12 +48,10 @@ class HttpClient:
                 headers['Content-Type'] = 'application/json'
             r = requests.post(url, headers=headers, json=body, **(options if options else {})) \
                 if is_json else requests.post(url, headers=headers, data=body, **(options if options else {}))
-            if r.status_code != 201:
-                raise InvalidParameterException(
-                    f'Failed to POST with status code: {r.status_code}, {r.text}')
+            self._check_status_code(r, 201)
             return r.json() if is_body else r
         except Exception as e:
-            raise InvalidParameterException(f'Failed to POST with exception: {str(e)}')
+            self._raise_http_exception(url, 'POST', e)
 
     def post_file(self, url, access_token, file_path: str):
         with open(file_path, 'rb') as f:
@@ -64,11 +69,10 @@ class HttpClient:
         try:
             headers = {"Authorization": "token " + access_token}
             r = requests.put(url, headers=headers, data=body)
-            if r.status_code != 200:
-                raise InvalidParameterException(f'Failed to PUT {url} with status code: {r.status_code}')
+            self._check_status_code(r, 200)
             return r.json() if is_body else r
         except Exception as e:
-            raise InvalidParameterException(f'Failed to PUT {url} with exception: {str(e)}')
+            self._raise_http_exception(url, 'PUT', e)
 
     def put_file(self, url, access_token, file_path: Path):
         with open(file_path.as_posix(), 'br') as f:
@@ -78,10 +82,9 @@ class HttpClient:
         try:
             headers = {"Authorization": "token " + access_token}
             r = requests.delete(url, headers=headers)
-            if r.status_code != 204:
-                raise InvalidParameterException(f'Failed to PUT with status code: {r.status_code}')
+            self._check_status_code(r, 204)
         except Exception as e:
-            raise InvalidParameterException(f'Failed to PUT with exception: {str(e)}')
+            self._raise_http_exception(url, 'DELETE', e)
 
 
 class HttpServer:

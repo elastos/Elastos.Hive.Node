@@ -18,10 +18,13 @@ class HiveException(Exception):
         self.msg = msg
 
     def get_error_response(self):
+        return jsonify(self._get_error_dict()), self.code
+
+    def _get_error_dict(self):
         error = {"message": self.msg}
         if self.internal_code > 0:
             error['internal_code'] = self.internal_code
-        return jsonify({"error": error}), self.code
+        return {"error": error}
 
     @staticmethod
     def get_success_response(data, is_download=False, is_code=False):
@@ -44,6 +47,9 @@ class HiveException(Exception):
         }
         assert request.method in codes
         return codes[request.method]
+
+    def __str__(self):
+        return json.dumps(self._get_error_dict())
 
 
 # BadRequestException

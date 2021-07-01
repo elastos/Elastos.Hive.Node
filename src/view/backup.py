@@ -19,9 +19,9 @@ server: BackupServer = None
 
 def init_app(app, hive_setting):
     """ This will be called by application initializer. """
-    global backup
+    global backup, server
     backup = Backup(app=app, hive_setting=hive_setting)
-    backup = BackupServer()
+    server = BackupServer()
     app.register_blueprint(blueprint)
 
 

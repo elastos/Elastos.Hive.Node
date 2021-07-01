@@ -6,6 +6,7 @@ The view of backup module.
 from flask import Blueprint, request
 
 from src.modules.backup.backup import Backup
+from src.modules.backup.backup_server import BackupServer
 from src.utils.http_request import params
 from src.utils.http_exception import NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
@@ -13,12 +14,14 @@ from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_F
 
 blueprint = Blueprint('backup', __name__)
 backup: Backup = None
+server: BackupServer = None
 
 
 def init_app(app, hive_setting):
     """ This will be called by application initializer. """
     global backup
     backup = Backup(app=app, hive_setting=hive_setting)
+    backup = BackupServer()
     app.register_blueprint(blueprint)
 
 
@@ -45,52 +48,55 @@ def backup_restore():
 def promotion():
     return backup.promotion()
 
+###############################################################################
+# below is internal backup APIs
+
 
 @blueprint.route(URL_BACKUP_SERVICE, methods=['GET'])
-def internal_backup_service():
-    return backup.backup_service()
+def internal_get_backup_service():
+    return server.get_backup_service()
 
 
 @blueprint.route(URL_BACKUP_FINISH, methods=['POST'])
 def internal_backup_finish():
-    return backup.backup_finish(params.get('checksum_list'))
+    return server.backup_finish(params.get('checksum_list'))
 
 
 @blueprint.route(URL_BACKUP_FILES, methods=['GET'])
 def internal_backup_files():
-    return backup.backup_files()
+    return server.backup_files()
 
 
 @blueprint.route(URL_BACKUP_FILE, methods=['GET'])
 def internal_backup_get_file():
-    return backup.backup_get_file(request.args.get('file'))
+    return server.backup_get_file(request.args.get('file'))
 
 
 @blueprint.route(URL_BACKUP_FILE, methods=['PUT'])
 def internal_backup_upload_file():
-    return backup.backup_upload_file(request.args.get('file'))
+    return server.backup_upload_file(request.args.get('file'))
 
 
 @blueprint.route(URL_BACKUP_FILE, methods=['DELETE'])
 def internal_backup_delete_file():
-    return backup.backup_delete_file(request.args.get('file'))
+    return server.backup_delete_file(request.args.get('file'))
 
 
 @blueprint.route(URL_BACKUP_PATCH_HASH, methods=['GET'])
 def internal_backup_get_file_hash():
-    return backup.backup_get_file_hash(request.args.get('file'))
+    return server.backup_get_file_hash(request.args.get('file'))
 
 
 @blueprint.route(URL_BACKUP_PATCH_DELTA, methods=['POST'])
 def internal_backup_get_file_delta():
-    return backup.backup_get_file_delta(request.args.get('file'))
+    return server.backup_get_file_delta(request.args.get('file'))
 
 
 @blueprint.route(URL_BACKUP_PATCH_FILE, methods=['POST'])
 def internal_backup_patch_file():
-    return backup.backup_patch_file(request.args.get('file'))
+    return server.backup_patch_file(request.args.get('file'))
 
 
 @blueprint.route(URL_RESTORE_FINISH, methods=['GET'])
 def internal_restore_finish():
-    return backup.restore_finish()
+    return server.restore_finish()

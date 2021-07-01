@@ -12,7 +12,6 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVI
 from hive.util.did_file_info import get_vault_path
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
-from src.modules.backup.backup_server import BackupServer
 from src.modules.scripting.scripting import check_auth
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.file_manager import fm
@@ -128,31 +127,3 @@ class VaultSubscription:
         if not name:
             return plans
         return list(filter(lambda p: p.get('name') == name, plans))
-
-
-class BackupSubscription:
-    def __init__(self):
-        self.server = BackupServer()
-
-    @hive_restful_response
-    def subscribe(self, credential):
-        if credential:
-            # TODO: Need support this with payment.
-            raise NotImplementedException(msg='Not support with credential.')
-        return self.server.subscribe_free()
-
-    @hive_restful_response
-    def unsubscribe(self):
-        self.server.unsubscribe()
-
-    @hive_restful_response
-    def activate(self):
-        raise NotImplementedException()
-
-    @hive_restful_response
-    def deactivate(self):
-        raise NotImplementedException()
-
-    @hive_restful_response
-    def get_info(self):
-        return self.server.get_info()

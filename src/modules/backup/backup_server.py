@@ -23,16 +23,19 @@ from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import VAULT_SERVICE_STATE_RUNNING
 from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
-    VAULT_BACKUP_MSG_FAILED, VAULT_BACKUP_STATE_RESTORE
+    VAULT_BACKUP_MSG_FAILED
 from src.modules.auth.auth import Auth
 from src.modules.scripting.scripting import check_auth2
 from src.utils.db_client import cli
 from src.utils.http_client import HttpClient, HttpServer
 from src.utils.http_exception import BackupIsInProcessingException, InsufficientStorageException, \
-    InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException
+    InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \
+    NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
 from src.utils.file_manager import fm
+from src.utils.http_response import hive_restful_response, hive_stream_response
+from src.utils.singleton import Singleton
 
 
 def clog():
@@ -263,11 +266,11 @@ class BackupClient:
         return {'state': state, 'result': result}
 
 
-class BackupServer:
+class BackupServer(metaclass=Singleton):
     def __init__(self):
         self.http_server = HttpServer()
 
-    def __check_auth_backup(self, is_raise=True, is_create=False):
+    def _check_auth_backup(self, is_raise=True, is_create=False):
         did, app_did = check_auth2()
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
                                   is_create=is_create, is_raise=False)
@@ -275,13 +278,13 @@ class BackupServer:
             raise BackupNotFoundException()
         return did, app_did, doc
 
-    def subscribe_free(self):
-        did, app_did, doc = self.__check_auth_backup(is_raise=False, is_create=True)
+    def _subscribe_free(self):
+        did, app_did, doc = self._check_auth_backup(is_raise=False, is_create=True)
         if doc:
             raise AlreadyExistsException('The backup vault is already subscribed.')
-        return self.__get_vault_info(self.__create_backup(did, PaymentConfig.get_free_backup_info()))
+        return self._get_vault_info(self._create_backup(did, PaymentConfig.get_free_backup_info()))
 
-    def __create_backup(self, did, price_plan):
+    def _create_backup(self, did, price_plan):
         now = datetime.utcnow().timestamp()  # seconds in UTC
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
         # there is no use of database for backup vault.
@@ -297,7 +300,7 @@ class BackupServer:
         cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, doc, is_create=True)
         return doc
 
-    def __get_vault_info(self, doc):
+    def _get_vault_info(self, doc):
         return {
             'pricing_plan': doc[VAULT_BACKUP_SERVICE_USING],
             'service_did': h_auth.get_did_string(),
@@ -307,8 +310,16 @@ class BackupServer:
             'updated': cli.timestamp_to_epoch(doc[VAULT_BACKUP_SERVICE_MODIFY_TIME]),
         }
 
+    @hive_restful_response
+    def subscribe(self, credential):
+        if credential:
+            # TODO: Need support this with payment.
+            raise NotImplementedException(msg='Not support with credential.')
+        return self._subscribe_free()
+
+    @hive_restful_response
     def unsubscribe(self):
-        did, _, doc = self.__check_auth_backup(is_raise=False)
+        did, _, doc = self._check_auth_backup(is_raise=False)
         if not doc:
             return
         backup_root = get_vault_backup_path(did)
@@ -319,17 +330,28 @@ class BackupServer:
                               {VAULT_BACKUP_SERVICE_DID: did},
                               is_check_exist=False)
 
-    def get_info(self):
-        _, _, doc = self.__check_auth_backup(is_create=True)
-        return self.__get_vault_info(doc)
+    @hive_restful_response
+    def activate(self):
+        raise NotImplementedException()
 
+    @hive_restful_response
+    def deactivate(self):
+        raise NotImplementedException()
+
+    @hive_restful_response
+    def get_info(self):
+        _, _, doc = self._check_auth_backup(is_create=True)
+        return self._get_vault_info(doc)
+
+    @hive_restful_response
     def get_backup_service(self):
-        _, _, doc = self.__check_auth_backup(is_create=True)
+        _, _, doc = self._check_auth_backup(is_create=True)
         del doc["_id"]
         return doc
 
+    @hive_restful_response
     def backup_finish(self, checksum_list):
-        did, _, doc = self.__check_auth_backup()
+        did, _, doc = self._check_auth_backup()
 
         backup_root = get_vault_backup_path(did)
         # TODO: remove this check.
@@ -346,53 +368,60 @@ class BackupServer:
                               {VAULT_BACKUP_SERVICE_DID: did},
                               {"$set": {VAULT_BACKUP_SERVICE_USE_STORAGE: get_dir_size(backup_root.as_posix(), 0)}})
 
+    @hive_restful_response
     def backup_files(self):
-        did, _, _ = self.__check_auth_backup()
+        did, _, _ = self._check_auth_backup()
         return {'backup_files': fm.get_file_checksum_list(get_vault_backup_path(did))}
 
+    @hive_stream_response
     def backup_get_file(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
-        did, _, _ = self.__check_auth_backup()
+        did, _, _ = self._check_auth_backup()
         return self.http_server.create_range_request((get_vault_backup_path(did) / file_name).resolve())
 
+    @hive_restful_response
     def backup_upload_file(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
-        did, _, _ = self.__check_auth_backup()
+        did, _, _ = self._check_auth_backup()
         fm.write_file_by_request_stream((get_vault_backup_path(did) / file_name).resolve())
 
+    @hive_restful_response
     def backup_delete_file(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
-        did, _, _ = self.__check_auth_backup()
+        did, _, _ = self._check_auth_backup()
         fm.delete_vault_file(did, file_name)
 
+    @hive_stream_response
     def backup_get_file_hash(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
-        did, _, _ = self.__check_auth_backup()
+        did, _, _ = self._check_auth_backup()
         return fm.get_hashes_by_file((get_vault_backup_path(did) / file_name).resolve())
 
+    @hive_stream_response
     def backup_get_file_delta(self, file_name):
         if not file_name:
             raise InvalidParameterException(msg='The file name must provide.')
 
-        did, _, _ = self.__check_auth_backup()
+        did, _, _ = self._check_auth_backup()
 
         data = request.get_data()
         hashes = fm.get_hashes_by_lines(list() if not data else data.split(b'\n'))
         return fm.get_rsync_data((get_vault_backup_path(did) / file_name).resolve(), hashes)
 
+    @hive_restful_response
     def backup_patch_file(self, file_name):
         if not file_name:
             raise InvalidParameterException()
 
-        did, _, _ = self.__check_auth_backup()
+        did, _, _ = self._check_auth_backup()
 
         temp_file = gene_temp_file_name()
         fm.write_file_by_request_stream(temp_file)
@@ -400,8 +429,9 @@ class BackupServer:
         temp_file.unlink()
         fm.apply_rsync_data((get_vault_backup_path(did) / file_name).resolve(), pickle_data)
 
+    @hive_restful_response
     def restore_finish(self):
-        did, _, _ = self.__check_auth_backup()
+        did, _, _ = self._check_auth_backup()
         backup_root = get_vault_backup_path(did)
         checksum_list = list()
         if backup_root.exists():

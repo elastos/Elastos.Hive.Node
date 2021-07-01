@@ -16,7 +16,6 @@ class Backup:
         self.app = app
         self.hive_setting = hive_setting
         self.client = BackupClient(app, hive_setting)
-        self.server = BackupServer()
         self.auth = Auth(app, hive_setting)
 
     @hive_restful_response
@@ -43,43 +42,3 @@ class Backup:
     @hive_restful_response
     def promotion(self):
         raise NotImplementedException()
-
-    @hive_restful_response
-    def backup_service(self):
-        return self.server.get_backup_service()
-
-    @hive_restful_response
-    def backup_finish(self, checksum_list):
-        return self.server.backup_finish(checksum_list)
-
-    @hive_restful_response
-    def backup_files(self):
-        return self.server.backup_files()
-
-    @hive_stream_response
-    def backup_get_file(self, file_name):
-        return self.server.backup_get_file(file_name)
-
-    @hive_restful_response
-    def backup_upload_file(self, file_name):
-        return self.server.backup_upload_file(file_name)
-
-    @hive_restful_response
-    def backup_delete_file(self, file_name):
-        self.server.backup_delete_file(file_name)
-
-    @hive_stream_response
-    def backup_get_file_hash(self, file_name):
-        return self.server.backup_get_file_hash(file_name)
-
-    @hive_stream_response
-    def backup_get_file_delta(self, file_name):
-        return self.server.backup_get_file_delta(file_name)
-
-    @hive_restful_response
-    def backup_patch_file(self, file_name):
-        self.server.backup_patch_file(file_name)
-
-    @hive_restful_response
-    def restore_finish(self):
-        return self.server.restore_finish()

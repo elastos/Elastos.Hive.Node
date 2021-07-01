@@ -5,17 +5,16 @@ The view of subscription module.
 """
 from flask import Blueprint, request
 
-from src.modules.subscription.subscription import VaultSubscription, BackupSubscription
+from src.modules.backup.backup_server import BackupServer
+from src.modules.subscription.subscription import VaultSubscription
 
 blueprint = Blueprint('subscription', __name__)
 vault_subscription = VaultSubscription()
-backup_subscription = BackupSubscription()
+backup_server = BackupServer()
 
 
 def init_app(app, hive_setting):
     """ This will be called by application initializer. """
-    # global scripting
-    # scripting = Scripting(app=app, hive_setting=hive_setting)
     app.register_blueprint(blueprint)
 
 
@@ -50,26 +49,30 @@ def vault_unsubscribe():
     return vault_subscription.unsubscribe()
 
 
+###############################################################################
+# blow is for backup.
+
+
 @blueprint.route('/api/v2/subscription/backup', methods=['GET'])
 def backup_get_info():
-    return backup_subscription.get_info()
+    return backup_server.get_info()
 
 
 @blueprint.route('/api/v2/subscription/backup', methods=['PUT'])
 def backup_subscribe():
     credential = request.args.get('credential')
-    return backup_subscription.subscribe(credential)
+    return backup_server.subscribe(credential)
 
 
 @blueprint.route('/api/v2/subscription/backup', methods=['POST'])
 def backup_activate_deactivate():
     op = None
     if op == 'activation':
-        return backup_subscription.activate()
+        return backup_server.activate()
     elif op == 'deactivation':
-        return backup_subscription.deactivate()
+        return backup_server.deactivate()
 
 
 @blueprint.route('/api/v2/subscription/backup', methods=['DELETE'])
 def backup_unsubscribe():
-    return backup_subscription.unsubscribe()
+    return backup_server.unsubscribe()

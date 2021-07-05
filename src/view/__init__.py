@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from hive.settings import hive_setting
-from src.view import scripting, subscription, files, database, auth, backup
+from src.view import scripting, subscription, files, database, auth, backup, payment
 
 
 def init_app(app, mode):
@@ -10,3 +10,4 @@ def init_app(app, mode):
     scripting.init_app(app, hive_setting)
     files.init_app(app, hive_setting)
     database.init_app(app, hive_setting)
+    payment.init_app(app, hive_setting)

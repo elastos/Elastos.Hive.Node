@@ -87,14 +87,15 @@ class DatabaseClient:
     def insert_one(self, did, app_id, collection_name, document, options=None, is_create=False):
         return self.insert_one_origin(gene_mongo_db_name(did, app_id), collection_name, document, options, is_create)
 
-    def insert_one_origin(self, db_name, collection_name, document, options=None, is_create=False):
+    def insert_one_origin(self, db_name, collection_name, document, options=None, is_create=False, is_extra=True):
         col = self.get_origin_collection(db_name, collection_name, is_create)
         if not col:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
-        document['created'] = datetime.strptime(document["created"], DATETIME_FORMAT) \
-            if 'created' in document else datetime.utcnow()
-        document['modified'] = datetime.utcnow()
+        if is_extra:
+            document['created'] = datetime.strptime(document["created"], DATETIME_FORMAT) \
+                if 'created' in document else datetime.utcnow()
+            document['modified'] = datetime.utcnow()
 
         result = col.insert_one(convert_oid(document), **(options if options else {}))
         return {

@@ -50,7 +50,7 @@ class VaultSubscription:
                VAULT_SERVICE_MODIFY_TIME: now,
                VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
                VAULT_SERVICE_PRICING_USING: price_plan['name']}
-        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, doc, is_create=True)
+        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, doc, is_create=True, is_extra=False)
         # INFO: user database will create with first collection creation.
         if not fm.create_dir(get_vault_path(did)):
             raise BadRequestException('Failed to create folder for the user.')

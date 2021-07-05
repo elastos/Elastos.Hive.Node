@@ -42,7 +42,7 @@ class VaultSubscription:
         now = datetime.utcnow().timestamp()  # seconds in UTC
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
         doc = {VAULT_SERVICE_DID: did,
-               VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1000 * 1000,
+               VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,
                VAULT_SERVICE_FILE_USE_STORAGE: 0,
                VAULT_SERVICE_DB_USE_STORAGE: 0,
                VAULT_SERVICE_START_TIME: now,
@@ -61,7 +61,7 @@ class VaultSubscription:
             'pricing_plan': doc[VAULT_SERVICE_PRICING_USING],
             'service_did': h_auth.get_did_string(),
             'storage_quota': int(doc[VAULT_SERVICE_MAX_STORAGE]),
-            'storage_used': int(doc[VAULT_SERVICE_FILE_USE_STORAGE]),
+            'storage_used': int(doc[VAULT_SERVICE_FILE_USE_STORAGE]) + int(doc[VAULT_SERVICE_DB_USE_STORAGE]),
             'created': cli.timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),
             'updated': cli.timestamp_to_epoch(doc[VAULT_SERVICE_MODIFY_TIME]),
         }

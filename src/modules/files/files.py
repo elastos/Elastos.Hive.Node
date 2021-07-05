@@ -41,20 +41,21 @@ class Files:
         }
 
     def upload_file_by_did(self, did, app_did, path):
-        full_path = self._upload_file_from_request_stream(did, app_did, path)
-        inc_vault_file_use_storage_byte(did, os.path.getsize(full_path.as_posix()))
+        full_path, old_file_size = self._upload_file_from_request_stream(did, app_did, path)
+        inc_vault_file_use_storage_byte(did, os.path.getsize(full_path.as_posix()) - old_file_size)
 
     def _upload_file_from_request_stream(self, did, app_did, path):
         full_path, err = query_upload_get_filepath(did, app_did, path)
         if err:
             raise BadRequestException(msg=f'Failed to get upload file full path: "{str(err)}"')
 
-        temp_file = self._upload_file2temp()
+        temp_file, old_file_size = self._upload_file2temp(), 0
         if full_path.exists():
+            old_file_size = os.path.getsize(full_path.as_posix())
             full_path.unlink()
         shutil.move(temp_file.as_posix(), full_path.as_posix())
 
-        return full_path
+        return full_path, old_file_size
 
     def _upload_file2temp(self):
         temp_file = gene_temp_file_name()

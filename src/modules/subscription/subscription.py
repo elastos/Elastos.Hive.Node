@@ -13,6 +13,7 @@ from hive.util.did_file_info import get_vault_path
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
 from src.modules.scripting.scripting import check_auth
+from src.utils import singleton
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
@@ -20,7 +21,7 @@ from src.utils.http_exception import AlreadyExistsException, NotImplementedExcep
 from src.utils.http_response import hive_restful_response
 
 
-class VaultSubscription:
+class VaultSubscription(metaclass=singleton):
     def __init__(self):
         pass
 
@@ -127,3 +128,6 @@ class VaultSubscription:
         if not name:
             return plans
         return list(filter(lambda p: p.get('name') == name, plans))
+
+    def get_price_plans_version(self):
+        return PaymentConfig.get_all_package_info().get('version', '1.0')

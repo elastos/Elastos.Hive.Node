@@ -3,16 +3,17 @@
 """
 The entrance for payment module.
 """
+from src.modules.subscription.subscription import VaultSubscription
 from src.utils.http_response import hive_restful_response
 
 
 class Payment:
     def __init__(self):
-        pass
+        self.vault_subscription = VaultSubscription()
 
     @hive_restful_response
     def get_version(self):
-        pass
+        return {'version': self.vault_subscription.get_price_plans_version()}
 
     @hive_restful_response
     def place_order(self, json_body):

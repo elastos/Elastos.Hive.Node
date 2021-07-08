@@ -323,3 +323,26 @@ class Auth(Entity, metaclass=Singleton):
             raise InvalidParameterException(msg=f'backup_auth: failed to get the issuer of the challenge.')
 
         return body["token"]
+
+    def create_order_proof(self, user_did):
+        doc = lib.DIDStore_LoadDID(self.store, self.did)
+        if not doc:
+            raise BadRequestException('Can not load service instance document in creating order proof.')
+
+        builder = lib.DIDDocument_GetJwtBuilder(doc)
+        if not builder:
+            raise BadRequestException(msg='Can not get builder from doc in creating order proof.')
+
+        lib.JWTBuilder_SetHeader(builder, "typ".encode(), "JWT".encode())
+        lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
+        lib.JWTBuilder_SetSubject(builder, 'ORDER_PROOF'.encode())
+        lib.JWTBuilder_SetAudience(builder, user_did.encode())
+        lib.JWTBuilder_SetExpiration(builder, datetime.utcnow().timestamp() + 7 * 24 * 3600)
+
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
+        proof = lib.JWTBuilder_Compact(builder)
+        lib.JWTBuilder_Destroy(builder)
+        if not proof:
+            raise BadRequestException(msg='Can not build token in creating order proof.')
+
+        return ffi.string(proof).decode()

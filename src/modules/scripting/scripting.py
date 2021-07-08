@@ -51,6 +51,7 @@ def check_auth_and_vault(permission):
 
 
 def validate_exists(json_data, parent_name, prop_list):
+    """ check the input parameters exist, support dot, such as: a.b.c """
     for prop in prop_list:
         parts = prop.split('.')
         prop_name = parent_name + '.' + parts[0] if parent_name else parts[0]

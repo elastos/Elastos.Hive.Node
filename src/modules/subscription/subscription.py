@@ -106,6 +106,7 @@ class VaultSubscription(metaclass=Singleton):
             raise VaultNotFoundException()
         return self.__get_vault_info(doc)
 
+    @hive_restful_response
     def get_price_plans(self, subscription, name):
         all_plans = PaymentConfig.get_all_package_info()
         result = {'version': all_plans.get('version', '1.0')}
@@ -123,6 +124,15 @@ class VaultSubscription(metaclass=Singleton):
             if not result['backupPlans']:
                 raise PricePlanNotFoundException()
         return result
+
+    def get_price_plan(self, subscription, name):
+        all_plans = PaymentConfig.get_all_package_info()
+        plans = []
+        if subscription == 'vault':
+            plans = self.__filter_plans_by_name(all_plans.get('pricingPlans', []), name)
+        elif subscription == 'backup':
+            plans = self.__filter_plans_by_name(all_plans.get('backupPlans', []), name)
+        return plans[0] if plans else None
 
     def __filter_plans_by_name(self, plans, name):
         if not name:

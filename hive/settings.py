@@ -109,6 +109,10 @@ class HiveSetting:
         return self.env_config('HIVE_PAYMENT_CONFIG', default="./payment_config.json", cast=str)
 
     @property
+    def HIVE_PAYMENT_ADDRESS(self):
+        return self.env_config('HIVE_PAYMENT_ADDRESS', default='', cast=str)
+
+    @property
     def HIVE_SENTRY_DSN(self):
         return self.env_config('HIVE_SENTRY_DSN', default="", cast=str)
 

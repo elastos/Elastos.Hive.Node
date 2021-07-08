@@ -37,4 +37,6 @@ def get_orders():
     payment.get_orders(subscription, order_id)
 
 
-# TODO: get the receipt by order id.
+@blueprint.route('/api/v2/payment/receipt', methods=['GET'])
+def get_receipt_info():
+    payment.get_receipt_info(request.args.get('order_id'))

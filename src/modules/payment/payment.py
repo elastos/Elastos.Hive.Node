@@ -26,3 +26,7 @@ class Payment:
     @hive_restful_response
     def get_orders(self, subscription, order_id):
         pass
+
+    @hive_restful_response
+    def get_receipt_info(self, order_id):
+        pass

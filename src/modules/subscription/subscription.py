@@ -13,15 +13,15 @@ from hive.util.did_file_info import get_vault_path
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
 from src.modules.scripting.scripting import check_auth
-from src.utils import singleton
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
     PricePlanNotFoundException, BadRequestException
 from src.utils.http_response import hive_restful_response
+from src.utils.singleton import Singleton
 
 
-class VaultSubscription(metaclass=singleton):
+class VaultSubscription(metaclass=Singleton):
     def __init__(self):
         pass
 

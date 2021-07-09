@@ -77,10 +77,13 @@ class Payment:
         did, app_did = check_auth()
         order, transaction_id, paid_did = self._check_pay_order_params(did, app_did, order_id, json_body)
         receipt = self._update_transaction_id(did, app_did, order, transaction_id, paid_did)
+        return self.get_receipt_vo(order, receipt)
+
+    def get_receipt_vo(self, order, receipt):
         return {
             COL_RECEIPTS_ID: receipt['id'],
             COL_RECEIPTS_ORDER_ID: str(order['_id']),
-            COL_RECEIPTS_TRANSACTION_ID: transaction_id,
+            COL_RECEIPTS_TRANSACTION_ID: receipt[COL_RECEIPTS_TRANSACTION_ID],
             COL_ORDERS_PRICING_NAME: order[COL_ORDERS_PRICING_NAME],
             COL_RECEIPTS_PAID_DID: receipt[COL_RECEIPTS_PAID_DID],
             COL_ORDERS_ELA_AMOUNT: order[COL_ORDERS_ELA_AMOUNT],
@@ -88,6 +91,16 @@ class Payment:
         }
 
     def _check_pay_order_params(self, did, app_did, order_id, json_body):
+        order = self.check_param_order_id(did, app_did, order_id)
+        if not json_body:
+            raise InvalidParameterException(msg='Request body should not empty.')
+        validate_exists(json_body, '', 'transaction_id')
+
+        transaction_id = json_body.get('transaction_id', None)
+        paid_did = self._check_transaction_id(order, transaction_id)
+        return order, transaction_id, paid_did
+
+    def check_param_order_id(self, did, app_did, order_id):
         if not order_id:
             raise InvalidParameterException(msg='Order id MUST be provided.')
 
@@ -95,13 +108,7 @@ class Payment:
         if not doc or doc[DID] != did or doc[APP_DID] != app_did:
             raise InvalidParameterException(msg='Order id is invalid.')
 
-        if not json_body:
-            raise InvalidParameterException(msg='Request body should not empty.')
-        validate_exists(json_body, '', 'transaction_id')
-
-        transaction_id = json_body.get('transaction_id', None)
-        paid_did = self._check_transaction_id(doc, transaction_id)
-        return doc, transaction_id, paid_did
+        return doc
 
     def _check_transaction_id(self, doc, transaction_id):
         # TODO: verify the transaction id online.
@@ -124,8 +131,31 @@ class Payment:
 
     @hive_restful_response
     def get_orders(self, subscription, order_id):
-        pass
+        did, app_did = check_auth()
+        if subscription not in ('vault', 'backup'):
+            raise InvalidParameterException(msg=f'Invalid subscription: {subscription}.')
+
+        col_filter = {}
+        if subscription:
+            col_filter[COL_ORDERS_SUBSCRIPTION] = subscription
+        if order_id:
+            col_filter[COL_RECEIPTS_ORDER_ID] = order_id
+        orders = cli.find_many_origin(DID_INFO_DB_NAME, COL_RECEIPTS, col_filter, is_raise=False)
+        return {
+            'orders': map(lambda o: {'order_id': str(o['_id']),
+                                     COL_ORDERS_SUBSCRIPTION: o[COL_ORDERS_SUBSCRIPTION],
+                                     COL_ORDERS_PRICING_NAME: o[COL_ORDERS_PRICING_NAME],
+                                     COL_ORDERS_ELA_AMOUNT: o[COL_ORDERS_ELA_AMOUNT],
+                                     COL_ORDERS_ELA_ADDRESS: o[COL_ORDERS_ELA_ADDRESS],
+                                     COL_ORDERS_PROOF: o[COL_ORDERS_PROOF]}, orders)
+        }
 
     @hive_restful_response
     def get_receipt_info(self, order_id):
-        pass
+        did, app_did = check_auth()
+        order = self.check_param_order_id(did, app_did, order_id)
+        receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
+                                      {COL_RECEIPTS_ORDER_ID: order_id}, is_raise=False)
+        if not receipt:
+            raise InvalidParameterException(msg='Receipt can not be found.')
+        return self.get_receipt_vo(order, receipt)

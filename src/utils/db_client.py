@@ -73,6 +73,14 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **options))
 
+    def find_many_origin(self, db_name, collection_name, col_filter, options=None, is_create=True, is_raise=True):
+        col = self.get_origin_collection(db_name, collection_name, is_create=is_create)
+        if not col:
+            if not is_raise:
+                return []
+            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+        return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
+
     def find_one(self, did, app_id, collection_name, col_filter, options=None):
         return self.find_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter, options)
 

@@ -22,9 +22,9 @@ from src.utils.singleton import Singleton
 
 class Payment(metaclass=Singleton):
     def __init__(self, app, hive_setting):
-        self.vault_subscription = VaultSubscription()
         self.ela_address = hive_setting.HIVE_PAYMENT_ADDRESS
         self.auth = Auth(app, hive_setting)
+        self.vault_subscription = VaultSubscription(app, hive_setting)
 
     @hive_restful_response
     def get_version(self):
@@ -59,12 +59,18 @@ class Payment(metaclass=Singleton):
             COL_ORDERS_PRICING_NAME: plan['name'],
             COL_ORDERS_ELA_AMOUNT: plan['amount'],
             COL_ORDERS_ELA_ADDRESS: self.ela_address,
-            COL_ORDERS_PROOF: self.auth.create_order_proof(did),
+            COL_ORDERS_PROOF: '',
             CREATE_TIME: now,
             MODIFY_TIME: now
         }
+
         res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_ORDERS, doc, is_create=True, is_extra=False)
+
         doc['order_id'] = res['inserted_id']
+        doc[COL_ORDERS_PROOF] = self.auth.create_order_proof(did, doc['order_id'])
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(doc['order_id'])},
+                              {'$set': {COL_ORDERS_PROOF: doc[COL_ORDERS_PROOF]}})
+
         return {k: doc[k] for k in doc.keys() if k in ['order_id',
                                                        COL_ORDERS_SUBSCRIPTION,
                                                        COL_ORDERS_PRICING_NAME,
@@ -77,6 +83,7 @@ class Payment(metaclass=Singleton):
         did, app_did = check_auth()
         order, transaction_id, paid_did = self._check_pay_order_params(did, order_id, json_body)
         receipt = self._create_receipt(did, order, transaction_id, paid_did)
+        self.vault_subscription.upgrade_vault_plan(order[COL_ORDERS_PRICING_NAME])
         return self.get_receipt_vo(order, receipt)
 
     def get_receipt_vo(self, order, receipt):

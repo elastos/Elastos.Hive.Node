@@ -28,6 +28,7 @@ class VaultSubscription(metaclass=Singleton):
 
     @hive_restful_response
     def subscribe(self, credential):
+        # TODO: remove the parameter 'credential'
         return self._subscribe_by_receipt(credential)
 
     def _subscribe_by_receipt(self, receipt_id):
@@ -149,3 +150,7 @@ class VaultSubscription(metaclass=Singleton):
 
     def get_price_plans_version(self):
         return PaymentConfig.get_all_package_info().get('version', '1.0')
+
+    def upgrade_vault_plan(self, pricing_name):
+        # TODO: to be implemented.
+        pass

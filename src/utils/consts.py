@@ -14,6 +14,7 @@ URL_RESTORE_FINISH = '/api/v2/internal_restore/finished_confirmation'
 
 DID = 'did'
 APP_DID = 'app_did'
+OWNER_ID = 'owner_id'
 CREATE_TIME = 'create_time'
 MODIFY_TIME = 'modify_time'
 

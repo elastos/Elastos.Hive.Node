@@ -12,32 +12,40 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVI
 from hive.util.did_file_info import get_vault_path
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
+from src.modules.payment.payment import Payment
 from src.modules.scripting.scripting import check_auth
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
-    PricePlanNotFoundException, BadRequestException
+    PricePlanNotFoundException, BadRequestException, InvalidParameterException
 from src.utils.http_response import hive_restful_response
 from src.utils.singleton import Singleton
 
 
 class VaultSubscription(metaclass=Singleton):
-    def __init__(self):
-        pass
+    def __init__(self, app, hive_setting):
+        self.payment = Payment(app, hive_setting)
 
     @hive_restful_response
     def subscribe(self, credential):
-        if credential:
-            # TODO: Need support this with payment.
-            raise NotImplementedException(msg='Not support with credential.')
-        return self.__subscribe_free()
+        return self._subscribe_by_receipt(credential)
 
-    def __subscribe_free(self):
+    def _subscribe_by_receipt(self, receipt_id):
         did, app_id = check_auth()
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_create=True)
         if doc:
             raise AlreadyExistsException(msg='The vault is already subscribed.')
-        return self.__get_vault_info(self.__create_vault(did, PaymentConfig.get_free_vault_info()))
+        return self.__get_vault_info(
+            self.__create_vault(did, self._get_pricing_plan_info_by_receipt(did, receipt_id)))
+
+    def _get_pricing_plan_info_by_receipt(self, did, receipt_id):
+        name = 'Free'
+        if receipt_id:
+            name = self.payment.get_name_by_receipt_id(did, 'vault', receipt_id)
+        plan = self.get_price_plan('vault', name)
+        if not plan:
+            raise InvalidParameterException(msg=f'Can not find the plan by name {name}')
+        return plan
 
     def __create_vault(self, did, price_plan):
         now = datetime.utcnow().timestamp()  # seconds in UTC

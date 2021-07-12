@@ -47,8 +47,7 @@ def init_rootidentity(store, mnemonic, storepass, passphrase):
     id = lib.RootIdentity_CreateId(mnemonic, passphrase)
     assert(id is not None)
 
-    ret = lib.DIDStore_ContainsRootIdentity(store, id)
-    if ret:
+    if lib.DIDStore_ContainsRootIdentity(store, id) == 1:
         identity = lib.DIDStore_LoadRootIdentity(store, id)
         if identity:
             return identity
@@ -68,7 +67,7 @@ def get_did(identity):
     return did
 
 def check_did(store, did):
-    if lib.DIDStore_ContainsDID(store, did) == 0 and lib.DIDSotre_ContainsPrivateKeys(store, did) == 0:
+    if lib.DIDStore_ContainsDID(store, did) == 1 and lib.DIDSotre_ContainsPrivateKeys(store, did) == 1:
         doc = lib.DIDStore_LoadDID(store, did)
         if doc:
             return doc

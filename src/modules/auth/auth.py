@@ -44,7 +44,7 @@ class Auth(Entity, metaclass=Singleton):
     def __get_app_instance_did(self, app_instance_doc):
         doc_str = json.dumps(app_instance_doc)
         app_instance_doc = lib.DIDDocument_FromJson(doc_str.encode())
-        if not app_instance_doc or not lib.DIDDocument_IsValid(app_instance_doc):
+        if not app_instance_doc or lib.DIDDocument_IsValid(app_instance_doc) != 1:
             raise BadRequestException(msg='The did document is invalid in getting app instance did.')
 
         did = lib.DIDDocument_GetSubject(app_instance_doc)
@@ -135,7 +135,7 @@ class Auth(Entity, metaclass=Singleton):
         if not presentation_cstr:
             raise BadRequestException(msg='Can not get presentation cstr.')
         presentation = lib.Presentation_FromJson(presentation_cstr)
-        if not presentation or not lib.Presentation_IsValid(presentation):
+        if not presentation or lib.Presentation_IsValid(presentation) != 1:
             raise BadRequestException(msg='The presentation is invalid.')
         if lib.Presentation_GetCredentialCount(presentation) < 1:
             raise BadRequestException(msg='No presentation credential exists.')
@@ -196,7 +196,7 @@ class Auth(Entity, metaclass=Singleton):
         if not vc_str:
             raise BadRequestException(msg='The presentation credential does not exist.')
         vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
-        if not vc or not lib.Credential_IsValid(vc):
+        if not vc or lib.Credential_IsValid(vc) != 1:
             raise BadRequestException(msg='The presentation credential is invalid.')
         exp_time = lib.Credential_GetExpirationDate(vc)
         if exp_time <= 0:

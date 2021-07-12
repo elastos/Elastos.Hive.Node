@@ -324,7 +324,7 @@ class Auth(Entity, metaclass=Singleton):
 
         return body["token"]
 
-    def create_order_proof(self, user_did):
+    def create_order_proof(self, user_did, order_id):
         doc = lib.DIDStore_LoadDID(self.store, self.did)
         if not doc:
             raise BadRequestException('Can not load service instance document in creating order proof.')
@@ -338,6 +338,9 @@ class Auth(Entity, metaclass=Singleton):
         lib.JWTBuilder_SetSubject(builder, 'ORDER_PROOF'.encode())
         lib.JWTBuilder_SetAudience(builder, user_did.encode())
         lib.JWTBuilder_SetExpiration(builder, datetime.utcnow().timestamp() + 7 * 24 * 3600)
+        lib.JWTBuilder_SetClaim(builder, "props".encode(), json.dumps({'order_id': order_id,
+                                                                       'user_did': user_did,
+                                                                       'service_did': self.did}).encode())
 
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
         proof = lib.JWTBuilder_Compact(builder)

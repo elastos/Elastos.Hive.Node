@@ -33,6 +33,7 @@ function setup_venv () {
         python3 -m venv .venv
         source .venv/bin/activate
         pip install --upgrade pip
+        pip install markupsafe
         # pip install --global-option=build_ext --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" -r requirements.txt
         CPPFLAGS=-I/usr/local/opt/openssl/include LDFLAGS=-L/usr/local/opt/openssl/lib ARCHFLAGS="-arch x86_64" \
           pip install --global-option=build_ext --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" -r requirements.txt

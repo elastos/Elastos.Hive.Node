@@ -48,7 +48,7 @@ class RemoteResolver(metaclass=Singleton):
         doc_c = lib.DIDStore_LoadDID(self.app_did.store, self.app_did.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc_c, True)).decode()
         doc = json.loads(doc_str)
-        response = self.http_client.post('/signin', json.dumps({"id": doc}), need_token=False)
+        response = self.http_client.post('/signin', {"id": doc}, need_token=False)
         assert response.status_code == 201
         return response.json()["challenge"]
 
@@ -69,7 +69,7 @@ class RemoteResolver(metaclass=Singleton):
 
     def auth(self, challenge):
         auth_token = self.__get_auth_token(challenge)
-        response = self.http_client.post('/auth', json.dumps({"challenge_response": auth_token}), need_token=False)
+        response = self.http_client.post('/auth', {"challenge_response": auth_token}, need_token=False)
         assert response.status_code == 201
         return response.json()["token"]
 

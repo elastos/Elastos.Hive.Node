@@ -151,6 +151,37 @@ class VaultSubscription(metaclass=Singleton):
     def get_price_plans_version(self):
         return PaymentConfig.get_all_package_info().get('version', '1.0')
 
-    def upgrade_vault_plan(self, pricing_name):
-        # TODO: to be implemented.
-        pass
+    def check_vault_exist(self, did):
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_raise=False)
+        if not doc:
+            raise VaultNotFoundException()
+        return doc
+
+    def upgrade_vault_plan(self, did, vault, pricing_name):
+        remain_days = 0
+        now = datetime.utcnow().timestamp()  # seconds in UTC
+        plan = self.get_price_plan('vault', pricing_name)
+        if vault[VAULT_SERVICE_PRICING_USING] != 'Free':
+            cur_plan = self.get_price_plan('vault', vault[VAULT_SERVICE_PRICING_USING])
+            remain_days = self._get_remain_days(cur_plan, vault[VAULT_SERVICE_END_TIME], now, plan)
+
+        end_time = -1 if plan['serviceDays'] == -1 else now + (plan['serviceDays'] + remain_days) * 24 * 60 * 60
+        col_filter = {VAULT_SERVICE_DID: did}
+        update = {VAULT_SERVICE_PRICING_USING: pricing_name,
+                  VAULT_SERVICE_MAX_STORAGE: int(plan["maxStorage"]) * 1024 * 1024,
+                  VAULT_SERVICE_START_TIME: now,
+                  VAULT_SERVICE_END_TIME: end_time,
+                  VAULT_SERVICE_MODIFY_TIME: now,
+                  VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING}
+
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter, {"$set": update})
+
+    def _get_remain_days(self, cur_plan, cur_end_timestamp, now_timestamp, plan):
+        if cur_plan['amount'] < 0.01 or cur_plan['serviceDays'] == -1 or cur_end_timestamp == -1:
+            return 0
+        if plan['amount'] < 0.01 or plan['serviceDays'] == -1:
+            return 0
+        if cur_end_timestamp <= now_timestamp:
+            return 0
+        days = (now_timestamp - cur_end_timestamp) / (24 * 60 * 60)
+        return days * cur_plan['amount'] / plan['amount']

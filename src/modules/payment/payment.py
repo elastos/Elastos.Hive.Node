@@ -3,6 +3,7 @@
 """
 The entrance for payment module.
 """
+import json
 from datetime import datetime
 
 from bson import ObjectId
@@ -14,8 +15,9 @@ from src.utils.consts import COL_ORDERS, DID, COL_ORDERS_SUBSCRIPTION, COL_ORDER
     COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, COL_ORDERS_PROOF, CREATE_TIME, MODIFY_TIME, \
     COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, OWNER_ID
 from src.utils.db_client import cli
-from src.utils.http_exception import InvalidParameterException
+from src.utils.http_exception import InvalidParameterException, BadRequestException
 from src.utils.http_response import hive_restful_response
+from src.utils.resolver import ElaResolver
 from src.utils.singleton import Singleton
 
 
@@ -25,6 +27,7 @@ class Payment(metaclass=Singleton):
         self.ela_address = hive_setting.HIVE_PAYMENT_ADDRESS
         self.auth = Auth(app, hive_setting)
         self.vault_subscription = None
+        self.ela_resolver = ElaResolver(hive_setting.ELA_RESOLVER)
 
     def get_vault_subscription(self):
         if not self.vault_subscription:
@@ -54,6 +57,9 @@ class Payment(metaclass=Singleton):
         plan = self.get_vault_subscription().get_price_plan(subscription, pricing_name)
         if not plan:
             raise InvalidParameterException(msg=f'Invalid pricing_name: {pricing_name}.')
+
+        if plan['amount'] <= 0:
+            raise InvalidParameterException(msg=f'Invalid pricing_name which is free.')
 
         return subscription, plan
 
@@ -118,16 +124,38 @@ class Payment(metaclass=Singleton):
         if not order_id:
             raise InvalidParameterException(msg='Order id MUST be provided.')
 
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(order_id),
-                                                                 DID: did}, is_raise=False)
-        if not doc:
+        order = cli.find_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(order_id),
+                                                                   DID: did}, is_raise=False)
+        if not order:
             raise InvalidParameterException(msg='Order id is invalid.')
 
-        return doc
+        receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {'order_id': order_id}, is_raise=False)
+        if receipt:
+            raise InvalidParameterException(msg='Order id is invalid which is already paid.')
+
+        return order
 
     def _check_transaction_id(self, did, order, transaction_id):
-        # TODO: verify the transaction id online: transaction id existence, proof, ela amount, paid did?, target_address
+        result = self.ela_resolver.get_transaction_info(transaction_id)
+        # TODO:
+        # if result['time'] < 1:
+        #     raise BadRequestException(msg='invalid transaction id with result time less than 1')
+        # TODO: unfold the proof
+        if self.get_proof_by_memo(result['attributes'][0]['data']) != order[COL_ORDERS_PROOF]:
+            raise BadRequestException(msg='invalid transaction id with result time less than 1')
+        amount, address = float(result['vout'][0]['value']), result['vout'][0]['address']
+        if amount - order[COL_ORDERS_ELA_AMOUNT] < -0.01 or order[COL_ORDERS_ELA_ADDRESS] != address:
+            raise BadRequestException(msg='invalid transaction id with no more amount or invalid address')
         return did
+
+    def get_proof_by_memo(self, memo):
+        try:
+            json_memo = json.loads(self.ela_resolver.hexstring_to_bytes(memo, reverse=False).decode('utf-8'))
+            if not isinstance(json_memo, dict) or json_memo.get('source') != 'hive node':
+                raise BadRequestException(msg='invalid transaction id with invalid memo type')
+            return json_memo.get('proof')
+        except Exception as e:
+            raise BadRequestException(msg=f'invalid transaction id with invalid memo: {str(e)}')
 
     def _create_receipt(self, did, order, transaction_id, paid_did):
         now = datetime.utcnow().timestamp()

@@ -37,7 +37,7 @@ class PaymentTestCase(unittest.TestCase):
 
     def test03_pay_order(self):
         order_id = '60ed0f41a25b959b19a6acfb'
-        transaction_id = 'fake_transaction_id'
+        transaction_id = '3e1465e1ad3519e8e7ded3078d03a7133840e876eb5eb5598fc221a9c183a778'
         response = self.cli.post(f'/order/{order_id}', body={'transaction_id': transaction_id})
         self.assertEqual(response.status_code, 201)
         self.assertTrue('receipt_id' in response.json())

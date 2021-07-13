@@ -39,7 +39,7 @@ class DatabaseTestCase(unittest.TestCase):
             "options": {
                 "bypass_document_validation": False,
                 "ordered": True
-            }}, is_json=True)
+            }})
         self.assertEqual(response.status_code, 201)
         self.assertEqual(len(response.json().get('inserted_ids')), 2)
 
@@ -68,7 +68,7 @@ class DatabaseTestCase(unittest.TestCase):
                 "skip": 0,
                 "limit": 10,
                 "maxTimeMS": 1000000000
-            }}, is_json=True)
+            }})
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json().get('count'), 1)
 
@@ -94,7 +94,7 @@ class DatabaseTestCase(unittest.TestCase):
                 "return_key": False,
                 "show_record_id": False,
                 "batch_size": 0
-            }}, is_json=True)
+            }})
         self.assertEqual(response.status_code, 201)
         self.assertTrue('items' in response.json())
 

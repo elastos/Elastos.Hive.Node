@@ -83,9 +83,9 @@ class BackupTestCase(unittest.TestCase):
         return response.json()
 
     def backup(self, credential):
-        r = self.cli.post('/vault/content?to=hive_node', body={'credential': credential}, is_json=True)
+        r = self.cli.post('/vault/content?to=hive_node', body={'credential': credential})
         self.assertEqual(r.status_code, 201)
 
     def restore(self, credential):
-        r = self.cli.post('/vault/content?from=hive_node', body={'credential': credential}, is_json=True)
+        r = self.cli.post('/vault/content?from=hive_node', body={'credential': credential})
         self.assertEqual(r.status_code, 201)

@@ -51,7 +51,7 @@ class HiveAuth(Entity):
 
         doc_str = json.dumps(body.get('document', None))
         doc = lib.DIDDocument_FromJson(doc_str.encode())
-        if (not doc) or (not lib.DIDDocument_IsValid(doc)):
+        if (not doc) or (lib.DIDDocument_IsValid(doc) != 1):
             return self.response.response_err(BAD_REQUEST, "Thd did document is vaild")
 
         did = lib.DIDDocument_GetSubject(doc)
@@ -150,8 +150,7 @@ class HiveAuth(Entity):
         lib.JWT_Destroy(jws)
 
         # check vp
-        ret = lib.Presentation_IsValid(vp)
-        if not ret:
+        if lib.Presentation_IsValid(vp) != 1:
             return None, self.get_error_message("Presentation isValid")
         # print(ffi.string(vp_str).decode())
 
@@ -381,8 +380,7 @@ class HiveAuth(Entity):
         if not vc:
             return None, "The credential string is error, unable to rebuild to a credential object."
 
-        ret = lib.Credential_IsValid(vc)
-        if not ret:
+        if lib.Credential_IsValid(vc) != 1:
             return None, self.get_error_message("Credential isValid")
 
         vc_json = json.loads(vc_str)

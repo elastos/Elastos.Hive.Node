@@ -6,7 +6,7 @@ Testing file for scripting module.
 
 import unittest
 
-from tests.utils.http_client import HttpClient
+from tests.utils.http_client import HttpClient, TestConfig
 from tests import init_test
 
 
@@ -14,7 +14,8 @@ class SubscriptionTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.cli = HttpClient('http://localhost:5000/api/v2')
+        self.test_config = TestConfig()
+        self.cli = HttpClient(f'{self.test_config.host_url}/api/v2')
 
     def test01_vault_subscribe_free(self):
         response = self.cli.put('/subscription/vault')

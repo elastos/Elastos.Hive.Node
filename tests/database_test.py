@@ -8,7 +8,7 @@ import unittest
 
 import pymongo
 
-from tests.utils.http_client import HttpClient
+from tests.utils.http_client import HttpClient, TestConfig
 from tests import init_test
 
 
@@ -16,7 +16,8 @@ class DatabaseTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.cli = HttpClient('http://localhost:5000/api/v2/vault')
+        self.test_config = TestConfig()
+        self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/vault')
         self.collection_name = 'test_collection'
 
     def test01_create_collection(self):

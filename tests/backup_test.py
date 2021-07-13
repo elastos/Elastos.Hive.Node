@@ -6,15 +6,15 @@ Testing file for backup module.
 import unittest
 
 from tests import init_test
-from tests.utils.http_client import HttpClient, RemoteResolver
+from tests.utils.http_client import HttpClient, RemoteResolver, TestConfig
 
 
 class BackupTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.host_url = 'http://localhost:5000'
-        self.cli = HttpClient(f'{self.host_url}/api/v2')
+        self.test_config = TestConfig()
+        self.cli = HttpClient(f'{self.test_config.host_url}/api/v2')
         self.remote_resolver = RemoteResolver()
 
     def test01_get_state(self):
@@ -26,12 +26,12 @@ class BackupTestCase(unittest.TestCase):
     def test02_backup(self):
         # self.create_backup_vault()
         # self.prepare_backup_files()
-        self.backup(self.remote_resolver.get_backup_credential(self.host_url))
+        self.backup(self.remote_resolver.get_backup_credential(self.test_config.host_url))
 
     def test03_restore(self):
         # self.create_backup_vault()
         # self.prepare_restore_files()
-        self.restore(self.remote_resolver.get_backup_credential(self.host_url))
+        self.restore(self.remote_resolver.get_backup_credential(self.test_config.host_url))
 
     def create_backup_vault(self):
         response = self.cli.put('/subscription/backup')

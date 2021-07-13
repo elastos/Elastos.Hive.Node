@@ -20,25 +20,25 @@ def init_app(app, hive_setting):
 
 @blueprint.route('/api/v2/payment/version', methods=['GET'])
 def get_version():
-    payment.get_version()
+    return payment.get_version()
 
 
 @blueprint.route('/api/v2/payment/order', methods=['PUT'])
 def place_order():
-    payment.place_order(request.get_json(force=True, silent=True))
+    return payment.place_order(request.get_json(force=True, silent=True))
 
 
 @blueprint.route('/api/v2/payment/order/<order_id>', methods=['POST'])
 def pay_order(order_id):
-    payment.pay_order(order_id, request.get_json(force=True, silent=True))
+    return payment.pay_order(order_id, request.get_json(force=True, silent=True))
 
 
 @blueprint.route('/api/v2/payment/order', methods=['GET'])
 def get_orders():
     subscription, order_id = request.args.get('subscription'), request.args.get('order_id')
-    payment.get_orders(subscription, order_id)
+    return payment.get_orders(subscription, order_id)
 
 
 @blueprint.route('/api/v2/payment/receipt', methods=['GET'])
 def get_receipt_info():
-    payment.get_receipt_info(request.args.get('order_id'))
+    return payment.get_receipt_info(request.args.get('order_id'))

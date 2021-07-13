@@ -9,7 +9,7 @@ from src.modules.backup.backup_server import BackupServer
 from src.modules.subscription.subscription import VaultSubscription
 
 blueprint = Blueprint('subscription', __name__)
-vault_subscription: VaultSubscription = VaultSubscription()
+vault_subscription: VaultSubscription = None
 backup_server: BackupServer = BackupServer()
 
 

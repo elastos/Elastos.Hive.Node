@@ -11,13 +11,23 @@ from tests_v1.hive_auth_test import DApp, DIDApp
 from tests_v1 import test_common
 
 
+class TestConfig:
+    def __init__(self):
+        pass
+
+    @property
+    def host_url(self):
+        return 'http://localhost:5000'
+
+
 class RemoteResolver(metaclass=Singleton):
     def __init__(self):
         self.token = None
         self.user_did = DIDApp("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap", "")
         self.app_did = DApp("testapp", test_common.app_id,
                             "amount material swim purse swallow gate pride series cannon patient dentist person")
-        self.http_client = HttpClient('http://localhost:5000/api/v2/did')
+        self.test_config = TestConfig()
+        self.http_client = HttpClient(f'{self.test_config.host_url}/api/v2/did')
         self.node_did = None
 
     def get_token(self):

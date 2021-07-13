@@ -10,8 +10,7 @@ from bson import ObjectId
 from hive.util.constants import DID_INFO_DB_NAME
 from src.modules.auth.auth import Auth
 from src.modules.scripting.scripting import validate_exists, check_auth
-from src.modules.subscription.subscription import VaultSubscription
-from src.utils.consts import COL_ORDERS, DID, APP_DID, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, \
+from src.utils.consts import COL_ORDERS, DID, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, \
     COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, COL_ORDERS_PROOF, CREATE_TIME, MODIFY_TIME, \
     COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, OWNER_ID
 from src.utils.db_client import cli
@@ -22,13 +21,20 @@ from src.utils.singleton import Singleton
 
 class Payment(metaclass=Singleton):
     def __init__(self, app, hive_setting):
+        self.app, self.hive_setting = app, hive_setting
         self.ela_address = hive_setting.HIVE_PAYMENT_ADDRESS
         self.auth = Auth(app, hive_setting)
-        self.vault_subscription = VaultSubscription(app, hive_setting)
+        self.vault_subscription = None
+
+    def get_vault_subscription(self):
+        if not self.vault_subscription:
+            from src.modules.subscription.subscription import VaultSubscription
+            self.vault_subscription = VaultSubscription(self.app, self.hive_setting)
+        return self.vault_subscription
 
     @hive_restful_response
     def get_version(self):
-        return {'version': self.vault_subscription.get_price_plans_version()}
+        return {'version': self.get_vault_subscription().get_price_plans_version()}
 
     @hive_restful_response
     def place_order(self, json_body):
@@ -45,7 +51,7 @@ class Payment(metaclass=Singleton):
         if subscription not in ('vault', 'backup'):
             raise InvalidParameterException(msg=f'Invalid subscription: {subscription}.')
 
-        plan = self.vault_subscription.get_price_plan(subscription, pricing_name)
+        plan = self.get_vault_subscription().get_price_plan(subscription, pricing_name)
         if not plan:
             raise InvalidParameterException(msg=f'Invalid pricing_name: {pricing_name}.')
 
@@ -83,7 +89,7 @@ class Payment(metaclass=Singleton):
         did, app_did = check_auth()
         order, transaction_id, paid_did = self._check_pay_order_params(did, order_id, json_body)
         receipt = self._create_receipt(did, order, transaction_id, paid_did)
-        self.vault_subscription.upgrade_vault_plan(order[COL_ORDERS_PRICING_NAME])
+        self.get_vault_subscription().upgrade_vault_plan(order[COL_ORDERS_PRICING_NAME])
         return self.get_receipt_vo(order, receipt)
 
     def get_receipt_vo(self, order, receipt):

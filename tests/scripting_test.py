@@ -7,7 +7,7 @@ Testing file for scripting module.
 import unittest
 import json
 
-from tests.utils.http_client import HttpClient
+from tests.utils.http_client import HttpClient, TestConfig
 from tests import init_test
 from tests_v1 import test_common
 
@@ -16,7 +16,8 @@ class ScriptingTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.cli = HttpClient('http://localhost:5000/api/v2/vault')
+        self.test_config = TestConfig()
+        self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/vault')
         self.file_name = 'test.txt'
         self.file_content = 'File Content: 12345678'
         self.collection_name = 'script_database'

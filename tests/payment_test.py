@@ -20,3 +20,9 @@ class PaymentTestCase(unittest.TestCase):
     def test01_get_version(self):
         response = self.cli.get('/version')
         self.assertEqual(response.status_code, 200)
+        self.assertTrue('version' in response.json())
+
+    def test02_place_order(self):
+        response = self.cli.put('/order', body={'subscription': 'vault', 'pricing_name': 'Rookie'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('order_id' in response.json())

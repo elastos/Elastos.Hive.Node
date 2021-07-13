@@ -120,7 +120,7 @@ class HttpClient:
         return requests.get(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request
-    def post(self, relative_url, body=None, need_token=True, is_json=False):
+    def post(self, relative_url, body=None, need_token=True, is_json=True):
         if not is_json:
             return requests.post(self.__get_url(relative_url),
                                  headers=self.__get_headers(need_token=need_token, is_json=False), data=body)

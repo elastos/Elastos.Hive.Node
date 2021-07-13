@@ -87,9 +87,10 @@ class Payment(metaclass=Singleton):
     @hive_restful_response
     def pay_order(self, order_id, json_body):
         did, app_did = check_auth()
+        vault = self.get_vault_subscription().check_vault_exist(did)
         order, transaction_id, paid_did = self._check_pay_order_params(did, order_id, json_body)
         receipt = self._create_receipt(did, order, transaction_id, paid_did)
-        self.get_vault_subscription().upgrade_vault_plan(order[COL_ORDERS_PRICING_NAME])
+        self.get_vault_subscription().upgrade_vault_plan(did, vault, order[COL_ORDERS_PRICING_NAME])
         return self.get_receipt_vo(order, receipt)
 
     def get_receipt_vo(self, order, receipt):
@@ -107,7 +108,7 @@ class Payment(metaclass=Singleton):
         order = self.check_param_order_id(did, order_id)
         if not json_body:
             raise InvalidParameterException(msg='Request body should not empty.')
-        validate_exists(json_body, '', 'transaction_id')
+        validate_exists(json_body, '', ['transaction_id', ])
 
         transaction_id = json_body.get('transaction_id', None)
         paid_did = self._check_transaction_id(did, order, transaction_id)
@@ -126,7 +127,7 @@ class Payment(metaclass=Singleton):
 
     def _check_transaction_id(self, did, order, transaction_id):
         # TODO: verify the transaction id online: transaction id existence, proof, ela amount, paid did?, target_address
-        return None
+        return did
 
     def _create_receipt(self, did, order, transaction_id, paid_did):
         now = datetime.utcnow().timestamp()
@@ -135,8 +136,6 @@ class Payment(metaclass=Singleton):
             COL_RECEIPTS_ORDER_ID: str(order['_id']),
             COL_RECEIPTS_TRANSACTION_ID: transaction_id,
             COL_RECEIPTS_PAID_DID: paid_did,
-            # the flag for receipt usage.
-            OWNER_ID: '',
             CREATE_TIME: now,
             MODIFY_TIME: now
         }

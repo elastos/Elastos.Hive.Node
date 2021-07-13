@@ -28,9 +28,10 @@ class PaymentTestCase(unittest.TestCase):
         self.assertTrue('order_id' in response.json())
 
     def test03_pay_order(self):
-        order_id = '60ecea45e8a83c0c31bf4e33'
-        transaction_id = ''
-        response = self.cli.post(f'/order/{order_id}', body={'subscription': 'vault', 'pricing_name': 'Rookie'})
+        order_id = '60ed0f41a25b959b19a6acfb'
+        transaction_id = 'fake_transaction_id'
+        response = self.cli.post(f'/order/{order_id}', body={'transaction_id': transaction_id})
         self.assertEqual(response.status_code, 201)
+        self.assertTrue('receipt_id' in response.json())
         self.assertTrue('order_id' in response.json())
 

@@ -23,6 +23,14 @@ class FilesTestCase(unittest.TestCase):
         self.src_file_name2 = r'children/src_file2.txt'
         self.dst_file_name = 'dst_file'
 
+    @staticmethod
+    def _subscribe():
+        HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
+
+    @classmethod
+    def setUpClass(cls):
+        cls._subscribe()
+
     def test01_upload_file(self):
         response = self.cli.put(f'/files/{self.src_file_name}',
                                 self.src_file_content.encode(), is_json=False)

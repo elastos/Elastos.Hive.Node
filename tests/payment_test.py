@@ -17,6 +17,14 @@ class PaymentTestCase(unittest.TestCase):
         self.test_config = TestConfig()
         self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/payment')
 
+    @staticmethod
+    def _subscribe():
+        HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
+
+    @classmethod
+    def setUpClass(cls):
+        cls._subscribe()
+
     def test01_get_version(self):
         response = self.cli.get('/version')
         self.assertEqual(response.status_code, 200)

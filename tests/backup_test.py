@@ -17,6 +17,14 @@ class BackupTestCase(unittest.TestCase):
         self.cli = HttpClient(f'{self.test_config.host_url}/api/v2')
         self.remote_resolver = RemoteResolver()
 
+    @staticmethod
+    def _subscribe():
+        HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
+
+    @classmethod
+    def setUpClass(cls):
+        cls._subscribe()
+
     def test01_get_state(self):
         r = self.cli.get('/vault/content')
         self.assertEqual(r.status_code, 200)

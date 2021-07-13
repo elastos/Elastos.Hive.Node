@@ -20,11 +20,19 @@ class DatabaseTestCase(unittest.TestCase):
         self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/vault')
         self.collection_name = 'test_collection'
 
+    @staticmethod
+    def _subscribe():
+        HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
+
+    @classmethod
+    def setUpClass(cls):
+        cls._subscribe()
+
     def test01_create_collection(self):
-        self.__delete_collection()
         response = self.cli.put(f'/db/collections/{self.collection_name}')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('name'), self.collection_name)
+        self.assertTrue(response.status_code in [200, 455])
+        if response.status_code == 200:
+            self.assertEqual(response.json().get('name'), self.collection_name)
 
     def test02_insert_document(self):
         response = self.cli.post(f'/db/collection/{self.collection_name}', body={

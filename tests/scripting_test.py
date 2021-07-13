@@ -13,6 +13,8 @@ from tests_v1 import test_common
 
 
 class ScriptingTestCase(unittest.TestCase):
+    collection_name = 'script_database'
+
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
@@ -20,24 +22,30 @@ class ScriptingTestCase(unittest.TestCase):
         self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/vault')
         self.file_name = 'test.txt'
         self.file_content = 'File Content: 12345678'
-        self.collection_name = 'script_database'
-        # self.did = test_common.did
         self.did = 'did:elastos:ioRn3eEopRjA7CBRrrWQWzttAfXAjzvKMx'
         self.app_did = test_common.app_id
 
-    def __create_collection(self):
-        response = self.cli.put(f'/db/collections/{self.collection_name}')
-        self.assertEqual(response.status_code, 200)
+    @staticmethod
+    def _subscribe():
+        HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
 
-    def __delete_collection(self):
-        response = self.cli.delete(f'/db/{self.collection_name}')
-        self.assertEqual(response.status_code, 204)
+    @staticmethod
+    def _create_collection():
+        HttpClient(f'{TestConfig().host_url}/api/v2/vault').put(f'/db/collections/{ScriptingTestCase.collection_name}')
 
-    def setUp(self) -> None:
-        pass
+    @staticmethod
+    def _delete_collection():
+        HttpClient(f'{TestConfig().host_url}/api/v2/vault').delete(f'/db/{ScriptingTestCase.collection_name}')
 
-    def tearDown(self) -> None:
-        pass
+    @classmethod
+    def setUpClass(cls):
+        cls._subscribe()
+        cls._delete_collection()
+        cls._create_collection()
+
+    @classmethod
+    def tearDownClass(cls):
+        ScriptingTestCase._delete_collection()
 
     def __register_script(self, script_name, body):
         response = self.cli.put(f'/scripting/{script_name}', body)
@@ -50,8 +58,6 @@ class ScriptingTestCase(unittest.TestCase):
         return response.text if is_raw else json.loads(response.text)
 
     def test01_register_script(self):
-        self.__delete_collection()
-        self.__create_collection()
         self.__register_script('database_insert', {
             "executable": {
                 "output": True,
@@ -222,7 +228,6 @@ class ScriptingTestCase(unittest.TestCase):
     def test11_delete_script(self):
         response = self.cli.delete('/scripting/database_insert')
         self.assertEqual(response.status_code, 204)
-        self.__delete_collection()
 
     def __set_and_call_script(self, name, set_data, run_data):
         self.__register_script(name, set_data)

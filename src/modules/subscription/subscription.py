@@ -161,7 +161,7 @@ class VaultSubscription(metaclass=Singleton):
         remain_days = 0
         now = datetime.utcnow().timestamp()  # seconds in UTC
         plan = self.get_price_plan('vault', pricing_name)
-        if vault[VAULT_SERVICE_PRICING_USING] != 'Free':
+        if vault[VAULT_SERVICE_END_TIME] != -1:
             cur_plan = self.get_price_plan('vault', vault[VAULT_SERVICE_PRICING_USING])
             remain_days = self._get_remain_days(cur_plan, vault[VAULT_SERVICE_END_TIME], now, plan)
 
@@ -183,5 +183,5 @@ class VaultSubscription(metaclass=Singleton):
             return 0
         if cur_end_timestamp <= now_timestamp:
             return 0
-        days = (now_timestamp - cur_end_timestamp) / (24 * 60 * 60)
+        days = (cur_end_timestamp - now_timestamp) / (24 * 60 * 60)
         return days * cur_plan['amount'] / plan['amount']

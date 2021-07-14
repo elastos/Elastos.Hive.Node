@@ -136,6 +136,9 @@ class HiveSetting:
     def LANGUAGE(self):
         return "english"
 
+    @property
+    def PAYMENT_CHECK_EXPIRED(self):
+        return self.env_config('PAYMENT_CHECK_EXPIRED', default='True', cast=bool)
 
 
 hive_setting = HiveSetting()

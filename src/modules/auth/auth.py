@@ -379,10 +379,11 @@ class Auth(Entity, metaclass=Singleton):
             lib.JWT_Destroy(jws)
             raise BadRequestException(msg=f'the order_id of the proof not match: {props_json.get("order_id")}')
 
-        expired = lib.JWT_GetExpiration(jws)
-        now = int(datetime.now().timestamp()) + 7 * 24 * 3600
-        if now > expired:
-            lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=f'the proof is expired (valid for 7 days)')
+        if self.hive_setting.PAYMENT_CHECK_EXPIRED:
+            expired = lib.JWT_GetExpiration(jws)
+            now = int(datetime.now().timestamp()) + 7 * 24 * 3600
+            if now > expired:
+                lib.JWT_Destroy(jws)
+                raise BadRequestException(msg=f'the proof is expired (valid for 7 days)')
 
         lib.JWT_Destroy(jws)

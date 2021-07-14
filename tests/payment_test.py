@@ -47,3 +47,10 @@ class PaymentTestCase(unittest.TestCase):
         response = self.cli.get('/order?subscription=vault')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('orders' in response.json())
+
+    def test05_get_receipt(self):
+        order_id = '60ed0f41a25b959b19a6acfb'
+        response = self.cli.get(f'/receipt?order_id={order_id}')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('order_id' in response.json())
+        self.assertTrue('receipt_id' in response.json())

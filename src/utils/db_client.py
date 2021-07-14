@@ -55,7 +55,7 @@ class DatabaseClient:
     def __get_vault_service(self, did):
         return self.__get_connection()[DID_INFO_DB_NAME][VAULT_SERVICE_COL].find_one({VAULT_SERVICE_DID: did})
 
-    def check_vault_access(self, did, access_vault):
+    def check_vault_access(self, did, access_vault=None):
         """
         Check if the vault can be accessed by specific permission
         """
@@ -63,9 +63,10 @@ class DatabaseClient:
         if not info:
             raise VaultNotFoundException()
 
-        if (access_vault == VAULT_ACCESS_WR or access_vault == VAULT_ACCESS_DEL) \
-                and info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
-            raise ForbiddenException(msg="The vault can't be written.")
+        # INFO: no need check permission.
+        # if (access_vault == VAULT_ACCESS_WR or access_vault == VAULT_ACCESS_DEL) \
+        #         and info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
+        #     raise ForbiddenException(msg="The vault can't be written.")
 
     def find_many(self, did, app_id, collection_name, col_filter, options):
         col = self.get_user_collection(did, app_id, collection_name)
@@ -114,19 +115,24 @@ class DatabaseClient:
     def update_one(self, did, app_id, collection_name, col_filter, col_update, options):
         return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter, col_update, options)
 
-    def update_one_origin(self, db_name, collection_name, col_filter, col_update, options=None, is_create=False):
+    def update_one_origin(self, db_name, collection_name, col_filter, col_update,
+                          options=None, is_create=False, is_many=False, is_extra=False):
         col = self.get_origin_collection(db_name, collection_name, is_create=is_create)
         if not col:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
-        if '$setOnInsert' in col_update:
-            col_update["$setOnInsert"]['created'] = datetime.utcnow()
-        else:
-            col_update["$setOnInsert"] = {"created": datetime.utcnow()}
-        if "$set" in col_update:
-            col_update["$set"]["modified"] = datetime.utcnow()
+        if is_extra:
+            if '$setOnInsert' in col_update:
+                col_update["$setOnInsert"]['created'] = datetime.utcnow()
+            else:
+                col_update["$setOnInsert"] = {"created": datetime.utcnow()}
+            if "$set" in col_update:
+                col_update["$set"]["modified"] = datetime.utcnow()
 
-        result = col.update_one(convert_oid(col_filter), convert_oid(col_update, update=True), **(options if options else {}))
+        if is_many:
+            result = col.update_many(convert_oid(col_filter), convert_oid(col_update, update=True), **(options if options else {}))
+        else:
+            result = col.update_one(convert_oid(col_filter), convert_oid(col_update, update=True), **(options if options else {}))
         return {
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,

@@ -16,6 +16,8 @@ class PaymentTestCase(unittest.TestCase):
         init_test()
         self.test_config = TestConfig()
         self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/payment')
+        self.order_id = '60ed0f41a25b959b19a6acfb'
+        self.transaction_id = '3e1465e1ad3519e8e7ded3078d03a7133840e876eb5eb5598fc221a9c183a778'
 
     @staticmethod
     def _subscribe():
@@ -34,11 +36,10 @@ class PaymentTestCase(unittest.TestCase):
         response = self.cli.put('/order', body={'subscription': 'vault', 'pricing_name': 'Rookie'})
         self.assertEqual(response.status_code, 200)
         self.assertTrue('order_id' in response.json())
+        self.order_id = response.json().get('order_id')
 
     def test03_pay_order(self):
-        order_id = '60ed0f41a25b959b19a6acfb'
-        transaction_id = '3e1465e1ad3519e8e7ded3078d03a7133840e876eb5eb5598fc221a9c183a778'
-        response = self.cli.post(f'/order/{order_id}', body={'transaction_id': transaction_id})
+        response = self.cli.post(f'/order/{self.order_id}', body={'transaction_id': self.transaction_id})
         self.assertEqual(response.status_code, 201)
         self.assertTrue('receipt_id' in response.json())
         self.assertTrue('order_id' in response.json())
@@ -49,8 +50,7 @@ class PaymentTestCase(unittest.TestCase):
         self.assertTrue('orders' in response.json())
 
     def test05_get_receipt(self):
-        order_id = '60ed0f41a25b959b19a6acfb'
-        response = self.cli.get(f'/receipt?order_id={order_id}')
+        response = self.cli.get(f'/receipt?order_id={self.order_id}')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('order_id' in response.json())
         self.assertTrue('receipt_id' in response.json())

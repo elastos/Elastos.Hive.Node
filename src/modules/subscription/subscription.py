@@ -17,7 +17,7 @@ from src.modules.scripting.scripting import check_auth
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
-    PricePlanNotFoundException, BadRequestException, InvalidParameterException
+    PricePlanNotFoundException, BadRequestException
 from src.utils.http_response import hive_restful_response
 from src.utils.singleton import Singleton
 
@@ -27,26 +27,12 @@ class VaultSubscription(metaclass=Singleton):
         self.payment = Payment(app, hive_setting)
 
     @hive_restful_response
-    def subscribe(self, credential):
-        # TODO: remove the parameter 'credential'
-        return self._subscribe_by_receipt(credential)
-
-    def _subscribe_by_receipt(self, receipt_id):
+    def subscribe(self):
         did, app_id = check_auth()
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_create=True)
         if doc:
             raise AlreadyExistsException(msg='The vault is already subscribed.')
-        return self.__get_vault_info(
-            self.__create_vault(did, self._get_pricing_plan_info_by_receipt(did, receipt_id)))
-
-    def _get_pricing_plan_info_by_receipt(self, did, receipt_id):
-        name = 'Free'
-        if receipt_id:
-            name = self.payment.get_name_by_receipt_id(did, 'vault', receipt_id)
-        plan = self.get_price_plan('vault', name)
-        if not plan:
-            raise InvalidParameterException(msg=f'Can not find the plan by name {name}')
-        return plan
+        return self.__get_vault_info(self.__create_vault(did, self.get_price_plan('vault', 'Free')))
 
     def __create_vault(self, did, price_plan):
         now = datetime.utcnow().timestamp()  # seconds in UTC
@@ -81,9 +67,11 @@ class VaultSubscription(metaclass=Singleton):
         did, app_id = check_auth()
         document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_raise=False)
         if not document:
+            # INFO: do not raise here.
             return
         delete_user_vault_data(did)
         cli.remove_database(did, app_id)
+        self.payment.archive_orders(did)
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_check_exist=False)
 
     @hive_restful_response

@@ -24,6 +24,10 @@ COL_ORDERS_PRICING_NAME = 'pricing_name'
 COL_ORDERS_ELA_AMOUNT = 'ela_amount'
 COL_ORDERS_ELA_ADDRESS = 'ela_address'
 COL_ORDERS_PROOF = 'proof'
+COL_ORDERS_STATUS = 'status'
+
+COL_ORDERS_STATUS_NORMAL = 'normal'
+COL_ORDERS_STATUS_ARCHIVE = 'archive'
 
 COL_RECEIPTS = 'vault_backup_receipts'
 COL_RECEIPTS_ID = 'receipt_id'

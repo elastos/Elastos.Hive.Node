@@ -33,8 +33,7 @@ def vault_get_info():
 
 @blueprint.route('/api/v2/subscription/vault', methods=['PUT'])
 def vault_subscribe():
-    credential = request.args.get('credential')
-    return vault_subscription.subscribe(credential)
+    return vault_subscription.subscribe()
 
 
 @blueprint.route('/api/v2/subscription/vault', methods=['POST'])

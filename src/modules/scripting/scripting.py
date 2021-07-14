@@ -44,7 +44,7 @@ def check_auth2():
     return did, app_id
 
 
-def check_auth_and_vault(permission):
+def check_auth_and_vault(permission=None):
     did, app_id = check_auth()
     cli.check_vault_access(did, permission)
     return did, app_id

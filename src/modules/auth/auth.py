@@ -338,9 +338,7 @@ class Auth(Entity, metaclass=Singleton):
         lib.JWTBuilder_SetSubject(builder, 'ORDER_PROOF'.encode())
         lib.JWTBuilder_SetAudience(builder, user_did.encode())
         lib.JWTBuilder_SetExpiration(builder, int(datetime.utcnow().timestamp()) + 7 * 24 * 3600)
-        lib.JWTBuilder_SetClaim(builder, "props".encode(), json.dumps({'order_id': order_id,
-                                                                       'user_did': user_did,
-                                                                       'service_did': self.did_str}).encode())
+        lib.JWTBuilder_SetClaim(builder, "props".encode(), json.dumps({'order_id': order_id}).encode())
 
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
         proof = lib.JWTBuilder_Compact(builder)
@@ -349,3 +347,42 @@ class Auth(Entity, metaclass=Singleton):
             raise BadRequestException(msg='Can not build token in creating order proof.')
 
         return ffi.string(proof).decode()
+
+    def verify_order_proof(self, proof, user_did, order_id):
+        # INFO：DefaultJWSParser_Parse will validate the sign information.
+        jws = lib.DefaultJWSParser_Parse(proof.encode())
+        if not jws:
+            raise BadRequestException(msg=self.get_error_message('parse the proof error'))
+
+        issuer = lib.JWT_GetIssuer(jws)
+        if not issuer:
+            lib.JWT_Destroy(jws)
+            raise BadRequestException(msg=self.get_error_message('the issue of the proof error'))
+        if self.did_str != ffi.string(issuer).decode():
+            lib.JWT_Destroy(jws)
+            raise BadRequestException(msg=f'the issue of the proof not match: {ffi.string(issuer).decode()}')
+
+        audience = lib.JWT_GetAudience(jws)
+        if not audience:
+            lib.JWT_Destroy(jws)
+            raise BadRequestException(msg=self.get_error_message('the audience of the proof error'))
+        if user_did != ffi.string(audience).decode():
+            lib.JWT_Destroy(jws)
+            raise BadRequestException(msg=f'the audience of the proof not match: {ffi.string(audience).decode()}')
+
+        props = lib.JWT_GetClaim(jws, "props".encode())
+        if not props:
+            lib.JWT_Destroy(jws)
+            raise BadRequestException(msg=self.get_error_message('the claim of the proof error'))
+        props_json = json.loads(ffi.string(props).decode())
+        if props_json.get('order_id') != order_id:
+            lib.JWT_Destroy(jws)
+            raise BadRequestException(msg=f'the order_id of the proof not match: {props_json.get("order_id")}')
+
+        expired = lib.JWT_GetExpiration(jws)
+        now = int(datetime.now().timestamp()) + 7 * 24 * 3600
+        if now > expired:
+            lib.JWT_Destroy(jws)
+            raise BadRequestException(msg=f'the proof is expired (valid for 7 days)')
+
+        lib.JWT_Destroy(jws)

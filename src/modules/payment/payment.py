@@ -81,16 +81,16 @@ class Payment(metaclass=Singleton):
 
         res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_ORDERS, doc, is_create=True, is_extra=False)
 
-        doc['order_id'] = res['inserted_id']
-        doc[COL_ORDERS_PROOF] = self.auth.create_order_proof(did, doc['order_id'])
-        cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(doc['order_id'])},
+        doc['_id'] = res['inserted_id']
+        doc[COL_ORDERS_PROOF] = self.auth.create_order_proof(did, doc['_id'])
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(doc['_id'])},
                               {'$set': {COL_ORDERS_PROOF: doc[COL_ORDERS_PROOF]}})
 
         return doc
 
     def _get_order_vo(self, order):
         return {
-            'order_id': order['order_id'],
+            'order_id': str(order['_id']),
             COL_ORDERS_SUBSCRIPTION: order[COL_ORDERS_SUBSCRIPTION],
             COL_ORDERS_PRICING_NAME: order[COL_ORDERS_PRICING_NAME],
             COL_ORDERS_ELA_AMOUNT: order[COL_ORDERS_ELA_AMOUNT],
@@ -190,11 +190,18 @@ class Payment(metaclass=Singleton):
             COL_RECEIPTS_ORDER_ID: str(order['_id']),
             COL_RECEIPTS_TRANSACTION_ID: transaction_id,
             COL_RECEIPTS_PAID_DID: paid_did,
+            COL_ORDERS_PROOF: '',
+            COL_ORDERS_STATUS: COL_ORDERS_STATUS_NORMAL,
             CREATE_TIME: now,
             MODIFY_TIME: now
         }
         res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, receipt, is_create=True, is_extra=False)
-        receipt['id'] = res['inserted_id']
+
+        receipt['_id'] = res['inserted_id']
+        receipt[COL_ORDERS_PROOF] = self.auth.create_order_proof(
+            did, receipt['_id'], amount=order[COL_ORDERS_ELA_AMOUNT], is_receipt=True)
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {'_id': ObjectId(receipt['_id'])},
+                              {'$set': {COL_ORDERS_PROOF: receipt[COL_ORDERS_PROOF]}})
         return receipt
 
     @hive_restful_response
@@ -215,7 +222,9 @@ class Payment(metaclass=Singleton):
                                           COL_ORDERS_PRICING_NAME: o[COL_ORDERS_PRICING_NAME],
                                           COL_ORDERS_ELA_AMOUNT: o[COL_ORDERS_ELA_AMOUNT],
                                           COL_ORDERS_ELA_ADDRESS: o[COL_ORDERS_ELA_ADDRESS],
-                                          COL_ORDERS_PROOF: o[COL_ORDERS_PROOF]}, orders))
+                                          COL_ORDERS_PROOF: o[COL_ORDERS_PROOF],
+                                          COL_ORDERS_STATUS: o[COL_ORDERS_STATUS],
+                                          CREATE_TIME: int(o[CREATE_TIME])}, orders))
         }
 
     @hive_restful_response
@@ -235,3 +244,4 @@ class Payment(metaclass=Singleton):
             MODIFY_TIME: datetime.utcnow().timestamp(),
         }
         cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {DID: did}, {'$set': update}, is_many=True)
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {DID: did}, {'$set': update}, is_many=True)

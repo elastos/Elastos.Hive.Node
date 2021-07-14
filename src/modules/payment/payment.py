@@ -182,14 +182,14 @@ class Payment(metaclass=Singleton):
             col_filter[COL_ORDERS_SUBSCRIPTION] = subscription
         if order_id:
             col_filter[COL_RECEIPTS_ORDER_ID] = order_id
-        orders = cli.find_many_origin(DID_INFO_DB_NAME, COL_RECEIPTS, col_filter, is_raise=False)
+        orders = cli.find_many_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, is_raise=False)
         return {
-            'orders': map(lambda o: {'order_id': str(o['_id']),
-                                     COL_ORDERS_SUBSCRIPTION: o[COL_ORDERS_SUBSCRIPTION],
-                                     COL_ORDERS_PRICING_NAME: o[COL_ORDERS_PRICING_NAME],
-                                     COL_ORDERS_ELA_AMOUNT: o[COL_ORDERS_ELA_AMOUNT],
-                                     COL_ORDERS_ELA_ADDRESS: o[COL_ORDERS_ELA_ADDRESS],
-                                     COL_ORDERS_PROOF: o[COL_ORDERS_PROOF]}, orders)
+            'orders': list(map(lambda o: {'order_id': str(o['_id']),
+                                          COL_ORDERS_SUBSCRIPTION: o[COL_ORDERS_SUBSCRIPTION],
+                                          COL_ORDERS_PRICING_NAME: o[COL_ORDERS_PRICING_NAME],
+                                          COL_ORDERS_ELA_AMOUNT: o[COL_ORDERS_ELA_AMOUNT],
+                                          COL_ORDERS_ELA_ADDRESS: o[COL_ORDERS_ELA_ADDRESS],
+                                          COL_ORDERS_PROOF: o[COL_ORDERS_PROOF]}, orders))
         }
 
     @hive_restful_response

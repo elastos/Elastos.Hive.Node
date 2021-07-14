@@ -43,3 +43,7 @@ class PaymentTestCase(unittest.TestCase):
         self.assertTrue('receipt_id' in response.json())
         self.assertTrue('order_id' in response.json())
 
+    def test04_get_orders(self):
+        response = self.cli.get('/order?subscription=vault')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('orders' in response.json())

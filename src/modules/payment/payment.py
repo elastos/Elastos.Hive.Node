@@ -101,7 +101,7 @@ class Payment(metaclass=Singleton):
 
     def get_receipt_vo(self, order, receipt):
         return {
-            COL_RECEIPTS_ID: receipt['id'],
+            COL_RECEIPTS_ID: str(receipt['_id']),
             COL_RECEIPTS_ORDER_ID: str(order['_id']),
             COL_RECEIPTS_TRANSACTION_ID: receipt[COL_RECEIPTS_TRANSACTION_ID],
             COL_ORDERS_PRICING_NAME: order[COL_ORDERS_PRICING_NAME],
@@ -120,7 +120,7 @@ class Payment(metaclass=Singleton):
         paid_did = self._check_transaction_id(did, order, transaction_id)
         return order, transaction_id, paid_did
 
-    def check_param_order_id(self, did, order_id):
+    def check_param_order_id(self, did, order_id, check_receipt_exist=True):
         if not order_id:
             raise InvalidParameterException(msg='Order id MUST be provided.')
 
@@ -129,9 +129,11 @@ class Payment(metaclass=Singleton):
         if not order:
             raise InvalidParameterException(msg='Order id is invalid.')
 
-        receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {'order_id': order_id}, is_raise=False)
-        if receipt:
-            raise InvalidParameterException(msg='Order id is invalid which is already paid.')
+        if check_receipt_exist:
+            receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
+                                          {COL_RECEIPTS_ORDER_ID: order_id}, is_raise=False)
+            if receipt:
+                raise InvalidParameterException(msg='Order id is invalid which is already paid.')
 
         return order
 
@@ -195,11 +197,11 @@ class Payment(metaclass=Singleton):
     @hive_restful_response
     def get_receipt_info(self, order_id):
         did, app_did = check_auth()
-        order = self.check_param_order_id(did, order_id)
+        order = self.check_param_order_id(did, order_id, check_receipt_exist=False)
         receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
                                       {COL_RECEIPTS_ORDER_ID: order_id}, is_raise=False)
         if not receipt:
-            raise InvalidParameterException(msg='Receipt can not be found.')
+            raise InvalidParameterException(msg='Receipt can not be found by order_id.')
         return self.get_receipt_vo(order, receipt)
 
     def get_name_by_receipt_id(self, did, subscription, receipt_id):

@@ -14,7 +14,7 @@ from src.modules.scripting.scripting import validate_exists, check_auth, check_a
 from src.utils.consts import COL_ORDERS, DID, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, \
     COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, COL_ORDERS_PROOF, CREATE_TIME, MODIFY_TIME, \
     COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, OWNER_ID, \
-    COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE
+    COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_PAID
 from src.utils.db_client import cli
 from src.utils.http_exception import InvalidParameterException, BadRequestException
 from src.utils.http_response import hive_restful_response
@@ -107,8 +107,16 @@ class Payment(metaclass=Singleton):
         order, transaction_id, paid_did = self._check_pay_order_params(did, order_id, json_body)
 
         receipt = self._create_receipt(did, order, transaction_id, paid_did)
+        self._update_order_status(str(order['_id']), COL_ORDERS_STATUS_PAID)
         self._get_vault_subscription().upgrade_vault_plan(did, vault, order[COL_ORDERS_PRICING_NAME])
         return self._get_receipt_vo(order, receipt)
+
+    def _update_order_status(self, order_id, status):
+        update = {
+            COL_ORDERS_STATUS: status,
+            MODIFY_TIME: datetime.utcnow().timestamp(),
+        }
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(order_id)}, {'$set': update})
 
     def _get_receipt_vo(self, order, receipt):
         return {
@@ -122,7 +130,7 @@ class Payment(metaclass=Singleton):
         }
 
     def _check_pay_order_params(self, did, order_id, json_body):
-        order = self._check_param_order_id(did, order_id, is_normal=True)
+        order = self._check_param_order_id(did, order_id, is_pay_order=True)
         if not json_body:
             raise InvalidParameterException(msg='Request body should not empty.')
         validate_exists(json_body, '', ['transaction_id', ])
@@ -131,22 +139,22 @@ class Payment(metaclass=Singleton):
         paid_did = self._check_transaction_id(did, order, transaction_id)
         return order, transaction_id, paid_did
 
-    def _check_param_order_id(self, did, order_id, check_receipt_exist=True, is_normal=False):
+    def _check_param_order_id(self, did, order_id, is_pay_order=False):
         if not order_id:
             raise InvalidParameterException(msg='Order id MUST be provided.')
 
         col_filter = {'_id': ObjectId(order_id), DID: did}
-        if is_normal:
+        if is_pay_order:
             col_filter[COL_ORDERS_STATUS] = COL_ORDERS_STATUS_NORMAL
         order = cli.find_one_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, is_raise=False)
         if not order:
-            raise InvalidParameterException(msg='Order id is invalid.')
+            raise InvalidParameterException(msg='Order id is invalid because of not finding the order.')
 
-        if check_receipt_exist:
+        if is_pay_order:
             receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
                                           {COL_RECEIPTS_ORDER_ID: order_id}, is_raise=False)
             if receipt:
-                raise InvalidParameterException(msg='Order id is invalid which is already paid.')
+                raise InvalidParameterException(msg='Order id is invalid because of existing the relating receipt.')
 
         return order
 
@@ -164,9 +172,9 @@ class Payment(metaclass=Singleton):
 
     def _check_transaction_id_remote(self, did, order, transaction_id):
         result = self.ela_resolver.get_transaction_info(transaction_id)
-        # TODO: this is used to check whether the transaction is on block chain.
-        # if result['time'] < 1:
-        #     raise BadRequestException(msg='invalid transaction id with result time less than 1')
+        # INFO: this is used to check whether the transaction is on block chain.
+        if result['time'] < 1:
+            raise BadRequestException(msg='invalid transaction id with result time abnormal')
         proof = self._get_proof_by_result(result)
         self.auth.verify_order_proof(proof, did, str(order['_id']))
         amount, address = float(result['vout'][0]['value']), result['vout'][0]['address']
@@ -230,7 +238,7 @@ class Payment(metaclass=Singleton):
     @hive_restful_response
     def get_receipt_info(self, order_id):
         did, app_did = check_auth()
-        order = self._check_param_order_id(did, order_id, check_receipt_exist=False)
+        order = self._check_param_order_id(did, order_id)
         receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
                                       {COL_RECEIPTS_ORDER_ID: order_id}, is_raise=False)
         if not receipt:

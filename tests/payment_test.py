@@ -16,8 +16,9 @@ class PaymentTestCase(unittest.TestCase):
         init_test()
         self.test_config = TestConfig()
         self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/payment')
-        self.order_id = '60ed0f41a25b959b19a6acfb'
-        self.transaction_id = '3e1465e1ad3519e8e7ded3078d03a7133840e876eb5eb5598fc221a9c183a778'
+        # TODO: update order_id when do separately testing
+        self.order_id = '60ee8c056fdd17b16bb5b4c2'
+        self.transaction_id = '280a24034bfb241c31b5a73c792c9d05df2b1f79bb98733c5358aeb909c27010'
 
     @staticmethod
     def _subscribe():

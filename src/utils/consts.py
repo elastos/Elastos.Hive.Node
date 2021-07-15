@@ -27,6 +27,7 @@ COL_ORDERS_PROOF = 'proof'
 COL_ORDERS_STATUS = 'status'
 
 COL_ORDERS_STATUS_NORMAL = 'normal'
+COL_ORDERS_STATUS_PAID = 'paid'
 COL_ORDERS_STATUS_ARCHIVE = 'archive'
 
 COL_RECEIPTS = 'vault_backup_receipts'

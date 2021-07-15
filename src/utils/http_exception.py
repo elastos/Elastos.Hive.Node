@@ -101,6 +101,8 @@ class NotFoundException(HiveException):
     COLLECTION_NOT_FOUND = 4
     PRICE_PLAN_NOT_FOUND = 5
     FILE_NOT_FOUND = 6
+    ORDER_NOT_FOUND = 7
+    RECEIPT_NOT_FOUND = 8
 
     def __init__(self, internal_code=VAULT_NOT_FOUND, msg='The vault does not found or not activate.'):
         super().__init__(404, internal_code, msg)
@@ -134,6 +136,16 @@ class PricePlanNotFoundException(NotFoundException):
 class FileNotFoundException(NotFoundException):
     def __init__(self, msg='The file does not found.'):
         super().__init__(internal_code=NotFoundException.FILE_NOT_FOUND, msg=msg)
+
+
+class OrderNotFoundException(NotFoundException):
+    def __init__(self, msg='The order does not found.'):
+        super().__init__(internal_code=NotFoundException.ORDER_NOT_FOUND, msg=msg)
+
+
+class ReceiptNotFoundException(NotFoundException):
+    def __init__(self, msg='The receipt does not found.'):
+        super().__init__(internal_code=NotFoundException.RECEIPT_NOT_FOUND, msg=msg)
 
 
 # AlreadyExistsException

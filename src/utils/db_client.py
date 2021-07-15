@@ -32,13 +32,18 @@ class DatabaseClient:
         self.uri = hive_setting.MONGO_URI
         self.host = hive_setting.MONGO_HOST
         self.port = hive_setting.MONGO_PORT
+        self.connection = None
 
     def __get_connection(self):
-        if self.uri:
-            connection = MongoClient(self.uri)
-        else:
-            connection = MongoClient(host=self.host, port=self.port)
-        return connection
+        if not self.connection:
+            if self.uri:
+                self.connection = MongoClient(self.uri)
+            else:
+                self.connection = MongoClient(host=self.host, port=self.port)
+        return self.connection
+
+    def start_session(self):
+        return self.__get_connection().start_session()
 
     def get_user_collection(self, did, app_id, collection_name, is_create=False):
         return self.get_origin_collection(gene_mongo_db_name(did, app_id), collection_name, is_create)

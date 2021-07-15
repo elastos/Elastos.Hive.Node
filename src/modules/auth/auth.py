@@ -337,7 +337,8 @@ class Auth(Entity, metaclass=Singleton):
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
         lib.JWTBuilder_SetSubject(builder, 'ORDER_PROOF'.encode())
         lib.JWTBuilder_SetAudience(builder, user_did.encode())
-        lib.JWTBuilder_SetExpiration(builder, int(datetime.utcnow().timestamp()) + 7 * 24 * 3600)
+        exp = int(datetime.utcnow().timestamp()) + 7 * 24 * 3600 if not is_receipt else -1
+        lib.JWTBuilder_SetExpiration(builder, exp)
         props = {'order_id': doc_id}
         if is_receipt:
             props = {'receipt_id': doc_id, 'amount': amount}

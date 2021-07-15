@@ -16,7 +16,8 @@ from src.utils.consts import COL_ORDERS, DID, COL_ORDERS_SUBSCRIPTION, COL_ORDER
     COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, OWNER_ID, \
     COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_PAID
 from src.utils.db_client import cli
-from src.utils.http_exception import InvalidParameterException, BadRequestException
+from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, \
+    ReceiptNotFoundException
 from src.utils.http_response import hive_restful_response
 from src.utils.resolver import ElaResolver
 from src.utils.singleton import Singleton
@@ -214,7 +215,7 @@ class Payment(metaclass=Singleton):
 
     @hive_restful_response
     def get_orders(self, subscription, order_id):
-        did, app_did = check_auth()
+        _, _ = check_auth()
         if subscription not in ('vault', 'backup'):
             raise InvalidParameterException(msg=f'Invalid subscription: {subscription}.')
 
@@ -224,16 +225,16 @@ class Payment(metaclass=Singleton):
         if order_id:
             col_filter[COL_RECEIPTS_ORDER_ID] = order_id
         orders = cli.find_many_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, is_raise=False)
-        return {
-            'orders': list(map(lambda o: {'order_id': str(o['_id']),
-                                          COL_ORDERS_SUBSCRIPTION: o[COL_ORDERS_SUBSCRIPTION],
-                                          COL_ORDERS_PRICING_NAME: o[COL_ORDERS_PRICING_NAME],
-                                          COL_ORDERS_ELA_AMOUNT: o[COL_ORDERS_ELA_AMOUNT],
-                                          COL_ORDERS_ELA_ADDRESS: o[COL_ORDERS_ELA_ADDRESS],
-                                          COL_ORDERS_PROOF: o[COL_ORDERS_PROOF],
-                                          COL_ORDERS_STATUS: o[COL_ORDERS_STATUS],
-                                          CREATE_TIME: int(o[CREATE_TIME])}, orders))
-        }
+        if not orders:
+            raise OrderNotFoundException(msg='Can not get the matched orders.')
+        return {'orders': list(map(lambda o: {'order_id': str(o['_id']),
+                                              COL_ORDERS_SUBSCRIPTION: o[COL_ORDERS_SUBSCRIPTION],
+                                              COL_ORDERS_PRICING_NAME: o[COL_ORDERS_PRICING_NAME],
+                                              COL_ORDERS_ELA_AMOUNT: o[COL_ORDERS_ELA_AMOUNT],
+                                              COL_ORDERS_ELA_ADDRESS: o[COL_ORDERS_ELA_ADDRESS],
+                                              COL_ORDERS_PROOF: o[COL_ORDERS_PROOF],
+                                              COL_ORDERS_STATUS: o[COL_ORDERS_STATUS],
+                                              CREATE_TIME: int(o[CREATE_TIME])}, orders))}
 
     @hive_restful_response
     def get_receipt_info(self, order_id):
@@ -242,7 +243,7 @@ class Payment(metaclass=Singleton):
         receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
                                       {COL_RECEIPTS_ORDER_ID: order_id}, is_raise=False)
         if not receipt:
-            raise InvalidParameterException(msg='Receipt can not be found by order_id.')
+            raise ReceiptNotFoundException(msg='Receipt can not be found by order_id.')
         return self._get_receipt_vo(order, receipt)
 
     def archive_orders(self, did):

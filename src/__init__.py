@@ -11,6 +11,11 @@ from hive.util.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from hive.util.did.did_init import init_did_backend
 from src import view
 
+import os
+
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+CONFIG_FILE = os.path.join(BASE_DIR, 'logging.conf')
+
 
 class RegexConverter(BaseConverter):
     """ Support regex on url match """
@@ -38,7 +43,7 @@ def before_request():
 
 def _init_log():
     print("init log")
-    with open('logging.conf') as f:
+    with open(CONFIG_FILE) as f:
         logging.config.dictConfig(yaml.load(f, Loader=yaml.FullLoader))
     logfile = logging.getLogger('file')
     log_console = logging.getLogger('console')
@@ -47,7 +52,6 @@ def _init_log():
 
 
 def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
-    global app
     hive_setting.init_config(hive_config)
     _init_log()
     init_did_backend()
@@ -61,4 +65,14 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     #   2021-06-15 12:06:08,527 - root - INFO - [Initialize] create_app is processing now.
     logging.getLogger("Initialize").debug("create_app")
     logging.info('[Initialize] create_app is processing now.')
+    return app
+
+
+def make_port(is_first=False):
+    """
+    For sphinx documentation tool.
+    :return: the app of the flask
+    """
+    if is_first:
+        view.init_app(app, HIVE_MODE_PROD)
     return app

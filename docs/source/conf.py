@@ -35,7 +35,6 @@ extensions = [
     'sphinxcontrib.httpdomain',
     'sphinxcontrib.autohttp.flask',
     'sphinxcontrib.autohttp.flaskqref',
-    # 'sphinxcontrib.apiblueprint',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -22,7 +22,7 @@ def init_app(app, hive_setting):
 
 @blueprint.route(URL_DID_SIGN_IN, methods=['POST'])
 def did_sign_in():
-    """ sign in with the application DID and get the challenge string.
+    """ Sign in with the application DID and get the challenge string.
 
     .. :quickref: Authentication; Sign in with app DID
 
@@ -56,7 +56,7 @@ def did_sign_in():
 
 @blueprint.route(URL_DID_AUTH, methods=['POST'])
 def did_auth():
-    """ auth to get the access token for the user DID and the application DID.
+    """ Auth to get the access token for the user DID and the application DID.
 
     .. :quickref: Authentication; Get the access token.
 
@@ -90,5 +90,5 @@ def did_auth():
 
 @blueprint.route(URL_DID_BACKUP_AUTH, methods=['POST'])
 def backup_auth():
-    """ get the access token for the vault service node. """
+    """ Get the access token for the vault service node. """
     return auth.backup_auth(params.get('challenge_response'))

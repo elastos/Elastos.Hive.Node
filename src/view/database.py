@@ -20,16 +20,31 @@ def init_app(app, hive_setting):
 
 @blueprint.route('/api/v2/vault/db/collections/<collection_name>', methods=['PUT'])
 def create_collection(collection_name):
+    """ Create the collection
+
+    .. :quickref: Database; Create the collection
+
+    """
     return database.create_collection(collection_name)
 
 
 @blueprint.route('/api/v2/vault/db/<collection_name>', methods=['DELETE'])
 def delete_collection(collection_name):
+    """ Delete the collection
+
+    .. :quickref: Database; Delete the collection
+
+    """
     return database.delete_collection(collection_name)
 
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['POST'])
 def insert_or_count_document(collection_name):
+    """ Insert or count the documents
+
+    .. :quickref: Database; Insert&count the documents
+
+    """
     op = request.args.get('op')
     if op == 'count':
         return database.count_document(collection_name, request.get_json(force=True, silent=True))
@@ -38,16 +53,31 @@ def insert_or_count_document(collection_name):
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['PATCH'])
 def update_document(collection_name):
+    """ Update the documents
+
+    .. :quickref: Database; Update the documents
+
+    """
     return database.update_document(collection_name, request.get_json(force=True, silent=True))
 
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['DELETE'])
 def delete_document(collection_name):
+    """ Delete the documents
+
+    .. :quickref: Database; Delete the documents
+
+    """
     return database.delete_document(collection_name, request.get_json(force=True, silent=True))
 
 
 @blueprint.route('/api/v2/vault/db/<collection_name>', methods=['GET'])
 def find_document(collection_name):
+    """ Find the documents
+
+    .. :quickref: Database; Find the documents
+
+    """
     return database.find_document(collection_name,
                                   request.args.get('filter'),
                                   request.args.get('skip'),
@@ -56,5 +86,10 @@ def find_document(collection_name):
 
 @blueprint.route('/api/v2/vault/db/query', methods=['POST'])
 def query_document():
+    """ Query the documents with more options
+
+    .. :quickref: Database; Query the documents
+
+    """
     json_body, collection_name = params.get2('collection')
     return database.query_document(collection_name, json_body)

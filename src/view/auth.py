@@ -22,17 +22,73 @@ def init_app(app, hive_setting):
 
 @blueprint.route(URL_DID_SIGN_IN, methods=['POST'])
 def did_sign_in():
-    """ sign in of the auth module """
+    """ sign in with the application DID and get the challenge string.
+
+    .. :quickref: Authentication; Sign in with app DID
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        {
+            "id": "<the user’s did_document>",
+        }
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 201 OK
+
+        {
+           “challenge”: “<the authentication challenge encoded in JWT>”
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    """
     return auth.sign_in(params.get('id'))
 
 
 @blueprint.route(URL_DID_AUTH, methods=['POST'])
 def did_auth():
-    """ auth of the auth module """
+    """ auth to get the access token for the user DID and the application DID.
+
+    .. :quickref: Authentication; Get the access token.
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        {
+            "challenge_response": "<the response for the authentication challenge encoded in JWT>",
+        }
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 201 OK
+
+        {
+               “token”: “<the access token encoded in JWT>”
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    """
     return auth.auth(params.get('challenge_response'))
 
 
 @blueprint.route(URL_DID_BACKUP_AUTH, methods=['POST'])
 def backup_auth():
-    """ backup auth of the auth module """
+    """ get the access token for the vault service node. """
     return auth.backup_auth(params.get('challenge_response'))

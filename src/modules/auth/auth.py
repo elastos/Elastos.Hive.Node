@@ -233,6 +233,7 @@ class Auth(Entity, metaclass=Singleton):
 
     @hive_restful_response
     def backup_auth(self, challenge_response):
+        """ for the vault service node """
         credential_info = self.__get_auth_info_from_challenge_response(challenge_response, ["targetHost", "targetDID"])
         access_token = self.__create_access_token(credential_info, "BackupToken")
         return {'token': access_token}

@@ -22,14 +22,17 @@ def init_app(app, hive_setting):
 
 @blueprint.route(URL_DID_SIGN_IN, methods=['POST'])
 def did_sign_in():
+    """ sign in of the auth module """
     return auth.sign_in(params.get('id'))
 
 
 @blueprint.route(URL_DID_AUTH, methods=['POST'])
 def did_auth():
+    """ auth of the auth module """
     return auth.auth(params.get('challenge_response'))
 
 
 @blueprint.route(URL_DID_BACKUP_AUTH, methods=['POST'])
 def backup_auth():
+    """ backup auth of the auth module """
     return auth.backup_auth(params.get('challenge_response'))

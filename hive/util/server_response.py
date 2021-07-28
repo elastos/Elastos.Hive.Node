@@ -14,11 +14,14 @@ class ServerResponse:
 
     def response_ok(self, data_dic=None):
         ret = {STATUS: STATUS_OK}
-        if data_dic is not None:
-            try:
-                ret.update(data_dic)
-            except Exception as e:
-                return self.response_err(400, f'invalid response body: {str(data_dic)}, {str(e)}')
+        if not isinstance(data_dic, dict):
+            return self.response_err(500, f'impossible response body: {str(data_dic)}')
+
+        try:
+            ret.update(data_dic)
+        except Exception as e:
+            return self.response_err(400, f'invalid response body: {str(data_dic)}, {str(e)}')
+
         self.logger.debug(json.dumps(ret))
         return jsonify(ret)
 

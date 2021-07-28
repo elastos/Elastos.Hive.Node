@@ -82,8 +82,8 @@ def fix_dollar_keys(data, is_save=True):
 
 
 class Condition:
-    def __init__(self, json_data, params, did, app_id):
-        self.json_data = json_data if json_data else {}
+    def __init__(self, condition_data, params, did, app_id):
+        self.condition_data = condition_data if condition_data else {}
         self.params = params
         self.did = did
         self.app_id = app_id
@@ -115,51 +115,52 @@ class Condition:
         else:
             validate_exists(json_data['body'], 'condition.body', ['collection', ])
 
-    def is_satisfied(self) -> bool:
-        return self.__is_satisfied(self.json_data)
+    def is_satisfied(self, context) -> bool:
+        return self.__is_satisfied(self.condition_data, context) # )
 
-    def __is_satisfied(self, json_data) -> bool:
-        if not self.json_data:
+    def __is_satisfied(self, condition_data, context) -> bool:
+        if not condition_data:
             return True
 
-        ctype = json_data['type']
+        ctype = condition_data['type']
         if ctype == 'or':
-            for data in json_data['body']:
+            for data in condition_data['body']:
                 is_sat = self.__is_satisfied(data)
                 if is_sat:
                     return True
             return False
         elif ctype == 'and':
-            for data in json_data['body']:
+            for data in condition_data['body']:
                 is_sat = self.__is_satisfied(data)
                 if not is_sat:
                     return False
             return True
         else:
-            return self.__is_satisfied_query_has_result(json_data['body'])
+            return self.__is_satisfied_query_has_result(condition_data['body'], context)
 
-    def __is_satisfied_query_has_result(self, json_data):
-        col_name = json_data['collection']
-        col_filter = json_data.get('filter', {})
+    def __is_satisfied_query_has_result(self, con_body_data, context):
+        col_name = con_body_data['collection']
+        col_filter = con_body_data.get('filter', {})
         msg = populate_with_params_values(self.did, self.app_id, col_filter, self.params)
         if msg:
             raise BadRequestException(msg='Cannot find parameter: ' + msg)
 
-        col = cli.get_user_collection(self.did, self.app_id, col_name)
+        col = cli.get_user_collection(context.target_did, context.target_app_did, col_name)
         if not col:
             raise BadRequestException(msg='Do not find condition collection with name ' + col_name)
 
-        options = populate_options_count_documents(json_data.get('body', {}))
+        # INFO: 'options' is the internal supporting.
+        options = populate_options_count_documents(con_body_data.get('options', {}))
         return col.count_documents(convert_oid(col_filter), **options) > 0
 
 
 class Context:
-    def __init__(self, json_data, did, app_id):
+    def __init__(self, context_data, did, app_id):
         self.target_did = did
         self.target_app_did = app_id
-        if json_data:
-            self.target_did = json_data['target_did']
-            self.target_app_did = json_data['target_app_did']
+        if context_data:
+            self.target_did = context_data['target_did']
+            self.target_app_did = context_data['target_app_did']
 
     @staticmethod
     def validate_data(json_data):
@@ -172,6 +173,7 @@ class Context:
             raise BadRequestException(msg='target_did or target_app_did MUST be set.')
 
     def get_script_data(self, script_name):
+        """ get the script data by target_did and target_app_did """
         col = cli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
         return col.find_one({'name': script_name})
 
@@ -516,7 +518,7 @@ class Script:
         result = dict()
         for executable in self.executables:
             self.condition = Condition(script_data.get('condition'), executable.get_params(), self.did, self.app_id)
-            if not self.condition.is_satisfied():
+            if not self.condition.is_satisfied(self.context):
                 raise BadRequestException(msg="Caller can't match the condition for the script.")
 
             ret = executable.execute()

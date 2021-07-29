@@ -48,6 +48,9 @@ class Database:
 
     @hive_restful_response
     def insert_document(self, collection_name, json_body):
+        if not collection_name:
+            raise InvalidParameterException(msg='Invalid collection name.')
+
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
 
         if not json_body:
@@ -69,6 +72,9 @@ class Database:
 
     @hive_restful_response
     def update_document(self, collection_name, json_body):
+        if not collection_name:
+            raise InvalidParameterException(msg='Invalid collection name.')
+
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
 
         if 'filter' in json_body and type(json_body.get('filter')) is not dict:
@@ -92,6 +98,9 @@ class Database:
 
     @hive_restful_response
     def delete_document(self, collection_name, json_body):
+        if not collection_name:
+            raise InvalidParameterException(msg='Invalid collection name.')
+
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
 
         if json_body and 'filter' in json_body and type(json_body.get('filter')) is not dict:
@@ -102,6 +111,9 @@ class Database:
 
     @hive_restful_response
     def count_document(self, collection_name, json_body):
+        if not collection_name:
+            raise InvalidParameterException(msg='Invalid collection name.')
+
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
 
         if json_body and 'filter' in json_body and type(json_body.get('filter')) is not dict:
@@ -113,6 +125,9 @@ class Database:
 
     @hive_restful_response
     def find_document(self, collection_name, col_filter, skip, limit):
+        if not collection_name:
+            raise InvalidParameterException(msg='Invalid collection name.')
+
         did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
 
         col_filter = json.loads(col_filter) if col_filter else {}

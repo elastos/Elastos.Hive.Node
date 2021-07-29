@@ -224,9 +224,60 @@ def insert_or_count_document(collection_name):
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['PATCH'])
 def update_document(collection_name):
-    """ Update the documents
+    """ Update the documents by collection name.
 
     .. :quickref: Database; Update the documents
+
+    **Request**:
+
+    .. code-block:: json
+
+        {
+            "filter": {
+                "author": "john doe1",
+            },
+            "update": {"$set": {
+                "author": "john doe1_1",
+                "title": "Eve for Dummies1_1"
+            }},
+            "options": {
+                "upsert": true,
+                "bypass_document_validation": false
+            }
+        }
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+
+    .. code-block:: json
+
+        {
+            "acknowledged": true,
+            "matched_count": 10,
+            "modified_count": 10,
+            "upserted_id": null
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
 
     """
     return database.update_document(collection_name, request.get_json(force=True, silent=True))
@@ -234,9 +285,43 @@ def update_document(collection_name):
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['DELETE'])
 def delete_document(collection_name):
-    """ Delete the documents
+    """ Delete the documents by collection name.
 
     .. :quickref: Database; Delete the documents
+
+    **Request**:
+
+    .. code-block:: json
+
+        {
+            "filter": {
+                "author": "john doe1",
+            }
+         }
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 204 OK
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
 
     """
     return database.delete_document(collection_name, request.get_json(force=True, silent=True))
@@ -244,9 +329,62 @@ def delete_document(collection_name):
 
 @blueprint.route('/api/v2/vault/db/<collection_name>', methods=['GET'])
 def find_document(collection_name):
-    """ Find the documents
+    """ Find the documents by collection name. The parameters are URL ones.
 
     .. :quickref: Database; Find the documents
+
+    **URL Parameters**:
+
+    .. sourcecode:: http
+
+        filter (json str) : the filter doc need to be encoded by url
+        skip (int):
+        limit (int):
+
+    **Request**:
+
+    .. code-block:: json
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+
+    .. code-block:: json
+
+        {
+            "items": [{
+                "author": "john doe1_1",
+                "title": "Eve for Dummies1_1",
+                "created": {
+                    "$date": 1630022400000
+                },
+                "modified": {
+                    "$date": 1598803861786
+                }
+            }]
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
 
     """
     return database.find_document(collection_name,
@@ -260,6 +398,78 @@ def query_document():
     """ Query the documents with more options
 
     .. :quickref: Database; Query the documents
+
+    **Request**:
+
+    .. code-block:: json
+
+        {
+            "collection": "works",
+            "filter": {
+                "author": "john doe1_1",
+            },
+            "options": {
+                "skip": 0,
+                "limit": 3,
+                "projection": {
+                    "_id": false
+                },
+                "sort": [('_id', -1)], # pymongo.DESCENDING
+                "allow_partial_results": false,
+                "return_key": false,
+                "show_record_id": false,
+                "batch_size": 0
+            }
+        }
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 201 OK
+
+    .. code-block:: json
+
+        {
+            "items": [{
+                "author": "john doe1_1",
+                "title": "Eve for Dummies1_1",
+                "created": {
+                    "$date": 1630022400000
+                },
+                "modified": {
+                    "$date": 1598803861786
+                }
+            },
+            {
+                "author": "john doe1_2",
+                "title": "Eve for Dummies1_2",
+                "created": {
+                    "$date": 1630022400000
+                },
+                "modified": {
+                    "$date": 1598803861786
+                }
+            }]
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
 
     """
     json_body, collection_name = params.get2('collection')

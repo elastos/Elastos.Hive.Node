@@ -13,7 +13,7 @@ from hive.util.did_mongo_db_resource import get_mongo_database_size, convert_oid
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
 from src.modules.scripting.scripting import check_auth_and_vault
 from src.utils.db_client import cli
-from src.utils.http_exception import BadRequestException, CollectionNotFoundException
+from src.utils.http_exception import BadRequestException, CollectionNotFoundException, InvalidParameterException
 from src.utils.http_response import hive_restful_response
 
 
@@ -23,12 +23,18 @@ class Database:
 
     @hive_restful_response
     def create_collection(self, collection_name):
+        if not collection_name:
+            raise InvalidParameterException(msg='Invalid collection name.')
+
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         cli.create_collection(did, app_did, collection_name)
         return {'name': collection_name}
 
     @hive_restful_response
     def delete_collection(self, collection_name):
+        if not collection_name:
+            raise InvalidParameterException(msg='Invalid collection name.')
+
         did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
         cli.delete_collection(did, app_did, collection_name, is_check_exist=False)
         update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))

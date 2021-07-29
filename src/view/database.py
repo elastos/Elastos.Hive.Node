@@ -20,9 +20,45 @@ def init_app(app, hive_setting):
 
 @blueprint.route('/api/v2/vault/db/collections/<collection_name>', methods=['PUT'])
 def create_collection(collection_name):
-    """ Create the collection
+    """ Create the collection by collection name.
 
     .. :quickref: Database; Create the collection
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+
+    .. code-block:: json
+
+        {
+            “name”: “<collection_name>”
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    .. sourcecode:: http
+
+        HTTP/1.1 455 Already Exists
 
     """
     return database.create_collection(collection_name)
@@ -30,9 +66,41 @@ def create_collection(collection_name):
 
 @blueprint.route('/api/v2/vault/db/<collection_name>', methods=['DELETE'])
 def delete_collection(collection_name):
-    """ Delete the collection
+    """ Delete the collection by collection name.
 
     .. :quickref: Database; Delete the collection
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 204 OK
+
+    .. code-block:: json
+
+        {
+            “name”: “<collection_name>”
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
 
     """
     return database.delete_collection(collection_name)
@@ -40,9 +108,112 @@ def delete_collection(collection_name):
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['POST'])
 def insert_or_count_document(collection_name):
-    """ Insert or count the documents
+    """ Insert or count the documents. Insert the documents if no URL parameters.
 
     .. :quickref: Database; Insert&count the documents
+
+    **Request**:
+
+    .. code-block:: json
+
+        {
+            "document": [
+                {
+                    "author": "john doe1",
+                    "title": "Eve for Dummies1"
+                },
+                {
+                    "author": "john doe2",
+                    "title": "Eve for Dummies2"
+                 }
+             ],
+            "options": {
+                 "bypass_document_validation":false,
+                 "ordered":true
+             }
+        }
+
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 201 OK
+
+    .. code-block:: json
+
+        {
+            "acknowledged": true,
+            "inserted_ids": [
+                "5f4658d122c95b17e72f2d4a",
+                "5f4658d122c95b17e72f2d4b"
+            ]
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
+
+    Count the documents if the URL parameter is **op = count**
+
+    **Request**:
+
+    .. code-block:: json
+
+        {
+            "filter": {
+                "author": "john doe1_1",
+            },
+            "options": {
+                "skip": 0,
+                "limit": 10,
+                "maxTimeMS": 1000000000
+            }
+        }
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 204 OK
+
+    .. code-block:: json
+
+        {
+            "count": 10
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
 
     """
     op = request.args.get('op')

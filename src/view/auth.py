@@ -28,7 +28,7 @@ def did_sign_in():
 
     **Request**:
 
-    .. sourcecode:: http
+    .. code-block:: json
 
         {
             "id": "<the user’s did_document>",
@@ -39,6 +39,8 @@ def did_sign_in():
     .. sourcecode:: http
 
         HTTP/1.1 201 OK
+
+    .. code-block:: json
 
         {
            “challenge”: “<the authentication challenge encoded in JWT>”
@@ -62,7 +64,7 @@ def did_auth():
 
     **Request**:
 
-    .. sourcecode:: http
+    .. code-block:: json
 
         {
             "challenge_response": "<the response for the authentication challenge encoded in JWT>",
@@ -73,6 +75,8 @@ def did_auth():
     .. sourcecode:: http
 
         HTTP/1.1 201 OK
+
+    .. code-block:: json
 
         {
                “token”: “<the access token encoded in JWT>”

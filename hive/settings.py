@@ -156,7 +156,9 @@ class HiveSetting:
     def PAYMENT_CHECK_EXPIRED(self):
         return self.env_config('PAYMENT_CHECK_EXPIRED', default='True', cast=bool)
 
+    @property
+    def IPFS_NODE_URL(self):
+        return self.env_config('IPFS_NODE_URL', default='', cast=str)
+
 
 hive_setting = HiveSetting()
-
-

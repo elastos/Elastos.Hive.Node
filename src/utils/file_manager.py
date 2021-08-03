@@ -6,6 +6,7 @@ This is for files management, include file, file content, file properties, and d
 import hashlib
 import pickle
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 from flask import request
@@ -13,6 +14,7 @@ from flask import request
 from hive.settings import hive_setting
 from hive.util.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from hive.util.constants import CHUNK_SIZE
+from hive.util.flask_rangerequest import RangeRequest
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import get_vault_used_storage
 from hive.util.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
@@ -138,6 +140,11 @@ class FileManager:
     def ipfs_gen_cache_file_name(self, path: str):
         return path.replace('/', '_').replace('\\', '_')
 
+    def ipfs_get_file_path(self, did, relative_path):
+        name = fm.ipfs_gen_cache_file_name(relative_path)
+        cache_path = st_get_ipfs_cache_path(did)
+        return cache_path / name
+
     def get_file_content_sha256(self, file_path: Path):
         buf_size = 65536  # lets read stuff in 64kb chunks!
         sha = hashlib.sha256()
@@ -150,14 +157,25 @@ class FileManager:
         return sha.hexdigest()
 
     def ipfs_uploading_file(self, did, path: str):
-        name = self.ipfs_gen_cache_file_name(path)
-        cache_path = st_get_ipfs_cache_path(did)
-        file_path = cache_path / name
+        file_path = self.ipfs_get_file_path(did, path)
         options = {
             'files': {'file': open(file_path.as_posix(), 'rb')}
         }
         json_data = self.http.post(self.ipfs_url + '/api/v0/add', None, None, options=options, success_code=200)
         return json_data['Hash']
+
+    def get_response_by_file_path(self, path: Path):
+        size = path.stat().st_size
+        with open(path.as_posix(), 'rb') as f:
+            etag = RangeRequest.make_etag(f)
+        return RangeRequest(open(path.as_posix(), 'rb'),
+                            etag=etag,
+                            last_modified=datetime.utcnow(),
+                            size=size).make_response()
+
+    def ipfs_download_file_to_path(self, cid, path: Path):
+        response = self.http.post(self.ipfs_url + f'/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
+        self.write_file_by_response(response, path)
 
 
 fm = FileManager()

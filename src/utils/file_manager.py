@@ -3,6 +3,7 @@
 """
 This is for files management, include file, file content, file properties, and dir management.
 """
+import hashlib
 import pickle
 import shutil
 from pathlib import Path
@@ -123,6 +124,20 @@ class FileManager:
 
     def delete_vault_file(self, did, name):
         self.delete_file((get_vault_backup_path(did) / name).resolve())
+
+    def ipfs_gen_cache_file_name(self, path: str):
+        return path.replace('/', '_').replace('\\', '_')
+
+    def get_file_content_sha256(self, file_path: Path):
+        buf_size = 65536  # lets read stuff in 64kb chunks!
+        sha = hashlib.sha256()
+        with file_path.open('rb') as f:
+            while True:
+                data = f.read(buf_size)
+                if not data:
+                    break
+                sha.update(data)
+        return sha.hexdigest()
 
 
 fm = FileManager()

@@ -73,13 +73,23 @@ class IpfsFiles:
         cache_path = st_get_ipfs_cache_path(did)
         file_path = cache_path / name
         fm.write_file_by_request_stream(file_path)
-        file_doc = {
-            DID: did,
-            APP_DID: app_did,
-            COL_IPFS_FILES_PATH: path,
-            COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(file_path),
-            COL_IPFS_FILES_IS_FILE: True,
-            SIZE: file_path.stat().st_size,
-            COL_IPFS_FILES_IPFS_CID: None,
-        }
-        result = cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, file_doc, is_create=True)
+        col_filter = {DID: did,
+                      APP_DID: app_did,
+                      COL_IPFS_FILES_PATH: path}
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
+        if not doc:
+            # not exists, add new one.
+            file_doc = {
+                DID: did,
+                APP_DID: app_did,
+                COL_IPFS_FILES_PATH: path,
+                COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(file_path),
+                COL_IPFS_FILES_IS_FILE: True,
+                SIZE: file_path.stat().st_size,
+                COL_IPFS_FILES_IPFS_CID: None,
+            }
+            result = cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, file_doc, is_create=True)
+        else:
+            # exists, just remove cid for uploading the file to IPFS node later.
+            result = cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES,
+                                           col_filter, {'$set': {COL_IPFS_FILES_IPFS_CID: None}}, is_extra=True)

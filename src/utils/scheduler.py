@@ -27,7 +27,7 @@ def task_upload_ipfs_files():
     logging.info('[task_upload_ipfs_files] enter.')
     # find 10 docs and ordered by ascending.
     col_filter = {COL_IPFS_FILES_IPFS_CID: None}
-    options = {'limit': 10, 'sort': [('created', pymongo.ASCENDING), ]}
+    options = {'limit': 10, 'sort': [('modified', pymongo.ASCENDING), ]}
     file_docs = cli.find_many_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, col_filter, is_raise=False, options=options)
     if not file_docs:
         logging.info('[task_upload_ipfs_files] no files need be uploading to ipfs node.')

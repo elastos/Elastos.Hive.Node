@@ -13,6 +13,8 @@ from src import view
 
 import os
 
+from src.utils.scheduler import scheduler_init
+
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CONFIG_FILE = os.path.join(BASE_DIR, 'logging.conf')
 
@@ -57,6 +59,7 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     init_did_backend()
     main.init_app(app, mode)
     view.init_app(app, mode)
+    scheduler_init(app)
     if mode == HIVE_MODE_DEV:
         CORS(app, supports_credentials=True)
         print("hive node cors supported")

@@ -10,17 +10,27 @@ from pathlib import Path
 
 from flask import request
 
+from hive.settings import hive_setting
 from hive.util.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from hive.util.constants import CHUNK_SIZE
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import get_vault_used_storage
 from hive.util.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
 from src.utils.http_exception import BadRequestException
+from src.utils.node_settings import st_get_ipfs_cache_path
 
 
 class FileManager:
     def __init__(self):
-        pass
+        self._http = None
+        self.ipfs_url = hive_setting.IPFS_NODE_URL
+
+    @property
+    def http(self):
+        if not self._http:
+            from src.utils.http_client import HttpClient
+            self._http = HttpClient()
+        return self._http
 
     def get_vault_storage_size(self, did):
         return get_vault_used_storage(did)
@@ -138,6 +148,16 @@ class FileManager:
                     break
                 sha.update(data)
         return sha.hexdigest()
+
+    def ipfs_uploading_file(self, did, path: str):
+        name = self.ipfs_gen_cache_file_name(path)
+        cache_path = st_get_ipfs_cache_path(did)
+        file_path = cache_path / name
+        options = {
+            'files': {'file': open(file_path.as_posix(), 'rb')}
+        }
+        json_data = self.http.post(self.ipfs_url + '/api/v0/add', None, None, options=options, success_code=200)
+        return json_data['Hash']
 
 
 fm = FileManager()

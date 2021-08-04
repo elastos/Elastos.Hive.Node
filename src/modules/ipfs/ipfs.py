@@ -98,15 +98,62 @@ class IpfsFiles:
 
     @hive_restful_response
     def list_folder(self, path):
-        pass
+        """
+        List the files recursively.
+        :param path: Empty means root folder.
+        :return: File list.
+        """
+        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        col_filter = {DID: did, APP_DID: app_did}
+        if path:
+            folder_path = path if path[len(path) - 1] == '/' else f'{path}/'
+            col_filter[COL_IPFS_FILES_PATH] = {
+                '$regex': f'^{folder_path}'
+            }
+        docs = cli.find_many(did, app_did, COL_IPFS_FILES, col_filter)
+        return {
+            'value': list(map(lambda d: self.get_list_file_info_by_doc(d), docs))
+        }
 
     @hive_restful_response
     def get_properties(self, path):
-        pass
+        if not path:
+            raise InvalidParameterException()
+
+        did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
+        col_filter = {DID: did,
+                      APP_DID: app_did,
+                      COL_IPFS_FILES_PATH: path}
+        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter)
+        if not doc:
+            raise FileNotFoundException(msg=f'Can not find the file with path: {path}')
+
+        return {
+            'name': doc[COL_IPFS_FILES_PATH],
+            'is_file': doc[COL_IPFS_FILES_IS_FILE],
+            'size': doc[SIZE],
+            'created': doc['created'],
+            'updated': doc['modified'],
+        }
 
     @hive_restful_response
     def get_hash(self, path):
-        pass
+        if not path:
+            raise InvalidParameterException()
+
+        did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
+        col_filter = {DID: did,
+                      APP_DID: app_did,
+                      COL_IPFS_FILES_PATH: path}
+        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter)
+        if not doc:
+            raise FileNotFoundException(msg=f'Can not find the file with path: {path}')
+
+        return {
+            'name': doc[COL_IPFS_FILES_PATH],
+            'algorithm': 'SHA256',
+            'hash': doc[COL_IPFS_FILES_SHA256]
+        }
 
     def upload_file_by_did(self, did, app_did, path):
         """
@@ -216,4 +263,11 @@ class IpfsFiles:
                            {'$set': {COL_IPFS_FILES_PATH: dst_path}}, is_extra=True)
         return {
             'name': dst_path
+        }
+
+    def get_list_file_info_by_doc(self, file_doc):
+        return {
+            'name': file_doc[COL_IPFS_FILES_PATH],
+            'is_file': file_doc[COL_IPFS_FILES_IS_FILE],
+            'size': file_doc[SIZE],
         }

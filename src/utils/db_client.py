@@ -69,11 +69,11 @@ class DatabaseClient:
         #         and info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
         #     raise ForbiddenException(msg="The vault can't be written.")
 
-    def find_many(self, did, app_id, collection_name, col_filter, options):
+    def find_many(self, did, app_id, collection_name, col_filter, options=None):
         col = self.get_user_collection(did, app_id, collection_name)
         if not col:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
-        return list(col.find(convert_oid(col_filter) if col_filter else None, **options))
+        return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
 
     def find_many_origin(self, db_name, collection_name, col_filter, options=None, is_create=True, is_raise=True):
         col = self.get_origin_collection(db_name, collection_name, is_create=is_create)

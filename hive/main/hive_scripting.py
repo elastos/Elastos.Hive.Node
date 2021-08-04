@@ -206,11 +206,11 @@ class HiveScripting:
             data, err_message = None, f"invalid executable type '{executable_type}'"
 
         if err_message:
-            output[output_key] = err_message
-        else:
-            if capture_output:
-                output[output_key] = data
-        return output
+            return self.response.response_err(BAD_REQUEST, err_message), False
+
+        if capture_output:
+            output[output_key] = data
+        return output, True
 
     def __count_nested_condition(self, condition):
         content = copy.deepcopy(condition)
@@ -285,7 +285,7 @@ class HiveScripting:
         r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
         if r != SUCCESS:
             logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
-            return self.response.response_err(r, msg)
+            return self.response.response_err(r, msg), False
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -300,11 +300,11 @@ class HiveScripting:
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
             logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message), False
 
         if not script:
             logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-            return self.response.response_err(NOT_FOUND, err_message)
+            return self.response.response_err(NOT_FOUND, err_message), False
 
         # Validate anonymity options
         allow_anonymous_user = script.get('allowAnonymousUser', False)
@@ -314,21 +314,21 @@ class HiveScripting:
                           "allowAnonymousApp to be False as we cannot request an auth to prove an app identity without " \
                           "proving the user identity"
             logging.debug(err_message)
-            return self.response.response_err(BAD_REQUEST, err_message)
+            return self.response.response_err(BAD_REQUEST, err_message), False
         if allow_anonymous_user is True:
             caller_did = None
         else:
             if not caller_did:
                 logging.debug(f"Error while executing script named '{script_name}': Auth failed. caller_did "
                               f"not set")
-                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_did not set")
+                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_did not set"), False
         if allow_anonymous_app is True:
             caller_app_did = None
         else:
             if not caller_app_did:
                 logging.debug(f"Error while executing script named '{script_name}': Auth failed. "
                               f"caller_app_did not set")
-                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_app_did not set")
+                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_app_did not set"), False
 
         logging.debug(f"Executing a script named '{script_name}' with params: "
                       f"Caller DID: '{caller_did}', Caller App DID: '{caller_app_did}', "
@@ -341,26 +341,30 @@ class HiveScripting:
             r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
             if r != SUCCESS:
                 logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
-                return self.response.response_err(r, msg)
+                return self.response.response_err(r, msg), False
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
                 logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-                return self.response.response_err(FORBIDDEN, err_message)
+                return self.response.response_err(FORBIDDEN, err_message), False
 
         executable = script.get("executable")
         unmassage_keys_with_dollar_signs(executable)
         output = {}
-        data = self.__executable_execution(caller_did, caller_app_did, target_did, target_app_did, executable, params,
-                                           output=output, output_key=executable.get('name', "output0"))
-        return data
+        data, is_success = self.__executable_execution(caller_did, caller_app_did,
+                                                       target_did, target_app_did, executable, params,
+                                                       output=output, output_key=executable.get('name', "output0"))
+        return data, is_success
 
     def run_script_url(self, target_did, target_app_did, script_name, params):
         # Get caller info
         caller_did, caller_app_did = did_auth()
 
-        data = self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
+        data, is_success = self.__run_script(script_name, caller_did, caller_app_did,
+                                             target_did, target_app_did, params)
+        if not is_success:
+            return data
 
         return self.response.response_ok(data)
 
@@ -386,7 +390,10 @@ class HiveScripting:
             return self.response.response_err(BAD_REQUEST, "target_app_did not set")
 
         params = content.get('params', None)
-        data = self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
+        data, is_success = self.__run_script(script_name, caller_did, caller_app_did,
+                                             target_did, target_app_did, params)
+        if not is_success:
+            return data
 
         return self.response.response_ok(data)
 

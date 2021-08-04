@@ -5,7 +5,7 @@ The entrance for ipfs module.
 """
 import shutil
 
-from hive.util.constants import VAULT_ACCESS_WR, DID_INFO_DB_NAME, VAULT_ACCESS_R
+from hive.util.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
 from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.modules.scripting.scripting import check_auth_and_vault
 from src.utils.consts import COL_IPFS_FILES, DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
@@ -21,7 +21,7 @@ class IpfsFiles:
         """
         Use IPFS node as the file storage.
         1. Every did has a local files cache.
-        2. Every did/app_did has its own files collection. # TODO:
+        2. Every did/app_did has its own files collection.
         3. When uploading the file, cache it locally. Then upload to the IPFS node with the timed script.
         4. The files with same content is relating to the same CID of the IPFS node. So it can not be unpined in IPFS.
         """
@@ -62,7 +62,7 @@ class IpfsFiles:
         col_filter = {DID: did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, col_filter, is_raise=False)
+        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter, is_raise=False)
         if not doc:
             return
 
@@ -71,10 +71,12 @@ class IpfsFiles:
             file_path.unlink()
 
         if doc[COL_IPFS_FILES_IPFS_CID]:
-            fm.ipfs_remove_file(doc[COL_IPFS_FILES_IPFS_CID])
+            # INFO: can not unpin file in the IPFS node because of CID maybe used for many files.
+            #fm.ipfs_remove_file(doc[COL_IPFS_FILES_IPFS_CID])
+            pass
 
         inc_vault_file_use_storage_byte(did, 0 - doc[SIZE])
-        cli.delete_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, col_filter, is_check_exist=False)
+        cli.delete(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
@@ -123,7 +125,7 @@ class IpfsFiles:
         col_filter = {DID: did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
+        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
         if not doc:
             # not exists, add new one.
             file_doc = {
@@ -135,12 +137,12 @@ class IpfsFiles:
                 SIZE: file_path.stat().st_size,
                 COL_IPFS_FILES_IPFS_CID: None,
             }
-            result = cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, file_doc, is_create=True)
+            result = cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
             inc_vault_file_use_storage_byte(did, file_doc[SIZE])
         else:
             # exists, just remove cid for uploading the file to IPFS node later.
-            result = cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES,
-                                           col_filter, {'$set': {COL_IPFS_FILES_IPFS_CID: None}}, is_extra=True)
+            result = cli.update_one(did, app_did, COL_IPFS_FILES,
+                                    col_filter, {'$set': {COL_IPFS_FILES_IPFS_CID: None}}, is_extra=True)
             inc_vault_file_use_storage_byte(did, file_path.stat().st_size - doc[SIZE])
 
     def download_file_by_did(self, did, app_did, path):
@@ -157,7 +159,7 @@ class IpfsFiles:
         col_filter = {DID: did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, col_filter)
+        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter)
         if not doc:
             raise FileNotFoundException(msg=f'Can not find the file with path: {path}')
         file_path = fm.ipfs_get_file_path(did, path)
@@ -180,8 +182,8 @@ class IpfsFiles:
 
         src_filter = {DID: did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
         dst_filter = {DID: did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
-        src_doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, src_filter)
-        dst_doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, dst_filter)
+        src_doc = cli.find_one(did, app_did, COL_IPFS_FILES, src_filter)
+        dst_doc = cli.find_one(did, app_did, COL_IPFS_FILES, dst_filter)
         if not src_doc:
             raise FileNotFoundException(msg=f'Source file {src_path} does not exist.')
         if dst_doc:
@@ -207,11 +209,11 @@ class IpfsFiles:
                 SIZE: src_doc[SIZE],
                 COL_IPFS_FILES_IPFS_CID: src_doc[COL_IPFS_FILES_IPFS_CID],
             }
-            cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, file_doc)
+            cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc)
             inc_vault_file_use_storage_byte(did, src_doc[SIZE])
         else:
-            cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, src_filter,
-                                  {'$set': {COL_IPFS_FILES_PATH: dst_path}}, is_extra=True)
+            cli.update_one(did, app_did, COL_IPFS_FILES, src_filter,
+                           {'$set': {COL_IPFS_FILES_PATH: dst_path}}, is_extra=True)
         return {
             'name': dst_path
         }

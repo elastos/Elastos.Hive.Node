@@ -83,8 +83,9 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
 
-    def find_one(self, did, app_id, collection_name, col_filter, options=None):
-        return self.find_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter, options)
+    def find_one(self, did, app_id, collection_name, col_filter, options=None, is_create=False, is_raise=True):
+        return self.find_one_origin(gene_mongo_db_name(did, app_id),
+                                    collection_name, col_filter, options, is_create=is_create, is_raise=is_raise)
 
     def find_one_origin(self, db_name, collection_name, col_filter, options=None, is_create=False, is_raise=True):
         col = self.get_origin_collection(db_name, collection_name, is_create=is_create)
@@ -113,8 +114,9 @@ class DatabaseClient:
             "inserted_id": str(result.inserted_id) if result.inserted_id else ''
         }
 
-    def update_one(self, did, app_id, collection_name, col_filter, col_update, options):
-        return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter, col_update, options)
+    def update_one(self, did, app_id, collection_name, col_filter, col_update, options, is_extra=False):
+        return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name,
+                                      col_filter, col_update, options, is_extra=is_extra)
 
     def update_one_origin(self, db_name, collection_name, col_filter, col_update,
                           options=None, is_create=False, is_many=False, is_extra=False):
@@ -141,8 +143,9 @@ class DatabaseClient:
             "upserted_id": str(result.upserted_id) if result.upserted_id else '',
         }
 
-    def delete_one(self, did, app_id, collection_name, col_filter):
-        return self.delete_one_origin(gene_mongo_db_name(did, app_id), collection_name, col_filter)
+    def delete_one(self, did, app_id, collection_name, col_filter, is_check_exist=True):
+        return self.delete_one_origin(gene_mongo_db_name(did, app_id),
+                                      collection_name, col_filter, is_check_exist=is_check_exist)
 
     def delete_one_origin(self, db_name, collection_name, col_filter, is_check_exist=True):
         col = self.get_origin_collection(db_name, collection_name)

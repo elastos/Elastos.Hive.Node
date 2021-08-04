@@ -3,19 +3,28 @@
 """
 The entrance for ipfs module.
 """
+import shutil
+
 from hive.util.constants import VAULT_ACCESS_WR, DID_INFO_DB_NAME, VAULT_ACCESS_R
+from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.modules.scripting.scripting import check_auth_and_vault
 from src.utils.consts import COL_IPFS_FILES, DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
     COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
-from src.utils.http_exception import InvalidParameterException, FileNotFoundException
+from src.utils.http_exception import InvalidParameterException, FileNotFoundException, AlreadyExistsException
 from src.utils.http_response import hive_restful_response, hive_stream_response
-from src.utils.node_settings import st_get_ipfs_cache_path
 
 
 class IpfsFiles:
     def __init__(self):
+        """
+        Use IPFS node as the file storage.
+        1. Every did has a local files cache.
+        2. Every did/app_did has its own files collection. # TODO:
+        3. When uploading the file, cache it locally. Then upload to the IPFS node with the timed script.
+        4. The files with same content is relating to the same CID of the IPFS node. So it can not be unpined in IPFS.
+        """
         pass
 
     @hive_restful_response
@@ -39,15 +48,51 @@ class IpfsFiles:
 
     @hive_restful_response
     def delete_file(self, path):
-        pass
+        """
+        Delete the file.
+        1. remove the file in files cache.
+        2. unpin the file in IPFS node.
+        :param path:
+        :return:
+        """
+        if not path:
+            raise InvalidParameterException()
+
+        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        col_filter = {DID: did,
+                      APP_DID: app_did,
+                      COL_IPFS_FILES_PATH: path}
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, col_filter, is_raise=False)
+        if not doc:
+            return
+
+        file_path = fm.ipfs_get_file_path(did, path)
+        if file_path.exists():
+            file_path.unlink()
+
+        if doc[COL_IPFS_FILES_IPFS_CID]:
+            fm.ipfs_remove_file(doc[COL_IPFS_FILES_IPFS_CID])
+
+        inc_vault_file_use_storage_byte(did, 0 - doc[SIZE])
+        cli.delete_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, col_filter, is_check_exist=False)
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
-        pass
+        if not src_path or not dst_path:
+            raise InvalidParameterException()
+        elif src_path == dst_path:
+            raise InvalidParameterException(msg='The source file and the destination file can not be the same.')
+
+        return self.move_file_really(src_path, dst_path)
 
     @hive_restful_response
     def copy_file(self, src_path, dst_path):
-        pass
+        if not src_path or not dst_path:
+            raise InvalidParameterException()
+        elif src_path == dst_path:
+            raise InvalidParameterException(msg='The source file and the destination file can not be the same.')
+
+        return self.move_file_really(src_path, dst_path, True)
 
     @hive_restful_response
     def list_folder(self, path):
@@ -91,10 +136,12 @@ class IpfsFiles:
                 COL_IPFS_FILES_IPFS_CID: None,
             }
             result = cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, file_doc, is_create=True)
+            inc_vault_file_use_storage_byte(did, file_doc[SIZE])
         else:
             # exists, just remove cid for uploading the file to IPFS node later.
             result = cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES,
                                            col_filter, {'$set': {COL_IPFS_FILES_IPFS_CID: None}}, is_extra=True)
+            inc_vault_file_use_storage_byte(did, file_path.stat().st_size - doc[SIZE])
 
     def download_file_by_did(self, did, app_did, path):
         """
@@ -117,3 +164,54 @@ class IpfsFiles:
         if not file_path.exists():
             fm.ipfs_download_file_to_path(doc[COL_IPFS_FILES_IPFS_CID], file_path)
         return fm.get_response_by_file_path(file_path)
+
+    def move_file_really(self, src_path, dst_path, is_copy=False):
+        """
+        Move or copy file, not support directory.
+        1. check the existence of the source file.
+        2. move or copy file.
+        3. update the source file document or insert a new one.
+        :param src_path: The path of the source file.
+        :param dst_path: The path of the destination file.
+        :param is_copy: True means copy file, else move.
+        :return: Json data of the response.
+        """
+        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+
+        src_filter = {DID: did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
+        dst_filter = {DID: did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
+        src_doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, src_filter)
+        dst_doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, dst_filter)
+        if not src_doc:
+            raise FileNotFoundException(msg=f'Source file {src_path} does not exist.')
+        if dst_doc:
+            raise AlreadyExistsException(msg=f'Destination file {src_path} exists.')
+
+        full_src_path = fm.ipfs_get_file_path(did, src_path)
+        full_dst_path = fm.ipfs_get_file_path(did, dst_path)
+        if full_dst_path.exists():
+            full_dst_path.unlink()
+        if full_src_path.exists():
+            if is_copy:
+                shutil.copy2(full_src_path.as_posix(), full_dst_path.as_posix())
+            else:
+                shutil.move(full_src_path.as_posix(), full_dst_path.as_posix())
+
+        if is_copy:
+            file_doc = {
+                DID: did,
+                APP_DID: app_did,
+                COL_IPFS_FILES_PATH: dst_path,
+                COL_IPFS_FILES_SHA256: src_doc[COL_IPFS_FILES_SHA256],
+                COL_IPFS_FILES_IS_FILE: True,
+                SIZE: src_doc[SIZE],
+                COL_IPFS_FILES_IPFS_CID: src_doc[COL_IPFS_FILES_IPFS_CID],
+            }
+            cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, file_doc)
+            inc_vault_file_use_storage_byte(did, src_doc[SIZE])
+        else:
+            cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_FILES, src_filter,
+                                  {'$set': {COL_IPFS_FILES_PATH: dst_path}}, is_extra=True)
+        return {
+            'name': dst_path
+        }

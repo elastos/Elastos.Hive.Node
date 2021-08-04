@@ -140,8 +140,8 @@ class FileManager:
     def ipfs_gen_cache_file_name(self, path: str):
         return path.replace('/', '_').replace('\\', '_')
 
-    def ipfs_get_file_path(self, did, relative_path):
-        name = fm.ipfs_gen_cache_file_name(relative_path)
+    def ipfs_get_file_path(self, did, path: str):
+        name = self.ipfs_gen_cache_file_name(path)
         cache_path = st_get_ipfs_cache_path(did)
         return cache_path / name
 

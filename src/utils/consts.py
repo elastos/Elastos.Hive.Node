@@ -37,7 +37,7 @@ COL_RECEIPTS_ORDER_ID = 'order_id'
 COL_RECEIPTS_TRANSACTION_ID = 'transaction_id'
 COL_RECEIPTS_PAID_DID = 'paid_did'
 
-COL_IPFS_FILES = 'vault_ipfs_files'
+COL_IPFS_FILES = 'ipfs_files'
 COL_IPFS_FILES_PATH = 'path'
 COL_IPFS_FILES_SHA256 = 'sha256'
 COL_IPFS_FILES_IS_FILE = 'is_file'

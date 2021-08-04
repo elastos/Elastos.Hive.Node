@@ -125,6 +125,8 @@ def run_executable_find(did, app_did, target_did, target_app_did, executable_bod
         return None, err_message
 
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
+    if not col:
+        return None, f'Can not find the collection {executable_body.get("collection")}'
     data, err_message = query_find_many(col, executable_body, options)
     if err_message:
         return None, err_message

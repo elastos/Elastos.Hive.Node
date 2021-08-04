@@ -225,7 +225,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_4_set_script_with_anonymous_access(self):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_1_set_script_with_anonymous_access")
+        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_set_script_with_anonymous_access")
         r, s = self.parse_response(
             self.test_client.post('/api/v1/scripting/set_script',
                                   data=json.dumps(
@@ -350,6 +350,32 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
+
+    def test_8_1_run_script_with_url_exception(self):
+        logging.getLogger('ScriptingTest').debug("Enter test_8_1_run_script_with_url_exception")
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/scripting/set_script', json={
+                                      "name": "script_anonymous_access2",
+                                      "allowAnonymousUser": True,
+                                      "allowAnonymousApp": True,
+                                      "executable": {
+                                          "type": "find",
+                                          "name": "get_all_groups",
+                                          "body": {
+                                              "collection": "groups2"
+                                          }
+                                      }
+                                  }, headers=self.auth))
+        self.assertEqual(s, 200)
+        self.assertEqual(r["_status"], "OK")
+        # run to get an error response.
+        r, s = self.parse_response(
+            self.test_client.get('/api/v1/scripting/run_script_url/'
+                                 'did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN@appid/'
+                                 'script_anonymous_access2'))
+        self.assertEqual(s, 400)
+        self.assertEqual(r["_status"], "ERR")
+        logging.getLogger('ScriptingTest').debug(f"test_8_1 error message: {r['_error']['message']}")
 
 
 if __name__ == '__main__':

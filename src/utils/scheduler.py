@@ -18,8 +18,9 @@ scheduler = APScheduler()
 
 
 def scheduler_init(app):
-    scheduler.init_app(app)
-    scheduler.start()
+    if not scheduler.running:
+        scheduler.init_app(app)
+        scheduler.start()
 
 
 @scheduler.task(trigger='interval', id='task_upload_ipfs_files', minutes=10)

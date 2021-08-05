@@ -53,6 +53,9 @@ class DatabaseClient:
                 db.create_collection(collection_name)
         return db[collection_name]
 
+    def get_all_database_names(self):
+        return self.__get_connection().list_database_names()
+
     def __get_vault_service(self, did):
         return self.__get_connection()[DID_INFO_DB_NAME][VAULT_SERVICE_COL].find_one({VAULT_SERVICE_DID: did})
 
@@ -114,9 +117,9 @@ class DatabaseClient:
             "inserted_id": str(result.inserted_id) if result.inserted_id else ''
         }
 
-    def update_one(self, did, app_id, collection_name, col_filter, col_update, options, is_extra=False):
+    def update_one(self, did, app_id, collection_name, col_filter, col_update, options=None, is_extra=False):
         return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name,
-                                      col_filter, col_update, options, is_extra=is_extra)
+                                      col_filter, col_update, options=options, is_extra=is_extra)
 
     def update_one_origin(self, db_name, collection_name, col_filter, col_update,
                           options=None, is_create=False, is_many=False, is_extra=False):

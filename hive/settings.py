@@ -48,7 +48,8 @@ class HiveSetting:
 
     @property
     def HIVE_DATA(self):
-        return self.env_config('HIVE_DATA', default="./data", cast=str)
+        value = self.env_config('HIVE_DATA', default="./data", cast=str)
+        return BASE_DIR + '/' + value if value.startswith('./test_hive_data') else BASE_DIR + value
 
     @property
     def VAULTS_BASE_DIR(self):

@@ -40,12 +40,12 @@ def writing_operation(path):
     return ipfs_files.upload_file(path)
 
 
-@blueprint.route('/api/v2/vault/files/<path:path>', methods=['PATCH'])
+@blueprint.route('/api/v2/vault/ipfs-files/<path:path>', methods=['PATCH'])
 def move_file(path):
     dst_path = request.args.get('to')
     return ipfs_files.move_file(path, dst_path)
 
 
-@blueprint.route('/api/v2/vault/files/<path:path>', methods=['DELETE'])
+@blueprint.route('/api/v2/vault/ipfs-files/<path:path>', methods=['DELETE'])
 def delete_file(path):
     return ipfs_files.delete_file(path)

@@ -76,7 +76,7 @@ class IpfsFiles:
             pass
 
         inc_vault_file_use_storage_byte(did, 0 - doc[SIZE])
-        cli.delete(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
+        cli.delete_one(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
@@ -228,7 +228,7 @@ class IpfsFiles:
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
 
         src_filter = {DID: did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
-        dst_filter = {DID: did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
+        dst_filter = {DID: did, APP_DID: app_did, COL_IPFS_FILES_PATH: dst_path}
         src_doc = cli.find_one(did, app_did, COL_IPFS_FILES, src_filter)
         dst_doc = cli.find_one(did, app_did, COL_IPFS_FILES, dst_filter)
         if not src_doc:

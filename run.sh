@@ -95,6 +95,7 @@ function test () {
     pytest --disable-pytest-warnings -xs tests/scripting_test.py
     pytest --disable-pytest-warnings -xs tests/files_test.py
     pytest --disable-pytest-warnings -xs tests/database_test.py
+    pytest --disable-pytest-warnings -xs tests/ipfs_files_test.py
 
 #    docker container stop hive-mongo && docker container rm -f hive-mongo
 #    docker container stop hive-test-mongo && docker container rm -f hive-test-mongo

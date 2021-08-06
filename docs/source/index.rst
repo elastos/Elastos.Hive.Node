@@ -15,7 +15,8 @@ Summary
   :undoc-static:
   :endpoints: auth.did_sign_in, auth.did_auth,
     database.create_collection, database.delete_collection, database.insert_or_count_document,
-    database.update_document, database.delete_document, database.find_document, database.query_document
+    database.update_document, database.delete_document, database.find_document, database.query_document,
+    files.reading_operation, files.writing_operation, files.move_file, files.delete_file
 
 Auth
 ====
@@ -89,3 +90,36 @@ query documents
 .. autoflask:: src:make_port()
   :undoc-static:
   :endpoints: database.query_document
+
+Files
+=====
+
+Files storage and management.
+
+download/properties/hash/list
+-----------------------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: files.reading_operation
+
+copy/upload
+-----------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: files.writing_operation
+
+move
+----
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: files.move_file
+
+delete
+------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: files.delete_file

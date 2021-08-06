@@ -24,7 +24,7 @@ def init_app(app, hive_setting):
 def did_sign_in():
     """ Sign in with the application DID and get the challenge string.
 
-    .. :quickref: Authentication; Sign in with app DID
+    .. :quickref: 01 Authentication; Sign in with app DID
 
     **Request**:
 
@@ -38,7 +38,7 @@ def did_sign_in():
 
     .. sourcecode:: http
 
-        HTTP/1.1 201 OK
+        HTTP/1.1 201 Created
 
     .. code-block:: json
 
@@ -60,7 +60,7 @@ def did_sign_in():
 def did_auth():
     """ Auth to get the access token for the user DID and the application DID.
 
-    .. :quickref: Authentication; Get the access token.
+    .. :quickref: 01 Authentication; Get the access token.
 
     **Request**:
 
@@ -74,12 +74,12 @@ def did_auth():
 
     .. sourcecode:: http
 
-        HTTP/1.1 201 OK
+        HTTP/1.1 201 Created
 
     .. code-block:: json
 
         {
-               “token”: “<the access token encoded in JWT>”
+            “token”: “<the access token encoded in JWT>”
         }
 
     **Response Error**:

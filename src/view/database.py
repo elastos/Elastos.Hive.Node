@@ -22,7 +22,7 @@ def init_app(app, hive_setting):
 def create_collection(collection_name):
     """ Create the collection by collection name.
 
-    .. :quickref: Database; Create the collection
+    .. :quickref: 03 Database; Create the collection
 
     **Request**:
 
@@ -68,7 +68,7 @@ def create_collection(collection_name):
 def delete_collection(collection_name):
     """ Delete the collection by collection name.
 
-    .. :quickref: Database; Delete the collection
+    .. :quickref: 03 Database; Delete the collection
 
     **Request**:
 
@@ -80,7 +80,7 @@ def delete_collection(collection_name):
 
     .. sourcecode:: http
 
-        HTTP/1.1 204 OK
+        HTTP/1.1 204 Deleted
 
     .. code-block:: json
 
@@ -110,7 +110,7 @@ def delete_collection(collection_name):
 def insert_or_count_document(collection_name):
     """ Insert or count the documents. Insert the documents if no URL parameters.
 
-    .. :quickref: Database; Insert&count the documents
+    .. :quickref: 03 Database; Insert&count the documents
 
     **Request**:
 
@@ -138,7 +138,7 @@ def insert_or_count_document(collection_name):
 
     .. sourcecode:: http
 
-        HTTP/1.1 201 OK
+        HTTP/1.1 201 Created
 
     .. code-block:: json
 
@@ -189,7 +189,7 @@ def insert_or_count_document(collection_name):
 
     .. sourcecode:: http
 
-        HTTP/1.1 204 OK
+        HTTP/1.1 204 Deleted
 
     .. code-block:: json
 
@@ -226,7 +226,7 @@ def insert_or_count_document(collection_name):
 def update_document(collection_name):
     """ Update the documents by collection name.
 
-    .. :quickref: Database; Update the documents
+    .. :quickref: 03 Database; Update the documents
 
     **Request**:
 
@@ -287,7 +287,7 @@ def update_document(collection_name):
 def delete_document(collection_name):
     """ Delete the documents by collection name.
 
-    .. :quickref: Database; Delete the documents
+    .. :quickref: 03 Database; Delete the documents
 
     **Request**:
 
@@ -303,7 +303,7 @@ def delete_document(collection_name):
 
     .. sourcecode:: http
 
-        HTTP/1.1 204 OK
+        HTTP/1.1 204 Deleted
 
     **Response Error**:
 
@@ -331,7 +331,7 @@ def delete_document(collection_name):
 def find_document(collection_name):
     """ Find the documents by collection name. The parameters are URL ones.
 
-    .. :quickref: Database; Find the documents
+    .. :quickref: 03 Database; Find the documents
 
     **URL Parameters**:
 
@@ -397,7 +397,7 @@ def find_document(collection_name):
 def query_document():
     """ Query the documents with more options
 
-    .. :quickref: Database; Query the documents
+    .. :quickref: 03 Database; Query the documents
 
     **Request**:
 
@@ -426,7 +426,7 @@ def query_document():
 
     .. sourcecode:: http
 
-        HTTP/1.1 201 OK
+        HTTP/1.1 201 Created
 
     .. code-block:: json
 

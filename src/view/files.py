@@ -24,7 +24,7 @@ def reading_operation(path):
     """ Download/get the properties of/get the hash of the file, list the files of the folder.
     Download the content of the file by path if no URL parameter.
 
-    .. :quickref: Files; Download/properties/hash/list
+    .. :quickref: 04 Files; Download/properties/hash/list
 
     **Request**:
 
@@ -207,7 +207,7 @@ def writing_operation(path):
     """ Copy or upload file by path.
     Copy the file by the path if the URL parameter is 'dest=<path/to/destination>'.
 
-    .. :quickref: Files; Copy/upload
+    .. :quickref: 04 Files; Copy/upload
 
     **Request**:
 
@@ -219,7 +219,7 @@ def writing_operation(path):
 
     .. sourcecode:: http
 
-        HTTP/1.1 201 OK
+        HTTP/1.1 201 Created
 
     .. code-block:: json
 
@@ -261,7 +261,7 @@ def writing_operation(path):
 
     .. sourcecode:: http
 
-        HTTP/1.1 201 OK
+        HTTP/1.1 201 Created
 
     .. code-block:: json
 
@@ -298,7 +298,7 @@ def writing_operation(path):
 def move_file(path):
     """ Move the file by path to the file provided by the URL parameter 'to=<path/to/destination>'
 
-    .. :quickref: Files; Move
+    .. :quickref: 04 Files; Move
 
     **Request**:
 
@@ -349,7 +349,7 @@ def move_file(path):
 def delete_file(path):
     """ Delete the file by path.
 
-    .. :quickref: Files; Delete
+    .. :quickref: 04 Files; Delete
 
     **Request**:
 
@@ -361,7 +361,7 @@ def delete_file(path):
 
     .. sourcecode:: http
 
-        HTTP/1.1 204 OK
+        HTTP/1.1 204 Deleted
 
     **Response Error**:
 

@@ -4,9 +4,9 @@ Hive Node API Documentation
 Here is the documents for the APIs of the hive node. The hive node supports the following service:
 
 - authentication and authorization
-- the subscription of the vault service.
+- the subscription of the vault service
 - the services under the vault: database, files, scripting, payment, backup
-- the subscription of the backup service.
+- the subscription of the backup service
 
 Summary
 =======
@@ -14,14 +14,24 @@ Summary
 .. qrefflask:: src:make_port(is_first=True)
   :undoc-static:
   :endpoints: auth.did_sign_in, auth.did_auth,
+    subscription.vault_subscribe,
     database.create_collection, database.delete_collection, database.insert_or_count_document,
     database.update_document, database.delete_document, database.find_document, database.query_document,
     files.reading_operation, files.writing_operation, files.move_file, files.delete_file
 
-Auth
-====
+01 Auth
+=======
 
-authentication and authorization
+The authentication and authorization is for other hive node services.
+
+For accessing the services of the node, signing in with the DID document of the application
+and getting the access token is first step.
+
+To use the token returned by auth API. Please add this key-value in the header.
+
+.. sourcecode:: http
+
+    Authorization: token <the token returned by auth API>
 
 sign in
 -------
@@ -37,10 +47,22 @@ auth
   :undoc-static:
   :endpoints: auth.did_auth
 
-Database
-========
+02 Subscription
+===============
 
-based on mongodb
+subscription for the vault service and the backup service.
+
+subscribe
+---------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: subscription.vault_subscribe
+
+03 Database
+===========
+
+based on mongodb.
 
 create collection
 -----------------
@@ -91,10 +113,10 @@ query documents
   :undoc-static:
   :endpoints: database.query_document
 
-Files
-=====
+04 Files
+========
 
-Files storage and management.
+files storage and management.
 
 download/properties/hash/list
 -----------------------------

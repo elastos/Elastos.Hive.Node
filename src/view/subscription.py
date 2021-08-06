@@ -33,6 +33,52 @@ def vault_get_info():
 
 @blueprint.route('/api/v2/subscription/vault', methods=['PUT'])
 def vault_subscribe():
+    """ Subscribe to a remote vault service on the specific hive node,
+    where would create a new vault service if no such vault existed against the DID used.
+
+    A user can subscribe to only one vault service on the specific hive node with a given DID,
+    then should declare that service endpoint on the DID document that would be published on the DID chain
+    so that other users could be aware of the address and access the data on that vault with certain permission.
+
+    The free pricing plan is applied to a new subscribed vault.
+    The payment APIs will be used for upgrading the vault service.
+
+    .. :quickref: 02 Subscription; Subscribe
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 201 Created
+
+    .. code-block:: json
+
+        {
+            “pricingPlan”: “<the using pricing plan>
+            “serviceDid”: <hive node service did>
+            “quota”: 50000000, # the max space of the storage for the vault service.
+            “used”: 0,
+            “created”: <the epoch time>
+            “updated”: <the epoch time>
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 455 Already Exists
+
+    """
     return vault_subscription.subscribe()
 
 

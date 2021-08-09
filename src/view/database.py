@@ -80,7 +80,7 @@ def delete_collection(collection_name):
 
     .. sourcecode:: http
 
-        HTTP/1.1 204 Deleted
+        HTTP/1.1 204 No Content
 
     .. code-block:: json
 
@@ -189,7 +189,7 @@ def insert_or_count_document(collection_name):
 
     .. sourcecode:: http
 
-        HTTP/1.1 204 Deleted
+        HTTP/1.1 204 No Content
 
     .. code-block:: json
 
@@ -303,7 +303,7 @@ def delete_document(collection_name):
 
     .. sourcecode:: http
 
-        HTTP/1.1 204 Deleted
+        HTTP/1.1 204 No Content
 
     **Response Error**:
 

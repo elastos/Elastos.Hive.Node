@@ -93,6 +93,34 @@ def vault_activate_deactivate():
 
 @blueprint.route('/api/v2/subscription/vault', methods=['DELETE'])
 def vault_unsubscribe():
+    """ Unsubscribe from the remote vault service on a specific hive node.
+    Only the vault owner can unsubscribe from his owned vault service.
+    After unsubscription, the vault service would stop rendering service,
+    and users can not access data from the vault anymore.
+
+    And the data on the vault would be unsafe and undefined or even deleted from the hive node.
+
+    .. :quickref: 02 Subscription; Unsubscribe
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 204 No Content
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    """
     return vault_subscription.unsubscribe()
 
 

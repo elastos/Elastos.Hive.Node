@@ -361,7 +361,7 @@ def delete_file(path):
 
     .. sourcecode:: http
 
-        HTTP/1.1 204 Deleted
+        HTTP/1.1 204 No Content
 
     **Response Error**:
 

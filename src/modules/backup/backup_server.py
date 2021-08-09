@@ -311,10 +311,7 @@ class BackupServer(metaclass=Singleton):
         }
 
     @hive_restful_response
-    def subscribe(self, credential):
-        if credential:
-            # TODO: Need support this with payment.
-            raise NotImplementedException(msg='Not support with credential.')
+    def subscribe(self):
         return self._subscribe_free()
 
     @hive_restful_response

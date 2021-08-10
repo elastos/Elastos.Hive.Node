@@ -24,19 +24,27 @@ class RemoteResolver(metaclass=Singleton):
     def __init__(self):
         self.token = None
         self.user_did = DIDApp("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap", "")
+        self.token2 = None
+        self.user_did2 = DIDApp("crossUser",
+                                "stage west lava group genre ten farm pony small family february drink", "password")
         self.app_did = DApp("testapp", test_common.app_id,
                             "amount material swim purse swallow gate pride series cannon patient dentist person")
         self.test_config = TestConfig()
         self.http_client = HttpClient(f'{self.test_config.host_url}/api/v2/did')
         self.node_did = None
 
-    def get_token(self):
-        if not self.token:
-            self.token = self.__get_remote_token()
-        return self.token
+    def get_token(self, is_did2=False):
+        if not is_did2:
+            if not self.token:
+                self.token = self.__get_remote_token(self.user_did)
+            return self.token
+        else:
+            if not self.token2:
+                self.token2 = self.__get_remote_token(self.user_did2)
+            return self.token2
 
-    def __get_remote_token(self):
-        return self.auth(self.sign_in())
+    def __get_remote_token(self, did: DIDApp):
+        return self.auth(self.sign_in(), did)
 
     def __get_issuer_by_challenge(self, challenge):
         jws = lib.DefaultJWSParser_Parse(challenge.encode())
@@ -52,7 +60,7 @@ class RemoteResolver(metaclass=Singleton):
         assert response.status_code == 201
         return response.json()["challenge"]
 
-    def __get_auth_token(self, challenge):
+    def __get_auth_token(self, challenge, did: DIDApp):
         jws = lib.DefaultJWSParser_Parse(challenge.encode())
         if not jws:
             print(ffi.string(lib.DIDError_GetMessage()).decode())
@@ -63,12 +71,12 @@ class RemoteResolver(metaclass=Singleton):
         lib.JWT_Destroy(jws)
 
         # auth
-        vc = self.user_did.issue_auth(self.app_did)
+        vc = did.issue_auth(self.app_did)
         vp_json = self.app_did.create_presentation(vc, nonce, hive_did)
         return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
 
-    def auth(self, challenge):
-        auth_token = self.__get_auth_token(challenge)
+    def auth(self, challenge, did: DIDApp):
+        auth_token = self.__get_auth_token(challenge, did)
         response = self.http_client.post('/auth', {"challenge_response": auth_token}, need_token=False)
         assert response.status_code == 201
         return response.json()["token"]
@@ -105,12 +113,13 @@ class HttpClient:
     def __get_url(self, relative_url):
         return self.base_url + relative_url
 
-    def __get_headers(self, need_token=True, is_json=True):
+    def __get_headers(self, need_token=True, is_json=True, is_did2=False):
         headers = {}
         if is_json:
             headers['Content-type'] = 'application/json'
         if need_token:
-            headers['Authorization'] = 'token ' + RemoteResolver().get_token()
+            headers['Authorization'] = 'token ' + RemoteResolver().get_token(is_did2=is_did2)
+        logging.debug(f'HEADER: {headers}')
         return headers
 
     @_log_http_request
@@ -133,8 +142,8 @@ class HttpClient:
         return requests.put(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request
-    def patch(self, relative_url, body=None):
-        return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
+    def patch(self, relative_url, body=None, is_did2=False):
+        return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(is_did2=is_did2), json=body)
 
     @_log_http_request
     def delete(self, relative_url, body=None, is_json=False):

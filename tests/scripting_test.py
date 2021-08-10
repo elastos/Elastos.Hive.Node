@@ -3,7 +3,7 @@
 """
 Testing file for scripting module.
 """
-
+import logging
 import unittest
 import json
 
@@ -52,12 +52,12 @@ class ScriptingTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         return json.loads(response.text)
 
-    def __call_script(self, script_name, body, is_raw=False):
-        response = self.cli.patch(f'/scripting/{script_name}', body)
+    def __call_script(self, script_name, body, is_raw=False, is_did2=False):
+        response = self.cli.patch(f'/scripting/{script_name}', body, is_did2=is_did2)
         self.assertEqual(response.status_code, 200)
         return response.text if is_raw else json.loads(response.text)
 
-    def test01_register_script(self):
+    def test01_register_script_insert(self):
         self.__register_script('database_insert', {
             "executable": {
                 "output": True,
@@ -77,7 +77,7 @@ class ScriptingTestCase(unittest.TestCase):
             }
         })
 
-    def test02_call_script(self):
+    def test02_call_script_insert(self):
         self.__call_script('database_insert', {
             "params": {
                 "author": "John",
@@ -85,7 +85,7 @@ class ScriptingTestCase(unittest.TestCase):
             }
         })
 
-    def test03_call_script_url(self):
+    def test03_call_script_url_insert(self):
         response = self.cli.get('/scripting/database_insert/@'
                                 '/%7B%22author%22%3A%22John2%22%2C%22content%22%3A%22message2%22%7D')
         self.assertEqual(response.status_code, 200)
@@ -102,7 +102,7 @@ class ScriptingTestCase(unittest.TestCase):
         self.assertTrue('transaction_id' in response_body[script_name])
         return response_body[script_name]['transaction_id']
 
-    def test04_find_with_default_output(self):
+    def test04_find_with_default_output_find(self):
         name = 'database_find'
         col_filter = {'author': '$params.author'}
         body = self.__set_and_call_script(name, {'condition': {
@@ -124,6 +124,38 @@ class ScriptingTestCase(unittest.TestCase):
                 'target_app_did': self.app_did,
             }, 'params': {
                 'author': 'John'}})
+        self.assertIsNotNone(body)
+
+    def test04_find_with_anonymous(self):
+        name = 'database_find2'
+        col_filter = {'author': '$params.author'}
+        script_body = {
+            'condition': {
+                'name': 'verify_user_permission',
+                'type': 'queryHasResults',
+                'body': {
+                    'collection': self.collection_name,
+                    'filter': col_filter
+                }
+            },
+            'executable': {
+                'name': name,
+                'type': 'find',
+                'body': {
+                    'collection': self.collection_name,
+                    'filter': col_filter
+                }
+            },
+            "allowAnonymousUser": True,
+            "allowAnonymousApp": True
+        }
+        context = {'context': {
+                'target_did': self.did,
+                'target_app_did': self.app_did,
+            }, 'params': {
+                'author': 'John'}
+        }
+        body = self.__set_and_call_script(name, script_body, context, is_did2=True)
         self.assertIsNotNone(body)
 
     def test05_update(self):
@@ -229,9 +261,11 @@ class ScriptingTestCase(unittest.TestCase):
         response = self.cli.delete('/scripting/database_insert')
         self.assertEqual(response.status_code, 204)
 
-    def __set_and_call_script(self, name, set_data, run_data):
+    def __set_and_call_script(self, name, set_data, run_data, is_did2=False):
+        logging.debug(f'Register the script: {name}')
         self.__register_script(name, set_data)
-        return self.__call_script(name, run_data)
+        logging.debug(f'Call the script: {name}')
+        return self.__call_script(name, run_data, is_did2=is_did2)
 
 
 if __name__ == '__main__':

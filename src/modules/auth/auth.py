@@ -78,7 +78,7 @@ class Auth(Entity, metaclass=Singleton):
         """
         builder = lib.DIDDocument_GetJwtBuilder(self.doc)  # service instance doc
         if not builder:
-            raise BadRequestException(msg='Can not get challenge builder.')
+            raise BadRequestException(msg=f'Can not get challenge builder: {self.get_error_message()}.')
         lib.JWTBuilder_SetHeader(builder, "type".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
         lib.JWTBuilder_SetSubject(builder, "DIDAuthChallenge".encode())

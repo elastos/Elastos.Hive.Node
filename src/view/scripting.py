@@ -65,7 +65,9 @@ def register_script(script_name):
                         "limit": 100
                     }
                 }
-            }
+            },
+            "allowAnonymousUser": false,
+            "allowAnonymousApp": false
         }
 
     **Response OK**:

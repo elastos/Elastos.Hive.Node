@@ -116,7 +116,7 @@ class Condition:
             validate_exists(json_data['body'], 'condition.body', ['collection', ])
 
     def is_satisfied(self, context) -> bool:
-        return self.__is_satisfied(self.condition_data, context) # )
+        return self.__is_satisfied(self.condition_data, context)
 
     def __is_satisfied(self, condition_data, context) -> bool:
         if not condition_data:
@@ -125,13 +125,13 @@ class Condition:
         ctype = condition_data['type']
         if ctype == 'or':
             for data in condition_data['body']:
-                is_sat = self.__is_satisfied(data)
+                is_sat = self.__is_satisfied(data, context)
                 if is_sat:
                     return True
             return False
         elif ctype == 'and':
             for data in condition_data['body']:
-                is_sat = self.__is_satisfied(data)
+                is_sat = self.__is_satisfied(data, context)
                 if not is_sat:
                     return False
             return True
@@ -156,6 +156,7 @@ class Condition:
 
 class Context:
     def __init__(self, context_data, did, app_id):
+        self.did, self.app_did = did, app_id
         self.target_did = did
         self.target_app_did = app_id
         if context_data:
@@ -176,6 +177,17 @@ class Context:
         """ get the script data by target_did and target_app_did """
         col = cli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
         return col.find_one({'name': script_name})
+
+    def can_anonymous_access(self, anonymous_user: bool, anonymous_app: bool):
+        """ check the script option of 'anonymous_user' and 'anonymous_app' """
+        if not anonymous_user and not anonymous_app:
+            return self.did == self.target_did and self.app_did == self.target_app_did
+        elif not anonymous_user and anonymous_app:
+            return self.did == self.target_did
+        elif anonymous_user and not anonymous_app:
+            return self.app_did == self.target_app_did
+        else:
+            return True
 
 
 class Executable:
@@ -486,11 +498,6 @@ class Script:
         Condition.validate_data(json_data.get('condition', None))
         Executable.validate_data(json_data['executable'])
 
-        anonymous_user = json_data.get('allowAnonymousUser', False)
-        anonymous_app = json_data.get('allowAnonymousApp', False)
-        if anonymous_user and not anonymous_app:
-            raise BadRequestException(msg="Do not support 'allowAnonymousUser' true and 'allowAnonymousApp' false.")
-
     @staticmethod
     def validate_run_data(json_data):
         """ context, params may not exist. """
@@ -510,16 +517,13 @@ class Script:
         self.executables = Executable.create(self, script_data['executable'])
         self.anonymous_user = script_data.get('allowAnonymousUser', False)
         self.anonymous_app = script_data.get('allowAnonymousApp', False)
-        if self.anonymous_user:
-            self.did = None
-        if self.anonymous_app:
-            self.app_id = None
 
         result = dict()
         for executable in self.executables:
             self.condition = Condition(script_data.get('condition'), executable.get_params(), self.did, self.app_id)
-            if not self.condition.is_satisfied(self.context):
-                raise BadRequestException(msg="Caller can't match the condition for the script.")
+            if not self.context.can_anonymous_access(self.anonymous_user, self.anonymous_app) \
+                    and not self.condition.is_satisfied(self.context):
+                raise BadRequestException(msg="Caller can't match the condition or access anonymously for the script.")
 
             ret = executable.execute()
             if ret:

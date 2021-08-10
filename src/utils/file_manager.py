@@ -158,7 +158,7 @@ class FileManager:
 
     def ipfs_uploading_file(self, did, path: str):
         file_path = self.ipfs_get_file_path(did, path)
-        options = {'files': {'file': file_path.as_posix()}}
+        options = {'files': {'file': open(file_path.as_posix(), 'rb')}}
         json_data = self.http.post(self.ipfs_url + '/api/v0/add', None, None,
                                    is_json=False, options=options, success_code=200)
         return json_data['Hash']

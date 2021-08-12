@@ -9,8 +9,15 @@ from bson import ObjectId, json_util
 from pymongo import MongoClient
 
 from hive.settings import hive_setting
-from hive.util.constants import DATETIME_FORMAT, DID, APP_ID
+from hive.util.constants import DATETIME_FORMAT
 from hive.util.common import did_tail_part, create_full_path_dir
+
+
+def create_db_client():
+    """ Create the instance of the MongoClient by the setting MONGO_TYPE. """
+    if hive_setting.is_mongodb_atlas():
+        return MongoClient(hive_setting.MONGO_HOST)
+    return MongoClient(hive_setting.MONGO_HOST, hive_setting.MONGO_PORT)
 
 
 def convert_oid(query, update=False):
@@ -167,12 +174,7 @@ def gene_mongo_db_name(did, app_id):
 
 
 def get_collection(did, app_id, collection):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
     if collection not in db.list_collection_names():
@@ -182,23 +184,13 @@ def get_collection(did, app_id, collection):
 
 
 def delete_mongo_database(did, app_id):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db_name = gene_mongo_db_name(did, app_id)
     connection.drop_database(db_name)
 
 
 def get_mongo_database_size(did, app_id):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
     status = db.command("dbstats")

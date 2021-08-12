@@ -1,11 +1,6 @@
-import os
-import random
 import shutil
-import subprocess
 from datetime import datetime
 from pathlib import Path
-
-from pymongo import MongoClient
 
 from hive.settings import hive_setting
 from hive.util.common import did_tail_part
@@ -14,19 +9,14 @@ from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, VAUL
     VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_BACKUP_SERVICE_MODIFY_TIME
 
 from hive.util.did_file_info import get_dir_size, get_vault_path
-from hive.util.did_mongo_db_resource import gene_mongo_db_name
+from hive.util.did_mongo_db_resource import create_db_client
 from hive.util.payment.payment_config import PaymentConfig
 
 VAULT_BACKUP_SERVICE_FREE_STATE = "Free"
 
 
 def setup_vault_backup_service(did, max_storage, service_days, backup_name=VAULT_BACKUP_SERVICE_FREE_STATE):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
     now = datetime.utcnow().timestamp()
@@ -52,12 +42,7 @@ def setup_vault_backup_service(did, max_storage, service_days, backup_name=VAULT
 
 def update_vault_backup_service(did, max_storage, service_days, backup_name):
     # If there has a service, we just update it. complex process latter
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
     now = datetime.utcnow().timestamp()
@@ -81,12 +66,7 @@ def update_vault_backup_service(did, max_storage, service_days, backup_name):
 
 
 def update_vault_backup_service_item(did, item_name, item_value):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
     dic = {item_name: item_value}
@@ -109,12 +89,7 @@ def compose_ftp_record(user, passwd):
 
 
 def get_vault_backup_service(did):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
     query = {VAULT_BACKUP_SERVICE_DID: did}
@@ -123,12 +98,7 @@ def get_vault_backup_service(did):
 
 
 def proc_expire_vault_backup_job():
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
     query = {VAULT_BACKUP_SERVICE_USING: {"$ne": VAULT_BACKUP_SERVICE_FREE_STATE}}
@@ -185,12 +155,7 @@ def count_vault_backup_storage_size(did):
 
 
 def count_vault_backup_storage_job():
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
     info_list = col.find()
@@ -207,12 +172,7 @@ def count_vault_backup_storage_job():
 def get_backup_used_storage(did):
     use_size = count_vault_backup_storage_size(did)
     now = datetime.utcnow().timestamp()
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
     query = {VAULT_BACKUP_SERVICE_DID: did}
@@ -224,12 +184,7 @@ def get_backup_used_storage(did):
 
 
 def less_than_max_storage(did):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
     query = {VAULT_BACKUP_SERVICE_DID: did}
@@ -241,12 +196,7 @@ def less_than_max_storage(did):
 
 
 def inc_backup_use_storage_byte(did, size):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
     query = {VAULT_BACKUP_SERVICE_DID: did}

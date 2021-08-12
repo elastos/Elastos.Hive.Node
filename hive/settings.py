@@ -91,11 +91,17 @@ class HiveSetting:
         return self.env_config('BACKUP_FTP_PASSIVE_PORTS_END', default=8400, cast=int)
 
     @property
+    def MONGO_TYPE(self):
+        return self.env_config('MONGO_TYPE', default="", cast=str)
+
+    @property
     def MONGO_URI(self):
+        """ TODO: to be removed """
         return self.env_config('MONGO_URI', default="", cast=str)
 
     @property
     def MONGO_PASSWORD(self):
+        """ TODO: to be removed """
         return self.env_config('MONGO_PASSWORD', default="", cast=str)
 
     @property
@@ -105,6 +111,9 @@ class HiveSetting:
     @property
     def MONGO_PORT(self):
         return self.env_config('MONGO_PORT', default=27020, cast=int)
+
+    def is_mongodb_atlas(self):
+        return self.MONGO_TYPE == 'atlas'
 
     @property
     def RCLONE_CONFIG_FILE_DIR(self):

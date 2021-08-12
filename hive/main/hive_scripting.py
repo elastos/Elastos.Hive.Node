@@ -5,7 +5,6 @@ import logging
 import jwt
 from bson import ObjectId
 from flask import request
-from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from hive.main.interceptor import post_json_param_pre_proc
@@ -19,7 +18,7 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from hive.util.did_file_info import filter_path_root, query_upload_get_filepath, query_download
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, \
-    get_collection, get_mongo_database_size, query_delete_one, convert_oid
+    get_collection, get_mongo_database_size, query_delete_one, convert_oid, create_db_client
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
@@ -39,12 +38,7 @@ class HiveScripting:
         self.app = app
 
     def __upsert_script_to_db(self, did, app_id, content):
-        if hive_setting.MONGO_URI:
-            uri = hive_setting.MONGO_URI
-            connection = MongoClient(uri)
-        else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+        connection = create_db_client()
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
 

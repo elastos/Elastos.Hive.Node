@@ -9,14 +9,13 @@ import subprocess
 from pymongo.errors import CollectionInvalid
 
 from hive.settings import hive_setting
-from pymongo import MongoClient
 
 from hive.util.did_info import get_all_did_info_by_did
-from hive.util.did_mongo_db_resource import gene_mongo_db_name, convert_oid, export_mongo_db, get_save_mongo_db_path
-from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_STATE, \
-    VAULT_ACCESS_WR, VAULT_ACCESS_DEL, DATETIME_FORMAT, DID, APP_ID
-from src.utils.http_exception import NotFoundException, BadRequestException, AlreadyExistsException, \
-    VaultNotFoundException, CollectionNotFoundException, ForbiddenException
+from hive.util.did_mongo_db_resource import gene_mongo_db_name, convert_oid, export_mongo_db, get_save_mongo_db_path, \
+    create_db_client
+from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, DATETIME_FORMAT, DID, APP_ID
+from src.utils.http_exception import BadRequestException, AlreadyExistsException, \
+    VaultNotFoundException, CollectionNotFoundException
 from datetime import datetime
 
 import os
@@ -29,17 +28,13 @@ VAULT_SERVICE_STATE_FREEZE = "freeze"
 
 class DatabaseClient:
     def __init__(self):
-        self.uri = hive_setting.MONGO_URI
         self.host = hive_setting.MONGO_HOST
         self.port = hive_setting.MONGO_PORT
         self.connection = None
 
     def __get_connection(self):
         if not self.connection:
-            if self.uri:
-                self.connection = MongoClient(self.uri)
-            else:
-                self.connection = MongoClient(host=self.host, port=self.port)
+            self.connection = create_db_client()
         return self.connection
 
     def start_session(self):

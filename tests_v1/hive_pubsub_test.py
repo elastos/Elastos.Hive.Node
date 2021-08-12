@@ -7,12 +7,9 @@ import logging
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
 
-from pymongo import MongoClient
-
-# from hive import create_app, hive_setting
-from hive.settings import hive_setting
 from hive.util.constants import DID_INFO_DB_NAME, HIVE_MODE_TEST, SUB_MESSAGE_COLLECTION, SUB_MESSAGE_PUB_DID, \
     SUB_MESSAGE_PUB_APPID, PUB_CHANNEL_COLLECTION, PUB_CHANNEL_PUB_DID, PUB_CHANNEL_PUB_APPID
+from hive.util.did_mongo_db_resource import create_db_client
 from hive.util.error_code import ALREADY_EXIST, NOT_FOUND
 from src import create_app
 from tests_v1 import test_common
@@ -96,12 +93,7 @@ class HivePubsubTestCase(unittest.TestCase):
         self.assertEqual(status, 201)
 
     def clean_pub_channel_db(self, pub_did, pub_appid):
-        if hive_setting.MONGO_URI:
-            uri = hive_setting.MONGO_URI
-            connection = MongoClient(uri)
-        else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+        connection = create_db_client()
         db = connection[DID_INFO_DB_NAME]
         col = db[PUB_CHANNEL_COLLECTION]
         query = {
@@ -111,12 +103,7 @@ class HivePubsubTestCase(unittest.TestCase):
         col.delete_many(query)
 
     def clean_sub_message_db(self, pub_did, pub_appid):
-        if hive_setting.MONGO_URI:
-            uri = hive_setting.MONGO_URI
-            connection = MongoClient(uri)
-        else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+        connection = create_db_client()
         db = connection[DID_INFO_DB_NAME]
         col = db[SUB_MESSAGE_COLLECTION]
         query = {

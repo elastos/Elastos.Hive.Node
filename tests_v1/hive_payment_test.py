@@ -1,10 +1,10 @@
+import json
 import sys
 import unittest
 
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
 
-# from hive import create_app
 from src import create_app
 from tests_v1 import test_common
 from hive.util.payment.vault_order import *
@@ -67,12 +67,7 @@ class HivePaymentTestCase(unittest.TestCase):
         ]
 
     def init_vault_payment_db(self):
-        if hive_setting.MONGO_URI:
-            uri = hive_setting.MONGO_URI
-            connection = MongoClient(uri)
-        else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+        connection = create_db_client()
         db = connection[DID_INFO_DB_NAME]
         order_col = db[VAULT_ORDER_COL]
         query = {VAULT_ORDER_DID: self.did}
@@ -109,12 +104,7 @@ class HivePaymentTestCase(unittest.TestCase):
         self.test_order_id = str(ret.inserted_id)
 
     def init_vault_backup_payment_db(self):
-        if hive_setting.MONGO_URI:
-            uri = hive_setting.MONGO_URI
-            connection = MongoClient(uri)
-        else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+        connection = create_db_client()
         db = connection[DID_INFO_DB_NAME]
         order_col = db[VAULT_ORDER_COL]
         query = {VAULT_ORDER_DID: self.did}
@@ -163,12 +153,7 @@ class HivePaymentTestCase(unittest.TestCase):
                 VAULT_SERVICE_MAX_STORAGE: max_storage,
                 VAULT_SERVICE_PRICING_USING: pricing_name
                 }
-        if hive_setting.MONGO_URI:
-            uri = hive_setting.MONGO_URI
-            connection = MongoClient(uri)
-        else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+        connection = create_db_client()
         db = connection[DID_INFO_DB_NAME]
         col = db[VAULT_SERVICE_COL]
         query = {"_id": _id}

@@ -3,15 +3,13 @@ from datetime import datetime
 
 from bson import json_util
 
-from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
-from hive.settings import hive_setting
 from hive.util.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R, VAULT_ACCESS_DEL
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, options_filter, gene_sort, convert_oid, \
     populate_options_find_many, query_insert_one, query_find_many, populate_options_insert_one, query_count_documents, \
     populate_options_count_documents, query_update_one, populate_options_update_one, query_delete_one, get_collection, \
-    get_mongo_database_size
+    get_mongo_database_size, create_db_client
 from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, NOT_FOUND
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc
@@ -32,12 +30,7 @@ class HiveMongoDb:
             return err
 
         collection_name = content.get('collection')
-
-        if hive_setting.MONGO_URI:
-            uri = hive_setting.MONGO_URI
-            connection = MongoClient(uri)
-        else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = create_db_client()
 
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
@@ -59,12 +52,7 @@ class HiveMongoDb:
         if collection_name is None:
             return self.response.response_err(BAD_REQUEST, "parameter is null")
 
-        if hive_setting.MONGO_URI:
-            uri = hive_setting.MONGO_URI
-            connection = MongoClient(uri)
-        else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+        connection = create_db_client()
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
         try:

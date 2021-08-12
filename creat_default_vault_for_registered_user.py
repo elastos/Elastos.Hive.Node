@@ -1,7 +1,5 @@
-from pymongo import MongoClient
-
-from hive.settings import hive_setting
 from hive.util.constants import DID_INFO_REGISTER_COL, DID_INFO_DB_NAME, DID
+from hive.util.did_mongo_db_resource import create_db_client
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import get_vault_service, setup_vault_service
 
@@ -17,12 +15,7 @@ def create_vault_of_did(did):
 
 
 def create_all_vault():
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     infos = col.find()

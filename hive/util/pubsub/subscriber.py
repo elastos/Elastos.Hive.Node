@@ -1,23 +1,17 @@
 from datetime import datetime
 
 import pymongo
-from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
 
-from hive.settings import hive_setting
 from hive.util.constants import DID_INFO_DB_NAME, SUB_MESSAGE_COLLECTION, SUB_MESSAGE_PUB_DID, \
     SUB_MESSAGE_PUB_APPID, SUB_MESSAGE_CHANNEL_NAME, SUB_MESSAGE_SUB_DID, SUB_MESSAGE_SUB_APPID, \
     SUB_MESSAGE_MODIFY_TIME, SUB_MESSAGE_DATA, SUB_MESSAGE_TIME, SUB_MESSAGE_SUBSCRIBE_ID
+from hive.util.did_mongo_db_resource import create_db_client
 from hive.util.pubsub.publisher import pubsub_get_subscribe_id
 
 
 def sub_setup_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
     _id = pubsub_get_subscribe_id(pub_did, pub_appid, channel_name, sub_did, sub_appid)
@@ -40,12 +34,7 @@ def sub_setup_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_
 
 
 def sub_remove_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
     query = {
@@ -59,12 +48,7 @@ def sub_remove_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub
 
 
 def sub_get_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
     _id = pubsub_get_subscribe_id(pub_did, pub_appid, channel_name, sub_did, sub_appid)
@@ -76,12 +60,7 @@ def sub_get_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_ap
 
 
 def sub_add_message(pub_did, pub_appid, channel_name, sub_did, sub_appid, message, message_time):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
     _id = pubsub_get_subscribe_id(pub_did, pub_appid, channel_name, sub_did, sub_appid)
@@ -100,12 +79,7 @@ def sub_add_message(pub_did, pub_appid, channel_name, sub_did, sub_appid, messag
 
 
 def sub_pop_messages(pub_did, pub_appid, channel_name, sub_did, sub_appid, limit):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
     _id = pubsub_get_subscribe_id(pub_did, pub_appid, channel_name, sub_did, sub_appid)
@@ -129,12 +103,7 @@ def sub_pop_messages(pub_did, pub_appid, channel_name, sub_did, sub_appid, limit
 
 
 def __remove_messages(message_ids):
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-
+    connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
     col.delete_many({"_id": {"$in": message_ids}})

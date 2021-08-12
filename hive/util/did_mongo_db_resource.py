@@ -213,19 +213,28 @@ def export_mongo_db(did, app_id):
     if not save_path.exists():
         if not create_full_path_dir(save_path):
             return False
+
+    # dump the data of the database 'db_name' to file 'dump_file'
     db_name = gene_mongo_db_name(did, app_id)
-    line2 = 'mongodump -h %s --port %s  -d %s -o %s' % (
-    hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
+    dump_file = save_path / db_name + '.backup'
+    line2 = f"mongodump -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}  -d {db_name}" \
+            f" --archive='{dump_file}'"
     subprocess.call(line2, shell=True)
     return True
 
 
 def import_mongo_db(did):
+    """ same as import_mongodb """
     save_path = get_save_mongo_db_path(did)
     if not save_path.exists():
         return False
-    line2 = 'mongorestore -h %s --port %s --drop %s' % (hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, save_path)
-    subprocess.call(line2, shell=True)
+
+    # restore the data of the database from every 'dump_file'.
+    dump_files = [x for x in save_path.iterdir() if x.as_posix().endswith('.backup')]
+    for dump_file in dump_files:
+        line2 = f"mongorestore -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}" \
+                f" --archive='{dump_file.as_posix()}'"
+        subprocess.call(line2, shell=True)
     return True
 
 

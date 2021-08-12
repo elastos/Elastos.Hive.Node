@@ -28,6 +28,7 @@ VAULT_SERVICE_STATE_FREEZE = "freeze"
 
 class DatabaseClient:
     def __init__(self):
+        self.is_mongo_atlas = hive_setting.is_mongodb_atlas()
         self.host = hive_setting.MONGO_HOST
         self.port = hive_setting.MONGO_PORT
         self.connection = None
@@ -211,8 +212,12 @@ class DatabaseClient:
         # restore the data of the database from every 'dump_file'.
         dump_files = [x for x in mongodb_root.iterdir() if x.as_posix().endswith('.backup')]
         for dump_file in dump_files:
-            line2 = f"mongorestore -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}" \
-                    f" --archive='{dump_file.as_posix()}'"
+            if self.is_mongo_atlas:
+                line2 = f"mongorestore --uri={self.host}" \
+                        f" --drop --archive='{dump_file.as_posix()}'"
+            else:
+                line2 = f"mongorestore -h {self.host} --port {self.port}" \
+                        f" --drop --archive='{dump_file.as_posix()}'"
             return_code = subprocess.call(line2, shell=True)
             if return_code != 0:
                 raise BadRequestException(msg=f'Failed to restore mongodb data from file {dump_file.as_posix()}.')

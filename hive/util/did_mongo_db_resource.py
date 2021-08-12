@@ -217,8 +217,12 @@ def export_mongo_db(did, app_id):
     # dump the data of the database 'db_name' to file 'dump_file'
     db_name = gene_mongo_db_name(did, app_id)
     dump_file = save_path / db_name + '.backup'
-    line2 = f"mongodump -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}  -d {db_name}" \
-            f" --archive='{dump_file}'"
+    if hive_setting.is_mongodb_atlas():
+        line2 = f"mongodump --uri={hive_setting.MONGO_HOST} -d {db_name}" \
+                f" --archive='{dump_file.as_posix()}'"
+    else:
+        line2 = f"mongodump -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT} -d {db_name}" \
+                f" --archive='{dump_file.as_posix()}'"
     subprocess.call(line2, shell=True)
     return True
 
@@ -232,8 +236,12 @@ def import_mongo_db(did):
     # restore the data of the database from every 'dump_file'.
     dump_files = [x for x in save_path.iterdir() if x.as_posix().endswith('.backup')]
     for dump_file in dump_files:
-        line2 = f"mongorestore -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}" \
-                f" --archive='{dump_file.as_posix()}'"
+        if hive_setting.is_mongodb_atlas():
+            line2 = f"mongorestore --uri={hive_setting.MONGO_HOST}" \
+                    f" --drop --archive='{dump_file.as_posix()}'"
+        else:
+            line2 = f"mongorestore -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}" \
+                    f" --drop --archive='{dump_file.as_posix()}'"
         subprocess.call(line2, shell=True)
     return True
 

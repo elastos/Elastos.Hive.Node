@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 from flask import request, Response
 
+from hive.settings import hive_setting
 from hive.util.auth import did_auth
 from hive.util.common import deal_dir, get_file_md5_info, gene_temp_file_name, get_file_checksum_list, \
     create_full_path_dir

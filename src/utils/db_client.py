@@ -203,12 +203,19 @@ class DatabaseClient:
             export_mongo_db(did_info[DID], did_info[APP_ID])
 
     def import_mongodb(self, did):
+        """ same as import_mongo_db """
         mongodb_root = get_save_mongo_db_path(did)
         if mongodb_root.exists():
-            cmd_line = f'mongorestore -h {self.host} --port {self.port} --drop {mongodb_root}'
-            return_code = subprocess.call(cmd_line, shell=True)
+            return
+
+        # restore the data of the database from every 'dump_file'.
+        dump_files = [x for x in mongodb_root.iterdir() if x.as_posix().endswith('.backup')]
+        for dump_file in dump_files:
+            line2 = f"mongorestore -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}" \
+                    f" --archive='{dump_file.as_posix()}'"
+            return_code = subprocess.call(line2, shell=True)
             if return_code != 0:
-                raise BadRequestException(msg='Failed to restore mongodb data.')
+                raise BadRequestException(msg=f'Failed to restore mongodb data from file {dump_file.as_posix()}.')
 
 
 cli = DatabaseClient()

@@ -111,6 +111,8 @@ class IpfsFiles:
                 '$regex': f'^{folder_path}'
             }
         docs = cli.find_many(did, app_did, COL_IPFS_FILES, col_filter)
+        if not docs and path:
+            raise InvalidParameterException(f'Can not find the folder {path}')
         return {
             'value': list(map(lambda d: self.get_list_file_info_by_doc(d), docs))
         }
@@ -121,12 +123,7 @@ class IpfsFiles:
             raise InvalidParameterException()
 
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
-        col_filter = {DID: did,
-                      APP_DID: app_did,
-                      COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter)
-        if not doc:
-            raise FileNotFoundException(msg=f'Can not find the file with path: {path}')
+        doc = self.check_file_exists(did, app_did, path)
 
         return {
             'name': doc[COL_IPFS_FILES_PATH],
@@ -142,12 +139,7 @@ class IpfsFiles:
             raise InvalidParameterException()
 
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
-        col_filter = {DID: did,
-                      APP_DID: app_did,
-                      COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter)
-        if not doc:
-            raise FileNotFoundException(msg=f'Can not find the file with path: {path}')
+        doc = self.check_file_exists(did, app_did, path)
 
         return {
             'name': doc[COL_IPFS_FILES_PATH],
@@ -192,7 +184,7 @@ class IpfsFiles:
                                     col_filter, {'$set': {COL_IPFS_FILES_IPFS_CID: None}}, is_extra=True)
             inc_vault_file_use_storage_byte(did, file_path.stat().st_size - doc[SIZE])
 
-    def download_file_by_did(self, did, app_did, path):
+    def download_file_by_did(self, did, app_did, path: str):
         """
         Download file by did.
         1. check file caches.
@@ -203,12 +195,7 @@ class IpfsFiles:
         :param path:
         :return:
         """
-        col_filter = {DID: did,
-                      APP_DID: app_did,
-                      COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter)
-        if not doc:
-            raise FileNotFoundException(msg=f'Can not find the file with path: {path}')
+        doc = self.check_file_exists(did, app_did, path)
         file_path = fm.ipfs_get_file_path(did, path)
         if not file_path.exists():
             fm.ipfs_download_file_to_path(doc[COL_IPFS_FILES_IPFS_CID], file_path)
@@ -271,3 +258,12 @@ class IpfsFiles:
             'is_file': file_doc[COL_IPFS_FILES_IS_FILE],
             'size': file_doc[SIZE],
         }
+
+    def check_file_exists(self, did, app_did, path: str):
+        col_filter = {DID: did,
+                      APP_DID: app_did,
+                      COL_IPFS_FILES_PATH: path}
+        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter)
+        if not doc:
+            raise FileNotFoundException(msg=f'Can not find the file metadata with path: {path}')
+        return doc

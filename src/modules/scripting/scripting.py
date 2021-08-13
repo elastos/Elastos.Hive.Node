@@ -19,6 +19,8 @@ from hive.util.did_mongo_db_resource import populate_options_count_documents, co
     populate_options_find_many, populate_options_insert_one, populate_options_update_one
 from hive.util.did_scripting import populate_with_params_values
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
+from src.modules.ipfs.ipfs import IpfsFiles
+from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
 from src.utils.http_exception import NotFoundException, UnauthorizedException
 from src.utils.http_response import BadRequestException, hive_restful_response, hive_stream_response
@@ -196,6 +198,8 @@ class Executable:
         self.name = executable_data['name']
         self.body = executable_data['body']
         self.is_output = executable_data.get('output', True)
+        self.is_ipfs = script.is_ipfs
+        self.ipfs_files = IpfsFiles()
 
     @staticmethod
     def validate_data(json_data):
@@ -289,9 +293,15 @@ class Executable:
         cli.check_vault_access(self.get_target_did(), permission)
 
         body = self.get_populated_body()
-        full_path, err = query_upload_get_filepath(self.get_target_did(), self.get_target_app_did(), body['path'])
-        if err:
-            raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
+        if self.is_ipfs:
+            if action_type == 'download':
+                self.ipfs_files.check_file_exists(self.get_target_did(),
+                                                  self.get_target_app_did(),
+                                                  body['path'])
+        else:
+            _, err = query_upload_get_filepath(self.get_target_did(), self.get_target_app_did(), body['path'])
+            if err:
+                raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
 
         data = cli.insert_one(self.get_target_did(),
                               self.get_target_app_did(),
@@ -451,13 +461,21 @@ class FilePropertiesExecutable(Executable):
     def execute(self):
         cli.check_vault_access(self.script.did, VAULT_ACCESS_R)
         body = self.get_populated_body()
+        if self.is_ipfs:
+            doc = self.ipfs_files.check_file_exists(self.get_target_did(), self.get_target_app_did(), body['path'])
+            return self.get_output_data({
+                "type": "file" if doc[COL_IPFS_FILES_IS_FILE] else "folder",
+                "name": body['path'],
+                "size": doc[SIZE],
+                "last_modify": doc['modified']
+            })
         full_path, stat = self.script.scripting\
-            .get_files().get_file_stat_by_did(self.script.did, self.script.app_id, body['path'])
+            .get_files().get_file_stat_by_did(self.get_target_did(), self.get_target_app_did(), body['path'])
         return self.get_output_data({
             "type": "file" if full_path.is_file() else "folder",
             "name": body['path'],
             "size": stat.st_size,
-            "last_modify": stat.st_mtime,
+            "last_modify": stat.st_mtime
         })
 
 
@@ -468,6 +486,11 @@ class FileHashExecutable(Executable):
     def execute(self):
         cli.check_vault_access(self.script.did, VAULT_ACCESS_R)
         body = self.get_populated_body()
+        if self.is_ipfs:
+            doc = self.ipfs_files.check_file_exists(self.get_target_did(), self.get_target_app_did(), body['path'])
+            return self.get_output_data({
+                {"SHA256": doc[COL_IPFS_FILES_SHA256]}
+            })
         data, err = query_hash(self.get_target_did(), self.get_target_app_did(), body['path'])
         if err:
             raise BadRequestException('Failed to get file hash code with error message: ' + str(err))
@@ -475,7 +498,7 @@ class FileHashExecutable(Executable):
 
 
 class Script:
-    def __init__(self, script_name, run_data, did, app_id, hive_setting=None, scripting=None):
+    def __init__(self, script_name, run_data, did, app_id, hive_setting=None, scripting=None, is_ipfs=False):
         self.did = did
         self.app_id = app_id
         self.name = script_name
@@ -487,6 +510,7 @@ class Script:
         self.anonymous_app = False
         self.hive_setting = hive_setting
         self.scripting = scripting
+        self.is_ipfs = is_ipfs
 
     @staticmethod
     def validate_script_data(json_data):
@@ -533,10 +557,11 @@ class Script:
 
 
 class Scripting:
-    def __init__(self, app=None, hive_setting=None):
+    def __init__(self, app=None, hive_setting=None, is_ipfs=False):
         self.app = app
         self.hive_setting = hive_setting
         self.files = None
+        self.is_ipfs = is_ipfs
 
     @hive_restful_response
     def set_script(self, script_name):
@@ -579,7 +604,8 @@ class Scripting:
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
         did, app_id = check_auth()
-        return Script(script_name, json_data, did, app_id, self.hive_setting, scripting=self).execute()
+        return Script(script_name, json_data, did, app_id,
+                      self.hive_setting, scripting=self, is_ipfs=self.is_ipfs).execute()
 
     @hive_restful_response
     def run_script_url(self, script_name, target_did, target_app_did, params):
@@ -593,7 +619,8 @@ class Scripting:
             }
         Script.validate_run_data(json_data)
         did, app_id = check_auth()
-        return Script(script_name, json_data, did, app_id, self.hive_setting, scripting=self).execute()
+        return Script(script_name, json_data, did, app_id,
+                      self.hive_setting, scripting=self, is_ipfs=self.is_ipfs).execute()
 
     def get_files(self):
         if not self.files:

@@ -65,6 +65,7 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     #   2021-06-15 12:06:08,527 - root - INFO - [Initialize] create_app is processing now.
     logging.getLogger("Initialize").debug("create_app")
     logging.info('[Initialize] create_app is processing now.')
+    logging.info(f'[Initialize] Is the mongodb atlas: {hive_setting.is_mongodb_atlas()}.')
     return app
 
 

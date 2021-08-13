@@ -210,7 +210,7 @@ class DatabaseClient:
             return
 
         # restore the data of the database from every 'dump_file'.
-        dump_files = [x for x in mongodb_root.iterdir() if x.as_posix().endswith('.backup')]
+        dump_files = [x for x in mongodb_root.iterdir() if x.suffix == '.backup']
         for dump_file in dump_files:
             if self.is_mongo_atlas:
                 line2 = f"mongorestore --uri={self.host}" \

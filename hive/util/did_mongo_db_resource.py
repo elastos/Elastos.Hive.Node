@@ -170,7 +170,8 @@ def query_delete_one(col, content):
 def gene_mongo_db_name(did, app_id):
     md5 = hashlib.md5()
     md5.update((did + "_" + app_id).encode("utf-8"))
-    return "hive_user_db_" + str(md5.hexdigest())
+    user_db_prefix = "hive_user_db_" if not hive_setting.is_mongodb_atlas() else 'hu_'
+    return user_db_prefix + str(md5.hexdigest())
 
 
 def get_collection(did, app_id, collection):
@@ -216,7 +217,7 @@ def export_mongo_db(did, app_id):
 
     # dump the data of the database 'db_name' to file 'dump_file'
     db_name = gene_mongo_db_name(did, app_id)
-    dump_file = save_path / db_name + '.backup'
+    dump_file = (save_path / db_name).with_suffix('.backup')
     if hive_setting.is_mongodb_atlas():
         line2 = f"mongodump --uri={hive_setting.MONGO_HOST} -d {db_name}" \
                 f" --archive='{dump_file.as_posix()}'"
@@ -234,7 +235,7 @@ def import_mongo_db(did):
         return False
 
     # restore the data of the database from every 'dump_file'.
-    dump_files = [x for x in save_path.iterdir() if x.as_posix().endswith('.backup')]
+    dump_files = [x for x in save_path.iterdir() if x.suffix == '.backup']
     for dump_file in dump_files:
         if hive_setting.is_mongodb_atlas():
             line2 = f"mongorestore --uri={hive_setting.MONGO_HOST}" \

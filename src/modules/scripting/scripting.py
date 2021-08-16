@@ -562,6 +562,7 @@ class Scripting:
         self.hive_setting = hive_setting
         self.files = None
         self.is_ipfs = is_ipfs
+        self.ipfs_files = IpfsFiles()
 
     @hive_restful_response
     def set_script(self, script_name):
@@ -635,21 +636,31 @@ class Scripting:
     def handle_transaction(self, transaction_id, is_download=False):
         did, app_id = check_auth_and_vault(VAULT_ACCESS_R if is_download else VAULT_ACCESS_WR)
 
+        # check by transaction id
         row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)
         col_filter = {"_id": ObjectId(row_id)}
         trans = cli.find_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
         if not trans:
             raise BadRequestException("Cannot find the transaction by id.")
 
+        # executing uploading or downloading
         data = None
-        if is_download:
-            data = self.get_files().download_file_by_did(did, app_id, trans['document']['file_name'])
+        if self.is_ipfs:
+            if is_download:
+                data = self.ipfs_files.download_file_by_did(did, app_id, trans['document']['file_name'])
+            else:
+                self.ipfs_files.upload_file_by_did(did, app_id, trans['document']['file_name'])
         else:
-            self.get_files().upload_file_by_did(did, app_id, trans['document']['file_name'])
+            if is_download:
+                data = self.get_files().download_file_by_did(did, app_id, trans['document']['file_name'])
+            else:
+                self.get_files().upload_file_by_did(did, app_id, trans['document']['file_name'])
 
+        # recalculate the storage usage of the database
         cli.delete_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
         update_vault_db_use_storage_byte(target_did, get_mongo_database_size(target_did, target_app_did))
 
+        # return the content of the file
         return data
 
     @hive_stream_response

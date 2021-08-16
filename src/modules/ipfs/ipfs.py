@@ -147,7 +147,7 @@ class IpfsFiles:
             'hash': doc[COL_IPFS_FILES_SHA256]
         }
 
-    def upload_file_by_did(self, did, app_did, path):
+    def upload_file_by_did(self, did, app_did, path: str):
         """
         Upload file really.
             1. generate the local file name and save the content to local.

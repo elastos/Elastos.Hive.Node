@@ -79,11 +79,9 @@ def call_script_url(script_name, context_str, params):
 
 @blueprint.route('/api/v2/vault/ipfs-scripting/stream/<transaction_id>', methods=['PUT'])
 def upload_file(transaction_id):
-    # TODO:
     return scripting.upload_file(transaction_id)
 
 
 @blueprint.route('/api/v2/vault/ipfs-scripting/stream/<transaction_id>', methods=['GET'])
 def download_file(transaction_id):
-    # TODO:
     return scripting.download_file(transaction_id)

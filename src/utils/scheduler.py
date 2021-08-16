@@ -9,7 +9,6 @@ import logging
 import pymongo
 from flask_apscheduler import APScheduler
 
-from hive.util.constants import DID_INFO_DB_NAME
 from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_PATH, DID, APP_DID
 from src.utils.db_client import cli
 from src.utils.file_manager import fm

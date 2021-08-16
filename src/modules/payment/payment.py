@@ -10,12 +10,13 @@ from bson import ObjectId
 
 from hive.util.constants import DID_INFO_DB_NAME
 from src.modules.auth.auth import Auth
-from src.modules.scripting.scripting import validate_exists, check_auth, check_auth_and_vault
+from src.modules.scripting.scripting import validate_exists
 from src.utils.consts import COL_ORDERS, DID, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, \
     COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, COL_ORDERS_PROOF, CREATE_TIME, MODIFY_TIME, \
     COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, OWNER_ID, \
     COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_PAID
 from src.utils.db_client import cli
+from src.utils.did_auth import check_auth, check_auth_and_vault
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, \
     ReceiptNotFoundException
 from src.utils.http_response import hive_restful_response

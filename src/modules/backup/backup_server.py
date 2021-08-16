@@ -25,8 +25,8 @@ from hive.util.payment.vault_service_manage import VAULT_SERVICE_STATE_RUNNING
 from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
     VAULT_BACKUP_MSG_FAILED
 from src.modules.auth.auth import Auth
-from src.modules.scripting.scripting import check_auth2
 from src.utils.db_client import cli
+from src.utils.did_auth import check_auth2
 from src.utils.http_client import HttpClient, HttpServer
 from src.utils.http_exception import BackupIsInProcessingException, InsufficientStorageException, \
     InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \

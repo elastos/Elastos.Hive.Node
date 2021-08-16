@@ -9,7 +9,6 @@ import jwt
 from flask import request
 from bson import ObjectId
 
-from hive.util.auth import did_auth, did_auth2
 from hive.util.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
@@ -23,34 +22,9 @@ from hive.util.payment.vault_service_manage import update_vault_db_use_storage_b
 from src.modules.ipfs.ipfs import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
-from src.utils.http_exception import NotFoundException, UnauthorizedException
-from src.utils.http_response import BadRequestException, hive_restful_response, hive_stream_response
-
-
-def check_auth():
-    """
-    TODO: to be moved to other place.
-    """
-    did, app_id = did_auth()
-    if not did or not app_id:
-        raise UnauthorizedException()
-    return did, app_id
-
-
-def check_auth2():
-    """
-    TODO: to be moved to other place.
-    """
-    did, app_id, err = did_auth2()
-    if not did:
-        raise UnauthorizedException(msg=err)
-    return did, app_id
-
-
-def check_auth_and_vault(permission=None):
-    did, app_id = check_auth()
-    cli.check_vault_access(did, permission)
-    return did, app_id
+from src.utils.did_auth import check_auth_and_vault, check_auth
+from src.utils.http_exception import NotFoundException, BadRequestException
+from src.utils.http_response import hive_restful_response, hive_stream_response
 
 
 def validate_exists(json_data, parent_name, prop_list):

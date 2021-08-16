@@ -5,34 +5,15 @@ The entrance for ipfs module.
 """
 import shutil
 
-from hive.util.auth import did_auth
 from hive.util.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
 from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.utils.consts import COL_IPFS_FILES, DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
     COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID
 from src.utils.db_client import cli
+from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
-from src.utils.http_exception import InvalidParameterException, FileNotFoundException, AlreadyExistsException, \
-    UnauthorizedException
+from src.utils.http_exception import InvalidParameterException, FileNotFoundException, AlreadyExistsException
 from src.utils.http_response import hive_restful_response, hive_stream_response
-
-
-# TODO: check_auth, check_auth_and_vault comes from scripting and MUST be removed after merge to master.
-
-def check_auth():
-    """
-    TODO: to be moved to other place.
-    """
-    did, app_id = did_auth()
-    if not did or not app_id:
-        raise UnauthorizedException()
-    return did, app_id
-
-
-def check_auth_and_vault(permission=None):
-    did, app_id = check_auth()
-    cli.check_vault_access(did, permission)
-    return did, app_id
 
 
 class IpfsFiles:

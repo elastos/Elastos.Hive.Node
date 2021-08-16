@@ -3,6 +3,7 @@
 """
 The main handling file of scripting module.
 """
+import logging
 
 import jwt
 from flask import request
@@ -461,6 +462,7 @@ class FilePropertiesExecutable(Executable):
     def execute(self):
         cli.check_vault_access(self.script.did, VAULT_ACCESS_R)
         body = self.get_populated_body()
+        logging.info(f'get file properties: is_ipfs={self.is_ipfs}, path={body["path"]}')
         if self.is_ipfs:
             doc = self.ipfs_files.check_file_exists(self.get_target_did(), self.get_target_app_did(), body['path'])
             return self.get_output_data({
@@ -486,11 +488,10 @@ class FileHashExecutable(Executable):
     def execute(self):
         cli.check_vault_access(self.script.did, VAULT_ACCESS_R)
         body = self.get_populated_body()
+        logging.info(f'get file hash: is_ipfs={self.is_ipfs}, path={body["path"]}')
         if self.is_ipfs:
             doc = self.ipfs_files.check_file_exists(self.get_target_did(), self.get_target_app_did(), body['path'])
-            return self.get_output_data({
-                {"SHA256": doc[COL_IPFS_FILES_SHA256]}
-            })
+            return self.get_output_data({"SHA256": doc[COL_IPFS_FILES_SHA256]})
         data, err = query_hash(self.get_target_did(), self.get_target_app_did(), body['path'])
         if err:
             raise BadRequestException('Failed to get file hash code with error message: ' + str(err))
@@ -645,6 +646,8 @@ class Scripting:
 
         # executing uploading or downloading
         data = None
+        logging.info(f'handle transaction by id: is_ipfs={self.is_ipfs}, '
+                     f'is_download={is_download}, file_name={trans["document"]["file_name"]}')
         if self.is_ipfs:
             if is_download:
                 data = self.ipfs_files.download_file_by_did(did, app_id, trans['document']['file_name'])

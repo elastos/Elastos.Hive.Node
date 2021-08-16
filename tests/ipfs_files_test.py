@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for ipfs files module.
+Testing file for ipfs-files module.
 """
 
 import unittest

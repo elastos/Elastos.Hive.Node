@@ -16,9 +16,9 @@ from hive.util.did_info import create_nonce, get_did_info_by_app_instance_did, a
     update_did_info_by_app_instance_did, get_did_info_by_nonce, update_token_of_did_info
 from hive.main import view
 from src.utils.http_client import HttpClient
-from src.utils.http_exception import InvalidParameterException
+from src.utils.http_exception import InvalidParameterException, BadRequestException
 
-from src.utils.http_response import hive_restful_response, BadRequestException
+from src.utils.http_response import hive_restful_response
 from src.utils.consts import URL_DID_SIGN_IN, URL_DID_BACKUP_AUTH
 from src.utils.singleton import Singleton
 

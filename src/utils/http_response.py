@@ -9,7 +9,7 @@ import logging
 
 from flask import request
 
-from src.utils.http_exception import HiveException, BadRequestException, InternalServerErrorException
+from src.utils.http_exception import HiveException, InternalServerErrorException
 
 
 def __get_restful_response_wrapper(func, is_download=False, is_code=False):

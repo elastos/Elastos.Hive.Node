@@ -13,8 +13,8 @@ from hive.util.did_file_info import get_vault_path
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_service_manage import delete_user_vault_data
 from src.modules.payment.payment import Payment
-from src.modules.scripting.scripting import check_auth
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
+from src.utils.did_auth import check_auth
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
     PricePlanNotFoundException, BadRequestException

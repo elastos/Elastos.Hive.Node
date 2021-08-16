@@ -11,8 +11,8 @@ from bson import json_util
 from hive.util.constants import VAULT_ACCESS_WR, VAULT_ACCESS_DEL, VAULT_ACCESS_R
 from hive.util.did_mongo_db_resource import get_mongo_database_size, convert_oid, options_filter
 from hive.util.payment.vault_service_manage import update_vault_db_use_storage_byte
-from src.modules.scripting.scripting import check_auth_and_vault
 from src.utils.db_client import cli
+from src.utils.did_auth import check_auth_and_vault
 from src.utils.http_exception import BadRequestException, CollectionNotFoundException, InvalidParameterException
 from src.utils.http_response import hive_restful_response
 

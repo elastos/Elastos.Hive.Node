@@ -14,10 +14,10 @@ from hive.util.did_file_info import query_upload_get_filepath, query_download, f
     get_dir_size, query_hash
 from hive.util.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
 from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
+from src.utils.did_auth import check_auth_and_vault
 from src.utils.http_exception import BadRequestException, FileNotFoundException, InvalidParameterException, \
     AlreadyExistsException
 from src.utils.http_response import hive_restful_response, hive_stream_response
-from src.modules.scripting.scripting import check_auth_and_vault
 from src.utils.db_client import cli
 
 

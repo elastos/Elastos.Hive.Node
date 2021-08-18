@@ -21,7 +21,8 @@ Summary
     database.update_document, database.delete_document, database.find_document, database.query_document,
     files.reading_operation, files.writing_operation, files.move_file, files.delete_file,
     scripting.register_script, scripting.call_script, scripting.call_script_url, scripting.delete_script,
-    scripting.upload_file, scripting.download_file
+    scripting.upload_file, scripting.download_file,
+    backup.get_state, backup.backup_restore
 
 01 Auth
 =======
@@ -239,4 +240,22 @@ download file
   :undoc-static:
   :endpoints: scripting.download_file
 
+06 Backup
+============
 
+The backup module is for backup data to other hive node.
+The credential is required for the vault service to access the backup service.
+
+get state
+---------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: backup.get_state
+
+backup & restore
+----------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: backup.backup_restore

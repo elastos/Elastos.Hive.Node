@@ -22,7 +22,8 @@ Summary
     files.reading_operation, files.writing_operation, files.move_file, files.delete_file,
     scripting.register_script, scripting.call_script, scripting.call_script_url, scripting.delete_script,
     scripting.upload_file, scripting.download_file,
-    backup.get_state, backup.backup_restore
+    backup.get_state, backup.backup_restore,
+    payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info
 
 01 Auth
 =======
@@ -241,7 +242,7 @@ download file
   :endpoints: scripting.download_file
 
 06 Backup
-============
+=========
 
 The backup module is for backup data to other hive node.
 The credential is required for the vault service to access the backup service.
@@ -259,3 +260,43 @@ backup & restore
 .. autoflask:: src:make_port()
   :undoc-static:
   :endpoints: backup.backup_restore
+
+07 Payment
+==========
+
+The payment module is for upgrading the vault or the backup service.
+
+get version
+-----------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: payment.get_version
+
+place order
+-----------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: payment.place_order
+
+pay order
+---------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: payment.pay_order
+
+get orders
+----------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: payment.get_orders
+
+get receipt
+-----------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: payment.get_receipt_info

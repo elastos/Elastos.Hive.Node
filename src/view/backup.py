@@ -27,11 +27,109 @@ def init_app(app, hive_setting):
 
 @blueprint.route('/api/v2/vault/content', methods=['GET'])
 def get_state():
+    """ Get the status of the backup processing.
+
+    .. :quickref: 06 Backup; Get the State
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+
+    .. code-block:: json
+
+        {
+            "state": "stop", # stop, backup, restore
+            "result": "success" # success, failed
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    """
     return backup.get_state()
 
 
 @blueprint.route('/api/v2/vault/content', methods=['POST'])
 def backup_restore():
+    """ Backup or restore the data of the vault service.
+    Backup the data to another hive node by the credential if contains URL parameter is **to=hive_node**.
+
+    .. :quickref: 06 Backup; Backup & Restore
+
+    **Request**:
+
+    .. code-block:: json
+
+        {
+           "credential":"<credential_string>"
+        }
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 201 Created
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    Restore the data from the other hive node if the URL parameter is **from=hive_node**.
+
+    **Request**:
+
+    .. code-block:: json
+
+        {
+           "credential":"<credential_string>"
+        }
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 201 Created
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    """
     to = request.args.get('to')
     fr = request.args.get('from')
     if to == 'hive_node':

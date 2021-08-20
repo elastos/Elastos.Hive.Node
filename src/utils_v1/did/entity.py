@@ -28,7 +28,7 @@ class Entity:
         self.store, self.did, self.doc = init_did(self.mnemonic, self.passphrase, self.storepass, self.name)
         self.storepass = self.storepass.encode()
         self.did_str = self.get_did_string()
-        print("    Back-end DID string: " + self.did_str)
+        print("    V2 Back-end DID string: " + self.did_str)
         # print(self.did_str)
 
     def __del__(self):

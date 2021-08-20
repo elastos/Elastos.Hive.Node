@@ -10,7 +10,6 @@ from datetime import datetime
 
 from src.utils_v1.did.eladid import ffi, lib
 
-from src.utils_v1.auth import get_credential_info
 from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED
 from src.utils_v1.did.entity import Entity
 from src.utils_v1.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
@@ -245,6 +244,7 @@ class Auth(Entity, metaclass=Singleton):
 
     def get_backup_credential_info(self, credential):
         """ for vault /backup """
+        from src.utils_v1.auth import get_credential_info
         if not credential:
             raise InvalidParameterException('The credential must provide.')
         credential_info, err = get_credential_info(credential, ["targetHost", "targetDID"])

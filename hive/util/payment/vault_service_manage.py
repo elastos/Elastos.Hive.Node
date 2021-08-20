@@ -178,9 +178,9 @@ def proc_expire_vault_job():
 
 def count_file_system_storage_size(did):
     vault_path = get_vault_path(did)
-    storage_size = 0.0
-    storage_size = get_dir_size(vault_path.as_posix(), storage_size)
-    return storage_size
+    if not vault_path.exists() or vault_path.is_file():
+        return 0.0
+    return get_dir_size(vault_path.as_posix(), 0.0)
 
 
 def count_db_storage_size(did):

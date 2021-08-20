@@ -41,5 +41,6 @@ def init_app(app, mode):
     # Reset the storage size of all vaults when initialize.
     try:
         count_vault_storage_job()
+        logging.getLogger("Hive").info(f'Init vault usage successfully')
     except Exception as e:
         logging.getLogger("Hive").error(f'Init vault usage failed {str(e)}')

@@ -230,6 +230,19 @@ class HivePaymentTestCase(unittest.TestCase):
         r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
         self.assertEqual(r, SUCCESS)
 
+    @unittest.skip("Just for manually test.")
+    def test_00_remove_vault(self):
+        logging.getLogger("").debug("\nRunning test_2_0_remove_vault")
+
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/service/vault/remove',
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
+        self.assertEqual(r, NOT_FOUND)
+
     def test_2_create_package_order(self):
         logging.getLogger("").debug("\nRunning test_2_create_package_order")
 
@@ -297,6 +310,11 @@ class HivePaymentTestCase(unittest.TestCase):
         r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
         self.assertEqual(r, SUCCESS)
 
+    @unittest.skip("Just for manually test.")
+    def test_00_get_vault_info(self):
+        logging.getLogger("").debug("\nRunning test_5_get_vault_info")
+        self.assert_service_vault_info("Free")
+
     def assert_service_vault_info(self, state):
         r, s = self.parse_response(
             self.test_client.get('api/v1/service/vault', headers=self.auth)
@@ -307,7 +325,6 @@ class HivePaymentTestCase(unittest.TestCase):
             self.assertEqual(r["vault_service_info"][VAULT_SERVICE_PRICING_USING], state)
         else:
             self.assertEqual(404, s)
-
 
     def test_6_service_management_timeout_ONLY_READ(self):
         test_common.remove_test_vault(self.did)

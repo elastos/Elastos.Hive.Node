@@ -53,11 +53,16 @@ class VaultSubscription(metaclass=Singleton):
         return doc
 
     def __get_vault_info(self, doc):
+        storage_quota = float(doc[VAULT_SERVICE_MAX_STORAGE]) \
+                        if doc[VAULT_SERVICE_MAX_STORAGE] < 1024 * 1024 \
+                        else doc[VAULT_SERVICE_MAX_STORAGE] / (1024 * 1024)
+        storage_used = (doc[VAULT_SERVICE_FILE_USE_STORAGE]
+                        + doc[VAULT_SERVICE_DB_USE_STORAGE]) / (1024 * 1024)
         return {
             'pricing_plan': doc[VAULT_SERVICE_PRICING_USING],
             'service_did': h_auth.get_did_string(),
-            'storage_quota': int(doc[VAULT_SERVICE_MAX_STORAGE]),
-            'storage_used': int(doc[VAULT_SERVICE_FILE_USE_STORAGE]) + int(doc[VAULT_SERVICE_DB_USE_STORAGE]),
+            'storage_quota': storage_quota,
+            'storage_used': storage_used,
             'created': cli.timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),
             'updated': cli.timestamp_to_epoch(doc[VAULT_SERVICE_MODIFY_TIME]),
         }

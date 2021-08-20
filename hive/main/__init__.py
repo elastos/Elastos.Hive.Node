@@ -8,6 +8,8 @@ from hive.util.constants import HIVE_MODE_DEV, HIVE_MODE_TEST
 from ..settings import hive_setting
 from sentry_sdk.integrations.flask import FlaskIntegration
 
+from ..util.payment.vault_service_manage import count_vault_storage_job
+
 logging.getLogger().level = logging.INFO
 
 
@@ -36,3 +38,8 @@ def init_app(app, mode):
         scheduler.scheduler_init(app, paused=True)
     else:
         scheduler.scheduler_init(app, paused=False)
+    # Reset the storage size of all vaults when initialize.
+    try:
+        count_vault_storage_job()
+    except Exception as e:
+        logging.getLogger("Hive").error(f'Init vault usage failed {str(e)}')

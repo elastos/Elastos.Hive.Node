@@ -6,10 +6,13 @@ from flask import request
 from src import hive_setting
 from src.utils_v1.constants import DID, APP_ID, APP_INSTANCE_DID
 from src.utils_v1.did.eladid import ffi, lib
-from src.view.auth import auth
+from src.modules.auth.auth import Auth
 
 ###############################################################################
-# TODO: try to move the following methods to auth module.
+# TODO: try to move the following methods to authorization module.
+
+
+auth = Auth(None, hive_setting)
 
 
 def get_credential_info(vc_str, props):
@@ -79,9 +82,6 @@ def get_error_message(prompt):
 
 
 def get_info_from_token(token):
-    """
-    TODO: try to move this method to auth module.
-    """
     if token is None:
         return None, "Then token is none!"
 
@@ -134,17 +134,14 @@ def get_info_from_token(token):
 
 
 def get_token_info():
-    """
-    TODO: try to move this method to auth module.
-    """
-    auth = request.headers.get("Authorization")
-    if auth is None:
+    author = request.headers.get("Authorization")
+    if author is None:
         return None, "Can't find the Authorization!"
 
-    if not auth.strip().lower().startswith(("token", "bearer")):
+    if not author.strip().lower().startswith(("token", "bearer")):
         return None, "Can't find the token!"
 
-    auth_splits = auth.split(" ")
+    auth_splits = author.split(" ")
     if len(auth_splits) < 2:
         return None, "Can't find the token!"
 

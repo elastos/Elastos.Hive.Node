@@ -23,8 +23,7 @@ from src.utils.singleton import Singleton
 
 
 class Auth(Entity, metaclass=Singleton):
-    def __init__(self, app, hive_setting):
-        self.app = app
+    def __init__(self, app=None, hive_setting=None):
         self.hive_setting = hive_setting
         self.storepass = hive_setting.DID_STOREPASS
         Entity.__init__(self, "hive.auth", mnemonic=hive_setting.DID_MNEMONIC, passphrase=hive_setting.DID_PASSPHRASE)

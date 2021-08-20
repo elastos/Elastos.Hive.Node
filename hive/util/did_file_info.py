@@ -132,24 +132,26 @@ def query_hash(did, app_id, name):
     return data, err
 
 
-def get_dir_size(input_path, total_size):
-    path = Path(input_path)
-    path.resolve()
-    if not path.exists():
-        return 0.0
-
-    file_list = os.listdir(path.as_posix())
-    for i in file_list:
-        i_path = os.path.join(path, i)
-        if os.path.isdir(i_path):
-            try:
-                total_size += get_dir_size(i_path, total_size)
-            except RecursionError:
-                logging.getLogger("Hive_file_info").error("Err: get_dir_size too much for get_file_size")
-        else:
-            total_size += os.path.getsize(i_path)
-
-    return total_size
+def get_dir_size(input_path: str, total_size):
+    return get_directory_size(input_path)
 
 
-
+def get_directory_size(directory: str):
+    """Returns the `directory` size in bytes."""
+    total = 0
+    try:
+        # print("[+] Getting the size of", directory)
+        for entry in os.scandir(directory):
+            if entry.is_file():
+                # if it's a file, use stat() function
+                total += entry.stat().st_size
+            elif entry.is_dir():
+                # if it's a directory, recursively call this function
+                total += get_directory_size(entry.path)
+    except NotADirectoryError:
+        # if `directory` isn't a directory, get the file size then
+        return os.path.getsize(directory)
+    except PermissionError:
+        # if for whatever reason we can't open the folder, return 0
+        return 0
+    return total

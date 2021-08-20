@@ -9,7 +9,7 @@ from pathlib import Path
 
 import requests
 
-from hive.util.flask_rangerequest import RangeRequest
+from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils.file_manager import fm
 from src.utils.http_exception import InvalidParameterException, FileNotFoundException
 

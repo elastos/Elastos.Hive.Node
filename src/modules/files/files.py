@@ -8,12 +8,12 @@ import shutil
 
 from flask import request
 
-from hive.util.common import gene_temp_file_name
-from hive.util.constants import VAULT_ACCESS_WR, CHUNK_SIZE, VAULT_ACCESS_R
-from hive.util.did_file_info import query_upload_get_filepath, query_download, filter_path_root, get_save_files_path, \
+from src.utils_v1.common import gene_temp_file_name
+from src.utils_v1.constants import VAULT_ACCESS_WR, CHUNK_SIZE, VAULT_ACCESS_R
+from src.utils_v1.did_file_info import query_upload_get_filepath, query_download, filter_path_root, get_save_files_path, \
     get_dir_size, query_hash
-from hive.util.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
-from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
+from src.utils_v1.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
+from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.http_exception import BadRequestException, FileNotFoundException, InvalidParameterException, \
     AlreadyExistsException

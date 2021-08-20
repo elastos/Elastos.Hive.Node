@@ -3,7 +3,7 @@
 """
 Did or auth relating functions.
 """
-from hive.util.auth import did_auth, did_auth2
+from src.utils_v1.auth import did_auth, did_auth2
 from src.utils.db_client import cli
 from src.utils.http_exception import UnauthorizedException
 

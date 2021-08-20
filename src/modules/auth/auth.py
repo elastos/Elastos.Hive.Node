@@ -8,13 +8,13 @@ import logging
 import os
 from datetime import datetime
 
-from hive.util.did.eladid import ffi, lib
+from src.utils_v1.did.eladid import ffi, lib
 
-from hive.util.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED
-from hive.util.did.entity import Entity
-from hive.util.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
+from src.utils_v1.auth import get_credential_info
+from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED
+from src.utils_v1.did.entity import Entity
+from src.utils_v1.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
     update_did_info_by_app_instance_did, get_did_info_by_nonce, update_token_of_did_info
-from hive.main import view
 from src.utils.http_client import HttpClient
 from src.utils.http_exception import InvalidParameterException, BadRequestException
 
@@ -247,7 +247,7 @@ class Auth(Entity, metaclass=Singleton):
         """ for vault /backup """
         if not credential:
             raise InvalidParameterException('The credential must provide.')
-        credential_info, err = view.h_auth.get_credential_info(credential, ["targetHost", "targetDID"])
+        credential_info, err = get_credential_info(credential, ["targetHost", "targetDID"])
         if credential_info is None:
             raise InvalidParameterException(msg=f'Failed to get credential info: {err}')
         return credential_info

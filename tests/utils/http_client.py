@@ -6,7 +6,7 @@ import logging
 
 from src.utils_v1.did.eladid import ffi, lib
 from src.utils.singleton import Singleton
-from tests.utils_v1.hive_auth_test import DApp, DIDApp
+from tests.utils_v1.hive_auth_test_v1 import DApp, DIDApp
 from tests.utils_v1 import test_common
 
 

@@ -4,7 +4,12 @@ import unittest
 import logging
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
+from datetime import datetime
 
+# import os
+# import sys
+# sys.path.append(os.getcwd())
+# sys.path.append(os.getcwd() + "/hive/util/did")
 from hive.util.constants import HIVE_MODE_TEST
 from hive.util.did.entity import Entity
 from hive.util.did.eladid import ffi, lib

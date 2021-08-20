@@ -8,6 +8,7 @@ from hive.util.constants import HIVE_MODE_DEV, HIVE_MODE_TEST
 from ..settings import hive_setting
 from sentry_sdk.integrations.flask import FlaskIntegration
 
+from ..util.did.did_init import init_did_backend
 from ..util.payment.vault_service_manage import count_vault_storage_job
 
 logging.getLogger().level = logging.INFO
@@ -25,6 +26,7 @@ def init_app(app, mode):
             traces_sample_rate=1.0
         )
 
+    init_did_backend()
     interceptor.init_app(app)
     view.init_app(app)
     view_db.init_app(app)

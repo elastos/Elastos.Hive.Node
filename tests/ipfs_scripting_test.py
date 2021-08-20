@@ -9,7 +9,7 @@ import json
 
 from tests.utils.http_client import HttpClient, TestConfig
 from tests import init_test
-from tests_v1 import test_common
+from tests.utils_v1 import test_common
 
 
 class IpfsScriptingTestCase(unittest.TestCase):

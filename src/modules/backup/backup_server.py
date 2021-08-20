@@ -8,21 +8,20 @@ from pathlib import Path
 
 from flask import request
 
-from hive.main.view import h_auth
-from hive.util.common import get_file_checksum_list, gene_temp_file_name, \
+from src.utils_v1.common import get_file_checksum_list, gene_temp_file_name, \
     create_full_path_dir
-from hive.util.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, DID, \
+from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, DID, \
     VAULT_BACKUP_INFO_TIME, VAULT_BACKUP_INFO_TYPE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, VAULT_BACKUP_INFO_MSG, \
     VAULT_BACKUP_INFO_DRIVE, VAULT_BACKUP_INFO_TOKEN, VAULT_BACKUP_SERVICE_MAX_STORAGE, APP_ID, CHUNK_SIZE, \
     VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, VAULT_BACKUP_SERVICE_USE_STORAGE, \
     VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, VAULT_BACKUP_SERVICE_MODIFY_TIME, \
     VAULT_BACKUP_SERVICE_STATE, VAULT_BACKUP_SERVICE_USING
-from hive.util.did_file_info import get_vault_path, get_dir_size
-from hive.util.did_mongo_db_resource import get_save_mongo_db_path
-from hive.util.payment.payment_config import PaymentConfig
-from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
-from hive.util.payment.vault_service_manage import VAULT_SERVICE_STATE_RUNNING
-from hive.util.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
+from src.utils_v1.did_file_info import get_vault_path, get_dir_size
+from src.utils_v1.did_mongo_db_resource import get_save_mongo_db_path
+from src.utils_v1.payment.payment_config import PaymentConfig
+from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
+from src.utils_v1.payment.vault_service_manage import VAULT_SERVICE_STATE_RUNNING
+from src.utils_v1.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS, \
     VAULT_BACKUP_MSG_FAILED
 from src.modules.auth.auth import Auth
 from src.utils.db_client import cli
@@ -36,6 +35,7 @@ from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_F
 from src.utils.file_manager import fm
 from src.utils.http_response import hive_restful_response, hive_stream_response
 from src.utils.singleton import Singleton
+from src.utils_v1.auth import get_did_string
 
 
 def clog():
@@ -303,7 +303,7 @@ class BackupServer(metaclass=Singleton):
     def _get_vault_info(self, doc):
         return {
             'pricing_plan': doc[VAULT_BACKUP_SERVICE_USING],
-            'service_did': h_auth.get_did_string(),
+            'service_did': get_did_string(),
             'storage_quota': int(doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]),
             'storage_used': int(doc[VAULT_BACKUP_SERVICE_USE_STORAGE]),
             'created': cli.timestamp_to_epoch(doc[VAULT_BACKUP_SERVICE_START_TIME]),

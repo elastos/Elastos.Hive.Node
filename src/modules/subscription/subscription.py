@@ -5,13 +5,12 @@ Entrance of the subscription module.
 """
 from datetime import datetime
 
-from hive.main.view import h_auth
-from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
+from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
     VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING
-from hive.util.did_file_info import get_vault_path
-from hive.util.payment.payment_config import PaymentConfig
-from hive.util.payment.vault_service_manage import delete_user_vault_data
+from src.utils_v1.did_file_info import get_vault_path
+from src.utils_v1.payment.payment_config import PaymentConfig
+from src.utils_v1.payment.vault_service_manage import delete_user_vault_data
 from src.modules.payment.payment import Payment
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.did_auth import check_auth
@@ -20,6 +19,7 @@ from src.utils.http_exception import AlreadyExistsException, NotImplementedExcep
     PricePlanNotFoundException, BadRequestException
 from src.utils.http_response import hive_restful_response
 from src.utils.singleton import Singleton
+from src.utils_v1.auth import get_did_string
 
 
 class VaultSubscription(metaclass=Singleton):
@@ -59,7 +59,7 @@ class VaultSubscription(metaclass=Singleton):
         storage_used = int(doc[VAULT_SERVICE_FILE_USE_STORAGE] + doc[VAULT_SERVICE_DB_USE_STORAGE])
         return {
             'pricing_plan': doc[VAULT_SERVICE_PRICING_USING],
-            'service_did': h_auth.get_did_string(),
+            'service_did': get_did_string(),
             'storage_quota': storage_quota,
             'storage_used': storage_used,
             'created': cli.timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),

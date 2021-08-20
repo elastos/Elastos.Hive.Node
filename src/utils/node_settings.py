@@ -5,8 +5,8 @@ The settings for hive node, please use this instead of the hive.settings.
 """
 from pathlib import Path
 
-from hive.settings import hive_setting
-from hive.util.common import did_tail_part
+from src.settings import hive_setting
+from src.utils_v1.common import did_tail_part
 
 
 def st_get_vault_path(did):

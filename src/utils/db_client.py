@@ -8,12 +8,12 @@ import subprocess
 
 from pymongo.errors import CollectionInvalid
 
-from hive.settings import hive_setting
+from src.settings import hive_setting
 
-from hive.util.did_info import get_all_did_info_by_did
-from hive.util.did_mongo_db_resource import gene_mongo_db_name, convert_oid, export_mongo_db, get_save_mongo_db_path, \
-    create_db_client
-from hive.util.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, DATETIME_FORMAT, DID, APP_ID
+from src.utils_v1.did_info import get_all_did_info_by_did
+from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name, convert_oid, \
+    export_mongo_db, get_save_mongo_db_path, create_db_client
+from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, DATETIME_FORMAT, DID, APP_ID
 from src.utils.http_exception import BadRequestException, AlreadyExistsException, \
     VaultNotFoundException, CollectionNotFoundException
 from datetime import datetime

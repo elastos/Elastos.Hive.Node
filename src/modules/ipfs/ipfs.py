@@ -5,8 +5,8 @@ The entrance for ipfs module.
 """
 import shutil
 
-from hive.util.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
-from hive.util.payment.vault_service_manage import inc_vault_file_use_storage_byte
+from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
+from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.utils.consts import COL_IPFS_FILES, DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
     COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID
 from src.utils.db_client import cli

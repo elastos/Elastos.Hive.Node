@@ -3,7 +3,6 @@
 """
 Scheduler tasks for the hive node.
 """
-import atexit
 import logging
 
 import pymongo

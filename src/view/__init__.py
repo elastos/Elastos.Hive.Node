@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from hive.settings import hive_setting
+from src.settings import hive_setting
 from src.view import scripting, subscription, files, database, auth, backup, payment, ipfs
 
 

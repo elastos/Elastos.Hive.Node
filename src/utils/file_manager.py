@@ -11,13 +11,13 @@ from pathlib import Path
 
 from flask import request
 
-from hive.settings import hive_setting
-from hive.util.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
-from hive.util.constants import CHUNK_SIZE
-from hive.util.flask_rangerequest import RangeRequest
-from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
-from hive.util.payment.vault_service_manage import get_vault_used_storage
-from hive.util.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
+from src.settings import hive_setting
+from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
+from src.utils_v1.constants import CHUNK_SIZE
+from src.utils_v1.flask_rangerequest import RangeRequest
+from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
+from src.utils_v1.payment.vault_service_manage import get_vault_used_storage
+from src.utils_v1.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
 from src.utils.http_exception import BadRequestException
 from src.utils.node_settings import st_get_ipfs_cache_path
 

@@ -1,6 +1,5 @@
 import json
 import logging
-import shutil
 import sys
 import time
 from io import BytesIO
@@ -10,23 +9,13 @@ import requests
 import unittest
 
 from hive.main import view
-from hive.main.hive_backup import HiveBackup, VAULT_BACKUP_INFO_STATE, VAULT_BACKUP_MSG_SUCCESS, VAULT_BACKUP_INFO_MSG
-from hive.util.constants import INTER_BACKUP_FILE_URL
+from hive.main.hive_backup import HiveBackup
+from hive.util.constants import INTER_BACKUP_FILE_URL, HIVE_MODE_TEST
 from hive.util.error_code import NOT_FOUND
-from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
-from hive.util.payment.vault_service_manage import delete_user_vault, delete_user_vault_data, get_vault_path
-from tests.hive_auth_test import DIDApp, DApp
+from tests_v1.hive_auth_test import DIDApp, DApp
 from hive.util.did.eladid import ffi, lib
 
-from tests.test_common import upsert_collection, create_upload_file, prepare_vault_data, copy_to_backup_data
-
-from hive import create_app
-
-unittest.TestSuite
-
-import hive
-from hive import HIVE_MODE_TEST
-from tests import test_common
+from src import create_app
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG

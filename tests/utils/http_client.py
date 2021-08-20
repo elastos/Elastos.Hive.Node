@@ -4,11 +4,10 @@ import requests
 import json
 import logging
 
-from hive.util.did.eladid import ffi, lib
-
+from src.utils_v1.did.eladid import ffi, lib
 from src.utils.singleton import Singleton
-from tests_v1.hive_auth_test import DApp, DIDApp
-from tests_v1 import test_common
+from tests.utils_v1.hive_auth_test import DApp, DIDApp
+from tests.utils_v1 import test_common
 
 
 class TestConfig:

@@ -12,7 +12,14 @@ from src.modules.auth.auth import Auth
 # TODO: try to move the following methods to authorization module.
 
 
-auth = Auth(None, hive_setting)
+auth = None
+
+
+def get_auth():
+    global auth
+    if auth is None:
+        auth = Auth(None, hive_setting)
+    return auth
 
 
 def get_credential_info(vc_str, props):
@@ -56,7 +63,7 @@ def get_credential_info(vc_str, props):
 
 
 def get_did_string():
-    return get_did_string_from_did(auth.did)
+    return get_did_string_from_did(get_auth().did)
 
 
 def get_did_string_from_did(did):

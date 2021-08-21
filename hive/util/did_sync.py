@@ -1,6 +1,8 @@
+from pymongo import MongoClient
+
 from hive.util.constants import DID, DID_INFO_DB_NAME, DID_SYNC_INFO_COL, DID_SYNC_INFO_STATE, DID_SYNC_INFO_MSG, \
     DID_SYNC_INFO_TIME, DID_SYNC_INFO_DRIVE
-from hive.util.did_mongo_db_resource import create_db_client
+from hive.settings import hive_setting
 
 DATA_SYNC_STATE_NONE = "none"
 DATA_SYNC_STATE_INIT = "init"
@@ -15,7 +17,12 @@ DATA_SYNC_MSG_FAILED = "failed"
 
 
 def add_did_sync_info(did, time, drive):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_SYNC_INFO_COL]
     did_dic = {DID: did, DID_SYNC_INFO_STATE: DATA_SYNC_STATE_NONE,
@@ -26,7 +33,12 @@ def add_did_sync_info(did, time, drive):
 
 
 def update_did_sync_info(did, state, info, sync_time, drive):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_SYNC_INFO_COL]
     query = {DID: did}
@@ -37,7 +49,12 @@ def update_did_sync_info(did, state, info, sync_time, drive):
 
 
 def delete_did_sync_info(did):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_SYNC_INFO_COL]
     query = {DID: did}
@@ -45,7 +62,12 @@ def delete_did_sync_info(did):
 
 
 def get_did_sync_info(did):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_SYNC_INFO_COL]
     query = {DID: did}
@@ -54,7 +76,12 @@ def get_did_sync_info(did):
 
 
 def get_all_did_sync_info():
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_SYNC_INFO_COL]
     infos = col.find()

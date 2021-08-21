@@ -22,7 +22,6 @@ def get_vault_path(did):
 
 
 def get_save_files_path(did, app_id):
-    """ get files root path """
     path = Path(hive_setting.VAULTS_BASE_DIR)
     if path.is_absolute():
         path = path / did_tail_part(did) / app_id / "files"
@@ -37,8 +36,7 @@ def filter_path_root(name):
 
 def query_upload_get_filepath(did, app_id, file_name):
     """
-    Create the parent folder of the file and return the full path of the file.
-    Return: full file path, error message
+    Return: full file path
     """
     err = {}
 

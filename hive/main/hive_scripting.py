@@ -5,6 +5,7 @@ import logging
 import jwt
 from bson import ObjectId
 from flask import request
+from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from hive.main.interceptor import post_json_param_pre_proc
@@ -18,7 +19,7 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from hive.util.did_file_info import filter_path_root, query_upload_get_filepath, query_download
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, \
-    get_collection, get_mongo_database_size, query_delete_one, convert_oid, create_db_client
+    get_collection, get_mongo_database_size, query_delete_one, convert_oid
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
     run_executable_update, run_executable_delete, run_executable_file_download, run_executable_file_properties, \
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
@@ -38,7 +39,12 @@ class HiveScripting:
         self.app = app
 
     def __upsert_script_to_db(self, did, app_id, content):
-        connection = create_db_client()
+        if hive_setting.MONGO_URI:
+            uri = hive_setting.MONGO_URI
+            connection = MongoClient(uri)
+        else:
+            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
 
@@ -200,11 +206,11 @@ class HiveScripting:
             data, err_message = None, f"invalid executable type '{executable_type}'"
 
         if err_message:
-            return self.response.response_err(BAD_REQUEST, err_message), False
-
-        if capture_output:
-            output[output_key] = data
-        return output, True
+            output[output_key] = err_message
+        else:
+            if capture_output:
+                output[output_key] = data
+        return output
 
     def __count_nested_condition(self, condition):
         content = copy.deepcopy(condition)
@@ -279,7 +285,7 @@ class HiveScripting:
         r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
         if r != SUCCESS:
             logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
-            return self.response.response_err(r, msg), False
+            return self.response.response_err(r, msg)
 
         # Find the script in the database
         col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -294,11 +300,11 @@ class HiveScripting:
         except Exception as e:
             err_message = f"{err_message}. Exception: {str(e)}"
             logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message), False
+            return self.response.response_err(INTERNAL_SERVER_ERROR, err_message)
 
         if not script:
             logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-            return self.response.response_err(NOT_FOUND, err_message), False
+            return self.response.response_err(NOT_FOUND, err_message)
 
         # Validate anonymity options
         allow_anonymous_user = script.get('allowAnonymousUser', False)
@@ -308,21 +314,21 @@ class HiveScripting:
                           "allowAnonymousApp to be False as we cannot request an auth to prove an app identity without " \
                           "proving the user identity"
             logging.debug(err_message)
-            return self.response.response_err(BAD_REQUEST, err_message), False
+            return self.response.response_err(BAD_REQUEST, err_message)
         if allow_anonymous_user is True:
             caller_did = None
         else:
             if not caller_did:
                 logging.debug(f"Error while executing script named '{script_name}': Auth failed. caller_did "
                               f"not set")
-                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_did not set"), False
+                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_did not set")
         if allow_anonymous_app is True:
             caller_app_did = None
         else:
             if not caller_app_did:
                 logging.debug(f"Error while executing script named '{script_name}': Auth failed. "
                               f"caller_app_did not set")
-                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_app_did not set"), False
+                return self.response.response_err(UNAUTHORIZED, "Auth failed. caller_app_did not set")
 
         logging.debug(f"Executing a script named '{script_name}' with params: "
                       f"Caller DID: '{caller_did}', Caller App DID: '{caller_app_did}', "
@@ -335,30 +341,26 @@ class HiveScripting:
             r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
             if r != SUCCESS:
                 logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
-                return self.response.response_err(r, msg), False
+                return self.response.response_err(r, msg)
             passed = self.__condition_execution(caller_did, caller_app_did, target_did, target_app_did, condition,
                                                 params)
             if not passed:
                 err_message = f"the conditions were not met to execute this script"
                 logging.debug(f"Error while executing script named '{script_name}': {err_message}")
-                return self.response.response_err(FORBIDDEN, err_message), False
+                return self.response.response_err(FORBIDDEN, err_message)
 
         executable = script.get("executable")
         unmassage_keys_with_dollar_signs(executable)
         output = {}
-        data, is_success = self.__executable_execution(caller_did, caller_app_did,
-                                                       target_did, target_app_did, executable, params,
-                                                       output=output, output_key=executable.get('name', "output0"))
-        return data, is_success
+        data = self.__executable_execution(caller_did, caller_app_did, target_did, target_app_did, executable, params,
+                                           output=output, output_key=executable.get('name', "output0"))
+        return data
 
     def run_script_url(self, target_did, target_app_did, script_name, params):
         # Get caller info
         caller_did, caller_app_did = did_auth()
 
-        data, is_success = self.__run_script(script_name, caller_did, caller_app_did,
-                                             target_did, target_app_did, params)
-        if not is_success:
-            return data
+        data = self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
 
         return self.response.response_ok(data)
 
@@ -384,10 +386,7 @@ class HiveScripting:
             return self.response.response_err(BAD_REQUEST, "target_app_did not set")
 
         params = content.get('params', None)
-        data, is_success = self.__run_script(script_name, caller_did, caller_app_did,
-                                             target_did, target_app_did, params)
-        if not is_success:
-            return data
+        data = self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
 
         return self.response.response_ok(data)
 

@@ -81,6 +81,10 @@ function test () {
 
     setup_venv
 
+    rm -rf test_hive_data
+    rm -f hive.log
+    rm -f test_patch.delta
+
     # Run tests_v1
     pytest --disable-pytest-warnings -xs tests_v1/hive_auth_test.py
     pytest --disable-pytest-warnings -xs tests_v1/hive_mongo_test.py
@@ -88,14 +92,21 @@ function test () {
     pytest --disable-pytest-warnings -xs tests_v1/hive_scripting_test.py
     pytest --disable-pytest-warnings -xs tests_v1/hive_payment_test.py
     pytest --disable-pytest-warnings -xs tests_v1/hive_backup_test.py
-    # pytest --disable-pytest-warnings -xs tests_v1/hive_internal_test.py
+    # pytest --disable-pytest-warnings -xs tests_v1/hive_internal_test.py # INFO: skip this
     pytest --disable-pytest-warnings -xs tests_v1/hive_pubsub_test.py
-    # pytest --disable-pytest-warnings -xs tests/subscription_test.py
-    # pytest --disable-pytest-warnings -xs tests/backup_test.py
+
+    # Run tests
+    pytest --disable-pytest-warnings -xs tests/subscription_test.py
+    pytest --disable-pytest-warnings -xs tests/backup_test.py
+    pytest --disable-pytest-warnings -xs tests/payment_test.py
     pytest --disable-pytest-warnings -xs tests/scripting_test.py
     pytest --disable-pytest-warnings -xs tests/files_test.py
     pytest --disable-pytest-warnings -xs tests/database_test.py
     pytest --disable-pytest-warnings -xs tests/ipfs_files_test.py
+    pytest --disable-pytest-warnings -xs tests/ipfs_scripting_test.py
+
+    rm -f hive.log
+    rm -f test_patch.delta
 
 #    docker container stop hive-mongo && docker container rm -f hive-mongo
 #    docker container stop hive-test-mongo && docker container rm -f hive-test-mongo

@@ -435,6 +435,7 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
+    @unittest.skip("Just for manually test.")
     def test_8_1_run_script_with_url_exception(self):
         logging.getLogger('ScriptingTest').debug("Enter test_8_1_run_script_with_url_exception")
         r, s = self.parse_response(

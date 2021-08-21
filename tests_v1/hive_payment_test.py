@@ -9,6 +9,7 @@ from src import create_app
 from tests_v1 import test_common
 from hive.util.payment.vault_order import *
 from hive.util.payment.vault_service_manage import *
+from hive.settings import hive_setting
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -67,7 +68,12 @@ class HivePaymentTestCase(unittest.TestCase):
         ]
 
     def init_vault_payment_db(self):
-        connection = create_db_client()
+        if hive_setting.MONGO_URI:
+            uri = hive_setting.MONGO_URI
+            connection = MongoClient(uri)
+        else:
+            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
         db = connection[DID_INFO_DB_NAME]
         order_col = db[VAULT_ORDER_COL]
         query = {VAULT_ORDER_DID: self.did}
@@ -104,7 +110,12 @@ class HivePaymentTestCase(unittest.TestCase):
         self.test_order_id = str(ret.inserted_id)
 
     def init_vault_backup_payment_db(self):
-        connection = create_db_client()
+        if hive_setting.MONGO_URI:
+            uri = hive_setting.MONGO_URI
+            connection = MongoClient(uri)
+        else:
+            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
         db = connection[DID_INFO_DB_NAME]
         order_col = db[VAULT_ORDER_COL]
         query = {VAULT_ORDER_DID: self.did}
@@ -153,7 +164,12 @@ class HivePaymentTestCase(unittest.TestCase):
                 VAULT_SERVICE_MAX_STORAGE: max_storage,
                 VAULT_SERVICE_PRICING_USING: pricing_name
                 }
-        connection = create_db_client()
+        if hive_setting.MONGO_URI:
+            uri = hive_setting.MONGO_URI
+            connection = MongoClient(uri)
+        else:
+            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
         db = connection[DID_INFO_DB_NAME]
         col = db[VAULT_SERVICE_COL]
         query = {"_id": _id}

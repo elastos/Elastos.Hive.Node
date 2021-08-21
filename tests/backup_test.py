@@ -31,11 +31,13 @@ class BackupTestCase(unittest.TestCase):
         self.assertEqual(r.json()['state'], 'stop')
         self.assertEqual(r.json()['result'], 'success')
 
+    @unittest.skip
     def test02_backup(self):
         # self.create_backup_vault()
         # self.prepare_backup_files()
         self.backup(self.remote_resolver.get_backup_credential(self.test_config.host_url))
 
+    @unittest.skip
     def test03_restore(self):
         # self.create_backup_vault()
         # self.prepare_restore_files()

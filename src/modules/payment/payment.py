@@ -22,12 +22,14 @@ from src.utils.http_exception import InvalidParameterException, BadRequestExcept
 from src.utils.http_response import hive_restful_response
 from src.utils.resolver import ElaResolver
 from src.utils.singleton import Singleton
+from src.utils_v1.payment.payment_config import PaymentConfig
 
 
 class Payment(metaclass=Singleton):
     def __init__(self, app, hive_setting):
         self.app, self.hive_setting = app, hive_setting
         self.ela_address = hive_setting.HIVE_PAYMENT_ADDRESS
+        PaymentConfig.init_config()
         self.auth = Auth(app, hive_setting)
         self.vault_subscription = None
         self.ela_resolver = ElaResolver(hive_setting.ELA_RESOLVER)

@@ -33,23 +33,27 @@ class PaymentTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue('version' in response.json())
 
+    @unittest.skip
     def test02_place_order(self):
         response = self.cli.put('/order', body={'subscription': 'vault', 'pricing_name': 'Rookie'})
         self.assertEqual(response.status_code, 200)
         self.assertTrue('order_id' in response.json())
         self.order_id = response.json().get('order_id')
 
+    @unittest.skip
     def test03_pay_order(self):
         response = self.cli.post(f'/order/{self.order_id}', body={'transaction_id': self.transaction_id})
         self.assertEqual(response.status_code, 201)
         self.assertTrue('receipt_id' in response.json())
         self.assertTrue('order_id' in response.json())
 
+    @unittest.skip
     def test04_get_orders(self):
         response = self.cli.get('/order?subscription=vault')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('orders' in response.json())
 
+    @unittest.skip
     def test05_get_receipt(self):
         response = self.cli.get(f'/receipt?order_id={self.order_id}')
         self.assertEqual(response.status_code, 200)

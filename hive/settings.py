@@ -1,12 +1,7 @@
+import os
 from pathlib import Path
 from decouple import config, Config, RepositoryEnv
 import logging
-
-import os
-
-BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-PAYMENT_CONFIG_NAME = 'payment_config.json'
-PAYMENT_CONFIG_FILE = os.path.join(BASE_DIR, 'payment_config.json')
 
 
 class HiveSetting:
@@ -47,8 +42,7 @@ class HiveSetting:
 
     @property
     def HIVE_DATA(self):
-        value = self.env_config('HIVE_DATA', default="./data", cast=str)
-        return BASE_DIR + '/' + value if value.startswith('./test_hive_data') else BASE_DIR + value
+        return self.env_config('HIVE_DATA', default="./data", cast=str)
 
     @property
     def VAULTS_BASE_DIR(self):
@@ -91,17 +85,11 @@ class HiveSetting:
         return self.env_config('BACKUP_FTP_PASSIVE_PORTS_END', default=8400, cast=int)
 
     @property
-    def MONGO_TYPE(self):
-        return self.env_config('MONGO_TYPE', default="", cast=str)
-
-    @property
     def MONGO_URI(self):
-        """ TODO: to be removed """
         return self.env_config('MONGO_URI', default="", cast=str)
 
     @property
     def MONGO_PASSWORD(self):
-        """ TODO: to be removed """
         return self.env_config('MONGO_PASSWORD', default="", cast=str)
 
     @property
@@ -112,17 +100,13 @@ class HiveSetting:
     def MONGO_PORT(self):
         return self.env_config('MONGO_PORT', default=27020, cast=int)
 
-    def is_mongodb_atlas(self):
-        return self.MONGO_TYPE == 'atlas'
-
     @property
     def RCLONE_CONFIG_FILE_DIR(self):
         return self.env_config('RCLONE_CONFIG_FILE_DIR', default="./.rclone", cast=str)
 
     @property
     def HIVE_PAYMENT_CONFIG(self):
-        name = self.env_config('HIVE_PAYMENT_CONFIG', default=PAYMENT_CONFIG_NAME, cast=str)
-        return os.path.join(BASE_DIR, name)
+        return self.env_config('HIVE_PAYMENT_CONFIG', default="./payment_config.json", cast=str)
 
     @property
     def HIVE_PAYMENT_ADDRESS(self):
@@ -155,10 +139,6 @@ class HiveSetting:
     @property
     def PAYMENT_CHECK_EXPIRED(self):
         return self.env_config('PAYMENT_CHECK_EXPIRED', default='True', cast=bool)
-
-    @property
-    def IPFS_NODE_URL(self):
-        return self.env_config('IPFS_NODE_URL', default='', cast=str)
 
 
 hive_setting = HiveSetting()

@@ -1,10 +1,12 @@
 from datetime import datetime
 
+from pymongo import MongoClient
+
 from hive.util.constants import DID, DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, \
     VAULT_BACKUP_INFO_MSG, VAULT_BACKUP_INFO_TIME, VAULT_BACKUP_INFO_DRIVE, VAULT_BACKUP_INFO_TYPE, \
     VAULT_BACKUP_INFO_TOKEN
 
-from hive.util.did_mongo_db_resource import create_db_client
+from hive.settings import hive_setting
 
 VAULT_BACKUP_STATE_RESTORE = "restore"
 VAULT_BACKUP_STATE_BACKUP = "backup"
@@ -15,7 +17,12 @@ VAULT_BACKUP_MSG_FAILED = "failed"
 
 
 def upsert_vault_backup_info(did, backup_type, drive, token=None):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
     query = {DID: did}
@@ -31,7 +38,12 @@ def upsert_vault_backup_info(did, backup_type, drive, token=None):
 
 
 def update_vault_backup_info_item(did, key, value):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
     query = {DID: did}
@@ -41,7 +53,12 @@ def update_vault_backup_info_item(did, key, value):
 
 
 def update_vault_backup_state(did, state, msg):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
     query = {DID: did}
@@ -52,7 +69,12 @@ def update_vault_backup_state(did, state, msg):
 
 
 def delete_vault_backup_info(did):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
     query = {DID: did}
@@ -60,7 +82,12 @@ def delete_vault_backup_info(did):
 
 
 def get_vault_backup_info(did):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
     query = {DID: did}

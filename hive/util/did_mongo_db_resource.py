@@ -9,15 +9,8 @@ from bson import ObjectId, json_util
 from pymongo import MongoClient
 
 from hive.settings import hive_setting
-from hive.util.constants import DATETIME_FORMAT
+from hive.util.constants import DATETIME_FORMAT, DID, APP_ID
 from hive.util.common import did_tail_part, create_full_path_dir
-
-
-def create_db_client():
-    """ Create the instance of the MongoClient by the setting MONGO_TYPE. """
-    if hive_setting.is_mongodb_atlas():
-        return MongoClient(hive_setting.MONGO_HOST)
-    return MongoClient(hive_setting.MONGO_HOST, hive_setting.MONGO_PORT)
 
 
 def convert_oid(query, update=False):
@@ -170,12 +163,16 @@ def query_delete_one(col, content):
 def gene_mongo_db_name(did, app_id):
     md5 = hashlib.md5()
     md5.update((did + "_" + app_id).encode("utf-8"))
-    user_db_prefix = "hive_user_db_" if not hive_setting.is_mongodb_atlas() else 'hu_'
-    return user_db_prefix + str(md5.hexdigest())
+    return "hive_user_db_" + str(md5.hexdigest())
 
 
 def get_collection(did, app_id, collection):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
     if collection not in db.list_collection_names():
@@ -185,13 +182,23 @@ def get_collection(did, app_id, collection):
 
 
 def delete_mongo_database(did, app_id):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db_name = gene_mongo_db_name(did, app_id)
     connection.drop_database(db_name)
 
 
 def get_mongo_database_size(did, app_id):
-    connection = create_db_client()
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
     status = db.command("dbstats")
@@ -214,36 +221,19 @@ def export_mongo_db(did, app_id):
     if not save_path.exists():
         if not create_full_path_dir(save_path):
             return False
-
-    # dump the data of the database 'db_name' to file 'dump_file'
     db_name = gene_mongo_db_name(did, app_id)
-    dump_file = (save_path / db_name).with_suffix('.backup')
-    if hive_setting.is_mongodb_atlas():
-        line2 = f"mongodump --uri={hive_setting.MONGO_HOST} -d {db_name}" \
-                f" --archive='{dump_file.as_posix()}'"
-    else:
-        line2 = f"mongodump -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT} -d {db_name}" \
-                f" --archive='{dump_file.as_posix()}'"
+    line2 = 'mongodump -h %s --port %s  -d %s -o %s' % (
+    hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
     subprocess.call(line2, shell=True)
     return True
 
 
 def import_mongo_db(did):
-    """ same as import_mongodb """
     save_path = get_save_mongo_db_path(did)
     if not save_path.exists():
         return False
-
-    # restore the data of the database from every 'dump_file'.
-    dump_files = [x for x in save_path.iterdir() if x.suffix == '.backup']
-    for dump_file in dump_files:
-        if hive_setting.is_mongodb_atlas():
-            line2 = f"mongorestore --uri={hive_setting.MONGO_HOST}" \
-                    f" --drop --archive='{dump_file.as_posix()}'"
-        else:
-            line2 = f"mongorestore -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}" \
-                    f" --drop --archive='{dump_file.as_posix()}'"
-        subprocess.call(line2, shell=True)
+    line2 = 'mongorestore -h %s --port %s --drop %s' % (hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, save_path)
+    subprocess.call(line2, shell=True)
     return True
 
 

@@ -81,7 +81,7 @@ function test () {
 
     setup_venv
 
-    rm -rf test_hive_data
+    rm -rf data
     rm -f hive.log
     rm -f test_patch.delta
 

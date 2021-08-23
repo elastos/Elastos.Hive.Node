@@ -2,27 +2,24 @@ FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update
-RUN apt-get install python3-pip tzdata curl wget unzip -y
-RUN apt-get install gnupg && \
-    wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
+RUN apt-get update && \
+    apt-get install -y python3-pip tzdata curl unzip gnupg wget && \
+    curl https://rclone.org/install.sh | bash
+
+RUN wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
     echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
     apt-get update && \
     apt-get install mongodb-org-tools=4.4.0 -y
-RUN curl https://rclone.org/install.sh | bash
 
-ENV LD_LIBRARY_PATH="/src/hive/util/did/"
+COPY Elastos.NET.Hive.Node /Elastos.NET.Hive.Node
+COPY .env /Elastos.NET.Hive.Node/.env
+COPY payment_config.json /Elastos.NET.Hive.Node/payment_config.json
 
-ADD requirements.txt /src/
-WORKDIR /src
-RUN pip3 install --upgrade pip && pip3 install -r requirements.txt && pip3 install gunicorn
+WORKDIR /Elastos.NET.Hive.Node
 
-EXPOSE 5000
+RUN mkdir -p /root/.config/rclone && touch /root/.config/rclone/rclone.conf
+RUN pip3 install --upgrade pip && pip3 install -r requirements.txt && pip3 install gunicorn gevent
 
-RUN mkdir -p /root/.config/rclone/
-RUN touch /root/.config/rclone/rclone.conf
-
-ADD . /src/
+EXPOSE 5000 2121
 
 CMD ["gunicorn","-b","0.0.0.0:5000","-k","gevent","src:create_app()"]
-

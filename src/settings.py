@@ -10,8 +10,6 @@ import logging
 import os
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-PAYMENT_CONFIG_NAME = 'payment_config.json'
-PAYMENT_CONFIG_FILE = os.path.join(BASE_DIR, 'payment_config.json')
 
 
 class HiveSetting:
@@ -53,7 +51,9 @@ class HiveSetting:
     @property
     def HIVE_DATA(self):
         value = self.env_config('HIVE_DATA', default="./data", cast=str)
-        return BASE_DIR + '/' + value if value.startswith('./test_hive_data') else BASE_DIR + value
+        if value.startswith('/'):
+            return value
+        return os.path.join(BASE_DIR, value)
 
     @property
     def VAULTS_BASE_DIR(self):
@@ -126,7 +126,7 @@ class HiveSetting:
 
     @property
     def HIVE_PAYMENT_CONFIG(self):
-        name = self.env_config('HIVE_PAYMENT_CONFIG', default=PAYMENT_CONFIG_NAME, cast=str)
+        name = self.env_config('HIVE_PAYMENT_CONFIG', default='./payment_config.json', cast=str)
         return os.path.join(BASE_DIR, name)
 
     @property

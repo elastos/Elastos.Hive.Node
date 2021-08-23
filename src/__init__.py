@@ -15,7 +15,7 @@ from src import view
 from hive import main
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-CONFIG_FILE = os.path.join(BASE_DIR, 'logging.conf')
+CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')
 
 
 class RegexConverter(BaseConverter):

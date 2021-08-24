@@ -9,6 +9,7 @@ from bson import ObjectId, json_util
 from pymongo import MongoClient
 
 from src.settings import hive_setting
+from src.utils.consts import BACKUP_FILE_SUFFIX
 from src.utils_v1.constants import DATETIME_FORMAT
 from src.utils_v1.common import did_tail_part, create_full_path_dir
 
@@ -210,6 +211,7 @@ def get_save_mongo_db_path(did):
 
 
 def export_mongo_db(did, app_id):
+    """ Export every database as tar file to folder HIVE_DATA/vaults/<did>/mongo_db """
     save_path = get_save_mongo_db_path(did)
     if not save_path.exists():
         if not create_full_path_dir(save_path):
@@ -217,7 +219,7 @@ def export_mongo_db(did, app_id):
 
     # dump the data of the database 'db_name' to file 'dump_file'
     db_name = gene_mongo_db_name(did, app_id)
-    dump_file = (save_path / db_name).with_suffix('.backup')
+    dump_file = (save_path / db_name).with_suffix(BACKUP_FILE_SUFFIX)
     if hive_setting.is_mongodb_atlas():
         line2 = f"mongodump --uri={hive_setting.MONGO_HOST} -d {db_name}" \
                 f" --archive='{dump_file.as_posix()}'"
@@ -235,7 +237,7 @@ def import_mongo_db(did):
         return False
 
     # restore the data of the database from every 'dump_file'.
-    dump_files = [x for x in save_path.iterdir() if x.suffix == '.backup']
+    dump_files = [x for x in save_path.iterdir() if x.suffix == BACKUP_FILE_SUFFIX]
     for dump_file in dump_files:
         if hive_setting.is_mongodb_atlas():
             line2 = f"mongorestore --uri={hive_setting.MONGO_HOST}" \

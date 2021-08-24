@@ -13,7 +13,8 @@ from src.settings import hive_setting
 from src.utils_v1.did_info import get_all_did_info_by_did
 from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name, convert_oid, \
     export_mongo_db, get_save_mongo_db_path, create_db_client
-from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, DATETIME_FORMAT, DID, APP_ID
+from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, DATETIME_FORMAT, \
+    DID, APP_ID, DID_INFO_REGISTER_COL
 from src.utils.http_exception import BadRequestException, AlreadyExistsException, \
     VaultNotFoundException, CollectionNotFoundException
 from datetime import datetime
@@ -203,6 +204,11 @@ class DatabaseClient:
         t = datetime.fromtimestamp(timestamp)
         s = datetime(1970, 1, 1, 0, 0, 0)
         return int((t - s).total_seconds())
+
+    def get_all_user_databases(self, did):
+        docs = self.find_many_origin(DID_INFO_DB_NAME,
+                                     DID_INFO_REGISTER_COL, {DID: did}, is_create=False, is_raise=False)
+        return [gene_mongo_db_name(did, d[APP_ID]) for d in docs]
 
     def export_mongodb(self, did):
         did_info_list = get_all_did_info_by_did(did)

@@ -147,36 +147,43 @@ def promotion():
     return backup.promotion()
 
 ###############################################################################
-# below is internal backup APIs
+# Below is internal backup APIs, provided by the backup server.
 
 
 @blueprint.route(URL_BACKUP_SERVICE, methods=['GET'])
 def internal_get_backup_service():
+    """ Get the information of the backup service """
     return server.get_backup_service()
 
 
 @blueprint.route(URL_BACKUP_FINISH, methods=['POST'])
 def internal_backup_finish():
+    """ Notify the backup service the process has been completed.
+    The backup service will verify the checksum list of the files. """
     return server.backup_finish(params.get('checksum_list'))
 
 
 @blueprint.route(URL_BACKUP_FILES, methods=['GET'])
 def internal_backup_files():
+    """ Get the checksum list of the files for compare on client side. """
     return server.backup_files()
 
 
 @blueprint.route(URL_BACKUP_FILE, methods=['GET'])
 def internal_backup_get_file():
+    """ Get the content of the file """
     return server.backup_get_file(request.args.get('file'))
 
 
 @blueprint.route(URL_BACKUP_FILE, methods=['PUT'])
 def internal_backup_upload_file():
+    """ Upload the content of the file to backup server """
     return server.backup_upload_file(request.args.get('file'))
 
 
 @blueprint.route(URL_BACKUP_FILE, methods=['DELETE'])
 def internal_backup_delete_file():
+    """ Delete the file by the name """
     return server.backup_delete_file(request.args.get('file'))
 
 

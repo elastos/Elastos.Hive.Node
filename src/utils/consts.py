@@ -12,6 +12,9 @@ URL_BACKUP_PATCH_DELTA = '/api/v2/internal_backup/patch_delta'
 URL_BACKUP_PATCH_FILE = '/api/v2/internal_backup/patch_file'
 URL_RESTORE_FINISH = '/api/v2/internal_restore/finished_confirmation'
 
+URL_IPFS_BACKUP_PIN_CIDS = '/api/v2/ipfs-backup-internal/pin_cids'
+URL_IPFS_BACKUP_GET_CIDS = '/api/v2/ipfs-backup-internal/get_cids'
+
 DID = 'did'
 APP_DID = 'app_did'
 OWNER_ID = 'owner_id'

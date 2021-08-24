@@ -12,11 +12,11 @@ from src.utils.http_response import hive_restful_response
 
 
 class Backup:
-    def __init__(self, app=None, hive_setting=None):
-        self.app = app
+    def __init__(self, app=None, hive_setting=None, is_ipfs=False):
         self.hive_setting = hive_setting
-        self.client = BackupClient(app, hive_setting)
+        self.client = BackupClient(app, hive_setting, is_ipfs)
         self.auth = Auth(app, hive_setting)
+        self.is_ipfs = is_ipfs
 
     @hive_restful_response
     def get_state(self):

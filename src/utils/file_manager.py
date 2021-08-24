@@ -12,6 +12,8 @@ from pathlib import Path
 from flask import request
 
 from src.settings import hive_setting
+from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID
+from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE
 from src.utils_v1.flask_rangerequest import RangeRequest
@@ -175,6 +177,15 @@ class FileManager:
     def ipfs_download_file_to_path(self, cid, path: Path):
         response = self.http.post(self.ipfs_url + f'/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
         self.write_file_by_response(response, path)
+
+    def get_file_cids(self, did):
+        databases = cli.get_all_user_databases(did)
+        cids = []
+        for d in databases:
+            docs = cli.find_one_origin(d, COL_IPFS_FILES, is_create=False, is_raise=False)
+            if docs:
+                cids.append([d[COL_IPFS_FILES_IPFS_CID] for d in docs])
+        return cids
 
 
 fm = FileManager()

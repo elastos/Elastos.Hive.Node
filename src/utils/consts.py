@@ -15,6 +15,8 @@ URL_RESTORE_FINISH = '/api/v2/internal_restore/finished_confirmation'
 URL_IPFS_BACKUP_PIN_CIDS = '/api/v2/ipfs-backup-internal/pin_cids'
 URL_IPFS_BACKUP_GET_CIDS = '/api/v2/ipfs-backup-internal/get_cids'
 
+BACKUP_FILE_SUFFIX = '.backup'
+
 DID = 'did'
 APP_DID = 'app_did'
 OWNER_ID = 'owner_id'

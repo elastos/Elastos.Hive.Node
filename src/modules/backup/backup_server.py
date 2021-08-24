@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import _thread
 import logging
+import os
 import shutil
 import traceback
 from datetime import datetime
@@ -31,7 +32,8 @@ from src.utils.http_exception import BackupIsInProcessingException, Insufficient
     InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \
     NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
-    URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
+    URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA, URL_IPFS_BACKUP_PIN_CIDS, \
+    BACKUP_FILE_SUFFIX
 from src.utils.file_manager import fm
 from src.utils.http_response import hive_restful_response, hive_stream_response
 from src.utils_v1.auth import get_did_string
@@ -126,12 +128,13 @@ class BackupClient:
         cli.export_mongodb(did)
         clog().info('[backup_main] success to export mongodb data.')
 
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
+        clog().info('[backup_main] success to get backup info.')
         if self.is_ipfs:
-            self.backup_ipfs_cids(did)
+            self.backup_upload_mongdb_files(did)
+            self.backup_ipfs_cids(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
         else:
             vault_root = get_vault_path(did)
-            doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
-            clog().info('[backup_main] success to get backup info.')
             self.backup_files_really(vault_root, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
             clog().info('[backup_main] success to execute backup.')
 
@@ -145,14 +148,18 @@ class BackupClient:
 
     def restore(self, did):
         clog().info('[backup_main] enter restore().')
-        vault_root = get_vault_path(did)
-        if not vault_root.exists():
-            create_full_path_dir(vault_root)
-        clog().info(f'[restore_main] success to get vault root path.')
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
-        self.restore_really(vault_root, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
-        clog().info(f'[restore_main] success to execute restore.')
-        self.restore_finish(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
+        if self.is_ipfs:
+            # TODO:
+            pass
+        else:
+            vault_root = get_vault_path(did)
+            if not vault_root.exists():
+                create_full_path_dir(vault_root)
+            clog().info(f'[restore_main] success to get vault root path.')
+            self.restore_really(vault_root, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
+            clog().info(f'[restore_main] success to execute restore.')
+            self.restore_finish(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
         clog().info(f'[restore_main] success to restore finish.')
 
         cli.import_mongodb(did)
@@ -270,11 +277,26 @@ class BackupClient:
             state, result = doc[VAULT_BACKUP_INFO_STATE], doc[VAULT_BACKUP_INFO_MSG]
         return {'state': state, 'result': result}
 
-    def backup_ipfs_cids(self, did):
+    def backup_ipfs_cids(self, did, host_url, access_token):
         cids = fm.get_file_cids(did)
         if not cids:
             return
-        # TODO: send cids to backup server
+        self.http.post(host_url + URL_IPFS_BACKUP_PIN_CIDS, access_token, {'cids': cids})
+
+    def backup_upload_mongdb_files(self, did, host_url, access_token):
+        database_dir = get_save_mongo_db_path(did)
+        if not database_dir.exists():
+            # this means no user databases
+            return
+        for dir_root, dir_names, filenames in os.walk(database_dir.as_posix()):
+            for name in filenames:
+                if not name.endswith(BACKUP_FILE_SUFFIX):
+                    # skip none backup files.
+                    continue
+                self.http.put_file(host_url + URL_BACKUP_FILE + f'?file={name}', access_token,
+                                   Path(dir_root) / name)
+            # no need recursive
+            break
 
 
 class BackupServer:
@@ -449,4 +471,5 @@ class BackupServer:
 
     @hive_restful_response
     def ipfs_pin_cids(self, cids):
-        pass
+        for cid in cids:
+            fm.ipfs_pin_cid(cid)

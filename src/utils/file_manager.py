@@ -187,5 +187,9 @@ class FileManager:
                 cids.append([d[COL_IPFS_FILES_IPFS_CID] for d in docs])
         return cids
 
+    def ipfs_pin_cid(self, cid):
+        # TODO:
+        pass
+
 
 fm = FileManager()

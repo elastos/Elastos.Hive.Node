@@ -7,19 +7,26 @@ import json
 
 from flask import Blueprint, request
 
+from src.modules.backup.backup import Backup
+from src.modules.backup.backup_server import BackupServer
 from src.modules.ipfs.ipfs import IpfsFiles
 from src.modules.scripting.scripting import Scripting
+from src.utils.consts import URL_IPFS_BACKUP_PIN_CIDS, URL_IPFS_BACKUP_GET_CIDS
 from src.utils.http_exception import BadRequestException
+from src.utils.http_request import params
 
 blueprint = Blueprint('ipfs', __name__)
 ipfs_files = IpfsFiles()
 scripting = Scripting(is_ipfs=True)
+backup: Backup = None
+server: BackupServer = BackupServer(is_ipfs=True)
 
 
 def init_app(app, hive_setting):
     """ This will be called by application initializer. """
-    global scripting
+    global scripting, backup
     scripting = Scripting(app=app, hive_setting=hive_setting, is_ipfs=True)
+    backup = Backup(app=app, hive_setting=hive_setting, is_ipfs=True)
     app.register_blueprint(blueprint)
 
 
@@ -85,3 +92,29 @@ def upload_file(transaction_id):
 @blueprint.route('/api/v2/vault/ipfs-scripting/stream/<transaction_id>', methods=['GET'])
 def download_file(transaction_id):
     return scripting.download_file(transaction_id)
+
+
+# ipfs-backup
+
+
+@blueprint.route('/api/v2/ipfs-vault/content', methods=['POST'])
+def backup_restore():
+    to = request.args.get('to')
+    fr = request.args.get('from')
+    if to == 'hive_node':
+        return backup.backup(params.get('credential'))
+    elif fr == 'hive_node':
+        return backup.restore(params.get('credential'))
+
+
+# ipfs-backup internal APIs
+
+
+@blueprint.route(URL_IPFS_BACKUP_PIN_CIDS, methods=['POST'])
+def internal_pin_cids():
+    """ Pin the cids for the specific user.
+    This requires that the two nodes from the vault and the backup connect each other.
+    Then the backup ipfs node can find the vault one to get the cid relating file.
+    :return None
+    """
+    return server.ipfs_pin_cids(params.get('cids'))

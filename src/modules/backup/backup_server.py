@@ -34,7 +34,6 @@ from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_F
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
 from src.utils.file_manager import fm
 from src.utils.http_response import hive_restful_response, hive_stream_response
-from src.utils.singleton import Singleton
 from src.utils_v1.auth import get_did_string
 
 
@@ -47,7 +46,7 @@ def slog():
 
 
 class BackupClient:
-    def __init__(self, app=None, hive_setting=None):
+    def __init__(self, app=None, hive_setting=None, is_ipfs=False):
         self.http = HttpClient()
         self.backup_thread = None
         self.hive_setting = hive_setting
@@ -55,6 +54,7 @@ class BackupClient:
         if hive_setting:
             self.mongo_host, self.mongo_port = self.hive_setting.MONGO_HOST, self.hive_setting.MONGO_PORT
         self.auth = Auth(app, hive_setting)
+        self.is_ipfs = is_ipfs
 
     def check_backup_status(self, did, is_restore=False):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did}, is_create=True)
@@ -125,15 +125,20 @@ class BackupClient:
         clog().info('[backup_main] enter backup().')
         cli.export_mongodb(did)
         clog().info('[backup_main] success to export mongodb data.')
-        vault_root = get_vault_path(did)
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
-        clog().info('[backup_main] success to get backup info.')
-        self.backup_really(vault_root, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
-        clog().info('[backup_main] success to execute backup.')
 
-        checksum_list = get_file_checksum_list(vault_root)
-        self.backup_finish(doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN], checksum_list)
-        clog().info('[backup_main] success to finish backup.')
+        if self.is_ipfs:
+            self.backup_ipfs_cids(did)
+        else:
+            vault_root = get_vault_path(did)
+            doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
+            clog().info('[backup_main] success to get backup info.')
+            self.backup_files_really(vault_root, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
+            clog().info('[backup_main] success to execute backup.')
+
+            checksum_list = get_file_checksum_list(vault_root)
+            self.backup_finish(doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN], checksum_list)
+            clog().info('[backup_main] success to finish backup.')
+
         self.delete_mongodb_data(did)
         self.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
         clog().info('[backup_main] success to backup really.')
@@ -155,7 +160,7 @@ class BackupClient:
         self.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
         clog().info('[restore_main] success to backup really.')
 
-    def backup_really(self, vault_root, host_url, access_token):
+    def backup_files_really(self, vault_root, host_url, access_token):
         remote_files = self.http.get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
         local_files = fm.get_file_checksum_list(vault_root)
         new_files, patch_files, delete_files = self.diff_files(local_files, remote_files)
@@ -265,10 +270,17 @@ class BackupClient:
             state, result = doc[VAULT_BACKUP_INFO_STATE], doc[VAULT_BACKUP_INFO_MSG]
         return {'state': state, 'result': result}
 
+    def backup_ipfs_cids(self, did):
+        cids = fm.get_file_cids(did)
+        if not cids:
+            return
+        # TODO: send cids to backup server
 
-class BackupServer(metaclass=Singleton):
-    def __init__(self):
+
+class BackupServer:
+    def __init__(self, is_ipfs=False):
         self.http_server = HttpServer()
+        self.is_ipfs = is_ipfs
 
     def _check_auth_backup(self, is_raise=True, is_create=False):
         did, app_did = check_auth2()
@@ -434,3 +446,7 @@ class BackupServer(metaclass=Singleton):
         if backup_root.exists():
             checksum_list = get_file_checksum_list(backup_root)
         return {'checksum_list': checksum_list}
+
+    @hive_restful_response
+    def ipfs_pin_cids(self, cids):
+        pass

@@ -233,7 +233,7 @@ def update_document(collection_name):
 
     .. sourcecode:: http
 
-        updateone=<true|false> # Whether update only one matched document.
+        updateone=<true|false> # Whether update only one matched document. Default is false.
 
     **Request**:
 
@@ -288,7 +288,7 @@ def update_document(collection_name):
 
     """
     updateone = request.args.get('updateone')
-    if updateone != 'true' or updateone != 'false':
+    if updateone and updateone != 'true' and updateone != 'false':
         return InvalidParameterException(msg='Invalid parameter updateone.').get_error_response()
     return database.update_document(collection_name, request.get_json(force=True, silent=True), updateone == 'true')
 
@@ -303,7 +303,7 @@ def delete_document(collection_name):
 
     .. sourcecode:: http
 
-        deleteone=<true|false> # Whether delete only one matched document.
+        deleteone=<true|false> # Whether delete only one matched document. Default is false.
 
     **Request**:
 
@@ -341,7 +341,7 @@ def delete_document(collection_name):
 
     """
     deleteone = request.args.get('deleteone')
-    if deleteone != 'true' or deleteone != 'false':
+    if deleteone and deleteone != 'true' and deleteone != 'false':
         return InvalidParameterException(msg='Invalid parameter deleteone.').get_error_response()
     return database.delete_document(collection_name, request.get_json(force=True, silent=True), deleteone == 'true')
 

@@ -67,6 +67,22 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('matched_count'), 1)
 
+    def test03_update_one_document(self):
+        response = self.cli.patch(f'/db/collection/{self.collection_name}?updateone=true', body={
+            "filter": {
+                "author": "john doe1_1",
+            },
+            "update": {"$set": {
+                "author": "john doe1_2",
+                "title": "Eve for Dummies1_1"
+            }},
+            "options": {
+                "upsert": True,
+                "bypass_document_validation": False
+            }})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json().get('matched_count'), 1)
+
     def test04_count_document(self):
         response = self.cli.post(f'/db/collection/{self.collection_name}?op=count', body={
             "filter": {
@@ -106,10 +122,17 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertTrue('items' in response.json())
 
+    def test07_delete_one_document(self):
+        response = self.cli.delete(f'/db/collection/{self.collection_name}?deleteone=true', body={
+            "filter": {
+                "author": "john doe1_2",
+            }}, is_json=True)
+        self.assertEqual(response.status_code, 204)
+
     def test07_delete_document(self):
         response = self.cli.delete(f'/db/collection/{self.collection_name}', body={
             "filter": {
-                "author": "john doe1_1",
+                "author": "john doe2",
             }}, is_json=True)
         self.assertEqual(response.status_code, 204)
 

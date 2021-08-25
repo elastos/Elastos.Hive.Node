@@ -5,6 +5,7 @@ The view of database module.
 """
 from flask import Blueprint, request
 from src.modules.database.database import Database
+from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import params
 
 blueprint = Blueprint('database', __name__)
@@ -228,6 +229,12 @@ def update_document(collection_name):
 
     .. :quickref: 03 Database; Update the documents
 
+    **URL Parameters**:
+
+    .. sourcecode:: http
+
+        updateone=<true|false> # Whether update only one matched document.
+
     **Request**:
 
     .. code-block:: json
@@ -280,7 +287,10 @@ def update_document(collection_name):
         HTTP/1.1 404 Not Found
 
     """
-    return database.update_document(collection_name, request.get_json(force=True, silent=True))
+    updateone = request.args.get('updateone')
+    if updateone != 'true' or updateone != 'false':
+        return InvalidParameterException(msg='Invalid parameter updateone.').get_error_response()
+    return database.update_document(collection_name, request.get_json(force=True, silent=True), updateone == 'true')
 
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['DELETE'])
@@ -288,6 +298,12 @@ def delete_document(collection_name):
     """ Delete the documents by collection name.
 
     .. :quickref: 03 Database; Delete the documents
+
+    **URL Parameters**:
+
+    .. sourcecode:: http
+
+        deleteone=<true|false> # Whether delete only one matched document.
 
     **Request**:
 
@@ -324,7 +340,10 @@ def delete_document(collection_name):
         HTTP/1.1 404 Not Found
 
     """
-    return database.delete_document(collection_name, request.get_json(force=True, silent=True))
+    deleteone = request.args.get('deleteone')
+    if deleteone != 'true' or deleteone != 'false':
+        return InvalidParameterException(msg='Invalid parameter deleteone.').get_error_response()
+    return database.delete_document(collection_name, request.get_json(force=True, silent=True), deleteone == 'true')
 
 
 @blueprint.route('/api/v2/vault/db/<collection_name>', methods=['GET'])

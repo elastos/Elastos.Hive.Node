@@ -71,7 +71,7 @@ class Database:
         }
 
     @hive_restful_response
-    def update_document(self, collection_name, json_body):
+    def update_document(self, collection_name, json_body, is_update_one):
         if not collection_name:
             raise InvalidParameterException(msg='Invalid collection name.')
 
@@ -85,8 +85,12 @@ class Database:
         update = json_body["update"]
         if "$set" in update:
             update["$set"]["modified"] = datetime.utcnow()
-        ret = col.update_many(convert_oid(json_body["filter"]), convert_oid(update, update=True),
-                              **options_filter(json_body, ("upsert", "bypass_document_validation")))
+        if is_update_one:
+            ret = col.update_many(convert_oid(json_body["filter"]), convert_oid(update, update=True),
+                                  **options_filter(json_body, ("upsert", "bypass_document_validation")))
+        else:
+            ret = col.update_one(convert_oid(json_body["filter"]), convert_oid(update, update=True),
+                                 **options_filter(json_body, ("upsert", "bypass_document_validation")))
 
         update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))
         return {
@@ -97,7 +101,7 @@ class Database:
         }
 
     @hive_restful_response
-    def delete_document(self, collection_name, json_body):
+    def delete_document(self, collection_name, json_body, is_delete_one):
         if not collection_name:
             raise InvalidParameterException(msg='Invalid collection name.')
 
@@ -106,7 +110,10 @@ class Database:
         if json_body and 'filter' in json_body and type(json_body.get('filter')) is not dict:
             raise BadRequestException(msg='Invalid parameter filter.')
 
-        col.delete_many(convert_oid(json_body["filter"] if json_body and 'filter' in json_body else {}))
+        if is_delete_one:
+            col.delete_one(convert_oid(json_body["filter"] if json_body and 'filter' in json_body else {}))
+        else:
+            col.delete_many(convert_oid(json_body["filter"] if json_body and 'filter' in json_body else {}))
         update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))
 
     @hive_restful_response

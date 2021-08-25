@@ -160,10 +160,7 @@ class FileManager:
 
     def ipfs_uploading_file(self, did, path: str):
         file_path = self.ipfs_get_file_path(did, path)
-        options = {'files': {'file': open(file_path.as_posix(), 'rb')}}
-        json_data = self.http.post(self.ipfs_url + '/api/v0/add', None, None,
-                                   is_json=False, options=options, success_code=200)
-        return json_data['Hash']
+        return self.ipfs_upload_file_from_path(file_path)
 
     def get_response_by_file_path(self, path: Path):
         size = path.stat().st_size
@@ -178,6 +175,12 @@ class FileManager:
         response = self.http.post(self.ipfs_url + f'/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
         self.write_file_by_response(response, path)
 
+    def ipfs_upload_file_from_path(self, path: Path):
+        options = {'files': {'file': open(path.as_posix(), 'rb')}}
+        json_data = self.http.post(self.ipfs_url + '/api/v0/add', None, None,
+                                   is_json=False, options=options, success_code=200)
+        return json_data['Hash']
+
     def get_file_cids(self, did):
         databases = cli.get_all_user_databases(did)
         cids = []
@@ -188,8 +191,11 @@ class FileManager:
         return cids
 
     def ipfs_pin_cid(self, cid):
-        # TODO:
-        pass
+        # TODO: optimize this as ipfs not support pin other node file to local node.
+        temp_file = gene_temp_file_name()
+        self.ipfs_download_file_to_path(cid, temp_file)
+        self.ipfs_upload_file_from_path(temp_file)
+        temp_file.unlink()
 
 
 fm = FileManager()

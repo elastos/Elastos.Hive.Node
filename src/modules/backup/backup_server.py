@@ -33,7 +33,7 @@ from src.utils.http_exception import BackupIsInProcessingException, Insufficient
     NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA, URL_IPFS_BACKUP_PIN_CIDS, \
-    BACKUP_FILE_SUFFIX
+    BACKUP_FILE_SUFFIX, URL_IPFS_BACKUP_GET_DBFILES
 from src.utils.file_manager import fm
 from src.utils.http_response import hive_restful_response, hive_stream_response
 from src.utils_v1.auth import get_did_string
@@ -131,7 +131,7 @@ class BackupClient:
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
         clog().info('[backup_main] success to get backup info.')
         if self.is_ipfs:
-            self.backup_upload_mongdb_files(did)
+            self.backup_ipfs_upload_dbfiles(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
             self.backup_ipfs_cids(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
         else:
             vault_root = get_vault_path(did)
@@ -150,8 +150,9 @@ class BackupClient:
         clog().info('[backup_main] enter restore().')
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
         if self.is_ipfs:
-            # TODO:
-            pass
+            self.restore_ipfs_download_dbfiles(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
+            cli.import_mongodb(did)
+            self.restore_ipfs_pin_cids(did)
         else:
             vault_root = get_vault_path(did)
             if not vault_root.exists():
@@ -160,9 +161,8 @@ class BackupClient:
             self.restore_really(vault_root, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
             clog().info(f'[restore_main] success to execute restore.')
             self.restore_finish(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
-        clog().info(f'[restore_main] success to restore finish.')
-
-        cli.import_mongodb(did)
+            clog().info(f'[restore_main] success to restore finish.')
+            cli.import_mongodb(did)
         self.delete_mongodb_data(did)
         self.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
         clog().info('[restore_main] success to backup really.')
@@ -283,7 +283,7 @@ class BackupClient:
             return
         self.http.post(host_url + URL_IPFS_BACKUP_PIN_CIDS, access_token, {'cids': cids})
 
-    def backup_upload_mongdb_files(self, did, host_url, access_token):
+    def backup_ipfs_upload_dbfiles(self, did, host_url, access_token):
         database_dir = get_save_mongo_db_path(did)
         if not database_dir.exists():
             # this means no user databases
@@ -297,6 +297,20 @@ class BackupClient:
                                    Path(dir_root) / name)
             # no need recursive
             break
+
+    def restore_ipfs_download_dbfiles(self, did, host_url, access_token):
+        body = self.http.get(host_url + URL_IPFS_BACKUP_GET_DBFILES, access_token)
+        if not body['files']:
+            return
+        database_dir = get_save_mongo_db_path(did)
+        for name in body['files']:
+            self.http.get_to_file(f'{host_url}{URL_BACKUP_FILE}?file={name}', access_token,
+                                  (database_dir / name).as_posix())
+
+    def restore_ipfs_pin_cids(self, did):
+        cids = fm.get_file_cids(did)
+        for cid in cids:
+            fm.ipfs_pin_cid(cid)
 
 
 class BackupServer:
@@ -473,3 +487,11 @@ class BackupServer:
     def ipfs_pin_cids(self, cids):
         for cid in cids:
             fm.ipfs_pin_cid(cid)
+
+    @hive_restful_response
+    def ipfs_get_dbfiles(self):
+        did, _, _ = self._check_auth_backup()
+        vault_dir = get_vault_backup_path(did)
+        return {
+            'files': [name for name in vault_dir.iterdir() if name.suffix == BACKUP_FILE_SUFFIX]
+        }

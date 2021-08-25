@@ -11,7 +11,7 @@ from src.modules.backup.backup import Backup
 from src.modules.backup.backup_server import BackupServer
 from src.modules.ipfs.ipfs import IpfsFiles
 from src.modules.scripting.scripting import Scripting
-from src.utils.consts import URL_IPFS_BACKUP_PIN_CIDS, URL_IPFS_BACKUP_GET_CIDS
+from src.utils.consts import URL_IPFS_BACKUP_PIN_CIDS, URL_IPFS_BACKUP_GET_DBFILES
 from src.utils.http_exception import BadRequestException
 from src.utils.http_request import params
 
@@ -118,3 +118,13 @@ def internal_pin_cids():
     :return None
     """
     return server.ipfs_pin_cids(params.get('cids'))
+
+
+@blueprint.route(URL_IPFS_BACKUP_GET_DBFILES, methods=['POST'])
+def internal_get_dbfiles():
+    """ Pin the cids for the specific user.
+    This requires that the two nodes from the vault and the backup connect each other.
+    Then the backup ipfs node can find the vault one to get the cid relating file.
+    :return None
+    """
+    return server.ipfs_get_dbfiles()

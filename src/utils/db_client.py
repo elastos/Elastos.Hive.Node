@@ -122,6 +122,10 @@ class DatabaseClient:
         return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name,
                                       col_filter, col_update, options=options, is_extra=is_extra)
 
+    def is_col_exists(self, db_name, collection_name):
+        col = self.get_origin_collection(db_name, collection_name)
+        return col is not None
+
     def update_one_origin(self, db_name, collection_name, col_filter, col_update,
                           options=None, is_create=False, is_many=False, is_extra=False):
         col = self.get_origin_collection(db_name, collection_name, is_create=is_create)

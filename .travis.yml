@@ -9,7 +9,7 @@ before_install:
   - docker run -d --name hive-mongo --network hive -v  ${PWD}/.mongodb-data:/data/db -p 27020:27017 mongo
   - docker run -d --name hive-test-mongo --network hive -v  ${PWD}/.mongodb-test-data:/data/db -p 27022:27017 mongo
 #  - sudo mkdir /etc/hive && sudo cp payment_config.json /etc/hive/
-  - cp .env.example .env
+  - cp config/.env.example .env
 install:
   - pip install -r requirements.txt
 script:
@@ -19,9 +19,6 @@ script:
   - pytest --disable-pytest-warnings -xs tests_v1/hive_scripting_test.py
   - pytest --disable-pytest-warnings -xs tests_v1/hive_payment_test.py
   - pytest --disable-pytest-warnings -xs tests_v1/hive_backup_test.py
-# TODO: can not disable this on CI.
+# TODO: maybe need fix this ???
 #  - pytest --disable-pytest-warnings -xs tests_v1/hive_internal_test.py
   - pytest --disable-pytest-warnings -xs tests_v1/hive_pubsub_test.py
-#  - pytest --disable-pytest-warnings -xs tests/scripting_test.py
-#  - pytest --disable-pytest-warnings -xs tests/files_test.py
-#  - pytest --disable-pytest-warnings -xs tests/database_test.py

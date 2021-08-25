@@ -255,5 +255,7 @@ class Payment(metaclass=Singleton):
             COL_ORDERS_STATUS: COL_ORDERS_STATUS_ARCHIVE,
             MODIFY_TIME: datetime.utcnow().timestamp(),
         }
-        cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {DID: did}, {'$set': update}, is_many=True)
-        cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {DID: did}, {'$set': update}, is_many=True)
+        if cli.is_col_exists(DID_INFO_DB_NAME, COL_ORDERS):
+            cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {DID: did}, {'$set': update}, is_many=True)
+        if cli.is_col_exists(DID_INFO_DB_NAME, COL_RECEIPTS):
+            cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {DID: did}, {'$set': update}, is_many=True)

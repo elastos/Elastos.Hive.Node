@@ -20,9 +20,57 @@ def init_app(app, hive_setting):
 
 @blueprint.route('/api/v2/about/version', methods=['GET'])
 def get_version():
+    """ Get the version of hive node. No authentication is required.
+
+    .. :quickref: 08 About; Get the Version
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+
+    .. code-block:: json
+
+        {
+            "major": 1,
+            "minor": 0,
+            "patch": 0
+        }
+
+    """
     return about.get_version()
 
 
 @blueprint.route('/api/v2/about/commit_id', methods=['GET'])
 def get_commit_id():
+    """ Get the commit ID of hive node. No authentication is required.
+
+    .. :quickref: 08 About; Get the Commit ID
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+
+    .. code-block:: json
+
+        {
+            "commit_id": "<commit_id>"
+        }
+
+    """
     return about.get_commit_id()

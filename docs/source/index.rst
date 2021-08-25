@@ -23,7 +23,8 @@ Summary
     scripting.register_script, scripting.call_script, scripting.call_script_url, scripting.delete_script,
     scripting.upload_file, scripting.download_file,
     backup.get_state, backup.backup_restore,
-    payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info
+    payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info,
+    about.get_version, about.get_commit_id
 
 01 Auth
 =======
@@ -300,3 +301,22 @@ get receipt
 .. autoflask:: src:make_port()
   :undoc-static:
   :endpoints: payment.get_receipt_info
+
+08 About
+========
+
+Show some information of the hive node. No authentication is required.
+
+get version
+-----------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: about.get_version
+
+get commit id
+-------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: about.get_commit_id

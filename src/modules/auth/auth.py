@@ -385,7 +385,7 @@ class Auth(Entity, metaclass=Singleton):
 
         if self.hive_setting.PAYMENT_CHECK_EXPIRED:
             expired = lib.JWT_GetExpiration(jws)
-            now = int(datetime.now().timestamp()) + 7 * 24 * 3600
+            now = int(datetime.now().timestamp())
             if now > expired:
                 lib.JWT_Destroy(jws)
                 raise BadRequestException(msg=f'the proof is expired (valid for 7 days)')

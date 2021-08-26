@@ -86,10 +86,10 @@ class Database:
         if "$set" in update:
             update["$set"]["modified"] = datetime.utcnow()
         if is_update_one:
-            ret = col.update_many(convert_oid(json_body["filter"]), convert_oid(update, update=True),
+            ret = col.update_one(convert_oid(json_body["filter"]), convert_oid(update, update=True),
                                   **options_filter(json_body, ("upsert", "bypass_document_validation")))
         else:
-            ret = col.update_one(convert_oid(json_body["filter"]), convert_oid(update, update=True),
+            ret = col.update_many(convert_oid(json_body["filter"]), convert_oid(update, update=True),
                                  **options_filter(json_body, ("upsert", "bypass_document_validation")))
 
         update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))

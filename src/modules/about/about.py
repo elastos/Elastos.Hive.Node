@@ -12,7 +12,12 @@ class About:
 
     @hive_restful_response
     def get_version(self):
-        parts = self.hive_setting.HIVE_VERSION.split('.')
+        """ This value comes from tag name and must be '***v<major>.<minor>.<patch>' or '<major>.<minor>.<patch>' """
+        src = self.hive_setting.HIVE_VERSION
+        index = src.rfind('v')
+        if index >= 0:
+            src = src[index + 1:]
+        parts = src.split('.')
         return {
             'major': int(parts[0]),
             'minor': int(parts[1]),

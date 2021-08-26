@@ -158,12 +158,15 @@ class HiveSetting:
         return "english"
 
     @property
+    def IPFS_NODE_URL(self):
+        return self.env_config('IPFS_NODE_URL', default='', cast=str)
+
+    @property
     def PAYMENT_CHECK_EXPIRED(self):
         return self.env_config('PAYMENT_CHECK_EXPIRED', default='True', cast=bool)
 
-    @property
-    def IPFS_NODE_URL(self):
-        return self.env_config('IPFS_NODE_URL', default='', cast=str)
+    def BACKUP_IS_SYNC(self):
+        return self.env_config('BACKUP_IS_SYNC', default='True', cast=bool)
 
 
 hive_setting = HiveSetting()

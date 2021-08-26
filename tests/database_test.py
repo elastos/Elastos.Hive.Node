@@ -40,6 +40,12 @@ class DatabaseTestCase(unittest.TestCase):
                     "author": "john doe1",
                     "title": "Eve for Dummies1"
                 }, {
+                    "author": "john doe1",
+                    "title": "Eve for Dummies1"
+                }, {
+                    "author": "john doe2",
+                    "title": "Eve for Dummies2"
+                }, {
                     "author": "john doe2",
                     "title": "Eve for Dummies2"
                 }
@@ -49,7 +55,7 @@ class DatabaseTestCase(unittest.TestCase):
                 "ordered": True
             }})
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(len(response.json().get('inserted_ids')), 2)
+        self.assertEqual(len(response.json().get('inserted_ids')), 4)
 
     def test03_update_document(self):
         response = self.cli.patch(f'/db/collection/{self.collection_name}', body={
@@ -65,7 +71,7 @@ class DatabaseTestCase(unittest.TestCase):
                 "bypass_document_validation": False
             }})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('matched_count'), 1)
+        self.assertEqual(response.json().get('matched_count'), 2)
 
     def test03_update_one_document(self):
         response = self.cli.patch(f'/db/collection/{self.collection_name}?updateone=true', body={
@@ -74,7 +80,7 @@ class DatabaseTestCase(unittest.TestCase):
             },
             "update": {"$set": {
                 "author": "john doe1_2",
-                "title": "Eve for Dummies1_1"
+                "title": "Eve for Dummies1_2"
             }},
             "options": {
                 "upsert": True,

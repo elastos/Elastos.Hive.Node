@@ -12,7 +12,7 @@ from pathlib import Path
 from flask import request
 
 from src.settings import hive_setting
-from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID
+from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID
 from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE
@@ -183,12 +183,12 @@ class FileManager:
 
     def get_file_cids(self, did):
         databases = cli.get_all_user_databases(did)
-        cids = []
+        cids = set()
         for d in databases:
-            docs = cli.find_one_origin(d, COL_IPFS_FILES, is_create=False, is_raise=False)
+            docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: did}, is_create=False, is_raise=False)
             if docs:
-                cids.append([d[COL_IPFS_FILES_IPFS_CID] for d in docs])
-        return cids
+                cids.update([doc[COL_IPFS_FILES_IPFS_CID] for doc in docs])
+        return list(cids)
 
     def ipfs_pin_cid(self, cid):
         # TODO: optimize this as ipfs not support pin other node file to local node.

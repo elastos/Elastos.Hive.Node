@@ -65,7 +65,7 @@ class BackupClient:
             raise BackupIsInProcessingException('The backup/restore is in process.')
 
         if is_restore and not (doc[VAULT_BACKUP_INFO_STATE] == VAULT_BACKUP_STATE_STOP
-                               and doc[VAULT_BACKUP_INFO_MSG] == VAULT_BACKUP_MSG_SUCCESS):
+                               or doc[VAULT_BACKUP_INFO_MSG] == VAULT_BACKUP_MSG_SUCCESS):
             raise BadRequestException(msg='No successfully backup for restore.')
 
     def get_backup_service_info(self, credential, credential_info):
@@ -94,7 +94,10 @@ class BackupClient:
 
         clog().debug('start new thread for backup processing.')
 
-        _thread.start_new_thread(self.__class__.backup_main, (did, self))
+        if self.hive_setting.BACKUP_IS_SYNC:
+            self.__class__.backup_main(did, self)
+        else:
+            _thread.start_new_thread(self.__class__.backup_main, (did, self))
 
     def update_backup_state(self, did, state, msg):
         cli.update_one_origin(DID_INFO_DB_NAME,
@@ -165,7 +168,7 @@ class BackupClient:
             cli.import_mongodb(did)
         self.delete_mongodb_data(did)
         self.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
-        clog().info('[restore_main] success to backup really.')
+        clog().info('[restore_main] success to restore really.')
 
     def backup_files_really(self, vault_root, host_url, access_token):
         remote_files = self.http.get(host_url + URL_BACKUP_FILES, access_token)['backup_files']
@@ -256,7 +259,10 @@ class BackupClient:
         # if use_storage > backup_service_info[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
         #     raise InsufficientStorageException(msg='Insufficient storage to execute backup.')
 
-        _thread.start_new_thread(self.__class__.restore_main, (did, self))
+        if self.hive_setting.BACKUP_IS_SYNC:
+            self.__class__.restore_main(did, self)
+        else:
+            _thread.start_new_thread(self.__class__.restore_main, (did, self))
 
     def restore_finish(self, did, host_url, access_token):
         body = self.http.get(host_url + URL_RESTORE_FINISH, access_token)
@@ -281,7 +287,7 @@ class BackupClient:
         cids = fm.get_file_cids(did)
         if not cids:
             return
-        self.http.post(host_url + URL_IPFS_BACKUP_PIN_CIDS, access_token, {'cids': cids})
+        self.http.post(host_url + URL_IPFS_BACKUP_PIN_CIDS, access_token, {'cids': cids}, is_body=False)
 
     def backup_ipfs_upload_dbfiles(self, did, host_url, access_token):
         database_dir = get_save_mongo_db_path(did)
@@ -304,8 +310,7 @@ class BackupClient:
             return
         database_dir = get_save_mongo_db_path(did)
         for name in body['files']:
-            self.http.get_to_file(f'{host_url}{URL_BACKUP_FILE}?file={name}', access_token,
-                                  (database_dir / name).as_posix())
+            self.http.get_to_file(f'{host_url}{URL_BACKUP_FILE}?file={name}', access_token, database_dir / name)
 
     def restore_ipfs_pin_cids(self, did):
         cids = fm.get_file_cids(did)
@@ -493,5 +498,5 @@ class BackupServer:
         did, _, _ = self._check_auth_backup()
         vault_dir = get_vault_backup_path(did)
         return {
-            'files': [name for name in vault_dir.iterdir() if name.suffix == BACKUP_FILE_SUFFIX]
+            'files': [name.name for name in vault_dir.iterdir() if name.suffix == BACKUP_FILE_SUFFIX]
         }

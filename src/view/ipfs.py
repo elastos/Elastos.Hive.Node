@@ -120,7 +120,7 @@ def internal_pin_cids():
     return server.ipfs_pin_cids(params.get('cids'))
 
 
-@blueprint.route(URL_IPFS_BACKUP_GET_DBFILES, methods=['POST'])
+@blueprint.route(URL_IPFS_BACKUP_GET_DBFILES, methods=['GET'])
 def internal_get_dbfiles():
     """ Pin the cids for the specific user.
     This requires that the two nodes from the vault and the backup connect each other.

@@ -219,6 +219,10 @@ def export_mongo_db(did, app_id):
 
     # dump the data of the database 'db_name' to file 'dump_file'
     db_name = gene_mongo_db_name(did, app_id)
+    from src.utils.db_client import cli
+    if not cli.is_database_exists(db_name):
+        return False
+
     dump_file = (save_path / db_name).with_suffix(BACKUP_FILE_SUFFIX)
     if hive_setting.is_mongodb_atlas():
         line2 = f"mongodump --uri={hive_setting.MONGO_HOST} -d {db_name}" \

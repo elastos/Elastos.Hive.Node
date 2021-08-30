@@ -42,6 +42,13 @@ class DatabaseClient:
     def start_session(self):
         return self.__get_connection().start_session()
 
+    def is_database_exists(self, db_name):
+        return db_name in self.__get_connection().list_database_names()
+
+    def is_col_exists(self, db_name, collection_name):
+        col = self.get_origin_collection(db_name, collection_name)
+        return col is not None
+
     def get_user_collection(self, did, app_id, collection_name, is_create=False):
         return self.get_origin_collection(gene_mongo_db_name(did, app_id), collection_name, is_create)
 
@@ -121,10 +128,6 @@ class DatabaseClient:
     def update_one(self, did, app_id, collection_name, col_filter, col_update, options=None, is_extra=False):
         return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name,
                                       col_filter, col_update, options=options, is_extra=is_extra)
-
-    def is_col_exists(self, db_name, collection_name):
-        col = self.get_origin_collection(db_name, collection_name)
-        return col is not None
 
     def update_one_origin(self, db_name, collection_name, col_filter, col_update,
                           options=None, is_create=False, is_many=False, is_extra=False):
@@ -222,7 +225,7 @@ class DatabaseClient:
     def import_mongodb(self, did):
         """ same as import_mongo_db """
         mongodb_root = get_save_mongo_db_path(did)
-        if mongodb_root.exists():
+        if not mongodb_root.exists():
             return
 
         # restore the data of the database from every 'dump_file'.
@@ -234,6 +237,7 @@ class DatabaseClient:
             else:
                 line2 = f"mongorestore -h {self.host} --port {self.port}" \
                         f" --drop --archive='{dump_file.as_posix()}'"
+            logging.info(f'[db_client] restore database from file {line2}.')
             return_code = subprocess.call(line2, shell=True)
             if return_code != 0:
                 raise BadRequestException(msg=f'Failed to restore mongodb data from file {dump_file.as_posix()}.')

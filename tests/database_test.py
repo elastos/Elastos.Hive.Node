@@ -100,7 +100,7 @@ class DatabaseTestCase(unittest.TestCase):
                 "maxTimeMS": 1000000000
             }})
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.json().get('count'), 1)
+        self.assertEqual(response.json().get('count'), 2)
 
     def test05_find_document(self):
         response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"john doe2"}&skip=0')

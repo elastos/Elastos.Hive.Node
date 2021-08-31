@@ -168,5 +168,9 @@ class HiveSetting:
     def BACKUP_IS_SYNC(self):
         return self.env_config('BACKUP_IS_SYNC', default='True', cast=bool)
 
+    @property
+    def ENABLE_CORS(self):
+        return self.env_config('ENABLE_CORS', default='False', cast=bool)
+
 
 hive_setting = HiveSetting()

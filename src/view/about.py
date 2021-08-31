@@ -3,7 +3,7 @@
 """
 About module to show some information of the node.
 """
-from flask import Blueprint
+from flask import Blueprint, request
 
 from src.modules.about.about import About
 
@@ -74,3 +74,10 @@ def get_commit_id():
 
     """
     return about.get_commit_id()
+
+
+@blueprint.route('/api/v2/echo', methods=['GET'])
+def echo():
+    """ only for test whether it can be connected with the hive node """
+    content = request.args.get('content')
+    return content if content else 'echo the parameter content'

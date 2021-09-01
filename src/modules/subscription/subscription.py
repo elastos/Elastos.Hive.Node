@@ -32,9 +32,9 @@ class VaultSubscription(metaclass=Singleton):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_create=True)
         if doc:
             raise AlreadyExistsException(msg='The vault is already subscribed.')
-        return self.__get_vault_info(self.__create_vault(did, self.get_price_plan('vault', 'Free')))
+        return self.__get_vault_info(self.create_vault(did, self.get_price_plan('vault', 'Free')))
 
-    def __create_vault(self, did, price_plan):
+    def create_vault(self, did, price_plan):
         now = datetime.utcnow().timestamp()  # seconds in UTC
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
         doc = {VAULT_SERVICE_DID: did,
@@ -143,9 +143,9 @@ class VaultSubscription(metaclass=Singleton):
     def get_price_plans_version(self):
         return PaymentConfig.get_all_package_info().get('version', '1.0')
 
-    def check_vault_exist(self, did):
+    def check_vault_exist(self, did, is_raise=True):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_raise=False)
-        if not doc:
+        if not doc and is_raise:
             raise VaultNotFoundException()
         return doc
 

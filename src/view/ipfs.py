@@ -11,7 +11,7 @@ from src.modules.backup.backup import Backup
 from src.modules.backup.backup_server import BackupServer
 from src.modules.ipfs.ipfs import IpfsFiles
 from src.modules.scripting.scripting import Scripting
-from src.utils.consts import URL_IPFS_BACKUP_PIN_CIDS, URL_IPFS_BACKUP_GET_DBFILES
+from src.utils.consts import URL_IPFS_BACKUP_PIN_CIDS, URL_IPFS_BACKUP_GET_DBFILES, URL_IPFS_BACKUP_STATE
 from src.utils.http_exception import BadRequestException
 from src.utils.http_request import params
 
@@ -110,6 +110,13 @@ def backup_restore():
 # ipfs-backup internal APIs
 
 
+@blueprint.route(URL_IPFS_BACKUP_STATE, methods=['POST'])
+def internal_pin_state():
+    """ Start or finish the backup process. """
+    to = request.args.get('to')
+    return server.ipfs_pin_state(to)
+
+
 @blueprint.route(URL_IPFS_BACKUP_PIN_CIDS, methods=['POST'])
 def internal_pin_cids():
     """ Pin the cids for the specific user.
@@ -128,3 +135,10 @@ def internal_get_dbfiles():
     :return None
     """
     return server.ipfs_get_dbfiles()
+
+
+# ipfs-promotion
+
+@blueprint.route('/api/v2/ipfs-backup/promotion', methods=['POST'])
+def promotion():
+    return server.ipfs_promotion()

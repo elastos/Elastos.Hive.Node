@@ -33,7 +33,7 @@ from src.utils.http_exception import BackupIsInProcessingException, Insufficient
     NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA, URL_IPFS_BACKUP_PIN_CIDS, \
-    BACKUP_FILE_SUFFIX, URL_IPFS_BACKUP_GET_DBFILES
+    BACKUP_FILE_SUFFIX, URL_IPFS_BACKUP_GET_DBFILES, STATE, STATE_RUNNING, STATE_FINISH, URL_IPFS_BACKUP_STATE
 from src.utils.file_manager import fm
 from src.utils.http_response import hive_restful_response, hive_stream_response
 from src.utils_v1.auth import get_did_string
@@ -114,6 +114,7 @@ class BackupClient:
             client.backup(did)
         except Exception as e:
             clog().error(f'Failed to backup really: {traceback.format_exc()}')
+            client.delete_mongodb_data(did)
             client.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_FAILED)
         clog().info('[backup_main] leave backup thread.')
 
@@ -124,6 +125,7 @@ class BackupClient:
             client.restore(did)
         except Exception as e:
             clog().error(f'[restore_main] Failed to restore really: {traceback.format_exc()}')
+            client.delete_mongodb_data(did)
             client.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_FAILED)
 
     def backup(self, did):
@@ -134,13 +136,18 @@ class BackupClient:
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
         clog().info('[backup_main] success to get backup info.')
         if self.is_ipfs:
+            self.update_server_state_to(doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN], STATE_RUNNING)
+            clog().info('[backup_main: ipfs] success to start the backup.')
             self.backup_ipfs_upload_dbfiles(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
+            clog().info('[backup_main: ipfs] success to upload database files.')
             self.backup_ipfs_cids(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
+            clog().info('[backup_main: ipfs] success to backup ipfs cids.')
+            self.update_server_state_to(doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN], STATE_FINISH)
+            clog().info('[backup_main: ipfs] success to finish the backup process.')
         else:
             vault_root = get_vault_path(did)
             self.backup_files_really(vault_root, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
             clog().info('[backup_main] success to execute backup.')
-
             checksum_list = get_file_checksum_list(vault_root)
             self.backup_finish(doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN], checksum_list)
             clog().info('[backup_main] success to finish backup.')
@@ -150,12 +157,16 @@ class BackupClient:
         clog().info('[backup_main] success to backup really.')
 
     def restore(self, did):
-        clog().info('[backup_main] enter restore().')
+        clog().info('[restore_main] enter restore().')
+
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
         if self.is_ipfs:
             self.restore_ipfs_download_dbfiles(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
+            clog().info('[restore_main: ipfs] success to download database files.')
             cli.import_mongodb(did)
+            clog().info('[restore_main: ipfs] success to import mongodb database.')
             self.restore_ipfs_pin_cids(did)
+            clog().info('[restore_main: ipfs] success to pin ipfs cids.')
         else:
             vault_root = get_vault_path(did)
             if not vault_root.exists():
@@ -166,6 +177,7 @@ class BackupClient:
             self.restore_finish(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
             clog().info(f'[restore_main] success to restore finish.')
             cli.import_mongodb(did)
+
         self.delete_mongodb_data(did)
         self.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_SUCCESS)
         clog().info('[restore_main] success to restore really.')
@@ -317,11 +329,15 @@ class BackupClient:
         for cid in cids:
             fm.ipfs_pin_cid(cid)
 
+    def update_server_state_to(self, host_url, access_token, state):
+        self.http.put_file(f'{host_url}{URL_IPFS_BACKUP_STATE}?to={state}', access_token)
+
 
 class BackupServer:
-    def __init__(self, is_ipfs=False):
+    def __init__(self, app=None, hive_setting=None, is_ipfs=False):
         self.http_server = HttpServer()
         self.is_ipfs = is_ipfs
+        self.client = BackupClient(app, hive_setting, is_ipfs=is_ipfs)
 
     def _check_auth_backup(self, is_raise=True, is_create=False):
         did, app_did = check_auth2()
@@ -346,6 +362,7 @@ class BackupServer:
                VAULT_BACKUP_SERVICE_USE_STORAGE: 0,
                VAULT_BACKUP_SERVICE_START_TIME: now,
                VAULT_BACKUP_SERVICE_END_TIME: end_time,
+               STATE: STATE_RUNNING,
                VAULT_BACKUP_SERVICE_MODIFY_TIME: now,
                VAULT_BACKUP_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
                VAULT_BACKUP_SERVICE_USING: price_plan['name']
@@ -489,6 +506,19 @@ class BackupServer:
         return {'checksum_list': checksum_list}
 
     @hive_restful_response
+    def ipfs_pin_state(self, to):
+        if to != STATE_RUNNING or to != STATE_FINISH:
+            raise InvalidParameterException(f'Invalid parameter to = {to}')
+
+        did, _, _ = self._check_auth_backup()
+        update = {
+            '$set': {STATE: STATE_RUNNING,
+                     VAULT_BACKUP_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp()}
+        }
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL,
+                              {DID: did}, update)
+
+    @hive_restful_response
     def ipfs_pin_cids(self, cids):
         for cid in cids:
             fm.ipfs_pin_cid(cid)
@@ -500,3 +530,24 @@ class BackupServer:
         return {
             'files': [name.name for name in vault_dir.iterdir() if name.suffix == BACKUP_FILE_SUFFIX]
         }
+
+    @hive_restful_response
+    def ipfs_promotion(self):
+        did, app_did, backup = self._check_auth_backup()
+        if backup[STATE] != STATE_FINISH:
+            raise BadRequestException(msg='No backup data exists.')
+
+        from src.view.subscription import vault_subscription
+        vault = vault_subscription.check_vault_exist(did)
+        if vault:
+            raise AlreadyExistsException(msg='The vault already exists, no need promotion.')
+
+        # restore the data of the vault.
+        self.ipfs_promote_restore(did)
+
+        # create new vault.
+        vault_subscription.create_vault(did, vault_subscription.get_price_plan('vault', 'Free'))
+
+    def ipfs_promote_restore(self, did):
+        vault_dir = get_vault_backup_path(did)
+        cli.import_mongodb_in_backup_server(vault_dir)

@@ -5,6 +5,7 @@ Any database operations can be found here.
 """
 import logging
 import subprocess
+from pathlib import Path
 
 from pymongo.errors import CollectionInvalid
 
@@ -21,6 +22,7 @@ from datetime import datetime
 
 import os
 
+from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
 
 VAULT_SERVICE_FREE = "Free"
 VAULT_SERVICE_STATE_RUNNING = "running"
@@ -225,11 +227,19 @@ class DatabaseClient:
     def import_mongodb(self, did):
         """ same as import_mongo_db """
         mongodb_root = get_save_mongo_db_path(did)
-        if not mongodb_root.exists():
+        self.restore_database(mongodb_root)
+
+    def import_mongodb_in_backup_server(self, did):
+        vault_dir = get_vault_backup_path(did)
+        self.restore_database(vault_dir)
+
+    def restore_database(self, root_dir: Path):
+        if not root_dir.exists():
+            logging.info('The backup root dir does not exist, skip restore.')
             return
 
         # restore the data of the database from every 'dump_file'.
-        dump_files = [x for x in mongodb_root.iterdir() if x.suffix == '.backup']
+        dump_files = [x for x in root_dir.iterdir() if x.suffix == '.backup']
         for dump_file in dump_files:
             if self.is_mongo_atlas:
                 line2 = f"mongorestore --uri={self.host}" \

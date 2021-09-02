@@ -15,7 +15,8 @@ from src.settings import hive_setting
 from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE
 from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
-from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE
+from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE, \
+    VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE
 from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
 from src.utils_v1.payment.vault_service_manage import get_vault_used_storage
@@ -37,13 +38,16 @@ class FileManager:
         return self._http
 
     def get_vault_storage_size(self, did):
-        return get_vault_used_storage(did)
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {DID: did})
+        if not doc:
+            raise VaultNotFoundException(msg='Vault not found for get max size.')
+        return int(doc[VAULT_SERVICE_FILE_USE_STORAGE] + doc[VAULT_SERVICE_DB_USE_STORAGE])
 
     def get_vault_max_size(self, did):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {DID: did})
         if not doc:
             raise VaultNotFoundException(msg='Vault not found for get max size.')
-        return doc[VAULT_SERVICE_MAX_STORAGE]
+        return int(doc[VAULT_SERVICE_MAX_STORAGE])
 
     def get_file_checksum_list(self, root_path: Path) -> list:
         """

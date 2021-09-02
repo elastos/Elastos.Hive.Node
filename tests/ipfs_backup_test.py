@@ -43,7 +43,7 @@ class IpfsBackupTestCase(unittest.TestCase):
 
     @unittest.skip
     def test03_promotion(self):
-        # PREPARE: backup and remove the vault.
+        # PREPARE: backup and remove the vault for local test.
         r = self.cli.post('/ipfs-backup/promotion')
         self.assertEqual(r.status_code, 201)
 

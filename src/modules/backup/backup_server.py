@@ -319,7 +319,7 @@ class BackupClient:
         body = self.http.get(host_url + URL_IPFS_BACKUP_GET_DBFILES, access_token)
         if not body['files']:
             return
-        if body['vault_size'] > fm.get_vault_max_size(did):
+        if body['origin_size'] > fm.get_vault_max_size(did):
             raise InsufficientStorageException('No enough space for restore.')
         database_dir = get_save_mongo_db_path(did)
         for name in body['files']:
@@ -348,7 +348,7 @@ class BackupServer:
         if is_raise and not doc:
             raise BackupNotFoundException()
         if is_raise and is_check_size and doc \
-                and doc[VAULT_BACKUP_SERVICE_USE_STORAGE] > VAULT_BACKUP_SERVICE_MAX_STORAGE:
+                and doc[VAULT_BACKUP_SERVICE_USE_STORAGE] > doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
             raise InsufficientStorageException(msg='No more available space for backup.')
         return did, app_did, doc
 
@@ -521,6 +521,9 @@ class BackupServer:
             raise InvalidParameterException(f'Invalid parameter to = {to}')
 
         did, _, _ = self._check_auth_backup()
+        self.ipfs_update_state_really(did, to, vault_size)
+
+    def ipfs_update_state_really(self, did, to, vault_size=0):
         update = {'$set': {STATE: to, VAULT_BACKUP_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp()}}
         if to == STATE_RUNNING:
             # This is the start of the backup processing.
@@ -543,7 +546,7 @@ class BackupServer:
         did, _, backup = self._check_auth_backup()
         vault_dir = get_vault_backup_path(did)
         return {
-            'total_size': backup[ORIGINAL_SIZE],
+            'origin_size': backup[ORIGINAL_SIZE],
             'files': [name.name for name in vault_dir.iterdir() if name.suffix == BACKUP_FILE_SUFFIX]
         }
 
@@ -554,16 +557,12 @@ class BackupServer:
             raise BadRequestException(msg='No backup data exists.')
 
         from src.view.subscription import vault_subscription
-        vault = vault_subscription.check_vault_exist(did)
+        vault = vault_subscription.check_vault_exist(did, is_raise=False)
         if vault:
             raise AlreadyExistsException(msg='The vault already exists, no need promotion.')
 
-        self.ipfs_promote_restore(did)
-        vault_subscription.create_vault(did, vault_subscription.get_price_plan('vault', 'Free'))
-
-    def ipfs_promote_restore(self, did):
-        vault_dir = get_vault_backup_path(did)
-        cli.import_mongodb_in_backup_server(vault_dir)
+        vault_subscription.create_vault(did, vault_subscription.get_price_plan('vault', 'Free'), True)
+        cli.import_mongodb_in_backup_server(did)
 
     def ipfs_increase_used_size(self, backup, size, is_reset=False):
         update = {'$set': dict()}

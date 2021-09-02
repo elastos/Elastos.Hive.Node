@@ -5,6 +5,7 @@ Entrance of the subscription module.
 """
 from datetime import datetime
 
+from src.utils.consts import IS_UPGRADED
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
     VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING
@@ -34,13 +35,14 @@ class VaultSubscription(metaclass=Singleton):
             raise AlreadyExistsException(msg='The vault is already subscribed.')
         return self.__get_vault_info(self.create_vault(did, self.get_price_plan('vault', 'Free')))
 
-    def create_vault(self, did, price_plan):
+    def create_vault(self, did, price_plan, is_upgraded=False):
         now = datetime.utcnow().timestamp()  # seconds in UTC
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
         doc = {VAULT_SERVICE_DID: did,
                VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,
                VAULT_SERVICE_FILE_USE_STORAGE: 0,
                VAULT_SERVICE_DB_USE_STORAGE: 0,
+               IS_UPGRADED: is_upgraded,
                VAULT_SERVICE_START_TIME: now,
                VAULT_SERVICE_END_TIME: end_time,
                VAULT_SERVICE_MODIFY_TIME: now,

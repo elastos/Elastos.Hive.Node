@@ -115,7 +115,8 @@ def backup_restore():
 def internal_ipfs_backup_state():
     """ Start or finish the backup process. """
     to = request.args.get('to')
-    return server.ipfs_backup_state(to)
+    vault_size = request.args.get('vault_size')
+    return server.ipfs_backup_state(to, int(vault_size))
 
 
 @blueprint.route(URL_IPFS_BACKUP_PIN_CIDS, methods=['POST'])

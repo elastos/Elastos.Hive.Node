@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from src.utils_v1.constants import DID, DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, \
+from src.utils_v1.constants import USER_DID, DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, \
     VAULT_BACKUP_INFO_MSG, VAULT_BACKUP_INFO_TIME, VAULT_BACKUP_INFO_DRIVE, VAULT_BACKUP_INFO_TYPE, \
     VAULT_BACKUP_INFO_TOKEN
 from src.utils_v1.did_mongo_db_resource import create_db_client
@@ -17,8 +17,8 @@ def upsert_vault_backup_info(did, backup_type, drive, token=None):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
-    query = {DID: did}
-    did_dic = {"$set": {DID: did, VAULT_BACKUP_INFO_STATE: VAULT_BACKUP_STATE_STOP,
+    query = {USER_DID: did}
+    did_dic = {"$set": {USER_DID: did, VAULT_BACKUP_INFO_STATE: VAULT_BACKUP_STATE_STOP,
                         VAULT_BACKUP_INFO_TYPE: backup_type,
                         VAULT_BACKUP_INFO_MSG: VAULT_BACKUP_MSG_SUCCESS,
                         VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp(),
@@ -33,7 +33,7 @@ def update_vault_backup_info_item(did, key, value):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
-    query = {DID: did}
+    query = {USER_DID: did}
     did_dic = {"$set": {key: value}}
     ret = col.update_one(query, did_dic)
     return ret.upserted_id
@@ -43,7 +43,7 @@ def update_vault_backup_state(did, state, msg):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
-    query = {DID: did}
+    query = {USER_DID: did}
     value = {"$set": {VAULT_BACKUP_INFO_STATE: state, VAULT_BACKUP_INFO_MSG: msg,
                       VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp()}}
     ret = col.update_one(query, value)
@@ -54,7 +54,7 @@ def delete_vault_backup_info(did):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
-    query = {DID: did}
+    query = {USER_DID: did}
     col.delete_many(query)
 
 
@@ -62,6 +62,6 @@ def get_vault_backup_info(did):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_INFO_COL]
-    query = {DID: did}
+    query = {USER_DID: did}
     info = col.find_one(query)
     return info

@@ -4,7 +4,7 @@ from decouple import config
 DID_INFO_DB_NAME = config('DID_INFO_DB_NAME', default="hive_manage_info", cast=str)
 
 DID_INFO_REGISTER_COL = "auth_register"
-DID = "userDid"
+USER_DID = "userDid"
 APP_ID = "appDid"
 APP_INSTANCE_DID = "appInstanceDid"
 DID_INFO_NONCE = "nonce"

@@ -1,6 +1,6 @@
 import uuid
 
-from src.utils_v1.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, DID, \
+from src.utils_v1.constants import DID_INFO_DB_NAME, DID_INFO_REGISTER_COL, USER_DID, \
     APP_ID, DID_INFO_NONCE, DID_INFO_TOKEN, \
     DID_INFO_NONCE_EXPIRED, DID_INFO_TOKEN_EXPIRED, APP_INSTANCE_DID
 from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name, create_db_client
@@ -40,7 +40,7 @@ def update_token_of_did_info(did, app_id, app_instance_did, nonce, token, expire
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {APP_INSTANCE_DID: app_instance_did, DID_INFO_NONCE: nonce}
-    value = {"$set": {DID: did, APP_ID: app_id, DID_INFO_TOKEN: token, DID_INFO_TOKEN_EXPIRED: expired}}
+    value = {"$set": {USER_DID: did, APP_ID: app_id, DID_INFO_TOKEN: token, DID_INFO_TOKEN_EXPIRED: expired}}
     ret = col.update_one(query, value)
     return ret
 
@@ -57,7 +57,7 @@ def delete_did_info(did, app_id):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {DID: did, APP_ID: app_id}
+    query = {USER_DID: did, APP_ID: app_id}
     col.delete_many(query)
 
 
@@ -65,7 +65,7 @@ def get_all_did_info_by_did(did):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {DID: did}
+    query = {USER_DID: did}
     infos = col.find(query)
     return infos
 
@@ -92,7 +92,7 @@ def get_did_info_by_did_appid(did, app_id):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {DID: did, APP_ID: app_id}
+    query = {USER_DID: did, APP_ID: app_id}
     info = col.find_one(query)
     return info
 
@@ -101,7 +101,7 @@ def save_token_to_db(did, app_id, token, expired):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {DID: did, APP_ID: app_id}
+    query = {USER_DID: did, APP_ID: app_id}
     value = {"$set": {
         DID_INFO_TOKEN: token,
         DID_INFO_TOKEN_EXPIRED: expired,

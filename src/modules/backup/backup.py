@@ -28,6 +28,7 @@ class Backup:
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         self.client.check_backup_status(did)
+        # TODO: try to remove http access to the thread
         backup_service_info, access_token = self.client.get_backup_service_info(credential, credential_info)
         self.client.execute_backup(did, credential_info, backup_service_info, access_token)
 
@@ -36,6 +37,7 @@ class Backup:
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         credential_info = self.auth.get_backup_credential_info(credential)
         self.client.check_backup_status(did, True)
+        # TODO: try to remove http access to the thread
         backup_service_info, access_token = self.client.get_backup_service_info(credential, credential_info)
         self.client.execute_restore(did, credential_info, backup_service_info, access_token)
 

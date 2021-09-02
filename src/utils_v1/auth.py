@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import request
 
 from src import hive_setting
-from src.utils_v1.constants import DID, APP_ID, APP_INSTANCE_DID
+from src.utils_v1.constants import USER_DID, APP_ID, APP_INSTANCE_DID
 from src.utils_v1.did.eladid import ffi, lib
 from src.modules.auth.auth import Auth
 
@@ -167,9 +167,9 @@ def did_auth():
     info, err = get_token_info()
     if info:
         if APP_ID in info:
-            return info[DID], info[APP_ID]
+            return info[USER_DID], info[APP_ID]
         else:
-            return info[DID], None
+            return info[USER_DID], None
     else:
         return None, None
 
@@ -177,6 +177,6 @@ def did_auth():
 def did_auth2():
     """ Only for src part. """
     info, err = get_token_info()
-    did = info[DID] if info else None
+    did = info[USER_DID] if info else None
     app_did = info[APP_ID] if info and APP_ID in info else None
     return did, app_did, err

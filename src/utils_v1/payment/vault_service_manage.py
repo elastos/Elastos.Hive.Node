@@ -3,7 +3,7 @@ from datetime import datetime
 
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_STATE, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_PRICING_USING, \
-    VAULT_ACCESS_WR, DID, APP_ID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, \
+    VAULT_ACCESS_WR, USER_DID, APP_ID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, \
     VAULT_SERVICE_MODIFY_TIME, VAULT_ACCESS_DEL
 
 from src.utils_v1.did_file_info import get_dir_size, get_vault_path
@@ -187,14 +187,14 @@ def count_db_storage_size(did):
     did_info_list = get_all_did_info_by_did(did)
     total_size = 0.0
     for did_info in did_info_list:
-        total_size += get_mongo_database_size(did_info[DID], did_info[APP_ID])
+        total_size += get_mongo_database_size(did_info[USER_DID], did_info[APP_ID])
     return total_size
 
 
 def delete_db_storage(did):
     did_info_list = get_all_did_info_by_did(did)
     for did_info in did_info_list:
-        delete_mongo_database(did_info[DID], did_info[APP_ID])
+        delete_mongo_database(did_info[USER_DID], did_info[APP_ID])
 
 
 def count_vault_storage_job():

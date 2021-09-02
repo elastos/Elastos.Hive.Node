@@ -12,15 +12,15 @@ from pathlib import Path
 from flask import request
 
 from src.settings import hive_setting
-from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID
+from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE
 from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
-from src.utils_v1.constants import CHUNK_SIZE
+from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE
 from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
 from src.utils_v1.payment.vault_service_manage import get_vault_used_storage
 from src.utils_v1.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
-from src.utils.http_exception import BadRequestException
+from src.utils.http_exception import BadRequestException, VaultNotFoundException
 from src.utils.node_settings import st_get_ipfs_cache_path
 
 
@@ -38,6 +38,12 @@ class FileManager:
 
     def get_vault_storage_size(self, did):
         return get_vault_used_storage(did)
+
+    def get_vault_max_size(self, did):
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {DID: did})
+        if not doc:
+            raise VaultNotFoundException(msg='Vault not found for get max size.')
+        return doc[VAULT_SERVICE_MAX_STORAGE]
 
     def get_file_checksum_list(self, root_path: Path) -> list:
         """
@@ -183,19 +189,22 @@ class FileManager:
 
     def get_file_cids(self, did):
         databases = cli.get_all_user_databases(did)
-        cids = set()
+        total_size, cids = 0, set()
         for d in databases:
             docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: did}, is_create=False, is_raise=False)
             if docs:
                 cids.update([doc[COL_IPFS_FILES_IPFS_CID] for doc in docs])
-        return list(cids)
+                total_size += sum([doc[SIZE] for doc in docs])
+        return total_size, list(cids)
 
     def ipfs_pin_cid(self, cid):
         # TODO: optimize this as ipfs not support pin other node file to local node.
         temp_file = gene_temp_file_name()
         self.ipfs_download_file_to_path(cid, temp_file)
         self.ipfs_upload_file_from_path(temp_file)
+        size = temp_file.stat().st_size
         temp_file.unlink()
+        return size
 
 
 fm = FileManager()

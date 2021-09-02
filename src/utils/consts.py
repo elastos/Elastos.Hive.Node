@@ -30,6 +30,7 @@ STATE_RUNNING = 'running'
 STATE_FINISH = 'finish'
 STATE_FAILED = 'failed'
 STATE_UPGRADED = 'upgraded'
+ORIGINAL_SIZE = 'original_size'
 
 COL_ORDERS = 'vault_order'
 COL_ORDERS_SUBSCRIPTION = 'subscription'

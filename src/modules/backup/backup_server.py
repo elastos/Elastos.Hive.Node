@@ -11,7 +11,7 @@ from flask import request
 
 from src.utils_v1.common import get_file_checksum_list, gene_temp_file_name, \
     create_full_path_dir
-from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, DID, \
+from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, USER_DID, \
     VAULT_BACKUP_INFO_TIME, VAULT_BACKUP_INFO_TYPE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, VAULT_BACKUP_INFO_MSG, \
     VAULT_BACKUP_INFO_DRIVE, VAULT_BACKUP_INFO_TOKEN, VAULT_BACKUP_SERVICE_MAX_STORAGE, APP_ID, CHUNK_SIZE, \
     VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, VAULT_BACKUP_SERVICE_USE_STORAGE, \
@@ -33,7 +33,8 @@ from src.utils.http_exception import BackupIsInProcessingException, Insufficient
     NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA, URL_IPFS_BACKUP_PIN_CIDS, \
-    BACKUP_FILE_SUFFIX, URL_IPFS_BACKUP_GET_DBFILES, STATE, STATE_RUNNING, STATE_FINISH, URL_IPFS_BACKUP_STATE
+    BACKUP_FILE_SUFFIX, URL_IPFS_BACKUP_GET_DBFILES, STATE, STATE_RUNNING, STATE_FINISH, URL_IPFS_BACKUP_STATE, DID, \
+    ORIGINAL_SIZE
 from src.utils.file_manager import fm
 from src.utils.http_response import hive_restful_response, hive_stream_response
 from src.utils_v1.auth import get_did_string
@@ -59,7 +60,7 @@ class BackupClient:
         self.is_ipfs = is_ipfs
 
     def check_backup_status(self, did, is_restore=False):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did}, is_create=True)
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {USER_DID: did}, is_create=True)
         if doc and doc[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP \
                 and doc[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow().timestamp() - 60 * 60 * 24):
             raise BackupIsInProcessingException('The backup/restore is in process.')
@@ -78,8 +79,8 @@ class BackupClient:
     def execute_backup(self, did, credential_info, backup_service_info, access_token):
         cli.update_one_origin(DID_INFO_DB_NAME,
                               VAULT_BACKUP_INFO_COL,
-                              {DID: did},
-                              {"$set": {DID: did,
+                              {USER_DID: did},
+                              {"$set": {USER_DID: did,
                                         VAULT_BACKUP_INFO_STATE: VAULT_BACKUP_STATE_STOP,
                                         VAULT_BACKUP_INFO_TYPE: VAULT_BACKUP_INFO_TYPE_HIVE_NODE,
                                         VAULT_BACKUP_INFO_MSG: VAULT_BACKUP_MSG_SUCCESS,
@@ -88,6 +89,7 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
                               options={'upsert': True}, is_create=True)
 
+        # TODO: move this to the backup process thread.
         vault_size = fm.get_vault_storage_size(did)
         if vault_size > backup_service_info[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
             raise InsufficientStorageException(msg='Insufficient storage to execute backup.')
@@ -95,23 +97,23 @@ class BackupClient:
         clog().debug('start new thread for backup processing.')
 
         if self.hive_setting.BACKUP_IS_SYNC:
-            self.__class__.backup_main(did, self)
+            self.__class__.backup_main(did, self, vault_size)
         else:
-            _thread.start_new_thread(self.__class__.backup_main, (did, self))
+            _thread.start_new_thread(self.__class__.backup_main, (did, self, vault_size))
 
     def update_backup_state(self, did, state, msg):
         cli.update_one_origin(DID_INFO_DB_NAME,
                               VAULT_BACKUP_INFO_COL,
-                              {DID: did},
+                              {USER_DID: did},
                               {"$set": {VAULT_BACKUP_INFO_STATE: state,
                                         VAULT_BACKUP_INFO_MSG: msg,
                                         VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp()}})
 
     @staticmethod
-    def backup_main(did, client):
+    def backup_main(did, client, vault_size):
         try:
             clog().info(f'[backup_main] enter backup thread, {did}, {client}.')
-            client.backup(did)
+            client.backup(did, vault_size)
         except Exception as e:
             clog().error(f'Failed to backup really: {traceback.format_exc()}')
             client.delete_mongodb_data(did)
@@ -128,15 +130,16 @@ class BackupClient:
             client.delete_mongodb_data(did)
             client.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_FAILED)
 
-    def backup(self, did):
+    def backup(self, did, vault_size):
         clog().info('[backup_main] enter backup().')
         cli.export_mongodb(did)
         clog().info('[backup_main] success to export mongodb data.')
 
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {USER_DID: did})
         clog().info('[backup_main] success to get backup info.')
         if self.is_ipfs:
-            self.update_server_state_to(doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN], STATE_RUNNING)
+            self.update_server_state_to(
+                doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN], STATE_RUNNING, vault_size)
             clog().info('[backup_main: ipfs] success to start the backup.')
             self.backup_ipfs_upload_dbfiles(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
             clog().info('[backup_main: ipfs] success to upload database files.')
@@ -159,7 +162,7 @@ class BackupClient:
     def restore(self, did):
         clog().info('[restore_main] enter restore().')
 
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did})
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {USER_DID: did})
         if self.is_ipfs:
             self.restore_ipfs_download_dbfiles(did, doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN])
             clog().info('[restore_main: ipfs] success to download database files.')
@@ -256,8 +259,8 @@ class BackupClient:
     def execute_restore(self, did, credential_info, backup_service_info, access_token):
         cli.update_one_origin(DID_INFO_DB_NAME,
                               VAULT_BACKUP_INFO_COL,
-                              {DID: did},
-                              {"$set": {DID: did,
+                              {USER_DID: did},
+                              {"$set": {USER_DID: did,
                                         VAULT_BACKUP_INFO_STATE: VAULT_BACKUP_STATE_STOP,
                                         VAULT_BACKUP_INFO_TYPE: VAULT_BACKUP_INFO_TYPE_HIVE_NODE,
                                         VAULT_BACKUP_INFO_MSG: VAULT_BACKUP_MSG_SUCCESS,
@@ -265,11 +268,6 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_DRIVE: credential_info['targetHost'],
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
                               options={'upsert': True}, is_create=True)
-
-        # TODO: check the vault storage has enough space to restore.
-        # use_storage = get_vault_used_storage(did)
-        # if use_storage > backup_service_info[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
-        #     raise InsufficientStorageException(msg='Insufficient storage to execute backup.')
 
         if self.hive_setting.BACKUP_IS_SYNC:
             self.__class__.restore_main(did, self)
@@ -289,17 +287,18 @@ class BackupClient:
                 raise BadRequestException(msg='Failed to finish restore.')
 
     def get_state(self, did):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {DID: did}, is_create=True)
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {USER_DID: did}, is_create=True)
         state, result = 'stop', 'success'
         if doc:
             state, result = doc[VAULT_BACKUP_INFO_STATE], doc[VAULT_BACKUP_INFO_MSG]
         return {'state': state, 'result': result}
 
     def backup_ipfs_cids(self, did, host_url, access_token):
-        cids = fm.get_file_cids(did)
+        total_size, cids = fm.get_file_cids(did)
         if not cids:
             return
-        self.http.post(host_url + URL_IPFS_BACKUP_PIN_CIDS, access_token, {'cids': cids}, is_body=False)
+        self.http.post(host_url + URL_IPFS_BACKUP_PIN_CIDS, access_token,
+                       {'total_size': total_size, 'cids': cids}, is_body=False)
 
     def backup_ipfs_upload_dbfiles(self, did, host_url, access_token):
         database_dir = get_save_mongo_db_path(did)
@@ -320,17 +319,20 @@ class BackupClient:
         body = self.http.get(host_url + URL_IPFS_BACKUP_GET_DBFILES, access_token)
         if not body['files']:
             return
+        if body['vault_size'] > fm.get_vault_max_size(did):
+            raise InsufficientStorageException('No enough space for restore.')
         database_dir = get_save_mongo_db_path(did)
         for name in body['files']:
             self.http.get_to_file(f'{host_url}{URL_BACKUP_FILE}?file={name}', access_token, database_dir / name)
 
     def restore_ipfs_pin_cids(self, did):
-        cids = fm.get_file_cids(did)
+        _, cids = fm.get_file_cids(did)
         for cid in cids:
             fm.ipfs_pin_cid(cid)
 
-    def update_server_state_to(self, host_url, access_token, state):
-        self.http.put_file(f'{host_url}{URL_IPFS_BACKUP_STATE}?to={state}', access_token)
+    def update_server_state_to(self, host_url, access_token, state, vault_size=0):
+        self.http.post(f'{host_url}{URL_IPFS_BACKUP_STATE}?to={state}&vault_size={vault_size}',
+                       access_token, None, is_body=False)
 
 
 class BackupServer:
@@ -339,12 +341,15 @@ class BackupServer:
         self.is_ipfs = is_ipfs
         self.client = BackupClient(app, hive_setting, is_ipfs=is_ipfs)
 
-    def _check_auth_backup(self, is_raise=True, is_create=False):
+    def _check_auth_backup(self, is_raise=True, is_create=False, is_check_size=False):
         did, app_did = check_auth2()
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
                                   is_create=is_create, is_raise=False)
         if is_raise and not doc:
             raise BackupNotFoundException()
+        if is_raise and is_check_size and doc \
+                and doc[VAULT_BACKUP_SERVICE_USE_STORAGE] > VAULT_BACKUP_SERVICE_MAX_STORAGE:
+            raise InsufficientStorageException(msg='No more available space for backup.')
         return did, app_did, doc
 
     def _subscribe_free(self):
@@ -360,6 +365,7 @@ class BackupServer:
         doc = {VAULT_BACKUP_SERVICE_DID: did,
                VAULT_BACKUP_SERVICE_MAX_STORAGE: price_plan["maxStorage"] * 1000 * 1000,
                VAULT_BACKUP_SERVICE_USE_STORAGE: 0,
+               ORIGINAL_SIZE: 0,
                VAULT_BACKUP_SERVICE_START_TIME: now,
                VAULT_BACKUP_SERVICE_END_TIME: end_time,
                STATE: STATE_RUNNING,
@@ -453,8 +459,12 @@ class BackupServer:
         if not file_name:
             raise InvalidParameterException()
 
-        did, _, _ = self._check_auth_backup()
-        fm.write_file_by_request_stream((get_vault_backup_path(did) / file_name).resolve())
+        is_ipfs = file_name.endswith(BACKUP_FILE_SUFFIX)
+        did, _, backup = self._check_auth_backup(is_check_size=is_ipfs)
+        dst_file = (get_vault_backup_path(did) / file_name).resolve()
+        fm.write_file_by_request_stream(dst_file)
+        if is_ipfs:
+            self.ipfs_increase_used_size(backup, dst_file.stat().st_size)
 
     @hive_restful_response
     def backup_delete_file(self, file_name):
@@ -506,28 +516,34 @@ class BackupServer:
         return {'checksum_list': checksum_list}
 
     @hive_restful_response
-    def ipfs_pin_state(self, to):
-        if to != STATE_RUNNING or to != STATE_FINISH:
+    def ipfs_backup_state(self, to, vault_size):
+        if to != STATE_RUNNING and to != STATE_FINISH:
             raise InvalidParameterException(f'Invalid parameter to = {to}')
 
         did, _, _ = self._check_auth_backup()
-        update = {
-            '$set': {STATE: STATE_RUNNING,
-                     VAULT_BACKUP_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp()}
-        }
-        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL,
-                              {DID: did}, update)
+        update = {'$set': {STATE: to, VAULT_BACKUP_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp()}}
+        if to == STATE_RUNNING:
+            # This is the start of the backup processing.
+            update['$set'][VAULT_BACKUP_SERVICE_USE_STORAGE] = 0
+            update['$set'][ORIGINAL_SIZE] = vault_size
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {DID: did}, update)
 
     @hive_restful_response
-    def ipfs_pin_cids(self, cids):
+    def ipfs_pin_cids(self, total_size, cids):
+        did, _, backup = self._check_auth_backup(is_check_size=True)
+        if backup[VAULT_BACKUP_SERVICE_USE_STORAGE] + total_size > backup[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
+            raise InsufficientStorageException(msg='No enough space to backup files.')
+
         for cid in cids:
             fm.ipfs_pin_cid(cid)
+        self.ipfs_increase_used_size(backup, total_size)
 
     @hive_restful_response
     def ipfs_get_dbfiles(self):
-        did, _, _ = self._check_auth_backup()
+        did, _, backup = self._check_auth_backup()
         vault_dir = get_vault_backup_path(did)
         return {
+            'total_size': backup[ORIGINAL_SIZE],
             'files': [name.name for name in vault_dir.iterdir() if name.suffix == BACKUP_FILE_SUFFIX]
         }
 
@@ -542,12 +558,17 @@ class BackupServer:
         if vault:
             raise AlreadyExistsException(msg='The vault already exists, no need promotion.')
 
-        # restore the data of the vault.
         self.ipfs_promote_restore(did)
-
-        # create new vault.
         vault_subscription.create_vault(did, vault_subscription.get_price_plan('vault', 'Free'))
 
     def ipfs_promote_restore(self, did):
         vault_dir = get_vault_backup_path(did)
         cli.import_mongodb_in_backup_server(vault_dir)
+
+    def ipfs_increase_used_size(self, backup, size, is_reset=False):
+        update = {'$set': dict()}
+        if is_reset:
+            update['$set'][VAULT_BACKUP_SERVICE_USE_STORAGE] = 0
+        else:
+            update['$set'][VAULT_BACKUP_SERVICE_USE_STORAGE] = backup[VAULT_BACKUP_SERVICE_USE_STORAGE] + size
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {DID: backup[DID]}, update)

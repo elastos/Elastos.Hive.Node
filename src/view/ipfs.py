@@ -19,14 +19,15 @@ blueprint = Blueprint('ipfs', __name__)
 ipfs_files = IpfsFiles()
 scripting = Scripting(is_ipfs=True)
 backup: Backup = None
-server: BackupServer = BackupServer(is_ipfs=True)
+server: BackupServer = None
 
 
 def init_app(app, hive_setting):
     """ This will be called by application initializer. """
-    global scripting, backup
+    global scripting, backup, server
     scripting = Scripting(app=app, hive_setting=hive_setting, is_ipfs=True)
     backup = Backup(app=app, hive_setting=hive_setting, is_ipfs=True)
+    server = BackupServer(app, hive_setting, is_ipfs=True)
     app.register_blueprint(blueprint)
 
 
@@ -111,10 +112,10 @@ def backup_restore():
 
 
 @blueprint.route(URL_IPFS_BACKUP_STATE, methods=['POST'])
-def internal_pin_state():
+def internal_ipfs_backup_state():
     """ Start or finish the backup process. """
     to = request.args.get('to')
-    return server.ipfs_pin_state(to)
+    return server.ipfs_backup_state(to)
 
 
 @blueprint.route(URL_IPFS_BACKUP_PIN_CIDS, methods=['POST'])
@@ -124,7 +125,7 @@ def internal_pin_cids():
     Then the backup ipfs node can find the vault one to get the cid relating file.
     :return None
     """
-    return server.ipfs_pin_cids(params.get('cids'))
+    return server.ipfs_pin_cids(params.get('total_size'), params.get('cids'))
 
 
 @blueprint.route(URL_IPFS_BACKUP_GET_DBFILES, methods=['GET'])
@@ -138,6 +139,7 @@ def internal_get_dbfiles():
 
 
 # ipfs-promotion
+
 
 @blueprint.route('/api/v2/ipfs-backup/promotion', methods=['POST'])
 def promotion():

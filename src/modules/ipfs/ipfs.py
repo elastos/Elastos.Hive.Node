@@ -4,6 +4,7 @@
 The entrance for ipfs module.
 """
 import shutil
+from pathlib import Path
 
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
 from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
@@ -70,13 +71,8 @@ class IpfsFiles:
         if file_path.exists():
             file_path.unlink()
 
-        if doc[COL_IPFS_FILES_IPFS_CID]:
-            # TODO: Try to remove file by create a table tracking the reference of the cid.
-            #fm.ipfs_remove_file(doc[COL_IPFS_FILES_IPFS_CID])
-            pass
-
+        self.delete_file_metadata(did, app_did, doc, col_filter=col_filter)
         inc_vault_file_use_storage_byte(did, 0 - doc[SIZE])
-        cli.delete_one(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
@@ -180,9 +176,43 @@ class IpfsFiles:
             inc_vault_file_use_storage_byte(did, file_doc[SIZE])
         else:
             # exists, just remove cid for uploading the file to IPFS node later.
-            result = cli.update_one(did, app_did, COL_IPFS_FILES,
-                                    col_filter, {'$set': {COL_IPFS_FILES_IPFS_CID: None}}, is_extra=True)
+            self.update_file_metadata(did, app_did, path, file_path, col_filter=col_filter)
             inc_vault_file_use_storage_byte(did, file_path.stat().st_size - doc[SIZE])
+
+    def add_file_to_metadata(self, did, app_did, rel_path, file_path):
+        file_doc = {
+            DID: did,
+            APP_DID: app_did,
+            COL_IPFS_FILES_PATH: rel_path,
+            COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(file_path),
+            COL_IPFS_FILES_IS_FILE: True,
+            SIZE: file_path.stat().st_size,
+            COL_IPFS_FILES_IPFS_CID: None,
+        }
+        result = cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
+
+    def update_file_metadata(self, did, app_did, rel_path: str, full_path: Path, col_filter=None, sha256=None):
+        if not col_filter:
+            col_filter = {DID: did,
+                          APP_DID: app_did,
+                          COL_IPFS_FILES_PATH: rel_path}
+        update = {'$set': {COL_IPFS_FILES_IPFS_CID: None,
+                           COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(full_path) if not sha256 else sha256,
+                           SIZE: full_path.stat().st_size}}
+        result = cli.update_one(did, app_did, COL_IPFS_FILES, col_filter, update, is_extra=True)
+
+    def delete_file_metadata(self, did, app_did, doc, col_filter=None):
+        if doc[COL_IPFS_FILES_IPFS_CID]:
+            # TODO: Try to remove file by create a table tracking the reference of the cid.
+            #fm.ipfs_remove_file(doc[COL_IPFS_FILES_IPFS_CID])
+            pass
+
+        if not col_filter:
+            col_filter = {DID: did,
+                          APP_DID: app_did,
+                          COL_IPFS_FILES_PATH: doc[COL_IPFS_FILES_PATH]}
+
+        cli.delete_one(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
 
     def download_file_by_did(self, did, app_did, path: str):
         """

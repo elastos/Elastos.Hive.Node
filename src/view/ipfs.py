@@ -95,6 +95,11 @@ def download_file(transaction_id):
     return scripting.download_file(transaction_id)
 
 
+@blueprint.route('/api/v2/vault/ipfs-scripting/getfile/<transaction_id>', methods=['GET'])
+def get_anonymous_file(transaction_id):
+    return scripting.get_anonymous_file(transaction_id)
+
+
 # ipfs-backup
 
 

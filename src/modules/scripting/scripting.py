@@ -285,7 +285,8 @@ class Executable:
                                   "document": {
                                       "file_name": body['path'],
                                       "fileapi_type": action_type
-                                  }
+                                  },
+                                  'anonymous': self.script.anonymous_app and self.script.anonymous_user
                               }, is_create=True)
         if not data.get('inserted_id', None):
             raise BadRequestException('Cannot retrieve the transaction ID.')
@@ -650,3 +651,20 @@ class Scripting:
             return trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
         except Exception as e:
             raise BadRequestException(msg=f"Invalid transaction id '{transaction_id}'")
+
+    @hive_stream_response
+    def get_anonymous_file(self, transaction_id):
+        if not self.is_ipfs:
+            raise BadRequestException(msg="Do not support without ipfs module.")
+
+        # check by transaction id
+        row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)
+        col_filter = {"_id": ObjectId(row_id)}
+        trans = cli.find_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
+        if not trans:
+            raise BadRequestException("Cannot find the transaction by id.")
+
+        if not trans['anonymous']:
+            raise BadRequestException(msg=f"The script does not support anonymous accessing.")
+
+        return self.ipfs_files.download_file_by_did(target_did, target_app_did, trans['document']['file_name'])

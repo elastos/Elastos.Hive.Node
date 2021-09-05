@@ -158,6 +158,10 @@ class HiveSetting:
         return "english"
 
     @property
+    def ENABLE_IPFS(self):
+        return self.env_config('ENABLE_IPFS', default='False', cast=bool)
+
+    @property
     def IPFS_NODE_URL(self):
         return self.env_config('IPFS_NODE_URL', default='', cast=str)
 

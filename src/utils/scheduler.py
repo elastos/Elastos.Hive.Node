@@ -8,9 +8,13 @@ import logging
 import pymongo
 from flask_apscheduler import APScheduler
 
+from src import hive_setting
 from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_PATH, DID, APP_DID
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
+from src.utils_v1.constants import USER_DID, APP_ID
+from src.utils_v1.did_file_info import get_save_files_path
+from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name
 
 scheduler = APScheduler()
 
@@ -21,13 +25,17 @@ def scheduler_init(app):
         scheduler.start()
 
 
-@scheduler.task(trigger='interval', id='task_upload_ipfs_files', minutes=5)
+@scheduler.task(trigger='interval', id='task_upload_ipfs_files', minutes=10)
 def task_upload_ipfs_files():
+    """ Task for syncing file content to ipfs server and updating cid on metadata """
     logging.info('[task_upload_ipfs_files] enter.')
-    names = cli.get_all_database_names()
-    for db_name in names:
-        if db_name.startswith('hive_user_db'):
-            upload_ipfs_files_by_db(db_name)
+
+    if not hive_setting.ENABLE_IPFS:
+        logging.info('[task_upload_ipfs_files] IPFS not supported, skip.')
+        return
+
+    for db_name in cli.get_all_user_database_names():
+        upload_ipfs_files_by_db(db_name)
 
 
 def upload_ipfs_files_by_db(db_name):
@@ -48,6 +56,29 @@ def upload_ipfs_files_by_db(db_name):
                                   col_filter, {'$set': {COL_IPFS_FILES_IPFS_CID: cid}}, is_extra=True)
         except Exception as e:
             logging.error(f'[task_upload_ipfs_files] failed upload file to ipfs with exception: {str(e)}')
+
+
+@scheduler.task(trigger='interval', id='task_adapt_local_file_to_ipfs', minutes=10)
+def task_adapt_local_file_to_ipfs():
+    """ Task for keeping sync with ipfs metadata """
+    logging.info('[task_adapt_local_file_to_ipfs] enter.')
+
+    if not hive_setting.ENABLE_IPFS:
+        logging.info('[task_adapt_local_file_to_ipfs] IPFS not supported, skip.')
+        return
+
+    for user in cli.get_all_users():
+        did, app_did = user[USER_DID], user[APP_ID]
+        name = gene_mongo_db_name(did, app_did)
+        files_root = get_save_files_path(did, app_did)
+        adapt_local_files_by_folder(name, files_root)
+
+
+def adapt_local_files_by_folder(did, app_did, database_name, files_root):
+    files = [n for n in files_root.iterdir()]
+    col_filter = {DID: did, APP_DID: app_did}
+    file_docs = cli.find_many_origin(database_name, COL_IPFS_FILES, col_filter, is_create=False, is_raise=False)
+    # TODO:
 
 
 # Shutdown your cron thread if the web process is stopped

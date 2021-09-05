@@ -50,7 +50,7 @@ def upload_ipfs_files_by_db(db_name):
 
     for doc in file_docs:
         try:
-            cid = fm.ipfs_uploading_file(doc[DID], doc[COL_IPFS_FILES_PATH])
+            cid = fm.ipfs_uploading_file(doc[DID], doc[APP_DID], doc[COL_IPFS_FILES_PATH])
             col_filter = {DID: doc[DID], APP_DID: doc[APP_DID], COL_IPFS_FILES_PATH: doc[COL_IPFS_FILES_PATH]}
             cli.update_one_origin(db_name, COL_IPFS_FILES,
                                   col_filter, {'$set': {COL_IPFS_FILES_IPFS_CID: cid}}, is_extra=True)
@@ -71,7 +71,7 @@ def task_adapt_local_file_to_ipfs():
         did, app_did = user[USER_DID], user[APP_ID]
         name = gene_mongo_db_name(did, app_did)
         files_root = get_save_files_path(did, app_did)
-        adapt_local_files_by_folder(name, files_root)
+        adapt_local_files_by_folder(did, app_did, name, files_root)
 
 
 def adapt_local_files_by_folder(did, app_did, database_name, files_root):

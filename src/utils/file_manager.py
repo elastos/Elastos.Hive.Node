@@ -17,6 +17,7 @@ from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE
+from src.utils_v1.did_file_info import get_save_files_path
 from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
 from src.utils_v1.payment.vault_service_manage import get_vault_used_storage
@@ -152,10 +153,13 @@ class FileManager:
     def ipfs_gen_cache_file_name(self, path: str):
         return path.replace('/', '_').replace('\\', '_')
 
-    def ipfs_get_file_path(self, did, path: str):
-        name = self.ipfs_gen_cache_file_name(path)
-        cache_path = st_get_ipfs_cache_path(did)
-        return cache_path / name
+    def ipfs_get_file_path(self, did, app_did, path: str):
+        # name = self.ipfs_gen_cache_file_name(path)
+        # cache_path = st_get_ipfs_cache_path(did)
+        # return cache_path / name
+
+        # INFO: change to vault files folder for keeping sync with v1.
+        return get_save_files_path(did, app_did) / path
 
     def get_file_content_sha256(self, file_path: Path):
         buf_size = 65536  # lets read stuff in 64kb chunks!
@@ -168,8 +172,8 @@ class FileManager:
                 sha.update(data)
         return sha.hexdigest()
 
-    def ipfs_uploading_file(self, did, path: str):
-        file_path = self.ipfs_get_file_path(did, path)
+    def ipfs_uploading_file(self, did, app_did, path: str):
+        file_path = self.ipfs_get_file_path(did, app_did, path)
         return self.ipfs_upload_file_from_path(file_path)
 
     def get_response_by_file_path(self, path: Path):

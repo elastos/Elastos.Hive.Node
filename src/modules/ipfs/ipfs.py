@@ -66,12 +66,12 @@ class IpfsFiles:
         if not doc:
             return
 
-        file_path = fm.ipfs_get_file_path(did, path)
+        file_path = fm.ipfs_get_file_path(did, app_did, path)
         if file_path.exists():
             file_path.unlink()
 
         if doc[COL_IPFS_FILES_IPFS_CID]:
-            # INFO: can not unpin file in the IPFS node because of CID maybe used for many files.
+            # TODO: Try to remove file by create a table tracking the reference of the cid.
             #fm.ipfs_remove_file(doc[COL_IPFS_FILES_IPFS_CID])
             pass
 
@@ -114,7 +114,7 @@ class IpfsFiles:
         if not docs and path:
             raise InvalidParameterException(f'Can not find the folder {path}')
         return {
-            'value': list(map(lambda d: self.get_list_file_info_by_doc(d), docs))
+            'value': list(map(lambda d: self._get_list_file_info_by_doc(d), docs))
         }
 
     @hive_restful_response
@@ -159,7 +159,7 @@ class IpfsFiles:
         :param path: the file relative path, not None
         :return: None
         """
-        file_path = fm.ipfs_get_file_path(did, path)
+        file_path = fm.ipfs_get_file_path(did, app_did, path)
         fm.write_file_by_request_stream(file_path)
         col_filter = {DID: did,
                       APP_DID: app_did,
@@ -196,7 +196,7 @@ class IpfsFiles:
         :return:
         """
         doc = self.check_file_exists(did, app_did, path)
-        file_path = fm.ipfs_get_file_path(did, path)
+        file_path = fm.ipfs_get_file_path(did, app_did, path)
         if not file_path.exists():
             fm.ipfs_download_file_to_path(doc[COL_IPFS_FILES_IPFS_CID], file_path)
         return fm.get_response_by_file_path(file_path)
@@ -223,8 +223,8 @@ class IpfsFiles:
         if dst_doc:
             raise AlreadyExistsException(msg=f'Destination file {src_path} exists.')
 
-        full_src_path = fm.ipfs_get_file_path(did, src_path)
-        full_dst_path = fm.ipfs_get_file_path(did, dst_path)
+        full_src_path = fm.ipfs_get_file_path(did, app_did, src_path)
+        full_dst_path = fm.ipfs_get_file_path(did, app_did, dst_path)
         if full_dst_path.exists():
             full_dst_path.unlink()
         if full_src_path.exists():
@@ -252,7 +252,7 @@ class IpfsFiles:
             'name': dst_path
         }
 
-    def get_list_file_info_by_doc(self, file_doc):
+    def _get_list_file_info_by_doc(self, file_doc):
         return {
             'name': file_doc[COL_IPFS_FILES_PATH],
             'is_file': file_doc[COL_IPFS_FILES_IS_FILE],

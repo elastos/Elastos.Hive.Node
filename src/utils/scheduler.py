@@ -9,7 +9,9 @@ import pymongo
 from flask_apscheduler import APScheduler
 
 from src import hive_setting
-from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_PATH, DID, APP_DID
+from src.modules.ipfs.ipfs import IpfsFiles
+from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_PATH, DID, APP_DID, SIZE, \
+    COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
 from src.utils_v1.constants import USER_DID, APP_ID
@@ -78,7 +80,25 @@ def adapt_local_files_by_folder(did, app_did, database_name, files_root):
     files = [n for n in files_root.iterdir()]
     col_filter = {DID: did, APP_DID: app_did}
     file_docs = cli.find_many_origin(database_name, COL_IPFS_FILES, col_filter, is_create=False, is_raise=False)
-    # TODO:
+    ipfs_files = IpfsFiles()
+
+    # handle new and update
+    for file in files:
+        rel_path = file.relative_to(files_root)
+        matches = list(filter(lambda d: d[COL_IPFS_FILES_PATH] == rel_path.as_posix(), file_docs))
+        if not matches:
+            ipfs_files.add_file_to_metadata(did, app_did, rel_path, file)
+            continue
+        doc = matches[0]
+        sha256 = fm.get_file_content_sha256(file)
+        if file.stat().st_size != doc[SIZE] or sha256 != doc[COL_IPFS_FILES_SHA256]:
+            ipfs_files.update_file_metadata(did, app_did, rel_path.as_posix(), file, sha256=sha256)
+
+    # handle delete
+    rel_paths = [n.relative_to(files_root).as_posix() for n in files]
+    remove_list = [d for d in file_docs if d[COL_IPFS_FILES_PATH] not in rel_paths]
+    for d in remove_list:
+        ipfs_files.delete_file_metadata(did, app_did, d)
 
 
 # Shutdown your cron thread if the web process is stopped

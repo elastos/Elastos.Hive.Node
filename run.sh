@@ -104,6 +104,7 @@ function test () {
     pytest --disable-pytest-warnings -xs tests/database_test.py
     pytest --disable-pytest-warnings -xs tests/ipfs_files_test.py
     pytest --disable-pytest-warnings -xs tests/ipfs_scripting_test.py
+    pytest --disable-pytest-warnings -xs tests/ipfs_backup_test.py
 
     rm -f hive.log
     rm -f test_patch.delta

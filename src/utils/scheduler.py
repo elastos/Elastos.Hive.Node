@@ -39,6 +39,8 @@ def task_upload_ipfs_files():
     for db_name in cli.get_all_user_database_names():
         upload_ipfs_files_by_db(db_name)
 
+    logging.info('[task_upload_ipfs_files] leave.')
+
 
 def upload_ipfs_files_by_db(db_name):
     # find 10 docs and ordered by ascending.
@@ -73,36 +75,44 @@ def task_adapt_local_file_to_ipfs():
         did, app_did = user[USER_DID], user[APP_ID]
         name = gene_mongo_db_name(did, app_did)
         files_root = get_save_files_path(did, app_did)
+        if not files_root.exists():
+            return
         adapt_local_files_by_folder(did, app_did, name, files_root)
+
+    logging.info('[task_adapt_local_file_to_ipfs] leave.')
 
 
 def adapt_local_files_by_folder(did, app_did, database_name, files_root):
-    files = [n for n in files_root.iterdir()]
+    files = fm.get_files_recursively(files_root)
     col_filter = {DID: did, APP_DID: app_did}
     file_docs = cli.find_many_origin(database_name, COL_IPFS_FILES, col_filter, is_create=False, is_raise=False)
     ipfs_files = IpfsFiles()
 
     # handle new and update
     for file in files:
-        rel_path = file.relative_to(files_root)
-        matches = list(filter(lambda d: d[COL_IPFS_FILES_PATH] == rel_path.as_posix(), file_docs))
+        rel_path = file.relative_to(files_root).as_posix()
+        matches = list(filter(lambda d: d[COL_IPFS_FILES_PATH] == rel_path, file_docs))
         if not matches:
             ipfs_files.add_file_to_metadata(did, app_did, rel_path, file)
+            logging.info(f'[task_adapt_local_file_to_ipfs] add new file {rel_path}.')
             continue
         doc = matches[0]
         sha256 = fm.get_file_content_sha256(file)
         if file.stat().st_size != doc[SIZE] or sha256 != doc[COL_IPFS_FILES_SHA256]:
-            ipfs_files.update_file_metadata(did, app_did, rel_path.as_posix(), file, sha256=sha256)
+            ipfs_files.update_file_metadata(did, app_did, rel_path, file, sha256=sha256)
+            logging.info(f'[task_adapt_local_file_to_ipfs] update existed file {rel_path}.')
 
     # handle delete
     rel_paths = [n.relative_to(files_root).as_posix() for n in files]
     remove_list = [d for d in file_docs if d[COL_IPFS_FILES_PATH] not in rel_paths]
     for d in remove_list:
         ipfs_files.delete_file_metadata(did, app_did, d)
+        logging.info(f'[task_adapt_local_file_to_ipfs] delete existed file {d[COL_IPFS_FILES_PATH]}.')
 
 
 # Shutdown your cron thread if the web process is stopped
 # atexit.register(lambda: scheduler.shutdown(wait=False))
 
 if __name__ == '__main__':
-    task_upload_ipfs_files()
+    # task_upload_ipfs_files()
+    task_adapt_local_file_to_ipfs()

@@ -4,12 +4,13 @@
 The entrance for ipfs module.
 """
 import shutil
+from datetime import datetime
 from pathlib import Path
 
-from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
+from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R, DID_INFO_DB_NAME
 from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.utils.consts import COL_IPFS_FILES, DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
-    COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID
+    COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_CID_REF, CID, COUNT, CREATE_TIME, MODIFY_TIME
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
@@ -176,8 +177,11 @@ class IpfsFiles:
             inc_vault_file_use_storage_byte(did, file_doc[SIZE])
         else:
             # exists, just remove cid for uploading the file to IPFS node later.
+            old_cid = doc[COL_IPFS_FILES_IPFS_CID]
             self.update_file_metadata(did, app_did, path, file_path, col_filter=col_filter)
             inc_vault_file_use_storage_byte(did, file_path.stat().st_size - doc[SIZE])
+            if old_cid:
+                self.decrease_cid_ref(old_cid)
 
     def add_file_to_metadata(self, did, app_did, rel_path, file_path):
         file_doc = {
@@ -202,10 +206,9 @@ class IpfsFiles:
         result = cli.update_one(did, app_did, COL_IPFS_FILES, col_filter, update, is_extra=True)
 
     def delete_file_metadata(self, did, app_did, doc, col_filter=None):
+        old_cid = None
         if doc[COL_IPFS_FILES_IPFS_CID]:
-            # TODO: Try to remove file by create a table tracking the reference of the cid.
-            #fm.ipfs_remove_file(doc[COL_IPFS_FILES_IPFS_CID])
-            pass
+            old_cid = doc[COL_IPFS_FILES_IPFS_CID]
 
         if not col_filter:
             col_filter = {DID: did,
@@ -213,6 +216,8 @@ class IpfsFiles:
                           COL_IPFS_FILES_PATH: doc[COL_IPFS_FILES_PATH]}
 
         cli.delete_one(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
+        if old_cid:
+            self.decrease_cid_ref(old_cid)
 
     def download_file_by_did(self, did, app_did, path: str):
         """
@@ -297,3 +302,38 @@ class IpfsFiles:
         if not doc:
             raise FileNotFoundException(msg=f'Can not find the file metadata with path: {path}')
         return doc
+
+    def increase_cid_ref(self, cid):
+        now = datetime.utcnow().timestamp()
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_raise=False)
+        if not doc:
+            doc = {
+                CID: cid,
+                COUNT: 1,
+                CREATE_TIME: now,
+                MODIFY_TIME: now
+            }
+            cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, doc, is_create=True, is_extra=False)
+        else:
+            self._update_ipfs_cid_ref_count(cid, doc[COUNT] + 1)
+
+    def decrease_cid_ref(self, cid):
+        now = datetime.utcnow().timestamp()
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_raise=False)
+        if not doc:
+            fm.ipfs_unpin_cid(cid)
+            return
+        if doc[COUNT] <= 1:
+            cli.delete_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_check_exist=False)
+            fm.ipfs_unpin_cid(cid)
+        else:
+            self._update_ipfs_cid_ref_count(cid, doc[COUNT] - 1)
+
+    def _update_ipfs_cid_ref_count(self, cid, count):
+        now = datetime.utcnow().timestamp()
+        col_filter = {CID: cid}
+        update = {'$set': {
+            COUNT: count,
+            MODIFY_TIME: now
+        }}
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, col_filter, update)

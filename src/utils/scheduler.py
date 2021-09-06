@@ -29,7 +29,9 @@ def scheduler_init(app):
 
 @scheduler.task(trigger='interval', id='task_upload_ipfs_files', minutes=10)
 def task_upload_ipfs_files():
-    """ Task for syncing file content to ipfs server and updating cid on metadata """
+    """ Task for syncing file content to ipfs server and updating cid on metadata.
+    This task only updates the IPFS CID of the file.
+    """
     logging.info('[task_upload_ipfs_files] enter.')
 
     if not hive_setting.ENABLE_IPFS:
@@ -52,9 +54,12 @@ def upload_ipfs_files_by_db(db_name):
     if not file_docs:
         return
 
+    ipfs_files = IpfsFiles()
+
     for doc in file_docs:
         try:
             cid = fm.ipfs_uploading_file(doc[DID], doc[APP_DID], doc[COL_IPFS_FILES_PATH])
+            ipfs_files.increase_cid_ref(cid)
             col_filter = {DID: doc[DID], APP_DID: doc[APP_DID], COL_IPFS_FILES_PATH: doc[COL_IPFS_FILES_PATH]}
             cli.update_one_origin(db_name, COL_IPFS_FILES,
                                   col_filter, {'$set': {COL_IPFS_FILES_IPFS_CID: cid}}, is_extra=True)
@@ -64,7 +69,9 @@ def upload_ipfs_files_by_db(db_name):
 
 @scheduler.task(trigger='interval', id='task_adapt_local_file_to_ipfs', minutes=10)
 def task_adapt_local_file_to_ipfs():
-    """ Task for keeping sync with ipfs metadata """
+    """ Task for keeping sync with ipfs metadata.
+    This do not handle the cid of the ipfs server.
+    """
     logging.info('[task_adapt_local_file_to_ipfs] enter.')
 
     if not hive_setting.ENABLE_IPFS:

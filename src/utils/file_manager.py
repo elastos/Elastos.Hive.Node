@@ -195,6 +195,9 @@ class FileManager:
                                    is_json=False, options=options, success_code=200)
         return json_data['Hash']
 
+    def ipfs_unpin_cid(self, cid):
+        response = self.http.post(self.ipfs_url + f'/api/v0/pin/rm?arg=/ipfs/{cid}&recursive=true', None, None, is_body=False, success_code=200)
+
     def get_file_cids(self, did):
         databases = cli.get_all_user_databases(did)
         total_size, cids = 0, set()

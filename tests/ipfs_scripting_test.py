@@ -116,6 +116,24 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 'path': self.file_name}})
         self.assertIsNotNone(body)
 
+    def test05_get_anonymous_file(self):
+        name = 'ipfs_get_anonymous_file'
+        self.__register_script(name, {
+            "executable": {
+                "output": True,
+                "name": name,
+                "type": "fileDownload",
+                "body": {
+                    "path": "$params.path"
+                }
+            },
+            "allowAnonymousUser": True,
+            "allowAnonymousApp": True
+        })
+        response = self.cli.get(f'/ipfs-scripting/getfile/{self.__call_script_for_transaction_id(name)}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, self.file_content)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -214,5 +214,18 @@ class FileManager:
         temp_file.unlink()
         return size
 
+    def get_files_recursively(self, root_dir: Path):
+        files = []
+
+        def get_files(dir: Path, result: list):
+            for file in dir.iterdir():
+                if file.is_dir():
+                    get_files(file, result)
+                elif file.is_file():
+                    result.append(file)
+
+        get_files(root_dir, files)
+        return files
+
 
 fm = FileManager()

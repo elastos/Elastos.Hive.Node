@@ -268,16 +268,19 @@ class Executable:
         cli.check_vault_access(self.get_target_did(), permission)
 
         body = self.get_populated_body()
+        anonymous_url = ''
         if self.is_ipfs:
             if action_type == 'download':
-                self.ipfs_files.check_file_exists(self.get_target_did(),
-                                                  self.get_target_app_did(),
-                                                  body['path'])
+                metadata = self.ipfs_files.check_file_exists(self.get_target_did(),
+                                                             self.get_target_app_did(),
+                                                             body['path'])
+                anonymous_url = self.ipfs_files.get_ipfs_file_access_url(metadata)
         else:
             _, err = query_upload_get_filepath(self.get_target_did(), self.get_target_app_did(), body['path'])
             if err:
                 raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
 
+        # TODO: make sure just insert once when call twice.
         data = cli.insert_one(self.get_target_did(),
                               self.get_target_app_did(),
                               SCRIPTING_SCRIPT_TEMP_TX_COLLECTION,
@@ -294,13 +297,16 @@ class Executable:
         update_vault_db_use_storage_byte(self.get_target_did(),
                                          get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
-        return {
+        result = {
             "transaction_id": jwt.encode({
                 "row_id": data.get('inserted_id', None),
                 "target_did": self.get_target_did(),
                 "target_app_did": self.get_target_app_did()
             }, self.script.hive_setting.DID_STOREPASS, algorithm='HS256')
         }
+        if action_type == 'download' and self.is_ipfs and self.script.anonymous_app and self.script.anonymous_user:
+            result['anonymous_url'] = anonymous_url
+        return result
 
     @staticmethod
     def create(script, executable_data):
@@ -651,20 +657,3 @@ class Scripting:
             return trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
         except Exception as e:
             raise BadRequestException(msg=f"Invalid transaction id '{transaction_id}'")
-
-    @hive_stream_response
-    def get_anonymous_file(self, transaction_id):
-        if not self.is_ipfs:
-            raise BadRequestException(msg="Do not support without ipfs module.")
-
-        # check by transaction id
-        row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)
-        col_filter = {"_id": ObjectId(row_id)}
-        trans = cli.find_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
-        if not trans:
-            raise BadRequestException("Cannot find the transaction by id.")
-
-        if not trans['anonymous']:
-            raise BadRequestException(msg=f"The script does not support anonymous accessing.")
-
-        return self.ipfs_files.download_file_by_did(target_did, target_app_did, trans['document']['file_name'])

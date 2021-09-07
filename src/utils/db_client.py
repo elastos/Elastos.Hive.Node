@@ -70,14 +70,14 @@ class DatabaseClient:
     def get_all_user_database_names(self):
         return [name for name in self.get_all_database_names() if name.startswith(get_user_database_prefix())]
 
-    def __get_vault_service(self, did):
+    def get_vault_service(self, did):
         return self.__get_connection()[DID_INFO_DB_NAME][VAULT_SERVICE_COL].find_one({VAULT_SERVICE_DID: did})
 
     def check_vault_access(self, did, access_vault=None):
         """
         Check if the vault can be accessed by specific permission
         """
-        info = self.__get_vault_service(did)
+        info = self.get_vault_service(did)
         if not info:
             raise VaultNotFoundException()
 

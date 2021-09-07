@@ -41,7 +41,7 @@ class FileManager:
     def get_vault_storage_size(self, did):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {DID: did})
         if not doc:
-            raise VaultNotFoundException(msg='Vault not found for get max size.')
+            raise VaultNotFoundException(msg='Vault not found for get storage size.')
         return int(doc[VAULT_SERVICE_FILE_USE_STORAGE] + doc[VAULT_SERVICE_DB_USE_STORAGE])
 
     def get_vault_max_size(self, did):

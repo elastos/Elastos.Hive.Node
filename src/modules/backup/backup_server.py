@@ -69,14 +69,13 @@ class BackupClient:
                                or doc[VAULT_BACKUP_INFO_MSG] == VAULT_BACKUP_MSG_SUCCESS):
             raise BadRequestException(msg='No successfully backup for restore.')
 
-    def get_backup_service_info(self, credential, credential_info):
+    def get_access_token(self, credential, credential_info):
         target_host = credential_info['targetHost']
         challenge_response, backup_service_instance_did = \
             self.auth.backup_client_sign_in(target_host, credential, 'DIDBackupAuthResponse')
-        access_token = self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
-        return self.http.get(target_host + URL_BACKUP_SERVICE, access_token), access_token
+        return self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
 
-    def execute_backup(self, did, credential_info, backup_service_info, access_token):
+    def execute_backup(self, did, credential_info, access_token):
         cli.update_one_origin(DID_INFO_DB_NAME,
                               VAULT_BACKUP_INFO_COL,
                               {USER_DID: did},
@@ -89,17 +88,12 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
                               options={'upsert': True}, is_create=True)
 
-        # TODO: move this to the backup process thread.
-        vault_size = fm.get_vault_storage_size(did)
-        if vault_size > backup_service_info[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
-            raise InsufficientStorageException(msg='Insufficient storage to execute backup.')
-
         clog().debug('start new thread for backup processing.')
 
         if self.hive_setting.BACKUP_IS_SYNC:
-            self.__class__.backup_main(did, self, vault_size)
+            self.__class__.backup_main(did, self)
         else:
-            _thread.start_new_thread(self.__class__.backup_main, (did, self, vault_size))
+            _thread.start_new_thread(self.__class__.backup_main, (did, self))
 
     def update_backup_state(self, did, state, msg):
         cli.update_one_origin(DID_INFO_DB_NAME,
@@ -110,10 +104,10 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp()}})
 
     @staticmethod
-    def backup_main(did, client, vault_size):
+    def backup_main(did, client):
         try:
             clog().info(f'[backup_main] enter backup thread, {did}, {client}.')
-            client.backup(did, vault_size)
+            client.backup(did)
         except Exception as e:
             clog().error(f'Failed to backup really: {traceback.format_exc()}')
             client.delete_mongodb_data(did)
@@ -130,7 +124,7 @@ class BackupClient:
             client.delete_mongodb_data(did)
             client.update_backup_state(did, VAULT_BACKUP_STATE_STOP, VAULT_BACKUP_MSG_FAILED)
 
-    def backup(self, did, vault_size):
+    def backup(self, did):
         clog().info('[backup_main] enter backup().')
         cli.export_mongodb(did)
         clog().info('[backup_main] success to export mongodb data.')
@@ -138,6 +132,7 @@ class BackupClient:
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {USER_DID: did})
         clog().info('[backup_main] success to get backup info.')
         if self.is_ipfs:
+            vault_size = fm.get_vault_storage_size(did)
             self.update_server_state_to(
                 doc[VAULT_BACKUP_INFO_DRIVE], doc[VAULT_BACKUP_INFO_TOKEN], STATE_RUNNING, vault_size)
             clog().info('[backup_main: ipfs] success to start the backup.')
@@ -256,7 +251,7 @@ class BackupClient:
         if mongodb_root.exists():
             shutil.rmtree(mongodb_root)
 
-    def execute_restore(self, did, credential_info, backup_service_info, access_token):
+    def execute_restore(self, did, credential_info, access_token):
         cli.update_one_origin(DID_INFO_DB_NAME,
                               VAULT_BACKUP_INFO_COL,
                               {USER_DID: did},
@@ -520,7 +515,9 @@ class BackupServer:
         if to != STATE_RUNNING and to != STATE_FINISH:
             raise InvalidParameterException(f'Invalid parameter to = {to}')
 
-        did, _, _ = self._check_auth_backup()
+        did, _, backup = self._check_auth_backup()
+        if backup[VAULT_BACKUP_SERVICE_MAX_STORAGE] < vault_size:
+            raise InsufficientStorageException('No more space for the backup process.')
         self.ipfs_update_state_really(did, to, vault_size)
 
     def ipfs_update_state_really(self, did, to, vault_size=0):

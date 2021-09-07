@@ -7,6 +7,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+from src import hive_setting
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R, DID_INFO_DB_NAME
 from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.utils.consts import COL_IPFS_FILES, DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
@@ -302,6 +303,9 @@ class IpfsFiles:
         if not doc:
             raise FileNotFoundException(msg=f'Can not find the file metadata with path: {path}')
         return doc
+
+    def get_ipfs_file_access_url(self, metadata):
+        return f'{hive_setting.IPFS_PROXY_URL}/ipfs/{metadata[COL_IPFS_FILES_IPFS_CID]}'
 
     def increase_cid_ref(self, cid):
         now = datetime.utcnow().timestamp()

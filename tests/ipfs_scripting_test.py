@@ -7,6 +7,7 @@ Testing file for ipfs-scripting module.
 import unittest
 import json
 
+from src import hive_setting
 from tests.utils.http_client import HttpClient, TestConfig
 from tests import init_test
 from tests.utils_v1 import test_common
@@ -49,7 +50,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.__register_script(name, set_data)
         return self.__call_script(name, run_data)
 
-    def __call_script_for_transaction_id(self, script_name):
+    def __call_script_for_transaction_id(self, script_name, check_anonymous=False):
         response_body = self.__call_script(script_name, {
             "params": {
                 "path": self.file_name
@@ -59,6 +60,9 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertTrue(script_name in response_body)
         self.assertEqual(type(response_body[script_name]), dict)
         self.assertTrue('transaction_id' in response_body[script_name])
+        if check_anonymous:
+            self.assertTrue('anonymous_url' in response_body[script_name])
+            self.assertTrue(response_body[script_name]['anonymous_url'].startswith(hive_setting.IPFS_PROXY_URL))
         return response_body[script_name]['transaction_id']
 
     def test01_file_upload(self):
@@ -130,9 +134,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
             "allowAnonymousUser": True,
             "allowAnonymousApp": True
         })
-        response = self.cli.get(f'/ipfs-scripting/getfile/{self.__call_script_for_transaction_id(name)}')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.text, self.file_content)
+        self.__call_script_for_transaction_id(name, check_anonymous=True)
 
 
 if __name__ == '__main__':

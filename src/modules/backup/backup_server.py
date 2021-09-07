@@ -535,6 +535,8 @@ class BackupServer:
             raise InsufficientStorageException(msg='No enough space to backup files.')
 
         for cid in cids:
+            if not cid:
+                continue
             fm.ipfs_pin_cid(cid)
         self.ipfs_increase_used_size(backup, total_size)
 

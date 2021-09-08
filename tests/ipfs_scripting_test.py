@@ -19,14 +19,17 @@ class IpfsScriptingTestCase(unittest.TestCase):
         init_test()
         self.test_config = TestConfig()
         self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/vault')
-        self.file_name = 'test.txt'
-        self.file_content = 'File Content: 12345678'
+        self.cli2 = HttpClient(f'{self.test_config.host_url}/api/v2/vault', is_did2=True)
+        self.file_name = 'ipfs-scripting/test.txt'
+        self.file_content = 'File Content: 1234567890'
+        # Owner's did and application did.
         self.did = 'did:elastos:ioRn3eEopRjA7CBRrrWQWzttAfXAjzvKMx'
         self.app_did = test_common.app_id
 
     @staticmethod
     def _subscribe():
         HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
+        HttpClient(f'{TestConfig().host_url}/api/v2', is_did2=True).put('/subscription/vault')
 
     @classmethod
     def setUpClass(cls):
@@ -41,8 +44,14 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         return json.loads(response.text)
 
-    def __call_script(self, script_name, body, is_raw=False):
-        response = self.cli.patch(f'/ipfs-scripting/{script_name}', body)
+    def __call_script(self, script_name, body=None, is_raw=False):
+        if body is None:
+            body = dict()
+        body['context'] = {
+            'target_did': self.did,
+            'target_app_did': self.app_did,
+        }
+        response = self.cli2.patch(f'/ipfs-scripting/{script_name}', body)
         self.assertEqual(response.status_code, 200)
         return response.text if is_raw else json.loads(response.text)
 
@@ -77,8 +86,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-        response = self.cli.put(f'/ipfs-scripting/stream/{self.__call_script_for_transaction_id(name)}',
-                                self.file_content.encode(), is_json=False)
+        response = self.cli2.put(f'/ipfs-scripting/stream/{self.__call_script_for_transaction_id(name)}',
+                                 self.file_content.encode(), is_json=False)
         self.assertEqual(response.status_code, 200)
 
     def test02_file_download(self):
@@ -93,7 +102,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-        response = self.cli.get(f'/ipfs-scripting/stream/{self.__call_script_for_transaction_id(name)}')
+        response = self.cli2.get(f'/ipfs-scripting/stream/{self.__call_script_for_transaction_id(name)}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.file_content)
 
@@ -106,7 +115,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
             'body': {
                 'path': self.file_name
             }}}, None)
-        self.assertIsNotNone(body)
+        self.assertTrue(name in body)
+        self.assertEqual(body[name]['size'], len(self.file_content))
 
     def test04_file_hash(self):
         name = 'ipfs_file_hash'

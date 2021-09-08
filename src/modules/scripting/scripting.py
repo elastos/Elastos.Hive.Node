@@ -280,7 +280,7 @@ class Executable:
             if err:
                 raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
 
-        # TODO: make sure just insert once when call twice.
+        # INFO: Do not consider run script twice.
         data = cli.insert_one(self.get_target_did(),
                               self.get_target_app_did(),
                               SCRIPTING_SCRIPT_TEMP_TX_COLLECTION,

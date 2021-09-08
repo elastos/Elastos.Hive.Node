@@ -104,20 +104,21 @@ def _log_http_request(func):
 
 
 class HttpClient:
-    def __init__(self, base_url):
+    def __init__(self, base_url, is_did2=False):
         self.base_url = base_url
         self.remote_resolver = None
+        self.is_did2 = is_did2
         logging.debug(f'HttpClient.base_url: {self.base_url}')
 
     def __get_url(self, relative_url):
         return self.base_url + relative_url
 
-    def __get_headers(self, need_token=True, is_json=True, is_did2=False):
+    def __get_headers(self, need_token=True, is_json=True):
         headers = {}
         if is_json:
             headers['Content-type'] = 'application/json'
         if need_token:
-            headers['Authorization'] = 'token ' + RemoteResolver().get_token(is_did2=is_did2)
+            headers['Authorization'] = 'token ' + RemoteResolver().get_token(is_did2=self.is_did2)
         logging.debug(f'HEADER: {headers}')
         return headers
 
@@ -143,8 +144,8 @@ class HttpClient:
         return requests.put(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request
-    def patch(self, relative_url, body=None, is_did2=False):
-        return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(is_did2=is_did2), json=body)
+    def patch(self, relative_url, body=None):
+        return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request
     def delete(self, relative_url, body=None, is_json=False):

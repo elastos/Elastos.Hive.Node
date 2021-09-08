@@ -20,6 +20,7 @@ class ScriptingTestCase(unittest.TestCase):
         init_test()
         self.test_config = TestConfig()
         self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/vault')
+        self.cli2 = HttpClient(f'{self.test_config.host_url}/api/v2/vault', is_did2=True)
         self.file_name = 'test.txt'
         self.file_content = 'File Content: 12345678'
         self.did = 'did:elastos:ioRn3eEopRjA7CBRrrWQWzttAfXAjzvKMx'
@@ -53,7 +54,8 @@ class ScriptingTestCase(unittest.TestCase):
         return json.loads(response.text)
 
     def __call_script(self, script_name, body, is_raw=False, is_did2=False):
-        response = self.cli.patch(f'/scripting/{script_name}', body, is_did2=is_did2)
+        cli = self.cli2 if is_did2 else self.cli
+        response = cli.patch(f'/scripting/{script_name}', body)
         self.assertEqual(response.status_code, 200)
         return response.text if is_raw else json.loads(response.text)
 

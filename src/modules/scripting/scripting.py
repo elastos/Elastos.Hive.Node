@@ -631,14 +631,14 @@ class Scripting:
                      f'is_download={is_download}, file_name={trans["document"]["file_name"]}')
         if self.is_ipfs:
             if is_download:
-                data = self.ipfs_files.download_file_by_did(did, app_id, trans['document']['file_name'])
+                data = self.ipfs_files.download_file_by_did(target_did, target_app_did, trans['document']['file_name'])
             else:
-                self.ipfs_files.upload_file_by_did(did, app_id, trans['document']['file_name'])
+                self.ipfs_files.upload_file_by_did(target_did, target_app_did, trans['document']['file_name'])
         else:
             if is_download:
-                data = self.get_files().download_file_by_did(did, app_id, trans['document']['file_name'])
+                data = self.get_files().download_file_by_did(target_did, target_app_did, trans['document']['file_name'])
             else:
-                self.get_files().upload_file_by_did(did, app_id, trans['document']['file_name'])
+                self.get_files().upload_file_by_did(target_did, target_app_did, trans['document']['file_name'])
 
         # recalculate the storage usage of the database
         cli.delete_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)

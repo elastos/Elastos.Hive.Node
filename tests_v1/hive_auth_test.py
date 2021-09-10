@@ -65,7 +65,7 @@ class DApp(Entity):
     def __init__(self, name, appId=None, mnemonic=None, passphrase=None):
         if (appId is not None):
             self.appId = appId
-        Entity.__init__(self, name, mnemonic, passphrase)
+        Entity.__init__(self, name, mnemonic, passphrase, need_resolve=False)
 
     def access_api_by_token(self):
         return self.access_token
@@ -197,19 +197,18 @@ class HiveAuthTestCase(unittest.TestCase):
         self.assertEqual(rt["_status"], "OK")
         return token, hive_did
 
-    #test sign in auth
     def test_b_auth(self):
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_b_auth")
 
         didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
         testapp = DApp("testapp", test_common.app_id,
-                       "amount material swim purse swallow gate pride series cannon patient dentist person")
+                       "chimney limit involve fine absent topic catch chalk goat era suit leisure")
         self.__test_auth_common(didapp, testapp)
 
     def test_c_auth(self):
         logging.getLogger("HiveAuthTestCase").debug("\nRunning test_c_auth")
         didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
-        testapp1 = DApp("testapp1", test_common.app_id, "amount material swim purse swallow gate pride series cannon patient dentist person")
+        testapp1 = DApp("testapp", test_common.app_id, "chimney limit involve fine absent topic catch chalk goat era suit leisure")
         testapp2 = DApp("testapp2", test_common.app_id2, "chimney limit involve fine absent topic catch chalk goat era suit leisure", "")
         # testapp3 = DApp("testapp3", "appid3", "license mango cluster candy payment prefer video rice desert pact february rabbit")
         token = self.__test_auth_common(didapp, testapp1)

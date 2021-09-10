@@ -23,13 +23,14 @@ class Entity:
     did_str = None
     name = "Entity"
 
-    def __init__(self, name, mnemonic=None, passphrase=None):
+    def __init__(self, name, mnemonic=None, passphrase=None, need_resolve=True):
         self.name = name
         if not mnemonic is None:
             self.mnemonic = mnemonic
         if not passphrase is None:
             self.passphrase = passphrase
-        self.store, self.did, self.doc = init_did(self.mnemonic, self.passphrase, self.storepass, self.name)
+        self.store, self.did, self.doc = init_did(self.mnemonic, self.passphrase, self.storepass, self.name,
+                                                  need_resolve)
         self.storepass = self.storepass.encode()
         self.did_str = self.get_did_string()
         print("    Back-end DID string: " + self.did_str)

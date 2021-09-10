@@ -22,12 +22,12 @@ class TestConfig:
 class RemoteResolver(metaclass=Singleton):
     def __init__(self):
         self.token = None
-        self.user_did = DIDApp("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap", "")
+        self.user_did = DIDApp("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap")
         self.token2 = None
         self.user_did2 = DIDApp("crossUser",
-                                "stage west lava group genre ten farm pony small family february drink", "password")
+                                "stage west lava group genre ten farm pony small family february drink")
         self.app_did = DApp("testapp", test_common.app_id,
-                            "amount material swim purse swallow gate pride series cannon patient dentist person")
+                            "chimney limit involve fine absent topic catch chalk goat era suit leisure")
         self.test_config = TestConfig()
         self.http_client = HttpClient(f'{self.test_config.host_url}/api/v2/did')
         self.node_did = None
@@ -41,6 +41,9 @@ class RemoteResolver(metaclass=Singleton):
             if not self.token2:
                 self.token2 = self.__get_remote_token(self.user_did2)
             return self.token2
+
+    def get_did_str(self):
+        return self.user_did.get_did_string()
 
     def __get_remote_token(self, did: DIDApp):
         return self.auth(self.sign_in(), did)

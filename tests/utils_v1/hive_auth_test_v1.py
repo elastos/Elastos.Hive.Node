@@ -42,7 +42,7 @@ class DApp(Entity):
     def __init__(self, name, appId=None, mnemonic=None, passphrase=None):
         if (appId is not None):
             self.appId = appId
-        Entity.__init__(self, name, mnemonic, passphrase)
+        Entity.__init__(self, name, mnemonic, passphrase, need_resolve=False)
 
     def access_api_by_token(self):
         return self.access_token

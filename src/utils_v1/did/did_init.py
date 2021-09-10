@@ -88,7 +88,7 @@ def resolve_did(store, did, identity):
 def destroy_identity(identity):
     lib.RootIdentity_Destroy(identity)
 
-def init_did(mnemonic, passphrase, storepass, name):
+def init_did(mnemonic, passphrase, storepass, name, need_resolve=True):
     assert(mnemonic is not None)
     assert(passphrase is not None)
     assert(storepass is not None)
@@ -111,7 +111,10 @@ def init_did(mnemonic, passphrase, storepass, name):
         destroy_identity(identity)
         return store, did, doc
 
-    doc = resolve_did(store, did, identity)
+    if need_resolve:
+        doc = resolve_did(store, did, identity)
+    else:
+        doc = lib.RootIdentity_NewDIDByIndex(identity, 0, storepass, ffi.NULL)
     destroy_identity(identity)
 
     return store, did, doc

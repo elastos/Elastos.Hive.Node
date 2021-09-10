@@ -8,7 +8,7 @@ import unittest
 import json
 
 from src import hive_setting
-from tests.utils.http_client import HttpClient, TestConfig
+from tests.utils.http_client import HttpClient, TestConfig, RemoteResolver
 from tests import init_test
 from tests.utils_v1 import test_common
 
@@ -23,7 +23,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.file_name = 'ipfs-scripting/test.txt'
         self.file_content = 'File Content: 1234567890'
         # Owner's did and application did.
-        self.did = 'did:elastos:ioRn3eEopRjA7CBRrrWQWzttAfXAjzvKMx'
+        self.did = RemoteResolver().get_did_str()
         self.app_did = test_common.app_id
 
     @staticmethod

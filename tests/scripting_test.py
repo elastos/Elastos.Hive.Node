@@ -7,7 +7,7 @@ import logging
 import unittest
 import json
 
-from tests.utils.http_client import HttpClient, TestConfig
+from tests.utils.http_client import HttpClient, TestConfig, RemoteResolver
 from tests import init_test
 from tests.utils_v1 import test_common
 
@@ -24,7 +24,7 @@ class ScriptingTestCase(unittest.TestCase):
         self.file_name = 'scripting/test.txt'
         self.file_content = 'File Content: 12345678'
         # script owner's did and application did.
-        self.did = 'did:elastos:ioRn3eEopRjA7CBRrrWQWzttAfXAjzvKMx'
+        self.did = RemoteResolver().get_did_str()
         self.app_did = test_common.app_id
 
     @staticmethod

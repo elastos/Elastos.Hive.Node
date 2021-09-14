@@ -6,7 +6,7 @@ Testing file for ipfs-files module.
 
 import unittest
 
-from tests.utils.http_client import HttpClient, TestConfig
+from tests.utils.http_client import HttpClient
 from tests import init_test
 
 
@@ -14,8 +14,7 @@ class IpfsFilesTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.test_config = TestConfig()
-        self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/vault')
+        self.cli = HttpClient(f'/api/v2/vault')
         self.folder_name = ''  # root
         self.src_file_content = 'File Content: 12345678'
         self.dst_file_content = self.src_file_content
@@ -25,7 +24,7 @@ class IpfsFilesTestCase(unittest.TestCase):
 
     @staticmethod
     def _subscribe():
-        HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
+        HttpClient(f'/api/v2').put('/subscription/vault')
 
     @classmethod
     def setUpClass(cls):

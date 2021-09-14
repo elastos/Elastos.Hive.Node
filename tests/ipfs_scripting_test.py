@@ -8,7 +8,7 @@ import unittest
 import json
 
 from src import hive_setting
-from tests.utils.http_client import HttpClient, TestConfig, RemoteResolver
+from tests.utils.http_client import HttpClient
 from tests import init_test
 from tests.utils_v1 import test_common
 
@@ -17,19 +17,18 @@ class IpfsScriptingTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.test_config = TestConfig()
-        self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/vault')
-        self.cli2 = HttpClient(f'{self.test_config.host_url}/api/v2/vault', is_did2=True)
+        self.cli = HttpClient(f'/api/v2/vault')
+        self.cli2 = HttpClient(f'/api/v2/vault', is_did2=True)
         self.file_name = 'ipfs-scripting/test.txt'
         self.file_content = 'File Content: 1234567890'
         # Owner's did and application did.
-        self.did = RemoteResolver().get_did_str()
+        self.did = self.cli.get_current_did()
         self.app_did = test_common.app_id
 
     @staticmethod
     def _subscribe():
-        HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
-        HttpClient(f'{TestConfig().host_url}/api/v2', is_did2=True).put('/subscription/vault')
+        HttpClient(f'/api/v2').put('/subscription/vault')
+        HttpClient(f'/api/v2', is_did2=True).put('/subscription/vault')
 
     @classmethod
     def setUpClass(cls):

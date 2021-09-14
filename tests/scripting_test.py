@@ -7,7 +7,7 @@ import logging
 import unittest
 import json
 
-from tests.utils.http_client import HttpClient, TestConfig, RemoteResolver
+from tests.utils.http_client import HttpClient
 from tests import init_test
 from tests.utils_v1 import test_common
 
@@ -18,27 +18,26 @@ class ScriptingTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.test_config = TestConfig()
-        self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/vault')
-        self.cli2 = HttpClient(f'{self.test_config.host_url}/api/v2/vault', is_did2=True)
+        self.cli = HttpClient(f'/api/v2/vault')
+        self.cli2 = HttpClient(f'/api/v2/vault', is_did2=True)
         self.file_name = 'scripting/test.txt'
         self.file_content = 'File Content: 12345678'
         # script owner's did and application did.
-        self.did = RemoteResolver().get_did_str()
+        self.did = self.cli.get_current_did()
         self.app_did = test_common.app_id
 
     @staticmethod
     def _subscribe():
-        HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
-        HttpClient(f'{TestConfig().host_url}/api/v2', is_did2=True).put('/subscription/vault')
+        HttpClient(f'/api/v2').put('/subscription/vault')
+        HttpClient(f'/api/v2', is_did2=True).put('/subscription/vault')
 
     @staticmethod
     def _create_collection():
-        HttpClient(f'{TestConfig().host_url}/api/v2/vault').put(f'/db/collections/{ScriptingTestCase.collection_name}')
+        HttpClient(f'/api/v2/vault').put(f'/db/collections/{ScriptingTestCase.collection_name}')
 
     @staticmethod
     def _delete_collection():
-        HttpClient(f'{TestConfig().host_url}/api/v2/vault').delete(f'/db/{ScriptingTestCase.collection_name}')
+        HttpClient(f'/api/v2/vault').delete(f'/db/{ScriptingTestCase.collection_name}')
 
     @classmethod
     def setUpClass(cls):

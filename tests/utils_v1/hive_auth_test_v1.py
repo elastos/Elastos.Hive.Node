@@ -25,13 +25,13 @@ class DIDApp(Entity):
         }
         return self.issue_auth_vc("AppIdCredential", props, app.did)
 
-    def issue_backup_auth(self, hive1_did, host, hive2_did):
+    def issue_backup_auth(self, host_did, backup_url, backup_did):
         props = {
-            'sourceDID': hive1_did,
-            'targetHost': host,
-            'targetDID': hive2_did,
+            'sourceDID': host_did,
+            'targetHost': backup_url,
+            'targetDID': backup_did,
         }
-        did = lib.DID_FromString(hive1_did.encode())
+        did = lib.DID_FromString(host_did.encode())
         return self.issue_auth_vc("BackupCredential", props, did)
 
 

@@ -82,10 +82,11 @@ def task_adapt_local_file_to_ipfs():
     for user in cli.get_all_users():
         try:
             did, app_did = user[USER_DID], user[APP_ID]
+            logging.info(f'[task_adapt_local_file_to_ipfs] Adapt for user({did}), app_id({app_did})')
             name = gene_mongo_db_name(did, app_did)
             files_root = get_save_files_path(did, app_did)
             if not files_root.exists():
-                return
+                continue
             adapt_local_files_by_folder(did, app_did, name, files_root)
         except Exception as e:
             logging.error(f'[task_adapt_local_file_to_ipfs] Failed to handle user:'

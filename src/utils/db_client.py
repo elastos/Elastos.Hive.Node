@@ -16,7 +16,7 @@ from src.utils_v1.did_info import get_all_did_info_by_did
 from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name, convert_oid, \
     export_mongo_db, get_save_mongo_db_path, create_db_client, get_user_database_prefix
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, DATETIME_FORMAT, \
-    USER_DID, APP_ID, DID_INFO_REGISTER_COL
+    USER_DID, APP_ID, DID_INFO_REGISTER_COL, APP_INSTANCE_DID
 from src.utils.http_exception import BadRequestException, AlreadyExistsException, \
     VaultNotFoundException, CollectionNotFoundException
 from datetime import datetime
@@ -225,8 +225,10 @@ class DatabaseClient:
         return [gene_mongo_db_name(did, d[APP_ID]) for d in docs]
 
     def get_all_users(self):
+        # INFO: Need consider the adaptation of the old user information.
+        query = {APP_INSTANCE_DID: {'$exists': True}, APP_ID: {'$exists': True}, USER_DID: {'$exists': True}}
         return self.find_many_origin(DID_INFO_DB_NAME,
-                                     DID_INFO_REGISTER_COL, {}, is_create=False, is_raise=False)
+                                     DID_INFO_REGISTER_COL, query, is_create=False, is_raise=False)
 
     def export_mongodb(self, did):
         did_info_list = get_all_did_info_by_did(did)

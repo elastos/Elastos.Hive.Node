@@ -4,6 +4,7 @@
 Scheduler tasks for the hive node.
 """
 import logging
+import traceback
 
 import pymongo
 from flask_apscheduler import APScheduler
@@ -79,12 +80,16 @@ def task_adapt_local_file_to_ipfs():
         return
 
     for user in cli.get_all_users():
-        did, app_did = user[USER_DID], user[APP_ID]
-        name = gene_mongo_db_name(did, app_did)
-        files_root = get_save_files_path(did, app_did)
-        if not files_root.exists():
-            return
-        adapt_local_files_by_folder(did, app_did, name, files_root)
+        try:
+            did, app_did = user[USER_DID], user[APP_ID]
+            name = gene_mongo_db_name(did, app_did)
+            files_root = get_save_files_path(did, app_did)
+            if not files_root.exists():
+                return
+            adapt_local_files_by_folder(did, app_did, name, files_root)
+        except Exception as e:
+            logging.error(f'[task_adapt_local_file_to_ipfs] Failed to handle user:'
+                          f'{str(user)}, {traceback.format_exc()}, skip')
 
     logging.info('[task_adapt_local_file_to_ipfs] leave.')
 

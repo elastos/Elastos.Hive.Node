@@ -257,7 +257,7 @@ class IpfsFiles:
         if not src_doc:
             raise FileNotFoundException(msg=f'Source file {src_path} does not exist.')
         if dst_doc:
-            raise AlreadyExistsException(msg=f'Destination file {src_path} exists.')
+            raise AlreadyExistsException(msg=f'Destination file {dst_path} exists.')
 
         full_src_path = fm.ipfs_get_file_path(did, app_did, src_path)
         full_dst_path = fm.ipfs_get_file_path(did, app_did, dst_path)

@@ -6,7 +6,7 @@ Testing file for about module.
 
 import unittest
 
-from tests.utils.http_client import HttpClient, TestConfig
+from tests.utils.http_client import HttpClient
 from tests import init_test
 
 
@@ -14,8 +14,7 @@ class AboutTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.test_config = TestConfig()
-        self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/about')
+        self.cli = HttpClient(f'/api/v2/about')
 
     def test01_get_version(self):
         response = self.cli.get(f'/version', need_token=False)

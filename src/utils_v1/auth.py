@@ -111,7 +111,7 @@ def get_info_from_token(token):
     issuer = ffi.string(issuer).decode()
     if issuer != get_did_string():
         lib.JWT_Destroy(jws)
-        return None, "Then issuer is invalid!"
+        return None, "The issuer is invalid!"
 
     expired = lib.JWT_GetExpiration(jws)
     now = (int)(datetime.now().timestamp())

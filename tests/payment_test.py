@@ -6,7 +6,7 @@ Testing file for payment module.
 
 import unittest
 
-from tests.utils.http_client import HttpClient, TestConfig
+from tests.utils.http_client import HttpClient
 from tests import init_test
 
 
@@ -14,15 +14,14 @@ class PaymentTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.test_config = TestConfig()
-        self.cli = HttpClient(f'{self.test_config.host_url}/api/v2/payment')
+        self.cli = HttpClient(f'/api/v2/payment')
         # TODO: update order_id when do separately testing
         self.order_id = '60ee8c056fdd17b16bb5b4c2'
         self.transaction_id = '280a24034bfb241c31b5a73c792c9d05df2b1f79bb98733c5358aeb909c27010'
 
     @staticmethod
     def _subscribe():
-        HttpClient(f'{TestConfig().host_url}/api/v2').put('/subscription/vault')
+        HttpClient(f'/api/v2').put('/subscription/vault')
 
     @classmethod
     def setUpClass(cls):

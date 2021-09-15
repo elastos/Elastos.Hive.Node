@@ -3,11 +3,13 @@
 """
 The entrance for ipfs module.
 """
+import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
 
 from src import hive_setting
+from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R, DID_INFO_DB_NAME
 from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
 from src.utils.consts import COL_IPFS_FILES, DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
@@ -73,7 +75,7 @@ class IpfsFiles:
         if file_path.exists():
             file_path.unlink()
 
-        self.delete_file_metadata(did, app_did, doc, col_filter=col_filter)
+        self.delete_file_metadata(did, app_did, path, doc[COL_IPFS_FILES_IPFS_CID])
         inc_vault_file_use_storage_byte(did, 0 - doc[SIZE])
 
     @hive_restful_response
@@ -157,34 +159,31 @@ class IpfsFiles:
         :param path: the file relative path, not None
         :return: None
         """
+        # remove the existing cache file.
         file_path = fm.ipfs_get_file_path(did, app_did, path)
-        fm.write_file_by_request_stream(file_path)
+        if file_path.exists():
+            file_path.unlink()
+
+        # upload to the temporary file and then to IPFS node.
+        temp_file = gene_temp_file_name()
+        fm.write_file_by_request_stream(temp_file)
+        # cid = fm.get_response_by_file_path(temp_file)
+
+        # insert or update file metadata.
         col_filter = {DID: did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
         doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
         if not doc:
-            # not exists, add new one.
-            file_doc = {
-                DID: did,
-                APP_DID: app_did,
-                COL_IPFS_FILES_PATH: path,
-                COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(file_path),
-                COL_IPFS_FILES_IS_FILE: True,
-                SIZE: file_path.stat().st_size,
-                COL_IPFS_FILES_IPFS_CID: None,
-            }
-            result = cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
-            inc_vault_file_use_storage_byte(did, file_doc[SIZE])
+            self.add_file_to_metadata(did, app_did, path, temp_file)
         else:
-            # exists, just remove cid for uploading the file to IPFS node later.
-            old_cid = doc[COL_IPFS_FILES_IPFS_CID]
-            self.update_file_metadata(did, app_did, path, file_path, col_filter=col_filter)
-            inc_vault_file_use_storage_byte(did, file_path.stat().st_size - doc[SIZE])
-            if old_cid:
-                self.decrease_cid_ref(old_cid)
+            self.update_file_metadata(did, app_did, path, temp_file, doc)
 
-    def add_file_to_metadata(self, did, app_did, rel_path, file_path):
+        # set temporary file as cache.
+        shutil.move(temp_file.as_posix(), file_path.as_posix())
+
+    def add_file_to_metadata(self, did, app_did, rel_path: str, file_path: Path):
+        cid = fm.get_response_by_file_path(file_path)
         file_doc = {
             DID: did,
             APP_DID: app_did,
@@ -192,33 +191,51 @@ class IpfsFiles:
             COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(file_path),
             COL_IPFS_FILES_IS_FILE: True,
             SIZE: file_path.stat().st_size,
-            COL_IPFS_FILES_IPFS_CID: None,
+            COL_IPFS_FILES_IPFS_CID: cid,
         }
+        self.increase_cid_ref(cid)
         result = cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
+        inc_vault_file_use_storage_byte(did, file_doc[SIZE])
+        logging.info(f'[ipfs-files] Add a new file {rel_path}')
 
-    def update_file_metadata(self, did, app_did, rel_path: str, full_path: Path, col_filter=None, sha256=None):
-        if not col_filter:
-            col_filter = {DID: did,
-                          APP_DID: app_did,
-                          COL_IPFS_FILES_PATH: rel_path}
-        update = {'$set': {COL_IPFS_FILES_IPFS_CID: None,
-                           COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(full_path) if not sha256 else sha256,
-                           SIZE: full_path.stat().st_size}}
+    def update_file_metadata(self, did, app_did, rel_path: str, file_path: Path, old_doc=None):
+        col_filter = {DID: did,
+                      APP_DID: app_did,
+                      COL_IPFS_FILES_PATH: rel_path}
+        if not old_doc:
+            old_doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
+            if not old_doc:
+                logging.error(f'The file {rel_path} does not exist. Update can not be done.')
+                return
+
+        # check if the same file.
+        sha256 = fm.get_file_content_sha256(file_path)
+        size = file_path.stat().st_size
+        cid = fm.get_response_by_file_path(file_path)
+        if size == old_doc[SIZE] and sha256 == old_doc[COL_IPFS_FILES_SHA256] \
+                and cid == old_doc[COL_IPFS_FILES_IPFS_CID]:
+            logging.info(f'The file {rel_path} is same, no need update.')
+            return
+
+        # do update really.
+        if cid != old_doc[COL_IPFS_FILES_IPFS_CID]:
+            self.increase_cid_ref(cid)
+        update = {'$set': {COL_IPFS_FILES_SHA256: sha256,
+                           SIZE: size,
+                           COL_IPFS_FILES_IPFS_CID: cid}}
         result = cli.update_one(did, app_did, COL_IPFS_FILES, col_filter, update, is_extra=True)
+        if cid != old_doc[COL_IPFS_FILES_IPFS_CID]:
+            self.decrease_cid_ref(old_doc[COL_IPFS_FILES_IPFS_CID])
+        logging.info(f'[ipfs-files] Update an existing file {rel_path}')
 
-    def delete_file_metadata(self, did, app_did, doc, col_filter=None):
-        old_cid = None
-        if doc[COL_IPFS_FILES_IPFS_CID]:
-            old_cid = doc[COL_IPFS_FILES_IPFS_CID]
-
-        if not col_filter:
-            col_filter = {DID: did,
-                          APP_DID: app_did,
-                          COL_IPFS_FILES_PATH: doc[COL_IPFS_FILES_PATH]}
-
-        cli.delete_one(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
-        if old_cid:
-            self.decrease_cid_ref(old_cid)
+    def delete_file_metadata(self, did, app_did, rel_path, cid):
+        col_filter = {DID: did,
+                      APP_DID: app_did,
+                      COL_IPFS_FILES_PATH: rel_path}
+        result = cli.delete_one(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
+        if result['deleted_count'] > 0:
+            self.decrease_cid_ref(cid)
+        logging.info(f'[ipfs-files] Remove an existing file {rel_path}')
 
     def download_file_by_did(self, did, app_did, path: str):
         """

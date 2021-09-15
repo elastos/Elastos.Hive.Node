@@ -28,7 +28,8 @@ def scheduler_init(app):
         scheduler.start()
 
 
-@scheduler.task(trigger='interval', id='task_upload_ipfs_files', minutes=10)
+# TODO: remove this later.
+# @scheduler.task(trigger='interval', id='task_upload_ipfs_files', minutes=10)
 def task_upload_ipfs_files():
     """ Task for syncing file content to ipfs server and updating cid on metadata.
     This task only updates the IPFS CID of the file.
@@ -69,7 +70,8 @@ def upload_ipfs_files_by_db(db_name):
             logging.error(f'[task_upload_ipfs_files] failed upload file to ipfs with exception: {str(e)}')
 
 
-@scheduler.task(trigger='interval', id='task_adapt_local_file_to_ipfs', minutes=10)
+# TODO: consider this process later, this will be implemented as other design.
+# @scheduler.task(trigger='interval', id='task_adapt_local_file_to_ipfs', minutes=10)
 def task_adapt_local_file_to_ipfs():
     """ Task for keeping sync with ipfs metadata.
     This do not handle the cid of the ipfs server.
@@ -108,20 +110,15 @@ def adapt_local_files_by_folder(did, app_did, database_name, files_root):
         matches = list(filter(lambda d: d[COL_IPFS_FILES_PATH] == rel_path, file_docs))
         if not matches:
             ipfs_files.add_file_to_metadata(did, app_did, rel_path, file)
-            logging.info(f'[task_adapt_local_file_to_ipfs] add new file {rel_path}.')
             continue
         doc = matches[0]
-        sha256 = fm.get_file_content_sha256(file)
-        if file.stat().st_size != doc[SIZE] or sha256 != doc[COL_IPFS_FILES_SHA256]:
-            ipfs_files.update_file_metadata(did, app_did, rel_path, file, sha256=sha256)
-            logging.info(f'[task_adapt_local_file_to_ipfs] update existed file {rel_path}.')
+        ipfs_files.update_file_metadata(did, app_did, rel_path, file, old_doc=doc)
 
     # handle delete
     rel_paths = [n.relative_to(files_root).as_posix() for n in files]
     remove_list = [d for d in file_docs if d[COL_IPFS_FILES_PATH] not in rel_paths]
     for d in remove_list:
-        ipfs_files.delete_file_metadata(did, app_did, d)
-        logging.info(f'[task_adapt_local_file_to_ipfs] delete existed file {d[COL_IPFS_FILES_PATH]}.')
+        ipfs_files.delete_file_metadata(did, app_did, d[COL_IPFS_FILES_PATH], d[COL_IPFS_FILES_IPFS_CID])
 
 
 # Shutdown your cron thread if the web process is stopped

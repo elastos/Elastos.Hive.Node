@@ -83,7 +83,7 @@ def test_auth_common(self, user_did, app_did):
     # print(jwt)
     jws = lib.DefaultJWSParser_Parse(jwt.encode())
     # if not jws:
-    #     print(ffi.string(lib.DIDError_GetMessage()).decode())
+    #     print(ffi.string(lib.DIDError_GetLastErrorMessage()).decode())
     aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
     self.assertEqual(aud, app_did.get_did_string())
     nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()

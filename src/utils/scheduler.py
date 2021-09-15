@@ -32,6 +32,7 @@ def scheduler_init(app):
 def task_upload_ipfs_files():
     """ Task for syncing file content to ipfs server and updating cid on metadata.
     This task only updates the IPFS CID of the file.
+    TODO: Try to move this to ipfs-files module for real-time CID getting.
     """
     logging.info('[task_upload_ipfs_files] enter.')
 

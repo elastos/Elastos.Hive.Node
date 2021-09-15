@@ -174,7 +174,7 @@ class HiveSetting:
         return self.env_config('PAYMENT_CHECK_EXPIRED', default='True', cast=bool)
 
     def BACKUP_IS_SYNC(self):
-        return self.env_config('BACKUP_IS_SYNC', default='True', cast=bool)
+        return self.env_config('BACKUP_IS_SYNC', default='False', cast=bool)
 
     @property
     def ENABLE_CORS(self):

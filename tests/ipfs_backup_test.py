@@ -19,6 +19,7 @@ class IpfsBackupTestCase(unittest.TestCase):
 
     @staticmethod
     def _subscribe():
+        HttpClient(f'/api/v2').put('/subscription/vault')
         HttpClient(f'/api/v2', is_backup_node=True).put('/subscription/backup')
 
     @classmethod

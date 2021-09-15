@@ -83,6 +83,7 @@ class RemoteResolver:
         # get from the result of sign_in()
         challenge = self.sign_in()
         jws = lib.DefaultJWSParser_Parse(challenge.encode())
+        assert jws, f'Cannot get challenge for node did: {ffi.string(lib.DIDError_GetMessage()).decode()}'
         node_did = self.__get_issuer_by_challenge2(jws)
         lib.JWT_Destroy(jws)
         return node_did

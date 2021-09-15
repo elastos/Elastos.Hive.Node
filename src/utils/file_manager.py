@@ -4,6 +4,7 @@
 This is for files management, include file, file content, file properties, and dir management.
 """
 import hashlib
+import logging
 import pickle
 import shutil
 from datetime import datetime
@@ -210,9 +211,12 @@ class FileManager:
 
     def ipfs_pin_cid(self, cid):
         # TODO: optimize this as ipfs not support pin other node file to local node.
+        logging.info(f'[fm.ipfs_pin_cid] Try to pin {cid} in backup node.')
         temp_file = gene_temp_file_name()
         self.ipfs_download_file_to_path(cid, temp_file)
+        logging.info(f'[fm.ipfs_pin_cid] Download file OK.')
         self.ipfs_upload_file_from_path(temp_file)
+        logging.info(f'[fm.ipfs_pin_cid] Upload file OK.')
         size = temp_file.stat().st_size
         temp_file.unlink()
         return size

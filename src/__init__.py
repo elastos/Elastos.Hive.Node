@@ -65,6 +65,7 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     if hive_setting.ENABLE_CORS:
         CORS(app, supports_credentials=True)
     logging.info(f'[Initialize] ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
+    logging.info(f'[Initialize] BACKUP_IS_SYNC is {hive_setting.BACKUP_IS_SYNC}.')
     # The logging examples, the output is in CONSOLE and hive.log:
     #   2021-06-15 12:06:08,527 - Initialize - DEBUG - create_app
     #   2021-06-15 12:06:08,527 - root - INFO - [Initialize] create_app is processing now.

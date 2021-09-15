@@ -173,6 +173,7 @@ class HiveSetting:
     def PAYMENT_CHECK_EXPIRED(self):
         return self.env_config('PAYMENT_CHECK_EXPIRED', default='True', cast=bool)
 
+    @property
     def BACKUP_IS_SYNC(self):
         return self.env_config('BACKUP_IS_SYNC', default='False', cast=bool)
 

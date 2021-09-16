@@ -22,7 +22,7 @@ def get_auth():
     return auth
 
 
-def get_credential_info(vc_str, props):
+def get_credential_info(vc_str, props: list):
     if vc_str is None:
         return None, "The credential is none."
 
@@ -41,9 +41,15 @@ def get_credential_info(vc_str, props):
     if not "id" in credentialSubject:
         return None, "The credentialSubject's id isn't exist."
 
+    if 'sourceDID' not in props:
+        props.append('sourceDID')
+
     for prop in props:
         if not prop in credentialSubject:
             return None, "The credentialSubject's '" + prop + "' isn't exist."
+
+    if credentialSubject['sourceDID'] != get_did_string():
+        return None, f'The sourceDID({credentialSubject["sourceDID"]}) is not the hive node did.'
 
     if not "issuer" in vc_json:
         return None, "The credential issuer isn't exist."

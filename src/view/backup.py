@@ -47,7 +47,8 @@ def get_state():
 
         {
             "state": "stop", # stop, backup, restore
-            "result": "success" # success, failed
+            "result": "success" # success, failed, process
+            "message": "" # any message for the result.
         }
 
     **Response Error**:

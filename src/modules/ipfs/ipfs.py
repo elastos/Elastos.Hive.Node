@@ -167,7 +167,6 @@ class IpfsFiles:
         # upload to the temporary file and then to IPFS node.
         temp_file = gene_temp_file_name()
         fm.write_file_by_request_stream(temp_file)
-        # cid = fm.get_response_by_file_path(temp_file)
 
         # insert or update file metadata.
         col_filter = {DID: did,
@@ -183,7 +182,7 @@ class IpfsFiles:
         shutil.move(temp_file.as_posix(), file_path.as_posix())
 
     def add_file_to_metadata(self, did, app_did, rel_path: str, file_path: Path):
-        cid = fm.get_response_by_file_path(file_path)
+        cid = fm.ipfs_upload_file_from_path(file_path)
         file_doc = {
             DID: did,
             APP_DID: app_did,
@@ -211,7 +210,7 @@ class IpfsFiles:
         # check if the same file.
         sha256 = fm.get_file_content_sha256(file_path)
         size = file_path.stat().st_size
-        cid = fm.get_response_by_file_path(file_path)
+        cid = fm.ipfs_upload_file_from_path(file_path)
         if size == old_doc[SIZE] and sha256 == old_doc[COL_IPFS_FILES_SHA256] \
                 and cid == old_doc[COL_IPFS_FILES_IPFS_CID]:
             logging.info(f'The file {rel_path} is same, no need update.')
@@ -296,6 +295,7 @@ class IpfsFiles:
                 SIZE: src_doc[SIZE],
                 COL_IPFS_FILES_IPFS_CID: src_doc[COL_IPFS_FILES_IPFS_CID],
             }
+            self.increase_cid_ref(src_doc[COL_IPFS_FILES_IPFS_CID])
             cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc)
             inc_vault_file_use_storage_byte(did, src_doc[SIZE])
         else:
@@ -325,21 +325,25 @@ class IpfsFiles:
         return f'{hive_setting.IPFS_PROXY_URL}/ipfs/{metadata[COL_IPFS_FILES_IPFS_CID]}'
 
     def increase_cid_ref(self, cid):
-        now = datetime.utcnow().timestamp()
+        if not cid:
+            logging.error(f'CID must exist for increase.')
+            return
+
         doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_raise=False)
         if not doc:
             doc = {
                 CID: cid,
-                COUNT: 1,
-                CREATE_TIME: now,
-                MODIFY_TIME: now
+                COUNT: 1
             }
-            cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, doc, is_create=True, is_extra=False)
+            cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, doc, is_create=True)
         else:
             self._update_ipfs_cid_ref_count(cid, doc[COUNT] + 1)
 
     def decrease_cid_ref(self, cid):
-        now = datetime.utcnow().timestamp()
+        if not cid:
+            logging.error(f'CID must exist for decrease.')
+            return
+
         doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_raise=False)
         if not doc:
             fm.ipfs_unpin_cid(cid)
@@ -351,10 +355,8 @@ class IpfsFiles:
             self._update_ipfs_cid_ref_count(cid, doc[COUNT] - 1)
 
     def _update_ipfs_cid_ref_count(self, cid, count):
-        now = datetime.utcnow().timestamp()
         col_filter = {CID: cid}
         update = {'$set': {
             COUNT: count,
-            MODIFY_TIME: now
         }}
-        cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, col_filter, update)
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, col_filter, update, is_extra=True)

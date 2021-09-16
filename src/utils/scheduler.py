@@ -70,8 +70,8 @@ def upload_ipfs_files_by_db(db_name):
             logging.error(f'[task_upload_ipfs_files] failed upload file to ipfs with exception: {str(e)}')
 
 
-# TODO: consider this process later, this will be implemented as other design.
-# @scheduler.task(trigger='interval', id='task_adapt_local_file_to_ipfs', minutes=10)
+# TODO: update this process later, this will be implemented as other design.
+@scheduler.task(trigger='interval', id='task_adapt_local_file_to_ipfs', minutes=10)
 def task_adapt_local_file_to_ipfs():
     """ Task for keeping sync with ipfs metadata.
     This do not handle the cid of the ipfs server.

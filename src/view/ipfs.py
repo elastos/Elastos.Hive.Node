@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-The view of ipfs module for file saving and viewing.
+The view of ipfs module for files and scripting.
 """
 import json
 
@@ -95,10 +95,11 @@ def download_file(transaction_id):
     return scripting.download_file(transaction_id)
 
 
+# TODO: need remove backup relating points.
 # ipfs-backup
 
 
-@blueprint.route('/api/v2/ipfs-vault/content', methods=['POST'])
+# @blueprint.route('/api/v2/ipfs-vault/content', methods=['POST'])
 def backup_restore():
     to = request.args.get('to')
     fr = request.args.get('from')
@@ -142,6 +143,6 @@ def internal_get_dbfiles():
 # ipfs-promotion
 
 
-@blueprint.route('/api/v2/ipfs-backup/promotion', methods=['POST'])
+# @blueprint.route('/api/v2/ipfs-backup/promotion', methods=['POST'])
 def promotion():
     return server.ipfs_promotion()

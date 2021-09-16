@@ -12,10 +12,15 @@ URL_BACKUP_PATCH_DELTA = '/api/v2/internal_backup/patch_delta'
 URL_BACKUP_PATCH_FILE = '/api/v2/internal_backup/patch_file'
 URL_RESTORE_FINISH = '/api/v2/internal_restore/finished_confirmation'
 
+# TODO: remove later
 URL_IPFS_BACKUP_PIN_CIDS = '/api/v2/ipfs-backup-internal/pin_cids'
 URL_IPFS_BACKUP_GET_CIDS = '/api/v2/ipfs-backup-internal/get_cids'
 URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'
 URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
+
+URL_IPFS_BACKUP_SERVER_BACKUP = '/api/v2/ipfs-backup-server/backup'
+URL_IPFS_BACKUP_SERVER_BACKUP_STATE = '/api/v2/ipfs-backup-server/backup-state'
+URL_IPFS_BACKUP_SERVER_RESTORE = '/api/v2/ipfs-backup-server/restore'
 
 BACKUP_FILE_SUFFIX = '.backup'
 

@@ -31,6 +31,7 @@ class FileManager:
     def __init__(self):
         self._http = None
         self.ipfs_url = hive_setting.IPFS_NODE_URL
+        self.ipfs_proxy_url = hive_setting.IPFS_PROXY_URL
 
     @property
     def http(self):
@@ -186,8 +187,9 @@ class FileManager:
                             last_modified=datetime.utcnow(),
                             size=size).make_response()
 
-    def ipfs_download_file_to_path(self, cid, path: Path):
-        response = self.http.post(self.ipfs_url + f'/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
+    def ipfs_download_file_to_path(self, cid, path: Path, is_proxy=False):
+        url = self.ipfs_proxy_url if is_proxy else self.ipfs_url
+        response = self.http.post(f'{url}/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
         self.write_file_by_response(response, path)
 
     def ipfs_upload_file_from_path(self, path: Path):
@@ -213,7 +215,7 @@ class FileManager:
         # TODO: optimize this as ipfs not support pin other node file to local node.
         logging.info(f'[fm.ipfs_pin_cid] Try to pin {cid} in backup node.')
         temp_file = gene_temp_file_name()
-        self.ipfs_download_file_to_path(cid, temp_file)
+        self.ipfs_download_file_to_path(cid, temp_file, is_proxy=True)
         logging.info(f'[fm.ipfs_pin_cid] Download file OK.')
         self.ipfs_upload_file_from_path(temp_file)
         logging.info(f'[fm.ipfs_pin_cid] Upload file OK.')

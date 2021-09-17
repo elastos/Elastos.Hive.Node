@@ -2,8 +2,29 @@
 
 """
 The entrance for ipfs-backup module.
+
+The definition of the request metadata:
+{
+    "databases": [{
+        "name":
+        "sha256":
+        "cid":
+        "size":
+    }],
+    "files": [{
+        "sha256":
+        "cid":
+        "size":
+    }],
+    "user_did":
+    "vault_size":
+    "vault_package_size":
+    "create_time":
+}
 """
+import logging
 import threading
+import traceback
 
 from flask import request
 
@@ -11,33 +32,73 @@ from src.modules.auth.auth import Auth
 from src.utils.consts import BACKUP_REQUEST_TYPE, BACKUP_REQUEST_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
-    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS
+    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
-from src.utils.http_exception import InvalidParameterException, BadRequestException
+from src.utils.http_exception import InvalidParameterException, BadRequestException, HiveException
 from src.utils.http_response import hive_restful_response
 from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, USER_DID
 
 
 class ExecutorBase(threading.Thread):
-    def __init__(self):
+    def __init__(self, did, owner, action='backup'):
         super().__init__()
+        self.did = did
+        self.owner = owner
+        self.action = action
+
+    def run(self):
+        try:
+            self.execute()
+            self.owner.update_request_state(BACKUP_REQUEST_STATE_SUCCESS)
+        except HiveException as e:
+            msg = f'Failed to {self.action} on the vault side: {e.get_error_response()}'
+            logging.error(msg)
+            self.owner.update_request_state(BACKUP_REQUEST_STATE_FAILED, msg)
+        except Exception as e:
+            msg = f'Unexpected failed to {self.action} on the vault side: {traceback.format_exc()}'
+            logging.error(msg)
+            self.owner.update_request_state(BACKUP_REQUEST_STATE_FAILED, msg)
+
+    def execute(self):
+        # INFO: override this.
+        pass
+
+    def get_request_metadata_cid(self, database_cids, file_cids):
+        return None, None
+
+    def pin_cids_to_local_ipfs(self, request_metadata, is_only_file=False):
+        pass
 
 
 class BackupExecutor(ExecutorBase):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, did, client):
+        super().__init__(did, client)
 
-    def run(self):
-        pass
+    def execute(self):
+        database_cids = self.owner.dump_to_database_cids()
+        file_cids = self.owner.get_file_cids_by_user_did(self.did)
+        cid, sha256 = self.get_request_metadata_cid(database_cids, file_cids)
+        self.owner.send_request_metadata_to_server(cid, sha256)
 
 
 class RestoreExecutor(ExecutorBase):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, did, client):
+        super().__init__(did, client, 'restore')
 
-    def run(self):
-        pass
+    def execute(self):
+        request_metadata = self.owner.recv_request_metadata_from_server(self.did)
+        self.pin_cids_to_local_ipfs(request_metadata, is_only_file=True)
+        self.owner.restore_database_by_dump_files(request_metadata)
+
+
+class BackupServerExecutor(ExecutorBase):
+    def __init__(self, did, server):
+        super().__init__(did, server, 'backup_server')
+
+    def execute(self):
+        request_metadata = self.owner.get_request_metadata(self.did)
+        self.pin_cids_to_local_ipfs(request_metadata)
 
 
 class IpfsBackupClient:
@@ -55,9 +116,9 @@ class IpfsBackupClient:
     def backup(self, credential):
         did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
-        self.check_state_for_backup_or_restore()
+        self.check_state_for_backup_or_restore(did)
         self.save_request(did, credential, credential_info)
-        BackupExecutor().start()
+        BackupExecutor(did, self).start()
 
     @hive_restful_response
     def restore(self, credential):
@@ -65,7 +126,7 @@ class IpfsBackupClient:
         credential_info = self.auth.get_backup_credential_info(credential)
         self.check_state_for_backup_or_restore(did)
         self.save_request(did, credential, credential_info, is_restore=True)
-        RestoreExecutor().start()
+        RestoreExecutor(did, self).start()
 
     def check_state_for_backup_or_restore(self, did):
         result = self.get_state_from_request(did)
@@ -141,6 +202,49 @@ class IpfsBackupClient:
         }}
         cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, col_filter, update, is_extra=True)
 
+    # the flowing is for the executors.
+
+    def update_request_state(self, state, msg=None):
+        pass
+
+    def dump_to_database_cids(self):
+        databases = self._dump_databases()
+        self._add_files_to_ipfs(databases)
+        self._remove_database_dump_files(databases)
+        return [{'name': d['name'],
+                 'sha256': d['sha256'],
+                 'cid': d['cid'],
+                 'size': d['size']} for d in databases]
+
+    def get_file_cids_by_user_did(self, did):
+        pass
+
+    def send_request_metadata_to_server(self, cid, sha256):
+        pass
+
+    def recv_request_metadata_from_server(self, did):
+        request_metadata = self._get_verified_request_metadata_from_server(did)
+        self._check_can_be_restore(request_metadata)
+        return request_metadata
+
+    def restore_database_by_dump_files(self, request_metadata):
+        pass
+
+    def _dump_databases(self):
+        pass
+
+    def _add_files_to_ipfs(self, databases):
+        pass
+
+    def _remove_database_dump_files(self, databases):
+        pass
+
+    def _get_verified_request_metadata_from_server(self, did):
+        pass
+
+    def _check_can_be_restore(self, request_metadata):
+        pass
+
 
 class IpfsBackupServer:
     def __init__(self, app=None, hive_setting=None):
@@ -161,4 +265,20 @@ class IpfsBackupServer:
 
     @hive_restful_response
     def internal_restore(self):
+        pass
+
+    # the flowing is for the executors.
+
+    def update_request_state(self, state, msg=None):
+        pass
+
+    def get_request_metadata(self, did):
+        request_metadata = self._get_verified_request_metadata(did)
+        self._check_can_be_backup(request_metadata)
+        return request_metadata
+
+    def _get_verified_request_metadata(self, did):
+        pass
+
+    def _check_can_be_backup(self, request_metadata):
         pass

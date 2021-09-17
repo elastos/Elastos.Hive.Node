@@ -226,15 +226,18 @@ def export_mongo_db(did, app_id):
     if not cli.is_database_exists(db_name):
         return False
 
-    dump_file = (save_path / db_name).with_suffix(BACKUP_FILE_SUFFIX)
+    return export_mongo_db_to_full_path(db_name, (save_path / db_name).with_suffix(BACKUP_FILE_SUFFIX))
+
+
+def export_mongo_db_to_full_path(db_name, full_path: Path):
     if hive_setting.is_mongodb_atlas():
         line2 = f"mongodump --uri={hive_setting.MONGO_HOST} -d {db_name}" \
-                f" --archive='{dump_file.as_posix()}'"
+                f" --archive='{full_path.as_posix()}'"
     else:
         line2 = f"mongodump -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT} -d {db_name}" \
-                f" --archive='{dump_file.as_posix()}'"
-    subprocess.call(line2, shell=True)
-    return True
+                f" --archive='{full_path.as_posix()}'"
+    ret_code = subprocess.call(line2, shell=True)
+    return ret_code == 0
 
 
 def import_mongo_db(did):

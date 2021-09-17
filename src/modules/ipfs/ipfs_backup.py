@@ -33,7 +33,7 @@ from src.modules.auth.auth import Auth
 from src.utils.consts import BACKUP_REQUEST_TYPE, BACKUP_REQUEST_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
-    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED
+    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, APP_DID
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
@@ -41,6 +41,7 @@ from src.utils.http_exception import InvalidParameterException, BadRequestExcept
 from src.utils.http_response import hive_restful_response
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, USER_DID
+from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, gene_mongo_db_name
 
 
 class ExecutorBase(threading.Thread):
@@ -104,7 +105,7 @@ class BackupExecutor(ExecutorBase):
         super().__init__(did, client)
 
     def execute(self):
-        database_cids = self.owner.dump_to_database_cids()
+        database_cids = self.owner.dump_to_database_cids(self.did)
         file_cids = self.owner.get_file_cids_by_user_did(self.did)
         cid, sha256 = self.get_request_metadata_cid(database_cids, file_cids)
         self.owner.send_request_metadata_to_server(cid, sha256)
@@ -240,10 +241,21 @@ class IpfsBackupClient:
         }}
         cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, col_filter, update, is_extra=True)
 
-    def dump_to_database_cids(self):
-        databases = self._dump_databases()
-        self._add_files_to_ipfs(databases)
-        self._remove_database_dump_files(databases)
+    def dump_to_database_cids(self, did):
+        users = cli.get_all_users(did)
+        databases = list()
+        for user in users:
+            d = dict()
+            d['path'] = gene_temp_file_name()
+            d['name'] = gene_mongo_db_name(did, user[APP_DID])
+            is_success = export_mongo_db_to_full_path(d['name'], d['path'])
+            if not is_success:
+                raise BadRequestException(f'Failed to dump {d["name"]} for {did}, {user[APP_DID]}')
+            d['sha256'] = fm.get_file_content_sha256(d['path'])
+            d['size'] = d['path'].stat().st_size
+            d['cid'] = fm.ipfs_upload_file_from_path(d['path'])
+            d['path'].unlink()
+            databases.append(d)
         return databases
 
     def get_file_cids_by_user_did(self, did):
@@ -258,15 +270,6 @@ class IpfsBackupClient:
         return request_metadata
 
     def restore_database_by_dump_files(self, request_metadata):
-        pass
-
-    def _dump_databases(self):
-        pass
-
-    def _add_files_to_ipfs(self, databases):
-        pass
-
-    def _remove_database_dump_files(self, databases):
         pass
 
     def _get_verified_request_metadata_from_server(self, did):

@@ -224,9 +224,11 @@ class DatabaseClient:
                                      DID_INFO_REGISTER_COL, {USER_DID: did}, is_create=False, is_raise=False)
         return [gene_mongo_db_name(did, d[APP_ID]) for d in docs]
 
-    def get_all_users(self):
+    def get_all_users(self, did=None):
         # INFO: Need consider the adaptation of the old user information.
         query = {APP_INSTANCE_DID: {'$exists': True}, APP_ID: {'$exists': True}, USER_DID: {'$exists': True}}
+        if did:
+            query[USER_DID] = did
         return self.find_many_origin(DID_INFO_DB_NAME,
                                      DID_INFO_REGISTER_COL, query, is_create=False, is_raise=False)
 

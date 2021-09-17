@@ -22,6 +22,7 @@ The definition of the request metadata:
     "create_time":
 }
 """
+import json
 import logging
 import threading
 import traceback
@@ -35,8 +36,10 @@ from src.utils.consts import BACKUP_REQUEST_TYPE, BACKUP_REQUEST_TYPE_HIVE_NODE,
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
+from src.utils.file_manager import fm
 from src.utils.http_exception import InvalidParameterException, BadRequestException, HiveException
 from src.utils.http_response import hive_restful_response
+from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, USER_DID
 
 
@@ -50,25 +53,50 @@ class ExecutorBase(threading.Thread):
     def run(self):
         try:
             self.execute()
-            self.owner.update_request_state(BACKUP_REQUEST_STATE_SUCCESS)
+            self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_SUCCESS)
         except HiveException as e:
             msg = f'Failed to {self.action} on the vault side: {e.get_error_response()}'
             logging.error(msg)
-            self.owner.update_request_state(BACKUP_REQUEST_STATE_FAILED, msg)
+            self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_FAILED, msg)
         except Exception as e:
             msg = f'Unexpected failed to {self.action} on the vault side: {traceback.format_exc()}'
             logging.error(msg)
-            self.owner.update_request_state(BACKUP_REQUEST_STATE_FAILED, msg)
+            self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_FAILED, msg)
 
     def execute(self):
         # INFO: override this.
         pass
 
     def get_request_metadata_cid(self, database_cids, file_cids):
-        return None, None
+        data = {
+            'databases': [{'name': d['name'],
+                           'sha256': d['sha256'],
+                           'cid': d['cid'],
+                           'size': d['size']} for d in database_cids],
+            'files': [{'sha256': d['sha256'],
+                       'cid': d['cid'],
+                       'size': d['size']} for d in file_cids]
+        }
+        temp_file = gene_temp_file_name()
+        with temp_file.open('w') as f:
+            json.dump(data, f)
+        sha256 = fm.get_file_content_sha256(temp_file)
+        cid = fm.ipfs_upload_file_from_path(temp_file)
+        temp_file.unlink()
+        return cid, sha256
 
     def pin_cids_to_local_ipfs(self, request_metadata, is_only_file=False):
-        pass
+        if not request_metadata:
+            return
+
+        files = request_metadata.get('files')
+        if files:
+            for f in files:
+                fm.ipfs_pin_cid(f['cid'])
+
+        if not is_only_file and request_metadata.get('databases'):
+            for d in request_metadata.get('databases'):
+                fm.ipfs_pin_cid(d['cid'])
 
 
 class BackupExecutor(ExecutorBase):
@@ -204,17 +232,19 @@ class IpfsBackupClient:
 
     # the flowing is for the executors.
 
-    def update_request_state(self, state, msg=None):
-        pass
+    def update_request_state(self, did, state, msg=None):
+        col_filter = {USER_DID: did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
+        update = {"$set": {
+            BACKUP_REQUEST_STATE: state,
+            BACKUP_REQUEST_STATE_MSG: msg,
+        }}
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, col_filter, update, is_extra=True)
 
     def dump_to_database_cids(self):
         databases = self._dump_databases()
         self._add_files_to_ipfs(databases)
         self._remove_database_dump_files(databases)
-        return [{'name': d['name'],
-                 'sha256': d['sha256'],
-                 'cid': d['cid'],
-                 'size': d['size']} for d in databases]
+        return databases
 
     def get_file_cids_by_user_did(self, did):
         pass
@@ -269,7 +299,7 @@ class IpfsBackupServer:
 
     # the flowing is for the executors.
 
-    def update_request_state(self, state, msg=None):
+    def update_request_state(self, did, state, msg=None):
         pass
 
     def get_request_metadata(self, did):

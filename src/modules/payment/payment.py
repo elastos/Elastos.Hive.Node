@@ -106,7 +106,7 @@ class Payment(metaclass=Singleton):
     @hive_restful_response
     def pay_order(self, order_id, json_body):
         did, app_did = check_auth()
-        vault = self._get_vault_subscription().check_vault_exist(did)
+        vault = self._get_vault_subscription().get_checked_vault(did)
 
         order, transaction_id, paid_did = self._check_pay_order_params(did, order_id, json_body)
 

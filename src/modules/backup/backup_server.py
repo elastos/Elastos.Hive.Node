@@ -556,7 +556,7 @@ class BackupServer:
             raise BadRequestException(msg='No backup data exists.')
 
         from src.view.subscription import vault_subscription
-        vault = vault_subscription.check_vault_exist(did, is_raise=False)
+        vault = vault_subscription.get_checked_vault(did, is_raise=False)
         if vault:
             raise AlreadyExistsException(msg='The vault already exists, no need promotion.')
 

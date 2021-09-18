@@ -5,7 +5,8 @@ The view of ipfs-backup module for file saving and viewing.
 """
 from flask import Blueprint, request
 
-from src.modules.ipfs.ipfs_backup import IpfsBackupClient, IpfsBackupServer
+from src.modules.ipfs.ipfs_backup import IpfsBackupClient
+from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.utils.consts import URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_BACKUP_STATE, \
     URL_IPFS_BACKUP_SERVER_RESTORE
 from src.utils.http_request import params

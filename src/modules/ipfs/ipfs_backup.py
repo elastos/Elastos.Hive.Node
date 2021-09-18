@@ -30,18 +30,23 @@ import traceback
 from flask import request
 
 from src.modules.auth.auth import Auth
+from src.modules.subscription.subscription import VaultSubscription
 from src.utils.consts import BACKUP_REQUEST_TYPE, BACKUP_REQUEST_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
-    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, APP_DID
+    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, APP_DID, \
+    URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_RESTORE
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
-from src.utils.http_exception import InvalidParameterException, BadRequestException, HiveException
+from src.utils.http_client import HttpClient
+from src.utils.http_exception import InvalidParameterException, BadRequestException, HiveException, \
+    InsufficientStorageException
 from src.utils.http_response import hive_restful_response
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, USER_DID
-from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, gene_mongo_db_name
+from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, gene_mongo_db_name, \
+    import_mongo_db_by_full_path
 
 
 class ExecutorBase(threading.Thread):
@@ -82,9 +87,10 @@ class ExecutorBase(threading.Thread):
         with temp_file.open('w') as f:
             json.dump(data, f)
         sha256 = fm.get_file_content_sha256(temp_file)
+        size = temp_file.stat().st_size
         cid = fm.ipfs_upload_file_from_path(temp_file)
         temp_file.unlink()
-        return cid, sha256
+        return cid, sha256, size
 
     def pin_cids_to_local_ipfs(self, request_metadata, is_only_file=False):
         if not request_metadata:
@@ -107,8 +113,8 @@ class BackupExecutor(ExecutorBase):
     def execute(self):
         database_cids = self.owner.dump_to_database_cids(self.did)
         file_cids = self.owner.get_file_cids_by_user_did(self.did)
-        cid, sha256 = self.get_request_metadata_cid(database_cids, file_cids)
-        self.owner.send_request_metadata_to_server(cid, sha256)
+        cid, sha256, size = self.get_request_metadata_cid(database_cids, file_cids)
+        self.owner.send_request_metadata_to_server(self.did, cid, sha256, size)
 
 
 class RestoreExecutor(ExecutorBase):
@@ -135,6 +141,8 @@ class IpfsBackupClient:
         self.app = app
         self.hive_setting = hive_setting
         self.auth = Auth(app, hive_setting)
+        self.http = HttpClient()
+        self.vault = VaultSubscription(app, hive_setting)
 
     @hive_restful_response
     def get_state(self):
@@ -242,15 +250,16 @@ class IpfsBackupClient:
         cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, col_filter, update, is_extra=True)
 
     def dump_to_database_cids(self, did):
-        users = cli.get_all_users(did)
+        db_names = cli.get_all_user_database_names(did)
         databases = list()
-        for user in users:
-            d = dict()
-            d['path'] = gene_temp_file_name()
-            d['name'] = gene_mongo_db_name(did, user[APP_DID])
+        for db_name in db_names:
+            d = {
+                'path': gene_temp_file_name(),
+                'name': db_name
+            }
             is_success = export_mongo_db_to_full_path(d['name'], d['path'])
             if not is_success:
-                raise BadRequestException(f'Failed to dump {d["name"]} for {did}, {user[APP_DID]}')
+                raise BadRequestException(f'Failed to dump {d["name"]} for {did}')
             d['sha256'] = fm.get_file_content_sha256(d['path'])
             d['size'] = d['path'].stat().st_size
             d['cid'] = fm.ipfs_upload_file_from_path(d['path'])
@@ -259,10 +268,13 @@ class IpfsBackupClient:
         return databases
 
     def get_file_cids_by_user_did(self, did):
-        pass
+        return fm.get_file_cid_metadatas(did)
 
-    def send_request_metadata_to_server(self, cid, sha256):
-        pass
+    def send_request_metadata_to_server(self, did, cid, sha256, size):
+        req = self.get_request_by_did(did)
+        body = {'cid': cid, 'sha256': sha256, 'size': size}
+        self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_IPFS_BACKUP_SERVER_BACKUP,
+                       req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
 
     def recv_request_metadata_from_server(self, did):
         request_metadata = self._get_verified_request_metadata_from_server(did)
@@ -270,13 +282,36 @@ class IpfsBackupClient:
         return request_metadata
 
     def restore_database_by_dump_files(self, request_metadata):
-        pass
+        databases = request_metadata['databases']
+        if not databases:
+            return
+        for d in databases:
+            temp_file = gene_temp_file_name()
+            msg = fm.ipfs_download_file_to_path(d['cid'], temp_file, is_proxy=True, sha256=d['sha256'], size=d['size'])
+            if msg:
+                temp_file.unlink()
+                raise BadRequestException(msg=msg)
+            import_mongo_db_by_full_path(temp_file)
+            temp_file.unlink()
 
     def _get_verified_request_metadata_from_server(self, did):
-        pass
+        req = self.get_request_by_did(did)
+        body = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_IPFS_BACKUP_SERVER_RESTORE,
+                             req[BACKUP_REQUEST_TARGET_TOKEN])
+        temp_file = gene_temp_file_name()
+        msg = fm.ipfs_download_file_to_path(body['cid'], temp_file,
+                                            is_proxy=True, sha256=body['sha256'], size=body['size'])
+        if msg:
+            temp_file.unlink()
+            raise BadRequestException(msg=msg)
+        with temp_file.open() as f:
+            metadata = json.load(f)
+        temp_file.unlink()
+        return metadata
 
     def _check_can_be_restore(self, request_metadata):
-        pass
+        if request_metadata['vault_size'] > self.vault.get_vault_max_size():
+            raise InsufficientStorageException(msg='No enough space for restore.')
 
 
 class IpfsBackupServer:

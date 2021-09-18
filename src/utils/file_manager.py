@@ -13,7 +13,8 @@ from pathlib import Path
 from flask import request
 
 from src.settings import hive_setting
-from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE
+from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE, get_unique_dict_item_from_list, \
+    COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE, \
@@ -187,10 +188,18 @@ class FileManager:
                             last_modified=datetime.utcnow(),
                             size=size).make_response()
 
-    def ipfs_download_file_to_path(self, cid, path: Path, is_proxy=False):
+    def ipfs_download_file_to_path(self, cid, path: Path, is_proxy=False, sha256=None, size=None):
         url = self.ipfs_proxy_url if is_proxy else self.ipfs_url
         response = self.http.post(f'{url}/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
         self.write_file_by_response(response, path)
+        if size is not None:
+            cid_size = path.stat().st_size
+            if size != cid_size:
+                return f'Failed to get file content with cid {cid}, size {size, cid_size}'
+        if sha256:
+            cid_sha256 = self.get_file_content_sha256(path)
+            if sha256 != cid_sha256:
+                return f'Failed to get file content with cid {cid}, sha256 {sha256, cid_sha256}'
 
     def ipfs_upload_file_from_path(self, path: Path):
         options = {'files': {'file': open(path.as_posix(), 'rb')}}
@@ -210,6 +219,18 @@ class FileManager:
                 cids.update([doc[COL_IPFS_FILES_IPFS_CID] for doc in docs])
                 total_size += sum([doc[SIZE] for doc in docs])
         return total_size, list(cids)
+
+    def get_file_cid_metadatas(self, did):
+        databases = cli.get_all_user_database_names(did)
+        total_size, cids = 0, list()
+        for d in databases:
+            docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: did}, is_create=False, is_raise=False)
+            if docs:
+                cids.extend([{'cid': doc[COL_IPFS_FILES_IPFS_CID],
+                              'sha256': doc[COL_IPFS_FILES_SHA256],
+                              'size': int(doc[SIZE])} for doc in docs])
+                total_size += sum([doc[SIZE] for doc in docs])
+        return total_size, get_unique_dict_item_from_list(cids)
 
     def ipfs_pin_cid(self, cid):
         # TODO: optimize this as ipfs not support pin other node file to local node.

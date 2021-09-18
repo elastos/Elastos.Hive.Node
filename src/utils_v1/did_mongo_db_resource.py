@@ -249,14 +249,21 @@ def import_mongo_db(did):
     # restore the data of the database from every 'dump_file'.
     dump_files = [x for x in save_path.iterdir() if x.suffix == BACKUP_FILE_SUFFIX]
     for dump_file in dump_files:
-        if hive_setting.is_mongodb_atlas():
-            line2 = f"mongorestore --uri={hive_setting.MONGO_HOST}" \
-                    f" --drop --archive='{dump_file.as_posix()}'"
-        else:
-            line2 = f"mongorestore -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}" \
-                    f" --drop --archive='{dump_file.as_posix()}'"
-        subprocess.call(line2, shell=True)
+        result = import_mongo_db_by_full_path(dump_file)
+        if not result:
+            return False
     return True
+
+
+def import_mongo_db_by_full_path(full_path: Path):
+    if hive_setting.is_mongodb_atlas():
+        line2 = f"mongorestore --uri={hive_setting.MONGO_HOST}" \
+                f" --drop --archive='{full_path.as_posix()}'"
+    else:
+        line2 = f"mongorestore -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}" \
+                f" --drop --archive='{full_path.as_posix()}'"
+    ret_code = subprocess.call(line2, shell=True)
+    return ret_code == 0
 
 
 def delete_mongo_db_export(did):

@@ -179,3 +179,7 @@ class VaultSubscription(metaclass=Singleton):
             return 0
         days = (cur_end_timestamp - now_timestamp) / (24 * 60 * 60)
         return days * cur_plan['amount'] / plan['amount']
+
+    def get_vault_max_size(self, did):
+        doc = self.check_vault_exist(did, is_raise=True)
+        return doc[VAULT_SERVICE_MAX_STORAGE]

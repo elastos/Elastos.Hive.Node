@@ -10,7 +10,7 @@ from pathlib import Path
 from pymongo.errors import CollectionInvalid
 
 from src.settings import hive_setting
-from src.utils.consts import BACKUP_FILE_SUFFIX
+from src.utils.consts import BACKUP_FILE_SUFFIX, get_unique_dict_item_from_list
 
 from src.utils_v1.did_info import get_all_did_info_by_did
 from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name, convert_oid, \
@@ -67,8 +67,17 @@ class DatabaseClient:
     def get_all_database_names(self):
         return self.__get_connection().list_database_names()
 
-    def get_all_user_database_names(self):
-        return [name for name in self.get_all_database_names() if name.startswith(get_user_database_prefix())]
+    def get_all_user_database_names(self, did=None):
+        names = [name for name in self.get_all_database_names() if name.startswith(get_user_database_prefix())]
+        if not did:
+            return names
+        user_apps = self.get_all_user_apps()
+        result = []
+        for app in user_apps:
+            db_name = gene_mongo_db_name(app[USER_DID], app[APP_ID])
+            if db_name in names:
+                result.append(db_name)
+        return result
 
     def get_vault_service(self, did):
         return self.__get_connection()[DID_INFO_DB_NAME][VAULT_SERVICE_COL].find_one({VAULT_SERVICE_DID: did})
@@ -218,19 +227,16 @@ class DatabaseClient:
         s = datetime(1970, 1, 1, 0, 0, 0)
         return int((t - s).total_seconds())
 
-    def get_all_user_databases(self, did):
-        """ TODO: refine this with self.get_all_user_database_names() """
-        docs = self.find_many_origin(DID_INFO_DB_NAME,
-                                     DID_INFO_REGISTER_COL, {USER_DID: did}, is_create=False, is_raise=False)
-        return [gene_mongo_db_name(did, d[APP_ID]) for d in docs]
-
-    def get_all_users(self, did=None):
+    def get_all_user_apps(self, did=None):
         # INFO: Need consider the adaptation of the old user information.
         query = {APP_INSTANCE_DID: {'$exists': True}, APP_ID: {'$exists': True}, USER_DID: {'$exists': True}}
         if did:
             query[USER_DID] = did
-        return self.find_many_origin(DID_INFO_DB_NAME,
+        docs = self.find_many_origin(DID_INFO_DB_NAME,
                                      DID_INFO_REGISTER_COL, query, is_create=False, is_raise=False)
+        if not docs:
+            return list()
+        return get_unique_dict_item_from_list([{USER_DID: d[USER_DID], APP_ID: d[APP_ID]} for d in docs])
 
     def export_mongodb(self, did):
         did_info_list = get_all_did_info_by_did(did)

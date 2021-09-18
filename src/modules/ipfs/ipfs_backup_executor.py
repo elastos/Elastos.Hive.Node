@@ -5,6 +5,7 @@ import logging
 import threading
 import traceback
 
+from src.modules.ipfs.ipfs import IpfsFiles
 from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED
 from src.utils.file_manager import fm
 from src.utils.http_exception import HiveException
@@ -59,10 +60,12 @@ class ExecutorBase(threading.Thread):
         if not request_metadata:
             return
 
+        ipfs_files = IpfsFiles()
         files = request_metadata.get('files')
         if files:
             for f in files:
                 fm.ipfs_pin_cid(f['cid'])
+                ipfs_files.increase_cid_ref(f['cid'], count=f['cid'])
 
         if not is_only_file and request_metadata.get('databases'):
             for d in request_metadata.get('databases'):

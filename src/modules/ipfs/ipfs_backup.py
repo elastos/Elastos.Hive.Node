@@ -15,6 +15,7 @@ The definition of the request metadata:
         "sha256":
         "cid":
         "size":
+        "count":
     }],
     "user_did":
     "vault_size":

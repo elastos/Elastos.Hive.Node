@@ -324,20 +324,21 @@ class IpfsFiles:
     def get_ipfs_file_access_url(self, metadata):
         return f'{hive_setting.IPFS_PROXY_URL}/ipfs/{metadata[COL_IPFS_FILES_IPFS_CID]}'
 
-    def increase_cid_ref(self, cid):
+    def increase_cid_ref(self, cid, count=None):
         if not cid:
-            logging.error(f'CID must exist for increase.')
+            logging.error(f'CID must be provided for increase.')
             return
 
+        increase_count = count if count is None else 1
         doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_raise=False)
         if not doc:
             doc = {
                 CID: cid,
-                COUNT: 1
+                COUNT: increase_count
             }
             cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, doc, is_create=True)
         else:
-            self._update_ipfs_cid_ref_count(cid, doc[COUNT] + 1)
+            self._update_ipfs_cid_ref_count(cid, doc[COUNT] + increase_count)
 
     def decrease_cid_ref(self, cid):
         if not cid:

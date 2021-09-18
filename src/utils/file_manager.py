@@ -225,12 +225,17 @@ class FileManager:
         total_size, cids = 0, list()
         for d in databases:
             docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: did}, is_create=False, is_raise=False)
-            if docs:
-                cids.extend([{'cid': doc[COL_IPFS_FILES_IPFS_CID],
-                              'sha256': doc[COL_IPFS_FILES_SHA256],
-                              'size': int(doc[SIZE])} for doc in docs])
-                total_size += sum([doc[SIZE] for doc in docs])
-        return total_size, get_unique_dict_item_from_list(cids)
+            for doc in docs:
+                mt = self._get_cid_metadata_from_list(cids, doc[COL_IPFS_FILES_IPFS_CID])
+                if mt:
+                    mt['count'] += 1
+                else:
+                    cids.append({'cid': doc[COL_IPFS_FILES_IPFS_CID],
+                                 'sha256': doc[COL_IPFS_FILES_SHA256],
+                                 'size': int(doc[SIZE]),
+                                 'count': 1})
+            total_size += sum([doc[SIZE] for doc in docs])
+        return total_size, cids
 
     def ipfs_pin_cid(self, cid):
         # TODO: optimize this as ipfs not support pin other node file to local node.
@@ -256,6 +261,14 @@ class FileManager:
 
         get_files(root_dir, files)
         return files
+
+    def _get_cid_metadata_from_list(self, cid_mts, cid):
+        if not cid_mts:
+            return None
+        for mt in cid_mts:
+            if mt['cid'] == cid:
+                return mt
+        return None
 
 
 fm = FileManager()

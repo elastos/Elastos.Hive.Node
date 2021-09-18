@@ -82,7 +82,7 @@ def task_adapt_local_file_to_ipfs():
         logging.info('[task_adapt_local_file_to_ipfs] IPFS not supported, skip.')
         return
 
-    for user in cli.get_all_users():
+    for user in cli.get_all_user_apps():
         try:
             did, app_did = user[USER_DID], user[APP_ID]
             logging.info(f'[task_adapt_local_file_to_ipfs] Adapt for user({did}), app_id({app_did})')

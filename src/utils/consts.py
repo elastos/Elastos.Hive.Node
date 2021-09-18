@@ -80,3 +80,9 @@ BACKUP_REQUEST_STATE_MSG = 'state_msg'
 BACKUP_REQUEST_TARGET_HOST = 'target_host'
 BACKUP_REQUEST_TARGET_DID = 'target_did'
 BACKUP_REQUEST_TARGET_TOKEN = 'target_token'
+
+
+def get_unique_dict_item_from_list(dict_list: list):
+    if not dict_list:
+        return list()
+    return list({frozenset(item.items()): item for item in dict_list}.values())

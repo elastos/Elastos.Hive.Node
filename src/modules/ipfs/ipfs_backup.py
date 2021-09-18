@@ -23,117 +23,27 @@ The definition of the request metadata:
 }
 """
 import json
-import logging
-import threading
-import traceback
 
 from flask import request
 
 from src.modules.auth.auth import Auth
+from src.modules.ipfs.ipfs_backup_executor import BackupExecutor, RestoreExecutor
 from src.modules.subscription.subscription import VaultSubscription
 from src.utils.consts import BACKUP_REQUEST_TYPE, BACKUP_REQUEST_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
-    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, APP_DID, \
+    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
     URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_RESTORE
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
 from src.utils.http_client import HttpClient
-from src.utils.http_exception import InvalidParameterException, BadRequestException, HiveException, \
+from src.utils.http_exception import InvalidParameterException, BadRequestException, \
     InsufficientStorageException
 from src.utils.http_response import hive_restful_response
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, USER_DID
-from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, gene_mongo_db_name, \
-    import_mongo_db_by_full_path
-
-
-class ExecutorBase(threading.Thread):
-    def __init__(self, did, owner, action='backup'):
-        super().__init__()
-        self.did = did
-        self.owner = owner
-        self.action = action
-
-    def run(self):
-        try:
-            self.execute()
-            self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_SUCCESS)
-        except HiveException as e:
-            msg = f'Failed to {self.action} on the vault side: {e.get_error_response()}'
-            logging.error(msg)
-            self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_FAILED, msg)
-        except Exception as e:
-            msg = f'Unexpected failed to {self.action} on the vault side: {traceback.format_exc()}'
-            logging.error(msg)
-            self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_FAILED, msg)
-
-    def execute(self):
-        # INFO: override this.
-        pass
-
-    def get_request_metadata_cid(self, database_cids, file_cids):
-        data = {
-            'databases': [{'name': d['name'],
-                           'sha256': d['sha256'],
-                           'cid': d['cid'],
-                           'size': d['size']} for d in database_cids],
-            'files': [{'sha256': d['sha256'],
-                       'cid': d['cid'],
-                       'size': d['size']} for d in file_cids]
-        }
-        temp_file = gene_temp_file_name()
-        with temp_file.open('w') as f:
-            json.dump(data, f)
-        sha256 = fm.get_file_content_sha256(temp_file)
-        size = temp_file.stat().st_size
-        cid = fm.ipfs_upload_file_from_path(temp_file)
-        temp_file.unlink()
-        return cid, sha256, size
-
-    def pin_cids_to_local_ipfs(self, request_metadata, is_only_file=False):
-        if not request_metadata:
-            return
-
-        files = request_metadata.get('files')
-        if files:
-            for f in files:
-                fm.ipfs_pin_cid(f['cid'])
-
-        if not is_only_file and request_metadata.get('databases'):
-            for d in request_metadata.get('databases'):
-                fm.ipfs_pin_cid(d['cid'])
-
-
-class BackupExecutor(ExecutorBase):
-    def __init__(self, did, client):
-        super().__init__(did, client)
-
-    def execute(self):
-        database_cids = self.owner.dump_to_database_cids(self.did)
-        file_cids = self.owner.get_file_cids_by_user_did(self.did)
-        cid, sha256, size = self.get_request_metadata_cid(database_cids, file_cids)
-        self.owner.send_request_metadata_to_server(self.did, cid, sha256, size)
-
-
-class RestoreExecutor(ExecutorBase):
-    def __init__(self, did, client):
-        super().__init__(did, client, 'restore')
-
-    def execute(self):
-        request_metadata = self.owner.recv_request_metadata_from_server(self.did)
-        self.pin_cids_to_local_ipfs(request_metadata, is_only_file=True)
-        self.owner.restore_database_by_dump_files(request_metadata)
-
-
-class BackupServerExecutor(ExecutorBase):
-    def __init__(self, did, server):
-        super().__init__(did, server, 'backup_server')
-
-    def execute(self):
-        request_metadata = self.owner.get_request_metadata(self.did)
-        self.pin_cids_to_local_ipfs(request_metadata)
+from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, import_mongo_db_by_full_path
 
 
 class IpfsBackupClient:
@@ -278,7 +188,7 @@ class IpfsBackupClient:
 
     def recv_request_metadata_from_server(self, did):
         request_metadata = self._get_verified_request_metadata_from_server(did)
-        self._check_can_be_restore(request_metadata)
+        self.check_can_be_restore(request_metadata)
         return request_metadata
 
     def restore_database_by_dump_files(self, request_metadata):
@@ -309,44 +219,6 @@ class IpfsBackupClient:
         temp_file.unlink()
         return metadata
 
-    def _check_can_be_restore(self, request_metadata):
+    def check_can_be_restore(self, request_metadata):
         if request_metadata['vault_size'] > self.vault.get_vault_max_size():
             raise InsufficientStorageException(msg='No enough space for restore.')
-
-
-class IpfsBackupServer:
-    def __init__(self, app=None, hive_setting=None):
-        self.app = app
-        self.hive_setting = hive_setting
-
-    @hive_restful_response
-    def promotion(self):
-        pass
-
-    @hive_restful_response
-    def internal_backup(self):
-        pass
-
-    @hive_restful_response
-    def internal_backup_state(self):
-        pass
-
-    @hive_restful_response
-    def internal_restore(self):
-        pass
-
-    # the flowing is for the executors.
-
-    def update_request_state(self, did, state, msg=None):
-        pass
-
-    def get_request_metadata(self, did):
-        request_metadata = self._get_verified_request_metadata(did)
-        self._check_can_be_backup(request_metadata)
-        return request_metadata
-
-    def _get_verified_request_metadata(self, did):
-        pass
-
-    def _check_can_be_backup(self, request_metadata):
-        pass

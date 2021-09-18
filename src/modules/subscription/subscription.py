@@ -30,9 +30,7 @@ class VaultSubscription(metaclass=Singleton):
     @hive_restful_response
     def subscribe(self):
         did, app_id = check_auth()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_create=True)
-        if doc:
-            raise AlreadyExistsException(msg='The vault is already subscribed.')
+        self.get_checked_vault(did, is_not_exist_raise=False)
         return self.__get_vault_info(self.create_vault(did, self.get_price_plan('vault', 'Free')))
 
     def create_vault(self, did, price_plan, is_upgraded=False):
@@ -71,7 +69,7 @@ class VaultSubscription(metaclass=Singleton):
     @hive_restful_response
     def unsubscribe(self):
         did, app_id = check_auth()
-        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_raise=False)
+        document = self.get_checked_vault(did, is_raise=False)
         if not document:
             # INFO: do not raise here.
             return
@@ -90,12 +88,8 @@ class VaultSubscription(metaclass=Singleton):
 
     def __update_vault_state(self, status):
         did, app_id = check_auth()
-
+        self.get_checked_vault(did)
         col_filter = {VAULT_SERVICE_DID: did}
-        document = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter)
-        if not document:
-            raise VaultNotFoundException()
-
         doc = {VAULT_SERVICE_DID: did,
                VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp(),
                VAULT_SERVICE_STATE: status}
@@ -104,9 +98,7 @@ class VaultSubscription(metaclass=Singleton):
     @hive_restful_response
     def get_info(self):
         did, app_id = check_auth()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_raise=False)
-        if not doc:
-            raise VaultNotFoundException()
+        doc = self.get_checked_vault(did)
         return self.__get_vault_info(doc)
 
     @hive_restful_response
@@ -145,10 +137,13 @@ class VaultSubscription(metaclass=Singleton):
     def get_price_plans_version(self):
         return PaymentConfig.get_all_package_info().get('version', '1.0')
 
-    def check_vault_exist(self, did, is_raise=True):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_raise=False)
-        if not doc and is_raise:
+    def get_checked_vault(self, did, is_raise=True, is_not_exist_raise=True):
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did},
+                                  is_raise=False, is_create=True)
+        if is_raise and is_not_exist_raise and not doc:
             raise VaultNotFoundException()
+        if is_raise and not is_not_exist_raise and doc:
+            raise AlreadyExistsException(msg='The vault already exists.')
         return doc
 
     def upgrade_vault_plan(self, did, vault, pricing_name):
@@ -181,5 +176,5 @@ class VaultSubscription(metaclass=Singleton):
         return days * cur_plan['amount'] / plan['amount']
 
     def get_vault_max_size(self, did):
-        doc = self.check_vault_exist(did, is_raise=True)
+        doc = self.get_checked_vault(did, is_raise=True)
         return doc[VAULT_SERVICE_MAX_STORAGE]

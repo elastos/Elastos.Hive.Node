@@ -20,7 +20,7 @@ from src.utils.http_exception import AlreadyExistsException, NotImplementedExcep
     PricePlanNotFoundException, BadRequestException
 from src.utils.http_response import hive_restful_response
 from src.utils.singleton import Singleton
-from src.utils_v1.auth import get_did_string
+from src.utils_v1.auth import get_current_node_did_string
 
 
 class VaultSubscription(metaclass=Singleton):
@@ -59,7 +59,7 @@ class VaultSubscription(metaclass=Singleton):
         storage_used = int(doc[VAULT_SERVICE_FILE_USE_STORAGE] + doc[VAULT_SERVICE_DB_USE_STORAGE])
         return {
             'pricing_plan': doc[VAULT_SERVICE_PRICING_USING],
-            'service_did': get_did_string(),
+            'service_did': get_current_node_did_string(),
             'storage_quota': storage_quota,
             'storage_used': storage_used,
             'created': cli.timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),

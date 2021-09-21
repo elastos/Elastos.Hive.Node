@@ -52,7 +52,7 @@ def promotion():
 
 @blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP, methods=['POST'])
 def internal_backup():
-    return backup_server.internal_backup()
+    return backup_server.internal_backup(params.get('cid'), params.get('sha256'), params.get('size'))
 
 
 @blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP_STATE, methods=['GET'])
@@ -63,3 +63,21 @@ def internal_backup_state():
 @blueprint.route(URL_IPFS_BACKUP_SERVER_RESTORE, methods=['GET'])
 def internal_restore():
     return backup_server.internal_restore()
+
+
+# subscription
+
+
+@blueprint.route('/api/v2/ipfs-subscription/backup', methods=['PUT'])
+def backup_subscribe():
+    return backup_server.subscribe()
+
+
+@blueprint.route('/api/v2/ipfs-subscription/backup', methods=['DELETE'])
+def backup_unsubscribe():
+    return backup_server.unsubscribe()
+
+
+@blueprint.route('/api/v2/ipfs-subscription/backup', methods=['GET'])
+def backup_get_info():
+    return backup_server.get_info()

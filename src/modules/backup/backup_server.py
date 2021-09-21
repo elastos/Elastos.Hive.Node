@@ -37,7 +37,7 @@ from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_F
     ORIGINAL_SIZE
 from src.utils.file_manager import fm
 from src.utils.http_response import hive_restful_response, hive_stream_response
-from src.utils_v1.auth import get_did_string
+from src.utils_v1.auth import get_current_node_did_string
 
 
 def clog():
@@ -374,7 +374,7 @@ class BackupServer:
     def _get_vault_info(self, doc):
         return {
             'pricing_plan': doc[VAULT_BACKUP_SERVICE_USING],
-            'service_did': get_did_string(),
+            'service_did': get_current_node_did_string(),
             'storage_quota': int(doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]),
             'storage_used': int(doc[VAULT_BACKUP_SERVICE_USE_STORAGE]),
             'created': cli.timestamp_to_epoch(doc[VAULT_BACKUP_SERVICE_START_TIME]),

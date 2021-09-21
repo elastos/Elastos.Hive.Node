@@ -48,7 +48,7 @@ def get_credential_info(vc_str, props: list):
         if not prop in credentialSubject:
             return None, "The credentialSubject's '" + prop + "' isn't exist."
 
-    if credentialSubject['sourceDID'] != get_did_string():
+    if credentialSubject['sourceDID'] != get_current_node_did_string():
         return None, f'The sourceDID({credentialSubject["sourceDID"]}) is not the hive node did.'
 
     if not "issuer" in vc_json:
@@ -68,7 +68,7 @@ def get_credential_info(vc_str, props: list):
     return credentialSubject, None
 
 
-def get_did_string():
+def get_current_node_did_string():
     return get_did_string_from_did(get_auth().did)
 
 
@@ -115,7 +115,7 @@ def get_info_from_token(token):
         return None, get_error_message("JWT getIssuer")
 
     issuer = ffi.string(issuer).decode()
-    if issuer != get_did_string():
+    if issuer != get_current_node_did_string():
         lib.JWT_Destroy(jws)
         return None, "The issuer is invalid!"
 

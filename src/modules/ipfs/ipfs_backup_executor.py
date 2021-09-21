@@ -56,7 +56,7 @@ class ExecutorBase(threading.Thread):
         return cid, sha256, size
 
     @staticmethod
-    def pin_cids_to_local_ipfs(request_metadata, is_only_file=False):
+    def pin_cids_to_local_ipfs(request_metadata, is_only_file=False, is_file_pin_to_ipfs=True):
         if not request_metadata:
             return
 
@@ -64,7 +64,8 @@ class ExecutorBase(threading.Thread):
         files = request_metadata.get('files')
         if files:
             for f in files:
-                fm.ipfs_pin_cid(f['cid'])
+                if is_file_pin_to_ipfs:
+                    fm.ipfs_pin_cid(f['cid'])
                 ipfs_files.increase_cid_ref(f['cid'], count=f['cid'])
 
         if not is_only_file and request_metadata.get('databases'):

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 from datetime import datetime
 
 from src.modules.ipfs.ipfs_backup import IpfsBackupClient
@@ -16,7 +17,7 @@ from src.utils.http_response import hive_restful_response
 from src.utils_v1.auth import get_current_node_did_string
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
-    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE
+    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 
@@ -38,8 +39,9 @@ class IpfsBackupServer:
         """
         did, app_did, doc = self._check_auth_backup()
         self.vault.get_checked_vault(did, is_not_exist_raise=False)
-        request_metadata = self.get_request_metadata_for_promotion(did, doc)
-        self.vault.create_vault(did, self.vault.get_price_plan('vault', 'Free'))
+        vault = self.vault.create_vault(did, self.vault.get_price_plan('vault', 'Free'))
+        request_metadata = self.get_server_request_metadata(did, doc, is_promotion=True,
+                                                            vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
         self.client.check_can_be_restore(request_metadata)
         ExecutorBase.pin_cids_to_local_ipfs(request_metadata,
                                             is_only_file=True,
@@ -62,7 +64,7 @@ class IpfsBackupServer:
             BKSERVER_REQ_SIZE: size
         }
         cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, col_filter, {'$set': update}, is_extra=True)
-        BackupServerExecutor(did, self).start()
+        BackupServerExecutor(did, self, doc).start()
 
     @hive_restful_response
     def internal_backup_state(self):
@@ -77,7 +79,7 @@ class IpfsBackupServer:
     def internal_restore(self):
         did, app_did, doc = self._check_auth_backup()
         if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
-            raise BadRequestException(msg='Failed because backup is in processing.')
+            raise BadRequestException(msg='Failed because backup is in processing..')
         elif doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_FAILED:
             raise BadRequestException(msg='Cannot execute restore because last backup is failed.')
         return {
@@ -96,26 +98,36 @@ class IpfsBackupServer:
         }
         cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, col_filter, {'$set': update}, is_extra=True)
 
-    def get_request_metadata_for_promotion(self, did, req):
+    def get_server_request_metadata(self, did, req, is_promotion=False, vault_max_size=0):
+        """ Get the request metadata for promotion or backup.
+        :param vault_max_size Only for promotion.
+        """
         request_metadata = self._get_verified_request_metadata(did, req)
-        self._check_can_be_promotion(request_metadata, req)
+        logging.info('[IpfsBackupServer] Success to get verified request metadata.')
+        self._check_verified_request_metadata(request_metadata, req,
+                                              is_promotion=is_promotion, vault_max_size=vault_max_size)
+        logging.info('[IpfsBackupServer] Success to check the verified request metadata.')
         return request_metadata
 
     def _get_verified_request_metadata(self, did, req):
-        cid, sha256, size = req.get(BKSERVER_REQ_CID), req.get(BKSERVER_REQ_CID), req.get(BKSERVER_REQ_SIZE)
+        cid, sha256, size = req.get(BKSERVER_REQ_CID), req.get(BKSERVER_REQ_SHA256), req.get(BKSERVER_REQ_SIZE)
         return fm.ipfs_download_file_content(cid, is_proxy=True, sha256=sha256, size=size)
 
-    def _check_can_be_promotion(self, request_metadata, req):
-        if request_metadata['vault_package_size'] > req['VAULT_BACKUP_SERVICE_MAX_STORAGE']:
-            raise InsufficientStorageException(msg='No enough space for promotion.')
+    def _check_verified_request_metadata(self, request_metadata, req, is_promotion=False, vault_max_size=0):
+        if is_promotion:
+            if request_metadata['vault_size'] > vault_max_size:
+                raise InsufficientStorageException(msg='No enough space for promotion.')
+        else:
+            if request_metadata['vault_package_size'] > req[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
+                raise InsufficientStorageException(msg='No enough space for backup on the backup node.')
 
     # ipfs-subscription
 
     @hive_restful_response
     def subscribe(self):
-        did, app_did, doc = self._check_auth_backup(is_raise=False, is_create=True)
+        did, app_did, doc = self._check_auth_backup(is_raise=False)
         if doc:
-            raise AlreadyExistsException('The backup vault is already subscribed.')
+            raise AlreadyExistsException('The backup service is already subscribed.')
         return self._get_vault_info(self._create_backup(did, PaymentConfig.get_free_backup_info()))
 
     @hive_restful_response

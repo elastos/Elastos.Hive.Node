@@ -100,5 +100,5 @@ class BackupServerExecutor(ExecutorBase):
         super().__init__(did, server, 'backup_server')
 
     def execute(self):
-        request_metadata = self.owner.get_request_metadata(self.did)
+        request_metadata = self.owner.get_request_metadata_for_promotion(self.did)
         self.__class__.pin_cids_to_local_ipfs(request_metadata)

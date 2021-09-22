@@ -4,6 +4,7 @@
 This is for files management, include file, file content, file properties, and dir management.
 """
 import hashlib
+import json
 import logging
 import pickle
 import shutil
@@ -13,8 +14,7 @@ from pathlib import Path
 from flask import request
 
 from src.settings import hive_setting
-from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE, get_unique_dict_item_from_list, \
-    COL_IPFS_FILES_SHA256
+from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE, \
@@ -22,10 +22,8 @@ from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_C
 from src.utils_v1.did_file_info import get_save_files_path
 from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
-from src.utils_v1.payment.vault_service_manage import get_vault_used_storage
 from src.utils_v1.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
 from src.utils.http_exception import BadRequestException, VaultNotFoundException
-from src.utils.node_settings import st_get_ipfs_cache_path
 
 
 class FileManager:
@@ -200,6 +198,17 @@ class FileManager:
             cid_sha256 = self.get_file_content_sha256(path)
             if sha256 != cid_sha256:
                 return f'Failed to get file content with cid {cid}, sha256 {sha256, cid_sha256}'
+
+    def ipfs_download_file_content(self, cid, is_proxy=False, sha256=None, size=None):
+        temp_file = gene_temp_file_name()
+        msg = fm.ipfs_download_file_to_path(cid, temp_file, is_proxy=is_proxy, sha256=sha256, size=size)
+        if msg:
+            temp_file.unlink()
+            raise BadRequestException(msg=msg)
+        with temp_file.open() as f:
+            metadata = json.load(f)
+        temp_file.unlink()
+        return metadata
 
     def ipfs_upload_file_from_path(self, path: Path):
         options = {'files': {'file': open(path.as_posix(), 'rb')}}

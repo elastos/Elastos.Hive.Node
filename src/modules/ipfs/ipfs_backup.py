@@ -109,9 +109,9 @@ class IpfsBackupClient:
         target_host, target_did = credential_info['targetHost'], credential_info['targetDID']
         req = self.get_request_by_did(did)
         if not req:
-            self.insert_request(did, target_host, target_did, access_token, is_restore)
+            self.insert_request(did, target_host, target_did, access_token, is_restore=is_restore)
         else:
-            self.update_request(did, target_host, target_did, access_token, req)
+            self.update_request(did, target_host, target_did, access_token, req, is_restore=is_restore)
 
     def get_access_token(self, credential, credential_info):
         target_host = credential_info['targetHost']
@@ -211,16 +211,7 @@ class IpfsBackupClient:
         req = self.get_request_by_did(did)
         body = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_IPFS_BACKUP_SERVER_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])
-        temp_file = gene_temp_file_name()
-        msg = fm.ipfs_download_file_to_path(body['cid'], temp_file,
-                                            is_proxy=True, sha256=body['sha256'], size=body['size'])
-        if msg:
-            temp_file.unlink()
-            raise BadRequestException(msg=msg)
-        with temp_file.open() as f:
-            metadata = json.load(f)
-        temp_file.unlink()
-        return metadata
+        return fm.ipfs_download_file_content(body['cid'], is_proxy=True, sha256=body['sha256'], size=body['size'])
 
     def check_can_be_restore(self, request_metadata):
         if request_metadata['vault_size'] > self.vault.get_vault_max_size():

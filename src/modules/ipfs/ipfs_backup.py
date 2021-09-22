@@ -24,6 +24,7 @@ The definition of the request metadata:
 }
 """
 import json
+import logging
 
 from flask import request
 
@@ -197,15 +198,18 @@ class IpfsBackupClient:
     def restore_database_by_dump_files(self, request_metadata):
         databases = request_metadata['databases']
         if not databases:
+            logging.info('[IpfsBackupClient] No user databases dump files, skip.')
             return
         for d in databases:
             temp_file = gene_temp_file_name()
             msg = fm.ipfs_download_file_to_path(d['cid'], temp_file, is_proxy=True, sha256=d['sha256'], size=d['size'])
             if msg:
+                logging.error(f'[IpfsBackupClient] Failed to download dump file for database {d["name"]}.')
                 temp_file.unlink()
                 raise BadRequestException(msg=msg)
             import_mongo_db_by_full_path(temp_file)
             temp_file.unlink()
+            logging.info(f'[IpfsBackupClient] Success to restore the dump file for database {d["name"]}.')
 
     def _get_verified_request_metadata_from_server(self, did):
         req = self.get_request_by_did(did)

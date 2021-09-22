@@ -350,7 +350,7 @@ class BackupServer:
     def _subscribe_free(self):
         did, app_did, doc = self._check_auth_backup(is_raise=False, is_create=True)
         if doc:
-            raise AlreadyExistsException('The backup vault is already subscribed.')
+            raise AlreadyExistsException('The backup service is already subscribed.')
         return self._get_vault_info(self._create_backup(did, PaymentConfig.get_free_backup_info()))
 
     def _create_backup(self, did, price_plan):

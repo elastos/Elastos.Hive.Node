@@ -4,6 +4,7 @@ import json
 import logging
 import threading
 import traceback
+from datetime import datetime
 
 from src.modules.ipfs.ipfs import IpfsFiles
 from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED
@@ -21,14 +22,16 @@ class ExecutorBase(threading.Thread):
 
     def run(self):
         try:
+            logging.error('[ExecutorBase] Enter execute the executor.')
             self.execute()
             self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_SUCCESS)
+            logging.error('[ExecutorBase] Leave execute the executor.')
         except HiveException as e:
-            msg = f'Failed to {self.action} on the vault side: {e.get_error_response()}'
+            msg = f'[ExecutorBase] Failed to {self.action} on the vault side: {e}'
             logging.error(msg)
             self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_FAILED, msg)
         except Exception as e:
-            msg = f'Unexpected failed to {self.action} on the vault side: {traceback.format_exc()}'
+            msg = f'[ExecutorBase] Unexpected failed to {self.action} on the vault side: {traceback.format_exc()}'
             logging.error(msg)
             self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_FAILED, msg)
 
@@ -36,7 +39,7 @@ class ExecutorBase(threading.Thread):
         # INFO: override this.
         pass
 
-    def get_request_metadata_cid(self, database_cids, file_cids):
+    def get_request_metadata_cid(self, database_cids, file_cids, total_file_size):
         # TODO: what if same cid with different sha256 or size.
         data = {
             'databases': [{'name': d['name'],
@@ -45,7 +48,11 @@ class ExecutorBase(threading.Thread):
                            'size': d['size']} for d in database_cids],
             'files': [{'sha256': d['sha256'],
                        'cid': d['cid'],
-                       'size': d['size']} for d in file_cids]
+                       'size': d['size']} for d in file_cids],
+            'did': self.did,
+            "vault_size": fm.get_vault_storage_size(self.did),
+            "vault_package_size": sum([d['size'] for d in database_cids]) + total_file_size,
+            "create_time": datetime.now().timestamp(),
         }
         temp_file = gene_temp_file_name()
         with temp_file.open('w') as f:
@@ -59,6 +66,7 @@ class ExecutorBase(threading.Thread):
     @staticmethod
     def pin_cids_to_local_ipfs(request_metadata, is_only_file=False, is_file_pin_to_ipfs=True):
         if not request_metadata:
+            logging.info('[ExecutorBase] Invalid request metadata, skip pin CIDs.')
             return
 
         ipfs_files = IpfsFiles()
@@ -69,9 +77,13 @@ class ExecutorBase(threading.Thread):
                     fm.ipfs_pin_cid(f['cid'])
                 ipfs_files.increase_cid_ref(f['cid'], count=f['cid'])
 
+        logging.info('[ExecutorBase] Success to pin all files CIDs.')
+
         if not is_only_file and request_metadata.get('databases'):
             for d in request_metadata.get('databases'):
                 fm.ipfs_pin_cid(d['cid'])
+
+        logging.info('[ExecutorBase] Success to pin all databases CIDs.')
 
 
 class BackupExecutor(ExecutorBase):
@@ -80,9 +92,13 @@ class BackupExecutor(ExecutorBase):
 
     def execute(self):
         database_cids = self.owner.dump_to_database_cids(self.did)
-        file_cids = self.owner.get_file_cids_by_user_did(self.did)
-        cid, sha256, size = self.get_request_metadata_cid(database_cids, file_cids)
+        logging.info('[BackupExecutor] Success to dump databases to CIDs.')
+        total_file_size, file_cids = self.owner.get_file_cids_by_user_did(self.did)
+        logging.info('[BackupExecutor] Success to get all file CIDs.')
+        cid, sha256, size = self.get_request_metadata_cid(database_cids, file_cids, total_file_size)
+        logging.info('[BackupExecutor] Success to get metadata CID')
         self.owner.send_request_metadata_to_server(self.did, cid, sha256, size)
+        logging.info('[BackupExecutor] Success to send metadata CID to the backup node.')
 
 
 class RestoreExecutor(ExecutorBase):
@@ -91,14 +107,20 @@ class RestoreExecutor(ExecutorBase):
 
     def execute(self):
         request_metadata = self.owner.recv_request_metadata_from_server(self.did)
+        logging.info('[RestoreExecutor] Success to get request metadata from the backup node.')
         self.__class__.pin_cids_to_local_ipfs(request_metadata, is_only_file=True)
+        logging.info('[RestoreExecutor] Success to pin files CIDs.')
         self.owner.restore_database_by_dump_files(request_metadata)
+        logging.info('[RestoreExecutor] Success to restore the dump files of the use\'s database.')
 
 
 class BackupServerExecutor(ExecutorBase):
-    def __init__(self, did, server):
+    def __init__(self, did, server, req):
         super().__init__(did, server, 'backup_server')
+        self.req = req
 
     def execute(self):
-        request_metadata = self.owner.get_request_metadata_for_promotion(self.did)
+        request_metadata = self.owner.get_server_request_metadata(self.did, self.req)
+        logging.info('[BackupServerExecutor] Success to get request metadata.')
         self.__class__.pin_cids_to_local_ipfs(request_metadata)
+        logging.info('[BackupServerExecutor] Success to get pin all CIDs.')

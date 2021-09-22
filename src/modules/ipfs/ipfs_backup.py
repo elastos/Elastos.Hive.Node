@@ -34,7 +34,7 @@ from src.utils.consts import BACKUP_REQUEST_TYPE, BACKUP_REQUEST_TYPE_HIVE_NODE,
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
-    URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_RESTORE
+    URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_RESTORE, URL_IPFS_BACKUP_SERVER_BACKUP_STATE
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
@@ -89,15 +89,17 @@ class IpfsBackupClient:
             result = req.get(BACKUP_REQUEST_STATE)
             msg = req.get(BACKUP_REQUEST_STATE_MSG)
             if state == BACKUP_REQUEST_ACTION_BACKUP and result == BACKUP_REQUEST_STATE_SUCCESS:
-                # TODO: check the result of the backup server side.
-                pass
+                body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_IPFS_BACKUP_SERVER_BACKUP_STATE,
+                                     req.get(BACKUP_REQUEST_TARGET_TOKEN))
+                state, result, msg = body['state'], body['result'], body['message']
         return {
-            'state': state,
-            'result': result,
-            'message': msg
+            'state': state if state else BACKUP_REQUEST_STATE_STOP,
+            'result': result if result else BACKUP_REQUEST_STATE_SUCCESS,
+            'message': msg if msg else '',
         }
 
     def get_request_by_did(self, did):
+        # TODO: update all filter to compatible with old data structure, same on server side.
         col_filter = {USER_DID: did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
         return cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, col_filter,
                                    is_create=True, is_raise=False)

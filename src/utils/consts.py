@@ -81,6 +81,13 @@ BACKUP_REQUEST_TARGET_HOST = 'target_host'
 BACKUP_REQUEST_TARGET_DID = 'target_did'
 BACKUP_REQUEST_TARGET_TOKEN = 'target_token'
 
+BKSERVER_REQ_ACTION = 'req_action'
+BKSERVER_REQ_STATE = 'req_state'
+BKSERVER_REQ_STATE_MSG = 'req_state_msg'
+BKSERVER_REQ_CID = 'req_cid'
+BKSERVER_REQ_SHA256 = 'req_sha256'
+BKSERVER_REQ_SIZE = 'req_size'
+
 
 def get_unique_dict_item_from_list(dict_list: list):
     if not dict_list:

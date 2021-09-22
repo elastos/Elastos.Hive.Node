@@ -37,6 +37,7 @@ class ExecutorBase(threading.Thread):
         pass
 
     def get_request_metadata_cid(self, database_cids, file_cids):
+        # TODO: what if same cid with different sha256 or size.
         data = {
             'databases': [{'name': d['name'],
                            'sha256': d['sha256'],

@@ -2,11 +2,14 @@
 from datetime import datetime
 
 from src.modules.ipfs.ipfs_backup import IpfsBackupClient
-from src.modules.ipfs.ipfs_backup_executor import ExecutorBase
+from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.subscription.subscription import VaultSubscription
+from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \
+    BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
+    BKSERVER_REQ_STATE_MSG
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth2
-from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException
+from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException
 from src.utils.http_response import hive_restful_response
 from src.utils_v1.auth import get_current_node_did_string
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, \
@@ -45,11 +48,27 @@ class IpfsBackupServer:
     def internal_backup(self, cid, sha256, size):
         # INFO: need refine backup subscription first.
         did, app_did, doc = self._check_auth_backup()
-        # TODO:
+        if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
+            raise BadRequestException(msg='Failed because backup is in processing.')
+        col_filter = {VAULT_BACKUP_SERVICE_DID: did}
+        update = {
+            BKSERVER_REQ_ACTION: BACKUP_REQUEST_ACTION_BACKUP,
+            BKSERVER_REQ_STATE: BACKUP_REQUEST_STATE_PROCESS,
+            BKSERVER_REQ_CID: cid,
+            BKSERVER_REQ_SHA256: sha256,
+            BKSERVER_REQ_SIZE: size
+        }
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, col_filter, {'$set': update}, is_extra=True)
+        BackupServerExecutor(did, self).start()
 
     @hive_restful_response
     def internal_backup_state(self):
-        pass
+        did, app_did, doc = self._check_auth_backup()
+        return {
+            'state': doc.get(BKSERVER_REQ_ACTION),
+            'result': doc.get(BKSERVER_REQ_STATE),
+            'message': doc.get(BKSERVER_REQ_STATE_MSG)
+        }
 
     @hive_restful_response
     def internal_restore(self):
@@ -71,13 +90,7 @@ class IpfsBackupServer:
     def _check_can_be_backup(self, request_metadata):
         pass
 
-    def _check_auth_backup(self, is_raise=True):
-        did, app_did = check_auth2()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
-                                  is_create=True, is_raise=False)
-        if is_raise and not doc:
-            raise BackupNotFoundException()
-        return did, app_did, doc
+    # ipfs-subscription
 
     @hive_restful_response
     def subscribe(self):
@@ -99,8 +112,16 @@ class IpfsBackupServer:
 
     @hive_restful_response
     def get_info(self):
-        _, _, doc = self._check_auth_backup(is_create=True)
+        _, _, doc = self._check_auth_backup()
         return self._get_vault_info(doc)
+
+    def _check_auth_backup(self, is_raise=True):
+        did, app_did = check_auth2()
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
+                                  is_create=True, is_raise=False)
+        if is_raise and not doc:
+            raise BackupNotFoundException()
+        return did, app_did, doc
 
     def _create_backup(self, did, price_plan):
         now = datetime.utcnow().timestamp()

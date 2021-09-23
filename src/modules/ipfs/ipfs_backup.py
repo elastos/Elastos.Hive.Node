@@ -54,7 +54,6 @@ class IpfsBackupClient:
         self.hive_setting = hive_setting
         self.auth = Auth(app, hive_setting)
         self.http = HttpClient()
-        self.vault = VaultSubscription(app, hive_setting)
 
     @hive_restful_response
     def get_state(self):
@@ -92,7 +91,7 @@ class IpfsBackupClient:
             if state == BACKUP_REQUEST_ACTION_BACKUP and result == BACKUP_REQUEST_STATE_SUCCESS:
                 body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_IPFS_BACKUP_SERVER_BACKUP_STATE,
                                      req.get(BACKUP_REQUEST_TARGET_TOKEN))
-                state, result, msg = body['state'], body['result'], body['message']
+                result, msg = body['result'], body['message']
         return {
             'state': state if state else BACKUP_REQUEST_STATE_STOP,
             'result': result if result else BACKUP_REQUEST_STATE_SUCCESS,
@@ -192,7 +191,7 @@ class IpfsBackupClient:
 
     def recv_request_metadata_from_server(self, did):
         request_metadata = self._get_verified_request_metadata_from_server(did)
-        self.check_can_be_restore(request_metadata)
+        self.check_can_be_restore(did, request_metadata)
         return request_metadata
 
     def restore_database_by_dump_files(self, request_metadata):
@@ -217,6 +216,6 @@ class IpfsBackupClient:
                              req[BACKUP_REQUEST_TARGET_TOKEN])
         return fm.ipfs_download_file_content(body['cid'], is_proxy=True, sha256=body['sha256'], size=body['size'])
 
-    def check_can_be_restore(self, request_metadata):
-        if request_metadata['vault_size'] > self.vault.get_vault_max_size():
+    def check_can_be_restore(self, did, request_metadata):
+        if request_metadata['vault_size'] > fm.get_vault_max_size(did):
             raise InsufficientStorageException(msg='No enough space for restore.')

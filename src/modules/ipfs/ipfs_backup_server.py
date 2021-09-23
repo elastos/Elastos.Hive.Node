@@ -84,7 +84,7 @@ class IpfsBackupServer:
             raise BadRequestException(msg='Cannot execute restore because last backup is failed.')
         return {
             'cid': doc.get(BKSERVER_REQ_CID),
-            'sha256': doc.get(BKSERVER_REQ_CID),
+            'sha256': doc.get(BKSERVER_REQ_SHA256),
             'size': doc.get(BKSERVER_REQ_SIZE),
         }
 

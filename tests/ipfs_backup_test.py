@@ -43,14 +43,18 @@ class IpfsBackupTestCase(unittest.TestCase):
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
 
+    def test05_state(self):
+        r = self.cli.get('/ipfs-vault/content')
+        self.assertEqual(r.status_code, 200)
+
     @unittest.skip
-    def test05_restore(self):
+    def test06_restore(self):
         r = self.cli.post('/ipfs-vault/content?from=hive_node',
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
 
     @unittest.skip
-    def test06_promotion(self):
+    def test07_promotion(self):
         # PREPARE: backup and remove the vault for local test.
         r = self.backup_cli.post('/ipfs-backup/promotion')
         self.assertEqual(r.status_code, 201)

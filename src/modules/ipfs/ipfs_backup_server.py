@@ -175,3 +175,11 @@ class IpfsBackupServer:
             'created': doc.get('created'),
             'updated': doc.get('modified'),
         }
+
+    def retry_backup_request(self, did):
+        req = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
+                                  is_create=True, is_raise=False)
+        if not req:
+            logging.info('[IpfsBackupServer] No backup request found, skip')
+            return
+        BackupServerExecutor(did, self, req).start()

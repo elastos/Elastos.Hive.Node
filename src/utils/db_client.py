@@ -238,6 +238,10 @@ class DatabaseClient:
             return list()
         return get_unique_dict_item_from_list([{USER_DID: d[USER_DID], APP_ID: d[APP_ID]} for d in docs])
 
+    def get_all_user_dids(self):
+        user_apps = self.get_all_user_apps()
+        return list(set([d[USER_DID] for d in user_apps]))
+
     def export_mongodb(self, did):
         did_info_list = get_all_did_info_by_did(did)
         for did_info in did_info_list:

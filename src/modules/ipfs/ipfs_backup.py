@@ -68,8 +68,8 @@ class IpfsBackupClient:
         did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         self.check_state_for_backup_or_restore(did)
-        self.save_request(did, credential, credential_info)
-        BackupExecutor(did, self).start()
+        req = self.save_request(did, credential, credential_info)
+        BackupExecutor(did, self, req).start()
 
     @hive_restful_response
     def restore(self, credential):
@@ -114,6 +114,7 @@ class IpfsBackupClient:
             self.insert_request(did, target_host, target_did, access_token, is_restore=is_restore)
         else:
             self.update_request(did, target_host, target_did, access_token, req, is_restore=is_restore)
+        return self.get_request_by_did(did)
 
     def get_access_token(self, credential, credential_info):
         target_host = credential_info['targetHost']
@@ -221,3 +222,10 @@ class IpfsBackupClient:
     def check_can_be_restore(self, did, request_metadata):
         if request_metadata['vault_size'] > fm.get_vault_max_size(did):
             raise InsufficientStorageException(msg='No enough space for restore.')
+
+    def retry_backup_request(self, did):
+        req = self.get_request_by_did(did)
+        if not req:
+            logging.info('[IpfsBackupClient] No backup request found, skip')
+            return
+        BackupExecutor(did, self, req).start()

@@ -7,7 +7,8 @@ import traceback
 from datetime import datetime
 
 from src.modules.ipfs.ipfs import IpfsFiles
-from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED
+from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, BACKUP_REQUEST_STATE, \
+    BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_STATE
 from src.utils.file_manager import fm
 from src.utils.http_exception import HiveException
 from src.utils_v1.common import gene_temp_file_name
@@ -86,10 +87,14 @@ class ExecutorBase(threading.Thread):
 
 
 class BackupExecutor(ExecutorBase):
-    def __init__(self, did, client):
+    def __init__(self, did, client, req):
         super().__init__(did, client)
+        self.req = req
 
     def execute(self):
+        if self.req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_PROCESS:
+            logging.info('[BackupExecutor] The state is not in processing, skip.')
+            return
         database_cids = self.owner.dump_to_database_cids(self.did)
         logging.info('[BackupExecutor] Success to dump databases to CIDs.')
         total_file_size, file_cids = self.owner.get_file_cids_by_user_did(self.did)
@@ -119,6 +124,9 @@ class BackupServerExecutor(ExecutorBase):
         self.req = req
 
     def execute(self):
+        if self.req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_PROCESS:
+            logging.info('[BackupServerExecutor] The state is not in processing, skip.')
+            return
         request_metadata = self.owner.get_server_request_metadata(self.did, self.req)
         logging.info('[BackupServerExecutor] Success to get request metadata.')
         self.__class__.pin_cids_to_local_ipfs(request_metadata)

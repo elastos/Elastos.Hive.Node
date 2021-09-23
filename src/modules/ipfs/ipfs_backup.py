@@ -50,6 +50,9 @@ from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, imp
 
 class IpfsBackupClient:
     def __init__(self, app=None, hive_setting=None):
+        """
+        TODO: optimize for the ref of CIDs of the databases and files to ensure CID unpin when it's not used further.
+        """
         self.app = app
         self.hive_setting = hive_setting
         self.auth = Auth(app, hive_setting)
@@ -99,7 +102,6 @@ class IpfsBackupClient:
         }
 
     def get_request_by_did(self, did):
-        # TODO: update all filter to compatible with old data structure, same on server side.
         col_filter = {USER_DID: did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
         return cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, col_filter,
                                    is_create=True, is_raise=False)

@@ -42,7 +42,7 @@ class IpfsBackupServer:
         vault = self.vault.create_vault(did, self.vault.get_price_plan('vault', 'Free'))
         request_metadata = self.get_server_request_metadata(did, doc, is_promotion=True,
                                                             vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
-        self.client.check_can_be_restore(request_metadata)
+        self.client.check_can_be_restore(did, request_metadata)
         ExecutorBase.pin_cids_to_local_ipfs(request_metadata,
                                             is_only_file=True,
                                             is_file_pin_to_ipfs=False)

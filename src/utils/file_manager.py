@@ -14,7 +14,8 @@ from pathlib import Path
 from flask import request
 
 from src.settings import hive_setting
-from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE, COL_IPFS_FILES_SHA256
+from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE, COL_IPFS_FILES_SHA256, \
+    COL_IPFS_FILES_PATH
 from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE, \
@@ -235,7 +236,7 @@ class FileManager:
         for d in databases:
             docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: did}, is_create=False, is_raise=False)
             for doc in docs:
-                mt = self._get_cid_metadata_from_list(cids, doc[COL_IPFS_FILES_IPFS_CID])
+                mt = self._get_cid_metadata_from_list(cids, doc)
                 if mt:
                     mt['count'] += 1
                 else:
@@ -271,11 +272,14 @@ class FileManager:
         get_files(root_dir, files)
         return files
 
-    def _get_cid_metadata_from_list(self, cid_mts, cid):
+    def _get_cid_metadata_from_list(self, cid_mts, file_mt):
         if not cid_mts:
             return None
         for mt in cid_mts:
-            if mt['cid'] == cid:
+            if mt['cid'] == file_mt[COL_IPFS_FILES_IPFS_CID]:
+                if mt['sha256'] != file_mt[COL_IPFS_FILES_SHA256] or mt['size'] != int(file_mt[SIZE]):
+                    logging.error(f'Found an unexpected file {file_mt[COL_IPFS_FILES_PATH]} with same CID, '
+                                  f'but different sha256 or size.')
                 return mt
         return None
 

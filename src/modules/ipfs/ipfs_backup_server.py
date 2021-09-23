@@ -135,7 +135,11 @@ class IpfsBackupServer:
         did, _, doc = self._check_auth_backup(is_raise=False)
         if not doc:
             return
-        # TODO: remove backup request relating CIDs.
+
+        if doc.get(BKSERVER_REQ_CID):
+            # INFO: remove relating CIDs.
+            fm.ipfs_unpin_cid(doc.get(BKSERVER_REQ_CID))
+
         cli.delete_one_origin(DID_INFO_DB_NAME,
                               VAULT_BACKUP_SERVICE_COL,
                               {VAULT_BACKUP_SERVICE_DID: did},

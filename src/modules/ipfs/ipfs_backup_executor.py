@@ -64,7 +64,16 @@ class ExecutorBase(threading.Thread):
         return cid, sha256, size
 
     @staticmethod
-    def pin_cids_to_local_ipfs(request_metadata, is_only_file=False, is_file_pin_to_ipfs=True):
+    def pin_cids_to_local_ipfs(request_metadata,
+                               is_only_file=False,
+                               is_file_pin_to_ipfs=True,
+                               root_cid=None,
+                               is_unpin=False):
+        execute_pin_unpin = fm.ipfs_pin_cid if not is_unpin else fm.ipfs_unpin_cid
+        if root_cid:
+            execute_pin_unpin(root_cid)
+            logging.info('[ExecutorBase] Success to pin root cid.')
+
         if not request_metadata:
             logging.info('[ExecutorBase] Invalid request metadata, skip pin CIDs.')
             return
@@ -74,15 +83,16 @@ class ExecutorBase(threading.Thread):
         if files:
             for f in files:
                 if is_file_pin_to_ipfs:
-                    fm.ipfs_pin_cid(f['cid'])
-                ipfs_files.increase_cid_ref(f['cid'], count=f['cid'])
-
+                    execute_pin_unpin(f['cid'])
+                    if not is_unpin:
+                        ipfs_files.increase_cid_ref(f['cid'], count=f['count'])
+                    else:
+                        ipfs_files.decrease_cid_ref(f['cid'], count=f['count'])
         logging.info('[ExecutorBase] Success to pin all files CIDs.')
 
         if not is_only_file and request_metadata.get('databases'):
             for d in request_metadata.get('databases'):
-                fm.ipfs_pin_cid(d['cid'])
-
+                execute_pin_unpin(d['cid'])
         logging.info('[ExecutorBase] Success to pin all databases CIDs.')
 
 

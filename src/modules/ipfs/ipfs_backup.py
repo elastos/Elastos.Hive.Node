@@ -23,14 +23,12 @@ The definition of the request metadata:
     "create_time":
 }
 """
-import json
 import logging
 
 from flask import request
 
 from src.modules.auth.auth import Auth
 from src.modules.ipfs.ipfs_backup_executor import BackupExecutor, RestoreExecutor
-from src.modules.subscription.subscription import VaultSubscription
 from src.utils.consts import BACKUP_REQUEST_TYPE, BACKUP_REQUEST_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
@@ -50,9 +48,6 @@ from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, imp
 
 class IpfsBackupClient:
     def __init__(self, app=None, hive_setting=None):
-        """
-        TODO: optimize for the ref of CIDs of the databases and files to ensure CID unpin when it's not used further.
-        """
         self.app = app
         self.hive_setting = hive_setting
         self.auth = Auth(app, hive_setting)

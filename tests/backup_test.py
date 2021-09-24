@@ -26,8 +26,6 @@ class BackupTestCase(unittest.TestCase):
     def test01_get_state(self):
         r = self.cli.get('/vault/content')
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.json()['state'], 'stop')
-        self.assertEqual(r.json()['result'], 'success')
 
     @unittest.skip
     def test02_backup(self):

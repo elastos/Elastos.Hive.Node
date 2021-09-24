@@ -130,9 +130,9 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
         if is_extra:
-            document['created'] = datetime.strptime(document["created"], DATETIME_FORMAT) \
-                if 'created' in document else datetime.utcnow()
-            document['modified'] = datetime.utcnow()
+            now_timestamp = datetime.now().timestamp()
+            document['created'] = now_timestamp
+            document['modified'] = now_timestamp
 
         result = col.insert_one(convert_oid(document), **(options if options else {}))
         return {
@@ -151,12 +151,13 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
         if is_extra:
+            now_timestamp = datetime.now().timestamp()
             if '$setOnInsert' in col_update:
-                col_update["$setOnInsert"]['created'] = datetime.utcnow()
+                col_update["$setOnInsert"]['created'] = now_timestamp
             else:
-                col_update["$setOnInsert"] = {"created": datetime.utcnow()}
+                col_update["$setOnInsert"] = {"created": now_timestamp}
             if "$set" in col_update:
-                col_update["$set"]["modified"] = datetime.utcnow()
+                col_update["$set"]["modified"] = now_timestamp
 
         if is_many:
             result = col.update_many(convert_oid(col_filter), convert_oid(col_update, update=True), **(options if options else {}))

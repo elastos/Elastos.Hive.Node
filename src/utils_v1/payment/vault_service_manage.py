@@ -244,13 +244,13 @@ def __less_than_max_storage(did):
         return False
 
 
-def inc_vault_file_use_storage_byte(did, size):
+def inc_vault_file_use_storage_byte(did, size, is_reset=False):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_DID: did}
     info = col.find_one(query)
-    info[VAULT_SERVICE_FILE_USE_STORAGE] = info[VAULT_SERVICE_FILE_USE_STORAGE] + size
+    info[VAULT_SERVICE_FILE_USE_STORAGE] = size if is_reset else (info[VAULT_SERVICE_FILE_USE_STORAGE] + size)
     now = datetime.utcnow().timestamp()
     info[VAULT_SERVICE_MODIFY_TIME] = now
     query = {VAULT_SERVICE_DID: did}

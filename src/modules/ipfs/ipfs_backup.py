@@ -44,6 +44,7 @@ from src.utils.http_response import hive_restful_response
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, USER_DID
 from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, import_mongo_db_by_full_path
+from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
 
 
 class IpfsBackupClient:
@@ -207,6 +208,9 @@ class IpfsBackupClient:
             import_mongo_db_by_full_path(temp_file)
             temp_file.unlink()
             logging.info(f'[IpfsBackupClient] Success to restore the dump file for database {d["name"]}.')
+
+    def update_storage_usage(self, did, size):
+        inc_vault_file_use_storage_byte(did, size, is_reset=True)
 
     def _get_verified_request_metadata_from_server(self, did):
         req = self.get_request_by_did(did)

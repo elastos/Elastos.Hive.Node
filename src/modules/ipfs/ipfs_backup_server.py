@@ -164,6 +164,7 @@ class IpfsBackupServer:
         doc = {VAULT_BACKUP_SERVICE_DID: did,
                VAULT_BACKUP_SERVICE_USING: price_plan['name'],
                VAULT_BACKUP_SERVICE_MAX_STORAGE: price_plan["maxStorage"] * 1024 * 1024,
+               VAULT_BACKUP_SERVICE_USE_STORAGE: 0,
                VAULT_BACKUP_SERVICE_START_TIME: now,
                VAULT_BACKUP_SERVICE_END_TIME: end_time
                }
@@ -179,6 +180,13 @@ class IpfsBackupServer:
             'created': doc.get('created'),
             'updated': doc.get('modified'),
         }
+
+    def update_storage_usage(self, did, size):
+        col_filter = {VAULT_BACKUP_SERVICE_DID: did}
+        update = {
+            VAULT_BACKUP_SERVICE_USE_STORAGE: size,
+        }
+        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, col_filter, {'$set': update}, is_extra=True)
 
     def retry_backup_request(self, did):
         req = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},

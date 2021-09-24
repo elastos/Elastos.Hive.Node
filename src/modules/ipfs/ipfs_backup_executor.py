@@ -23,10 +23,10 @@ class ExecutorBase(threading.Thread):
 
     def run(self):
         try:
-            logging.error('[ExecutorBase] Enter execute the executor.')
+            logging.info('[ExecutorBase] Enter execute the executor.')
             self.execute()
             self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_SUCCESS)
-            logging.error('[ExecutorBase] Leave execute the executor.')
+            logging.info('[ExecutorBase] Leave execute the executor.')
         except HiveException as e:
             msg = f'[ExecutorBase] Failed to {self.action} on the vault side: {e}'
             logging.error(msg)
@@ -126,6 +126,7 @@ class RestoreExecutor(ExecutorBase):
         logging.info('[RestoreExecutor] Success to pin files CIDs.')
         self.owner.restore_database_by_dump_files(request_metadata)
         logging.info('[RestoreExecutor] Success to restore the dump files of the use\'s database.')
+        self.owner.update_storage_usage(self.did, request_metadata['vault_size'])
 
 
 class BackupServerExecutor(ExecutorBase):
@@ -141,3 +142,4 @@ class BackupServerExecutor(ExecutorBase):
         logging.info('[BackupServerExecutor] Success to get request metadata.')
         self.__class__.pin_cids_to_local_ipfs(request_metadata)
         logging.info('[BackupServerExecutor] Success to get pin all CIDs.')
+        self.owner.update_storage_usage(self.did, request_metadata['vault_package_size'])

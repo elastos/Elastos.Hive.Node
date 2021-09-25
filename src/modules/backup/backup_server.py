@@ -378,7 +378,7 @@ class BackupServer:
             'storage_quota': int(doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]),
             'storage_used': int(doc[VAULT_BACKUP_SERVICE_USE_STORAGE]),
             'created': cli.timestamp_to_epoch(doc[VAULT_BACKUP_SERVICE_START_TIME]),
-            'updated': cli.timestamp_to_epoch(doc[VAULT_BACKUP_SERVICE_MODIFY_TIME]),
+            'updated': cli.timestamp_to_epoch(doc['modified']),
         }
 
     @hive_restful_response

@@ -60,18 +60,20 @@ class IpfsBackupClient:
         return self.get_state_from_request(did)
 
     @hive_restful_response
-    def backup(self, credential):
+    def backup(self, credential, is_force):
         did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
-        self.check_state_for_backup_or_restore(did)
+        if not is_force:
+            self.check_state_for_backup_or_restore(did)
         req = self.save_request(did, credential, credential_info)
-        BackupExecutor(did, self, req).start()
+        BackupExecutor(did, self, req, is_force=is_force).start()
 
     @hive_restful_response
-    def restore(self, credential):
+    def restore(self, credential, is_force):
         did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
-        self.check_state_for_backup_or_restore(did)
+        if not is_force:
+            self.check_state_for_backup_or_restore(did)
         self.save_request(did, credential, credential_info, is_restore=True)
         RestoreExecutor(did, self).start()
 
@@ -176,9 +178,9 @@ class IpfsBackupClient:
     def get_file_cids_by_user_did(self, did):
         return fm.get_file_cid_metadatas(did)
 
-    def send_request_metadata_to_server(self, did, cid, sha256, size):
+    def send_request_metadata_to_server(self, did, cid, sha256, size, is_force):
         req = self.get_request_by_did(did)
-        body = {'cid': cid, 'sha256': sha256, 'size': size}
+        body = {'cid': cid, 'sha256': sha256, 'size': size, 'is_force': is_force}
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_IPFS_BACKUP_SERVER_BACKUP,
                        req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
 

@@ -50,9 +50,9 @@ class IpfsBackupServer:
         ExecutorBase.update_vault_usage_by_metadata(did, request_metadata)
 
     @hive_restful_response
-    def internal_backup(self, cid, sha256, size):
+    def internal_backup(self, cid, sha256, size, is_force):
         did, app_did, doc = self._check_auth_backup()
-        if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
+        if not is_force and doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
             raise BadRequestException(msg='Failed because backup is in processing.')
         fm.ipfs_pin_cid(cid)
         update = {

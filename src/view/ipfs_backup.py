@@ -33,10 +33,11 @@ def get_state():
 def backup_restore():
     to = request.args.get('to')
     fr = request.args.get('from')
+    is_force = request.args.get('is_force', 'False') == 'True'
     if to == 'hive_node':
-        return backup_client.backup(params.get('credential'))
+        return backup_client.backup(params.get('credential'), is_force)
     elif fr == 'hive_node':
-        return backup_client.restore(params.get('credential'))
+        return backup_client.restore(params.get('credential'), is_force)
 
 
 # ipfs-promotion on the backup server side
@@ -52,7 +53,8 @@ def promotion():
 
 @blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP, methods=['POST'])
 def internal_backup():
-    return backup_server.internal_backup(params.get('cid'), params.get('sha256'), params.get('size'))
+    return backup_server.internal_backup(params.get('cid'), params.get('sha256'), params.get('size'),
+                                         params.get('is_force', False))
 
 
 @blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP_STATE, methods=['GET'])

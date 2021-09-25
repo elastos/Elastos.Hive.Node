@@ -163,6 +163,8 @@ class IpfsFiles:
         file_path = fm.ipfs_get_file_path(did, app_did, path)
         if file_path.exists():
             file_path.unlink()
+        else:
+            fm.create_dir(file_path.parent)
 
         # upload to the temporary file and then to IPFS node.
         temp_file = gene_temp_file_name()

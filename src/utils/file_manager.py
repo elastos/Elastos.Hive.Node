@@ -219,9 +219,9 @@ class FileManager:
         return metadata
 
     def ipfs_upload_file_from_path(self, path: Path):
-        options = {'files': {'file': open(path.as_posix(), 'rb')}}
+        files = {'file': open(path.as_posix(), 'rb')}
         json_data = self.http.post(self.ipfs_url + '/api/v0/add', None, None,
-                                   is_json=False, options=options, success_code=200)
+                                   is_json=False, files=files, success_code=200)
         return json_data['Hash']
 
     def ipfs_unpin_cid(self, cid):

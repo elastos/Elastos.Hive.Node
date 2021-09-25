@@ -16,7 +16,7 @@ from src.utils.http_exception import InvalidParameterException, FileNotFoundExce
 
 class HttpClient:
     def __init__(self):
-        pass
+        self.timeout = 10
 
     def _check_status_code(self, r, expect_code):
         if r.status_code != expect_code:
@@ -26,28 +26,28 @@ class HttpClient:
     def _raise_http_exception(self, url, method, e):
         raise InvalidParameterException(msg=f'[HttpClient] Failed to {method} ({url}) with exception: {str(e)}')
 
-    def get(self, url, access_token, is_body=True, options=None):
+    def get(self, url, access_token, is_body=True, **kwargs):
         try:
             headers = {"Content-Type": "application/json", "Authorization": "token " + access_token}
-            r = requests.get(url, headers=headers, **(options if options else {}))
+            r = requests.get(url, headers=headers, timeout=self.timeout, **kwargs)
             self._check_status_code(r, 200)
             return r.json() if is_body else r
         except Exception as e:
             self._raise_http_exception(url, 'GET', e)
 
     def get_to_file(self, url, access_token, file_path: Path):
-        r = self.get(url, access_token, is_body=False, options={'stream': True})
+        r = self.get(url, access_token, is_body=False, stream=True)
         fm.write_file_by_response(r, file_path, is_temp=True)
 
-    def post(self, url, access_token, body, is_json=True, is_body=True, options=None, success_code=201):
+    def post(self, url, access_token, body, is_json=True, is_body=True, success_code=201, **kwargs):
         try:
             headers = dict()
             if access_token:
                 headers["Authorization"] = "token " + access_token
             if is_json:
                 headers['Content-Type'] = 'application/json'
-            r = requests.post(url, headers=headers, json=body, **(options if options else {})) \
-                if is_json else requests.post(url, headers=headers, data=body, **(options if options else {}))
+            r = requests.post(url, headers=headers, json=body, timeout=self.timeout, **kwargs) \
+                if is_json else requests.post(url, headers=headers, data=body, timeout=self.timeout, **kwargs)
             self._check_status_code(r, success_code)
             return r.json() if is_body else r
         except Exception as e:
@@ -58,17 +58,17 @@ class HttpClient:
             self.post(url, access_token, body=f, is_json=False, is_body=False)
 
     def post_to_file(self, url, access_token, file_path: Path, body=None, is_temp=False):
-        r = self.post(url, access_token, body, is_json=False, is_body=False, options={'stream': True})
+        r = self.post(url, access_token, body, is_json=False, is_body=False, stream=True)
         fm.write_file_by_response(r, file_path, is_temp)
 
     def post_to_pickle_data(self, url, access_token, body=None):
-        r = self.post(url, access_token, body, is_json=False, is_body=False, options={'stream': True})
+        r = self.post(url, access_token, body, is_json=False, is_body=False, stream=True)
         return pickle.loads(r.content)
 
     def put(self, url, access_token, body, is_body=False):
         try:
             headers = {"Authorization": "token " + access_token}
-            r = requests.put(url, headers=headers, data=body)
+            r = requests.put(url, headers=headers, data=body, timeout=self.timeout)
             self._check_status_code(r, 200)
             return r.json() if is_body else r
         except Exception as e:
@@ -81,7 +81,7 @@ class HttpClient:
     def delete(self, url, access_token):
         try:
             headers = {"Authorization": "token " + access_token}
-            r = requests.delete(url, headers=headers)
+            r = requests.delete(url, headers=headers, timeout=self.timeout)
             self._check_status_code(r, 204)
         except Exception as e:
             self._raise_http_exception(url, 'DELETE', e)

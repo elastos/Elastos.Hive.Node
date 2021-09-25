@@ -65,6 +65,8 @@ COL_IPFS_FILES_IPFS_CID = 'ipfs_cid'
 
 COL_IPFS_CID_REF = 'ipfs_cid_ref'
 
+COL_IPFS_BACKUP_CLIENT = 'ipfs_backup_client'
+COL_IPFS_BACKUP_SERVER = 'ipfs_backup_server'
 BACKUP_REQUEST_TYPE = 'type'
 BACKUP_REQUEST_TYPE_HIVE_NODE = 'hive_node'
 BACKUP_REQUEST_TYPE_GOOGLE_DRIVER = 'google_driver'
@@ -81,6 +83,7 @@ BACKUP_REQUEST_TARGET_HOST = 'target_host'
 BACKUP_REQUEST_TARGET_DID = 'target_did'
 BACKUP_REQUEST_TARGET_TOKEN = 'target_token'
 
+# For backup subscription.
 BKSERVER_REQ_ACTION = 'req_action'
 BKSERVER_REQ_STATE = 'req_state'
 BKSERVER_REQ_STATE_MSG = 'req_state_msg'

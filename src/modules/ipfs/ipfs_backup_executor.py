@@ -21,6 +21,7 @@ class ExecutorBase(threading.Thread):
         self.owner = owner
         self.action = kwargs.get('action', 'backup')
         self.start_delay = kwargs.get('start_delay', 0)
+        self.is_force = kwargs.get('is_force', False)
 
     def run(self):
         try:
@@ -124,7 +125,7 @@ class BackupExecutor(ExecutorBase):
         logging.info('[BackupExecutor] Success to get all file CIDs.')
         cid, sha256, size = self.get_request_metadata_cid(database_cids, file_cids, total_file_size)
         logging.info('[BackupExecutor] Success to get metadata CID')
-        self.owner.send_request_metadata_to_server(self.did, cid, sha256, size)
+        self.owner.send_request_metadata_to_server(self.did, cid, sha256, size, self.is_force)
         logging.info('[BackupExecutor] Success to send metadata CID to the backup node.')
 
 

@@ -7,7 +7,7 @@ from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExec
 from src.modules.subscription.subscription import VaultSubscription
 from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
-    BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED
+    BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth2
 from src.utils.file_manager import fm
@@ -15,7 +15,7 @@ from src.utils.http_exception import BackupNotFoundException, AlreadyExistsExcep
     InsufficientStorageException
 from src.utils.http_response import hive_restful_response
 from src.utils_v1.auth import get_current_node_did_string
-from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, \
+from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_DID, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
     VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE
 from src.utils_v1.payment.payment_config import PaymentConfig
@@ -39,7 +39,7 @@ class IpfsBackupServer:
         """
         did, app_did, doc = self._check_auth_backup()
         self.vault.get_checked_vault(did, is_not_exist_raise=False)
-        vault = self.vault.create_vault(did, self.vault.get_price_plan('vault', 'Free'))
+        vault = self.vault.create_vault(did, self.vault.get_price_plan('vault', 'Free'), is_upgraded=True)
         request_metadata = self.get_server_request_metadata(did, doc, is_promotion=True,
                                                             vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
         self.client.check_can_be_restore(did, request_metadata)
@@ -47,6 +47,7 @@ class IpfsBackupServer:
                                             is_only_file=True,
                                             is_file_pin_to_ipfs=False)
         self.client.restore_database_by_dump_files(request_metadata)
+        ExecutorBase.update_vault_usage_by_metadata(did, request_metadata)
 
     @hive_restful_response
     def internal_backup(self, cid, sha256, size):
@@ -54,7 +55,6 @@ class IpfsBackupServer:
         if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
             raise BadRequestException(msg='Failed because backup is in processing.')
         fm.ipfs_pin_cid(cid)
-        col_filter = {VAULT_BACKUP_SERVICE_DID: did}
         update = {
             BKSERVER_REQ_ACTION: BACKUP_REQUEST_ACTION_BACKUP,
             BKSERVER_REQ_STATE: BACKUP_REQUEST_STATE_PROCESS,
@@ -63,8 +63,8 @@ class IpfsBackupServer:
             BKSERVER_REQ_SHA256: sha256,
             BKSERVER_REQ_SIZE: size
         }
-        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, col_filter, {'$set': update}, is_extra=True)
-        BackupServerExecutor(did, self, doc).start()
+        self.update_backup_request(did, update)
+        BackupServerExecutor(did, self, self.find_backup_request(did, False)).start()
 
     @hive_restful_response
     def internal_backup_state(self):
@@ -91,12 +91,7 @@ class IpfsBackupServer:
     # the flowing is for the executors.
 
     def update_request_state(self, did, state, msg=None):
-        col_filter = {VAULT_BACKUP_SERVICE_DID: did}
-        update = {
-            BKSERVER_REQ_STATE: state,
-            BKSERVER_REQ_STATE_MSG: msg,
-        }
-        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, col_filter, {'$set': update}, is_extra=True)
+        self.update_backup_request(did, {BKSERVER_REQ_STATE: state, BKSERVER_REQ_STATE_MSG: msg})
 
     def get_server_request_metadata(self, did, req, is_promotion=False, vault_max_size=0):
         """ Get the request metadata for promotion or backup.
@@ -141,7 +136,7 @@ class IpfsBackupServer:
             fm.ipfs_unpin_cid(doc.get(BKSERVER_REQ_CID))
 
         cli.delete_one_origin(DID_INFO_DB_NAME,
-                              VAULT_BACKUP_SERVICE_COL,
+                              COL_IPFS_BACKUP_SERVER,
                               {VAULT_BACKUP_SERVICE_DID: did},
                               is_check_exist=False)
 
@@ -152,11 +147,7 @@ class IpfsBackupServer:
 
     def _check_auth_backup(self, is_raise=True):
         did, app_did = check_auth2()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
-                                  is_create=True, is_raise=False)
-        if is_raise and not doc:
-            raise BackupNotFoundException()
-        return did, app_did, doc
+        return did, app_did, self.find_backup_request(did, is_raise=is_raise)
 
     def _create_backup(self, did, price_plan):
         now = datetime.utcnow().timestamp()
@@ -168,7 +159,7 @@ class IpfsBackupServer:
                VAULT_BACKUP_SERVICE_START_TIME: now,
                VAULT_BACKUP_SERVICE_END_TIME: end_time
                }
-        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, doc, is_create=True, is_extra=True)
+        cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, doc, is_create=True, is_extra=True)
         return doc
 
     def _get_vault_info(self, doc):
@@ -182,16 +173,22 @@ class IpfsBackupServer:
         }
 
     def update_storage_usage(self, did, size):
+        self.update_backup_request(did, {VAULT_BACKUP_SERVICE_USE_STORAGE: size})
+
+    def update_backup_request(self, did, update):
         col_filter = {VAULT_BACKUP_SERVICE_DID: did}
-        update = {
-            VAULT_BACKUP_SERVICE_USE_STORAGE: size,
-        }
-        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, col_filter, {'$set': update}, is_extra=True)
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, col_filter, {'$set': update}, is_extra=True)
+
+    def find_backup_request(self, did, is_raise=True):
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {VAULT_BACKUP_SERVICE_DID: did},
+                                  is_create=True, is_raise=False)
+        if is_raise and not doc:
+            raise BackupNotFoundException()
+        return doc
 
     def retry_backup_request(self, did):
-        req = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: did},
-                                  is_create=True, is_raise=False)
-        if not req:
-            logging.info('[IpfsBackupServer] No backup request found, skip')
+        req = self.find_backup_request(did, is_raise=False)
+        if not req or req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_PROCESS:
             return
-        BackupServerExecutor(did, self, req).start()
+        logging.info(f"[IpfsBackupServer] Found uncompleted request({req.get(VAULT_BACKUP_SERVICE_DID)}), retry.")
+        BackupServerExecutor(did, self, req, start_delay=30).start()

@@ -3,7 +3,7 @@
 """
 Testing file for ipfs-backup module.
 """
-
+import time
 import unittest
 
 from tests import init_test
@@ -37,32 +37,33 @@ class IpfsBackupTestCase(unittest.TestCase):
         response = self.backup_cli.get('/ipfs-subscription/backup')
         self.assertEqual(response.status_code, 200)
 
-    @unittest.skip
-    def test03_unsubscribe(self):
-        response = self.backup_cli.delete('/ipfs-subscription/backup')
-        self.assertEqual(response.status_code, 204)
-
-    def test04_backup(self):
+    def test03_backup(self):
         r = self.cli.post('/ipfs-vault/content?to=hive_node',
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
+        time.sleep(10)
 
-    def test05_state(self):
+    def test04_state(self):
         r = self.cli.get('/ipfs-vault/content')
         self.assertEqual(r.status_code, 200)
 
-    @unittest.skip
-    def test06_restore(self):
+    def test05_restore(self):
         r = self.cli.post('/ipfs-vault/content?from=hive_node',
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
+        time.sleep(10)
 
     @unittest.skip
-    def test07_promotion(self):
+    def test06_promotion(self):
         # PREPARE: backup and remove the vault for local test.
         self.__class__._unsubscribe()
         r = self.backup_cli.post('/ipfs-backup/promotion')
         self.assertEqual(r.status_code, 201)
+
+    @unittest.skip
+    def test07_unsubscribe(self):
+        response = self.backup_cli.delete('/ipfs-subscription/backup')
+        self.assertEqual(response.status_code, 204)
 
 
 if __name__ == '__main__':

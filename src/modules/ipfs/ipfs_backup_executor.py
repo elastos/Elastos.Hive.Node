@@ -3,30 +3,33 @@
 import json
 import logging
 import threading
+import time
 import traceback
 from datetime import datetime
 
 from src.modules.ipfs.ipfs import IpfsFiles
-from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, BACKUP_REQUEST_STATE, \
-    BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_STATE
+from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED
 from src.utils.file_manager import fm
 from src.utils.http_exception import HiveException
 from src.utils_v1.common import gene_temp_file_name
 
 
 class ExecutorBase(threading.Thread):
-    def __init__(self, did, owner, action='backup'):
+    def __init__(self, did, owner, **kwargs):
         super().__init__()
         self.did = did
         self.owner = owner
-        self.action = action
+        self.action = kwargs.get('action', 'backup')
+        self.start_delay = kwargs.get('start_delay', 0)
 
     def run(self):
         try:
-            logging.info('[ExecutorBase] Enter execute the executor.')
+            if self.start_delay > 0:
+                time.sleep(self.start_delay)
+            logging.info(f'[ExecutorBase] Enter execute the executor for {self.action}.')
             self.execute()
             self.owner.update_request_state(self.did, BACKUP_REQUEST_STATE_SUCCESS)
-            logging.info('[ExecutorBase] Leave execute the executor.')
+            logging.info(f'[ExecutorBase] Leave execute the executor for {self.action}.')
         except HiveException as e:
             msg = f'[ExecutorBase] Failed to {self.action} on the vault side: {e}'
             logging.error(msg)
@@ -48,7 +51,8 @@ class ExecutorBase(threading.Thread):
                            'size': d['size']} for d in database_cids],
             'files': [{'sha256': d['sha256'],
                        'cid': d['cid'],
-                       'size': d['size']} for d in file_cids],
+                       'size': d['size'],
+                       'count': d['count']} for d in file_cids],
             'did': self.did,
             "vault_size": fm.get_vault_storage_size(self.did),
             "vault_package_size": sum([d['size'] for d in database_cids]) + total_file_size,
@@ -62,6 +66,18 @@ class ExecutorBase(threading.Thread):
         cid = fm.ipfs_upload_file_from_path(temp_file)
         temp_file.unlink()
         return cid, sha256, size
+
+    @staticmethod
+    def get_vault_usage_by_metadata(request_metadata):
+        total_size = request_metadata['vault_size']
+        files_size = sum([f['size'] for f in request_metadata['files']])
+        return files_size, total_size - files_size
+
+    @staticmethod
+    def update_vault_usage_by_metadata(did, request_metadata):
+        files_size, dbs_size = ExecutorBase.get_vault_usage_by_metadata(request_metadata)
+        fm.update_vault_files_usage(did, files_size)
+        fm.update_vault_dbs_usage(did, dbs_size)
 
     @staticmethod
     def pin_cids_to_local_ipfs(request_metadata,
@@ -97,14 +113,11 @@ class ExecutorBase(threading.Thread):
 
 
 class BackupExecutor(ExecutorBase):
-    def __init__(self, did, client, req):
-        super().__init__(did, client)
+    def __init__(self, did, client, req, **kwargs):
+        super().__init__(did, client, **kwargs)
         self.req = req
 
     def execute(self):
-        if self.req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_PROCESS:
-            logging.info('[BackupExecutor] The state is not in processing, skip.')
-            return
         database_cids = self.owner.dump_to_database_cids(self.did)
         logging.info('[BackupExecutor] Success to dump databases to CIDs.')
         total_file_size, file_cids = self.owner.get_file_cids_by_user_did(self.did)
@@ -116,8 +129,8 @@ class BackupExecutor(ExecutorBase):
 
 
 class RestoreExecutor(ExecutorBase):
-    def __init__(self, did, client):
-        super().__init__(did, client, 'restore')
+    def __init__(self, did, client, **kwargs):
+        super().__init__(did, client, action='restore', **kwargs)
 
     def execute(self):
         request_metadata = self.owner.recv_request_metadata_from_server(self.did)
@@ -126,20 +139,19 @@ class RestoreExecutor(ExecutorBase):
         logging.info('[RestoreExecutor] Success to pin files CIDs.')
         self.owner.restore_database_by_dump_files(request_metadata)
         logging.info('[RestoreExecutor] Success to restore the dump files of the use\'s database.')
-        self.owner.update_storage_usage(self.did, request_metadata['vault_size'])
+        self.__class__.update_vault_usage_by_metadata(self.did, request_metadata)
+        logging.info('[RestoreExecutor] Success to update the usage of the vault.')
 
 
 class BackupServerExecutor(ExecutorBase):
-    def __init__(self, did, server, req):
-        super().__init__(did, server, 'backup_server')
+    def __init__(self, did, server, req, **kwargs):
+        super().__init__(did, server, action='backup_server', **kwargs)
         self.req = req
 
     def execute(self):
-        if self.req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_PROCESS:
-            logging.info('[BackupServerExecutor] The state is not in processing, skip.')
-            return
         request_metadata = self.owner.get_server_request_metadata(self.did, self.req)
         logging.info('[BackupServerExecutor] Success to get request metadata.')
         self.__class__.pin_cids_to_local_ipfs(request_metadata)
         logging.info('[BackupServerExecutor] Success to get pin all CIDs.')
         self.owner.update_storage_usage(self.did, request_metadata['vault_package_size'])
+        logging.info('[BackupServerExecutor] Success to update storage size.')

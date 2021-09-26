@@ -16,7 +16,7 @@ from src.utils.http_exception import InvalidParameterException, FileNotFoundExce
 
 class HttpClient:
     def __init__(self):
-        self.timeout = 10
+        self.timeout = 30
 
     def _check_status_code(self, r, expect_code):
         if r.status_code != expect_code:

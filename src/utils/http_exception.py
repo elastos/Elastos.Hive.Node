@@ -114,7 +114,7 @@ class VaultNotFoundException(NotFoundException):
 
 
 class BackupNotFoundException(NotFoundException):
-    def __init__(self, msg='The backup vault does not found.'):
+    def __init__(self, msg='The backup service does not found.'):
         super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND, msg=msg)
 
 

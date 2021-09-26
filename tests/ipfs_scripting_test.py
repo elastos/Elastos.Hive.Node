@@ -7,7 +7,6 @@ Testing file for ipfs-scripting module.
 import unittest
 import json
 
-from src import hive_setting
 from tests.utils.http_client import HttpClient
 from tests import init_test
 from tests.utils_v1 import test_common
@@ -70,7 +69,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertTrue('transaction_id' in response_body[script_name])
         if check_anonymous:
             self.assertTrue('anonymous_url' in response_body[script_name])
-            self.assertTrue(response_body[script_name]['anonymous_url'].startswith(hive_setting.IPFS_PROXY_URL))
+            self.assertTrue(response_body[script_name]['anonymous_url'])
         return response_body[script_name]['transaction_id']
 
     def test01_file_upload(self):

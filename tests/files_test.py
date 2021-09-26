@@ -37,7 +37,7 @@ class FilesTestCase(unittest.TestCase):
         self.assertEqual(response.json().get('name'), self.src_file_name)
         self.__check_remote_file_exist(self.src_file_name)
 
-    def test11_upload_file2(self):
+    def test01_upload_file2(self):
         response = self.cli.put(f'/files/{self.src_file_name2}',
                                 self.src_file_content.encode(), is_json=False)
         self.assertEqual(response.status_code, 200)
@@ -78,6 +78,7 @@ class FilesTestCase(unittest.TestCase):
 
     def test08_delete_file(self):
         self.__delete_file(self.src_file_name)
+        self.__delete_file(self.src_file_name2)
         self.__delete_file(self.dst_file_name)
 
     def __check_remote_file_exist(self, file_name):

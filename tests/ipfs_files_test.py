@@ -15,12 +15,12 @@ class IpfsFilesTestCase(unittest.TestCase):
         super().__init__(method_name)
         init_test()
         self.cli = HttpClient(f'/api/v2/vault')
-        self.folder_name = 'children'
+        self.folder_name = 'ipfs_children'
         self.src_file_content = 'File Content: 12345678'
         self.dst_file_content = self.src_file_content
-        self.src_file_name = 'src_file.txt'
-        self.src_file_name2 = r'children/src_file2.txt'
-        self.dst_file_name = 'dst_file.txt'
+        self.src_file_name = 'ipfs_src_file.txt'
+        self.src_file_name2 = r'ipfs_children/ipfs_src_file2.txt'
+        self.dst_file_name = 'ipfs_dst_file.txt'
 
     @staticmethod
     def _subscribe():

@@ -102,9 +102,9 @@ class ExecutorBase(threading.Thread):
                 if is_file_pin_to_ipfs:
                     execute_pin_unpin(f['cid'])
                     if not is_unpin:
-                        ipfs_files.increase_cid_ref(f['cid'], count=f['count'])
+                        ipfs_files.increase_refcount_cid(f['cid'], count=f['count'])
                     else:
-                        ipfs_files.decrease_cid_ref(f['cid'], count=f['count'])
+                        ipfs_files.decrease_refcount_cid(f['cid'], count=f['count'])
         logging.info('[ExecutorBase] Success to pin all files CIDs.')
 
         if not is_only_file and request_metadata.get('databases'):

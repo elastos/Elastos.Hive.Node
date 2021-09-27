@@ -3,11 +3,13 @@
 """
 Testing file for ipfs-files module.
 """
-
+import os
 import unittest
 
 from tests.utils.http_client import HttpClient
 from tests import init_test
+
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 
 class IpfsFilesTestCase(unittest.TestCase):
@@ -19,6 +21,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.src_file_content = 'File Content: 12345678'
         self.dst_file_content = self.src_file_content
         self.src_file_name = 'ipfs_src_file.txt'
+        self.src_file_cache = f'{BASE_DIR}/cache/test.txt'
         self.src_file_name2 = r'ipfs_children/ipfs_src_file2.txt'
         self.dst_file_name = 'ipfs_dst_file.txt'
 
@@ -31,8 +34,8 @@ class IpfsFilesTestCase(unittest.TestCase):
         cls._subscribe()
 
     def test01_upload_file(self):
-        response = self.cli.put(f'/ipfs-files/{self.src_file_name}',
-                                self.src_file_content.encode(), is_json=False)
+        with open(self.src_file_cache, 'rb') as f:
+            response = self.cli.put(f'/ipfs-files/{self.src_file_name}', f.read(), is_json=False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_file_name)
         self.__check_remote_file_exist(self.src_file_name)

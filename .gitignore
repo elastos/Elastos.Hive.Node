@@ -170,3 +170,5 @@ hive.log
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+/tests/cache/test2.txt

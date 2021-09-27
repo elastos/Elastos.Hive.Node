@@ -10,9 +10,8 @@ import pymongo
 from flask_apscheduler import APScheduler
 
 from src import hive_setting
-from src.modules.ipfs.ipfs import IpfsFiles
-from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_PATH, DID, APP_DID, SIZE, \
-    COL_IPFS_FILES_SHA256
+from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_PATH, DID, APP_DID
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
 from src.utils_v1.constants import USER_DID, APP_ID

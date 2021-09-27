@@ -7,7 +7,7 @@ import time
 import traceback
 from datetime import datetime
 
-from src.modules.ipfs.ipfs import IpfsFiles
+from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED
 from src.utils.file_manager import fm
 from src.utils.http_exception import HiveException

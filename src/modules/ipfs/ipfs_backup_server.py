@@ -2,7 +2,7 @@
 import logging
 from datetime import datetime
 
-from src.modules.ipfs.ipfs_backup import IpfsBackupClient
+from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.subscription.subscription import VaultSubscription
 from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \

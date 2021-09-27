@@ -5,7 +5,6 @@ The entrance for ipfs module.
 """
 import logging
 import shutil
-from datetime import datetime
 from pathlib import Path
 
 from src import hive_setting

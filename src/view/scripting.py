@@ -8,7 +8,7 @@ import json
 
 from src.modules.scripting.scripting import Scripting
 
-blueprint = Blueprint('scripting', __name__)
+blueprint = Blueprint('node-scripting', __name__)
 scripting = Scripting()
 
 
@@ -212,7 +212,7 @@ def delete_script(script_name):
     return scripting.delete_script(script_name)
 
 
-@blueprint.route('/api/v2/vault/scripting/<script_name>', methods=['PATCH'])
+@blueprint.route('/api/v2/vault/node-scripting/<script_name>', methods=['PATCH'])
 def call_script(script_name):
     """ Run the script registered by the owner.
 
@@ -274,7 +274,7 @@ def call_script(script_name):
     return scripting.run_script(script_name)
 
 
-@blueprint.route('/api/v2/vault/scripting/<script_name>/<context_str>/<params>', methods=['GET'])
+@blueprint.route('/api/v2/vault/node-scripting/<script_name>/<context_str>/<params>', methods=['GET'])
 def call_script_url(script_name, context_str, params):
     """ Run the script registered by the owner by the URL parameters.
 
@@ -329,7 +329,7 @@ def call_script_url(script_name, context_str, params):
     return scripting.run_script_url(script_name, target_did, target_app_did, json.loads(params))
 
 
-@blueprint.route('/api/v2/vault/scripting/stream/<transaction_id>', methods=['PUT'])
+@blueprint.route('/api/v2/vault/node-scripting/stream/<transaction_id>', methods=['PUT'])
 def upload_file(transaction_id):
     """ Upload file by transaction id returned by the running script for the executable type 'fileUpload'.
 
@@ -365,7 +365,7 @@ def upload_file(transaction_id):
     return scripting.upload_file(transaction_id)
 
 
-@blueprint.route('/api/v2/vault/scripting/stream/<transaction_id>', methods=['GET'])
+@blueprint.route('/api/v2/vault/node-scripting/stream/<transaction_id>', methods=['GET'])
 def download_file(transaction_id):
     """ Download file by transaction id which is returned by running script for the executable type 'fileDownload'.
 

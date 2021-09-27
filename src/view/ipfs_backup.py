@@ -24,12 +24,12 @@ def init_app(app, hive_setting):
     app.register_blueprint(blueprint)
 
 
-@blueprint.route('/api/v2/ipfs-vault/content', methods=['GET'])
+@blueprint.route('/api/v2/vault/content', methods=['GET'])
 def get_state():
     return backup_client.get_state()
 
 
-@blueprint.route('/api/v2/ipfs-vault/content', methods=['POST'])
+@blueprint.route('/api/v2/vault/content', methods=['POST'])
 def backup_restore():
     to = request.args.get('to')
     fr = request.args.get('from')
@@ -43,7 +43,7 @@ def backup_restore():
 # ipfs-promotion on the backup server side
 
 
-@blueprint.route('/api/v2/ipfs-backup/promotion', methods=['POST'])
+@blueprint.route('/api/v2/backup/promotion', methods=['POST'])
 def promotion():
     return backup_server.promotion()
 
@@ -70,16 +70,16 @@ def internal_restore():
 # subscription
 
 
-@blueprint.route('/api/v2/ipfs-subscription/backup', methods=['PUT'])
+@blueprint.route('/api/v2/subscription/backup', methods=['PUT'])
 def backup_subscribe():
     return backup_server.subscribe()
 
 
-@blueprint.route('/api/v2/ipfs-subscription/backup', methods=['DELETE'])
+@blueprint.route('/api/v2/subscription/backup', methods=['DELETE'])
 def backup_unsubscribe():
     return backup_server.unsubscribe()
 
 
-@blueprint.route('/api/v2/ipfs-subscription/backup', methods=['GET'])
+@blueprint.route('/api/v2/subscription/backup', methods=['GET'])
 def backup_get_info():
     return backup_server.get_info()

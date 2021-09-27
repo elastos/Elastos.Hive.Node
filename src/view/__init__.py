@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from src.settings import hive_setting
 from src.utils.db_client import cli
-from src.view import scripting, subscription, files, database, auth, backup, payment, ipfs, ipfs_backup, about
+from src.view import scripting, subscription, files, database, auth, backup, payment, about, \
+    ipfs_files, ipfs_scripting, ipfs_backup
 
 
 def retry_ipfs_backup():
@@ -24,6 +25,7 @@ def init_app(app, mode):
     files.init_app(app, hive_setting)
     database.init_app(app, hive_setting)
     payment.init_app(app, hive_setting)
-    ipfs.init_app(app, hive_setting)
+    ipfs_files.init_app(app, hive_setting)
+    ipfs_scripting.init_app(app, hive_setting)
     ipfs_backup.init_app(app, hive_setting)
     retry_ipfs_backup()

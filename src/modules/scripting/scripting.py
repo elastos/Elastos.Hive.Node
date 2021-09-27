@@ -19,7 +19,7 @@ from src.utils_v1.did_mongo_db_resource import populate_options_count_documents,
     populate_options_find_many, populate_options_insert_one, populate_options_update_one
 from src.utils_v1.did_scripting import populate_with_params_values
 from src.utils_v1.payment.vault_service_manage import update_vault_db_use_storage_byte
-from src.modules.ipfs.ipfs import IpfsFiles
+from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault, check_auth

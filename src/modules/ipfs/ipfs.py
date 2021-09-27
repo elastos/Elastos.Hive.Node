@@ -54,9 +54,9 @@ class IpfsFiles:
     @hive_restful_response
     def delete_file(self, path):
         """
-        Delete the file.
-        1. remove the file in files cache.
-        2. unpin the file in IPFS node.
+        Delete a file from the vault.
+        1. Remove the cached file in local filesystem;
+        2. Unpin the file data from corresponding IPFS node.
         :param path:
         :return:
         """
@@ -83,7 +83,7 @@ class IpfsFiles:
         if not src_path or not dst_path:
             raise InvalidParameterException()
         elif src_path == dst_path:
-            raise InvalidParameterException(msg='The source file and the destination file can not be the same.')
+            raise InvalidParameterException(msg='The source filename and destination filename must not be same.')
 
         return self.move_file_really(src_path, dst_path)
 
@@ -92,14 +92,14 @@ class IpfsFiles:
         if not src_path or not dst_path:
             raise InvalidParameterException()
         elif src_path == dst_path:
-            raise InvalidParameterException(msg='The source file and the destination file can not be the same.')
+            raise InvalidParameterException(msg='The source filename and destination filename must not be same.')
 
         return self.move_file_really(src_path, dst_path, True)
 
     @hive_restful_response
     def list_folder(self, path):
         """
-        List the files recursively.
+        List the files under the specific directory.
         :param path: Empty means root folder.
         :return: File list.
         """
@@ -112,7 +112,7 @@ class IpfsFiles:
             }
         docs = cli.find_many(did, app_did, COL_IPFS_FILES, col_filter)
         if not docs and path:
-            raise InvalidParameterException(f'Can not find the folder {path}')
+            raise InvalidParameterException(f'The directory {path} is not exist.')
         return {
             'value': list(map(lambda d: self._get_list_file_info_by_doc(d), docs))
         }
@@ -194,7 +194,7 @@ class IpfsFiles:
             SIZE: file_path.stat().st_size,
             COL_IPFS_FILES_IPFS_CID: cid,
         }
-        self.increase_cid_ref(cid)
+        self.increase_refcount_cid(cid)
         result = cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
         inc_vault_file_use_storage_byte(did, file_doc[SIZE])
         logging.info(f'[ipfs-files] Add a new file {rel_path}')
@@ -220,13 +220,13 @@ class IpfsFiles:
 
         # do update really.
         if cid != old_doc[COL_IPFS_FILES_IPFS_CID]:
-            self.increase_cid_ref(cid)
+            self.increase_refcount_cid(cid)
         update = {'$set': {COL_IPFS_FILES_SHA256: sha256,
                            SIZE: size,
                            COL_IPFS_FILES_IPFS_CID: cid}}
         result = cli.update_one(did, app_did, COL_IPFS_FILES, col_filter, update, is_extra=True)
         if cid != old_doc[COL_IPFS_FILES_IPFS_CID]:
-            self.decrease_cid_ref(old_doc[COL_IPFS_FILES_IPFS_CID])
+            self.decrease_refcount_cid(old_doc[COL_IPFS_FILES_IPFS_CID])
         logging.info(f'[ipfs-files] Update an existing file {rel_path}')
 
     def delete_file_metadata(self, did, app_did, rel_path, cid):
@@ -235,7 +235,7 @@ class IpfsFiles:
                       COL_IPFS_FILES_PATH: rel_path}
         result = cli.delete_one(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
         if result['deleted_count'] > 0:
-            self.decrease_cid_ref(cid)
+            self.decrease_refcount_cid(cid)
         logging.info(f'[ipfs-files] Remove an existing file {rel_path}')
 
     def download_file_by_did(self, did, app_did, path: str):
@@ -297,7 +297,7 @@ class IpfsFiles:
                 SIZE: src_doc[SIZE],
                 COL_IPFS_FILES_IPFS_CID: src_doc[COL_IPFS_FILES_IPFS_CID],
             }
-            self.increase_cid_ref(src_doc[COL_IPFS_FILES_IPFS_CID])
+            self.increase_refcount_cid(src_doc[COL_IPFS_FILES_IPFS_CID])
             cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc)
             inc_vault_file_use_storage_byte(did, src_doc[SIZE])
         else:
@@ -326,7 +326,7 @@ class IpfsFiles:
     def get_ipfs_file_access_url(self, metadata):
         return f'{hive_setting.IPFS_PROXY_URL}/ipfs/{metadata[COL_IPFS_FILES_IPFS_CID]}'
 
-    def increase_cid_ref(self, cid, count=1):
+    def increase_refcount_cid(self, cid, count=1):
         if not cid:
             logging.error(f'CID must be provided for increase.')
             return
@@ -339,9 +339,9 @@ class IpfsFiles:
             }
             cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, doc, is_create=True)
         else:
-            self._update_ipfs_cid_ref_count(cid, doc[COUNT] + count)
+            self._update_refcount_cid(cid, doc[COUNT] + count)
 
-    def decrease_cid_ref(self, cid, count=1):
+    def decrease_refcount_cid(self, cid, count=1):
         if not cid:
             logging.error(f'CID must exist for decrease.')
             return
@@ -354,9 +354,9 @@ class IpfsFiles:
             cli.delete_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_check_exist=False)
             fm.ipfs_unpin_cid(cid)
         else:
-            self._update_ipfs_cid_ref_count(cid, doc[COUNT] - count)
+            self._update_refcount_cid(cid, doc[COUNT] - count)
 
-    def _update_ipfs_cid_ref_count(self, cid, count):
+    def _update_refcount_cid(self, cid, count):
         col_filter = {CID: cid}
         update = {'$set': {
             COUNT: count,

@@ -12,7 +12,7 @@ from src.utils.http_exception import NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
 
-blueprint = Blueprint('backup', __name__)
+blueprint = Blueprint('node-backup', __name__)
 backup: Backup = None
 server: BackupServer = None
 
@@ -25,7 +25,7 @@ def init_app(app, hive_setting):
     app.register_blueprint(blueprint)
 
 
-@blueprint.route('/api/v2/vault/content', methods=['GET'])
+@blueprint.route('/api/v2/node-vault/content', methods=['GET'])
 def get_state():
     """ Get the status of the backup processing.
 
@@ -65,7 +65,7 @@ def get_state():
     return backup.get_state()
 
 
-@blueprint.route('/api/v2/vault/content', methods=['POST'])
+@blueprint.route('/api/v2/node-vault/content', methods=['POST'])
 def backup_restore():
     """ Backup or restore the data of the vault service.
     Backup the data to another hive node by the credential if contains URL parameter is **to=hive_node**.
@@ -143,7 +143,7 @@ def backup_restore():
         raise NotImplementedException()
 
 
-@blueprint.route('/api/v2/backup/promotion', methods=['POST'])
+@blueprint.route('/api/v2/node-backup/promotion', methods=['POST'])
 def promotion():
     return backup.promotion()
 

@@ -15,7 +15,7 @@ from src.utils.consts import URL_IPFS_BACKUP_PIN_CIDS, URL_IPFS_BACKUP_GET_DBFIL
 from src.utils.http_exception import BadRequestException
 from src.utils.http_request import params
 
-blueprint = Blueprint('ipfs', __name__)
+blueprint = Blueprint('ipfs-files', __name__)
 ipfs_files = IpfsFiles()
 scripting = Scripting(is_ipfs=True)
 backup: Backup = None
@@ -34,7 +34,7 @@ def init_app(app, hive_setting):
 # ipfs-files
 
 
-@blueprint.route('/api/v2/vault/ipfs-files/<regex("(|[0-9a-zA-Z_/.]*)"):path>', methods=['GET'])
+@blueprint.route('/api/v2/vault/files/<regex("(|[0-9a-zA-Z_/.]*)"):path>', methods=['GET'])
 def reading_operation(path):
     component = request.args.get('comp')
     if not component:
@@ -49,7 +49,7 @@ def reading_operation(path):
         return BadRequestException(msg='invalid parameter "comp"').get_error_response()
 
 
-@blueprint.route('/api/v2/vault/ipfs-files/<path:path>', methods=['PUT'])
+@blueprint.route('/api/v2/vault/files/<path:path>', methods=['PUT'])
 def writing_operation(path):
     dest_path = request.args.get('dest')
     if dest_path:
@@ -57,13 +57,13 @@ def writing_operation(path):
     return ipfs_files.upload_file(path)
 
 
-@blueprint.route('/api/v2/vault/ipfs-files/<path:path>', methods=['PATCH'])
+@blueprint.route('/api/v2/vault/files/<path:path>', methods=['PATCH'])
 def move_file(path):
     dst_path = request.args.get('to')
     return ipfs_files.move_file(path, dst_path)
 
 
-@blueprint.route('/api/v2/vault/ipfs-files/<path:path>', methods=['DELETE'])
+@blueprint.route('/api/v2/vault/files/<path:path>', methods=['DELETE'])
 def delete_file(path):
     return ipfs_files.delete_file(path)
 
@@ -71,12 +71,12 @@ def delete_file(path):
 # ipfs-scripting
 
 
-@blueprint.route('/api/v2/vault/ipfs-scripting/<script_name>', methods=['PATCH'])
+@blueprint.route('/api/v2/vault/scripting/<script_name>', methods=['PATCH'])
 def call_script(script_name):
     return scripting.run_script(script_name)
 
 
-@blueprint.route('/api/v2/vault/ipfs-scripting/<script_name>/<context_str>/<params>', methods=['GET'])
+@blueprint.route('/api/v2/vault/scripting/<script_name>/<context_str>/<params>', methods=['GET'])
 def call_script_url(script_name, context_str, params):
     target_did, target_app_did = None, None
     parts = context_str.split('@')
@@ -85,12 +85,12 @@ def call_script_url(script_name, context_str, params):
     return scripting.run_script_url(script_name, target_did, target_app_did, json.loads(params))
 
 
-@blueprint.route('/api/v2/vault/ipfs-scripting/stream/<transaction_id>', methods=['PUT'])
+@blueprint.route('/api/v2/vault/scripting/stream/<transaction_id>', methods=['PUT'])
 def upload_file(transaction_id):
     return scripting.upload_file(transaction_id)
 
 
-@blueprint.route('/api/v2/vault/ipfs-scripting/stream/<transaction_id>', methods=['GET'])
+@blueprint.route('/api/v2/vault/scripting/stream/<transaction_id>', methods=['GET'])
 def download_file(transaction_id):
     return scripting.download_file(transaction_id)
 
@@ -109,10 +109,11 @@ def backup_restore():
         return backup.restore(params.get('credential'))
 
 
+# TODO: remove the following end-points because of previous IPFS implementation.
 # ipfs-backup internal APIs
 
 
-@blueprint.route(URL_IPFS_BACKUP_STATE, methods=['POST'])
+# @blueprint.route(URL_IPFS_BACKUP_STATE, methods=['POST'])
 def internal_ipfs_backup_state():
     """ Start or finish the backup process. """
     to = request.args.get('to')
@@ -120,7 +121,7 @@ def internal_ipfs_backup_state():
     return server.ipfs_backup_state(to, int(vault_size))
 
 
-@blueprint.route(URL_IPFS_BACKUP_PIN_CIDS, methods=['POST'])
+# @blueprint.route(URL_IPFS_BACKUP_PIN_CIDS, methods=['POST'])
 def internal_pin_cids():
     """ Pin the cids for the specific user.
     This requires that the two nodes from the vault and the backup connect each other.
@@ -130,7 +131,7 @@ def internal_pin_cids():
     return server.ipfs_pin_cids(params.get('total_size'), params.get('cids'))
 
 
-@blueprint.route(URL_IPFS_BACKUP_GET_DBFILES, methods=['GET'])
+# @blueprint.route(URL_IPFS_BACKUP_GET_DBFILES, methods=['GET'])
 def internal_get_dbfiles():
     """ Pin the cids for the specific user.
     This requires that the two nodes from the vault and the backup connect each other.

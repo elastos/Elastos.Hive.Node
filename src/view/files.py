@@ -8,7 +8,7 @@ from flask import Blueprint, request
 from src.modules.files.files import Files
 from src.utils.http_exception import BadRequestException
 
-blueprint = Blueprint('node-files', __name__)
+blueprint = Blueprint('files-deprecated', __name__)
 files = Files()
 
 
@@ -19,7 +19,7 @@ def init_app(app, hive_setting):
     app.register_blueprint(blueprint)
 
 
-@blueprint.route('/api/v2/vault/node-files/<regex("(|[0-9a-zA-Z_/.]*)"):path>', methods=['GET'])
+@blueprint.route('/api/v2/vault/files-deprecated/<regex("(|[0-9a-zA-Z_/.]*)"):path>', methods=['GET'])
 def reading_operation(path):
     """ Download/get the properties of/get the hash of the file, list the files of the folder.
     Download the content of the file by path if no URL parameter.
@@ -202,7 +202,7 @@ def reading_operation(path):
         return BadRequestException(msg='invalid parameter "comp"').get_error_response()
 
 
-@blueprint.route('/api/v2/vault/node-files/<path:path>', methods=['PUT'])
+@blueprint.route('/api/v2/vault/files-deprecated/<path:path>', methods=['PUT'])
 def writing_operation(path):
     """ Copy or upload file by path.
     Copy the file by the path if the URL parameter is 'dest=<path/to/destination>'.
@@ -294,7 +294,7 @@ def writing_operation(path):
     return files.upload_file(path)
 
 
-@blueprint.route('/api/v2/vault/node-files/<path:path>', methods=['PATCH'])
+@blueprint.route('/api/v2/vault/files-deprecated/<path:path>', methods=['PATCH'])
 def move_file(path):
     """ Move the file by path to the file provided by the URL parameter 'to=<path/to/destination>'
 
@@ -345,7 +345,7 @@ def move_file(path):
     return files.move_file(path, dst_path)
 
 
-@blueprint.route('/api/v2/vault/node-files/<path:path>', methods=['DELETE'])
+@blueprint.route('/api/v2/vault/files-deprecated/<path:path>', methods=['DELETE'])
 def delete_file(path):
     """ Delete the file by path.
 

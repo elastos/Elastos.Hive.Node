@@ -24,7 +24,7 @@ class BackupTestCase(unittest.TestCase):
         cls._subscribe()
 
     def test01_get_state(self):
-        r = self.cli.get('/node-vault/content')
+        r = self.cli.get('/vault-deprecated/content')
         self.assertEqual(r.status_code, 200)
 
     @unittest.skip
@@ -36,9 +36,9 @@ class BackupTestCase(unittest.TestCase):
         self.restore(self.cli.get_backup_credential())
 
     def backup(self, credential):
-        r = self.cli.post('/node-vault/content?to=hive_node', body={'credential': credential})
+        r = self.cli.post('/vault-deprecated/content?to=hive_node', body={'credential': credential})
         self.assertEqual(r.status_code, 201)
 
     def restore(self, credential):
-        r = self.cli.post('/node-vault/content?from=hive_node', body={'credential': credential})
+        r = self.cli.post('/vault-deprecated/content?from=hive_node', body={'credential': credential})
         self.assertEqual(r.status_code, 201)

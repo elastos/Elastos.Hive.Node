@@ -3,7 +3,6 @@
 """
 Testing file for ipfs-scripting module.
 """
-
 import unittest
 import json
 
@@ -31,9 +30,13 @@ class IpfsScriptingTestCase(unittest.TestCase):
         HttpClient(f'/api/v2').put('/subscription/vault')
         HttpClient(f'/api/v2', is_did2=True).put('/subscription/vault')
 
+    def _delete_collection(self):
+        HttpClient(f'/api/v2/vault').delete(f'/db/{self.collection_name}')
+
     @classmethod
     def setUpClass(cls):
         cls._subscribe()
+        HttpClient(f'/api/v2/vault').put(f'/db/collections/{cls.collection_name}')
 
     @classmethod
     def tearDownClass(cls):
@@ -75,27 +78,25 @@ class IpfsScriptingTestCase(unittest.TestCase):
         return response_body[script_name]['transaction_id']
 
     def test01_register_script_insert(self):
-        self.__register_script('database_insert', {
-            "executable": {
-                "output": True,
-                "name": "database_insert",
-                "type": "insert",
-                "body": {
-                    "collection": self.collection_name,
-                    "document": {
-                        "author": "$params.author",
-                        "content": "$params.content"
-                    },
-                    "options": {
-                        "ordered": True,
-                        "bypass_document_validation": False
-                    }
+        self.__register_script('ipfs_database_insert', {"executable": {
+            "output": True,
+            "name": "database_insert",
+            "type": "insert",
+            "body": {
+                "collection": self.collection_name,
+                "document": {
+                    "author": "$params.author",
+                    "content": "$params.content"
+                },
+                "options": {
+                    "ordered": True,
+                    "bypass_document_validation": False
                 }
             }
-        })
+        }})
 
     def test02_call_script_insert(self):
-        self.__call_script('database_insert', {
+        self.__call_script('ipfs_database_insert', {
             "params": {
                 "author": "John",
                 "content": "message"
@@ -103,12 +104,12 @@ class IpfsScriptingTestCase(unittest.TestCase):
         })
 
     def test03_call_script_url_insert(self):
-        response = self.cli2.get(f'/scripting/database_insert/{self.did}@{self.app_did}'
+        response = self.cli2.get(f'/scripting/ipfs_database_insert/{self.did}@{self.app_did}'
                                  '/%7B%22author%22%3A%22John2%22%2C%22content%22%3A%22message2%22%7D')
         self.assertEqual(response.status_code, 200)
 
     def test04_find_with_default_output_find(self):
-        name = 'database_find'
+        name = 'ipfs_database_find'
         col_filter = {'author': '$params.author'}
         body = self.__set_and_call_script(name, {'condition': {
                 'name': 'verify_user_permission',
@@ -128,7 +129,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertIsNotNone(body)
 
     def test04_find_with_anonymous(self):
-        name = 'database_find2'
+        name = 'ipfs_database_find2'
         col_filter = {'author': '$params.author'}
         script_body = {
             'condition': {
@@ -157,7 +158,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertIsNotNone(body)
 
     def test05_update(self):
-        name = 'database_update'
+        name = 'ipfs_database_update'
         col_filter = {'author': '$params.author'}
         body = self.__set_and_call_script(name, {'executable': {
             'name': name,
@@ -182,9 +183,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertIsNotNone(body)
 
     def test06_file_upload(self):
-        name = 'ipfs_upload_file'
-        self.__register_script(name, {
-            "executable": {
+        name = 'ipfs_file_upload'
+        self.__register_script(name, {"executable": {
                 "output": True,
                 "name": name,
                 "type": "fileUpload",
@@ -198,9 +198,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test07_file_download(self):
-        name = 'ipfs_download_file'
-        self.__register_script(name, {
-            "executable": {
+        name = 'ipfs_file_download'
+        self.__register_script(name, {"executable": {
                 "output": True,
                 "name": name,
                 "type": "fileDownload",
@@ -239,8 +238,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     def test10_get_anonymous_file(self):
         name = 'ipfs_get_anonymous_file'
-        self.__register_script(name, {
-            "executable": {
+        self.__register_script(name, {"executable": {
                 "output": True,
                 "name": name,
                 "type": "fileDownload",
@@ -251,10 +249,15 @@ class IpfsScriptingTestCase(unittest.TestCase):
             "allowAnonymousUser": True,
             "allowAnonymousApp": True
         })
-        self.__call_script_for_transaction_id(name, check_anonymous=True)
+        # This will keep transaction for anyone accessing the file by 'anonymous_url'.
+        trans_id = self.__call_script_for_transaction_id(name, check_anonymous=True)
+        # Execute normal download to remove the transaction.
+        response = self.cli2.get(f'/scripting/stream/{trans_id}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, self.file_content)
 
     def test10_delete(self):
-        name = 'database_delete'
+        name = 'ipfs_database_delete'
         col_filter = {'author': '$params.author'}
         body = self.__set_and_call_script(name, {'executable': {
             'name': name,
@@ -267,8 +270,19 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertIsNotNone(body)
 
     def test11_delete_script(self):
-        response = self.cli.delete('/scripting/database_insert')
+        response = self.cli.delete('/scripting/ipfs_database_insert')
         self.assertEqual(response.status_code, 204)
+        response = self.cli.delete('/scripting/ipfs_database_find')
+        response = self.cli.delete('/scripting/ipfs_database_find2')
+        response = self.cli.delete('/scripting/ipfs_database_update')
+        response = self.cli.delete('/scripting/ipfs_database_delete')
+        response = self.cli.delete('/scripting/ipfs_file_upload')
+        response = self.cli.delete('/scripting/ipfs_file_download')
+        response = self.cli.delete('/scripting/ipfs_file_properties')
+        response = self.cli.delete('/scripting/ipfs_file_hash')
+        response = self.cli.delete('/scripting/ipfs_get_anonymous_file')
+        response = self.cli.delete(f'/files/{self.file_name}')
+        self._delete_collection()
 
 
 if __name__ == '__main__':

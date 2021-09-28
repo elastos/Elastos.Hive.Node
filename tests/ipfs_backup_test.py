@@ -30,38 +30,38 @@ class IpfsBackupTestCase(unittest.TestCase):
         cls._subscribe_vault()
 
     def test01_subscribe(self):
-        response = self.backup_cli.put('/ipfs-subscription/backup')
+        response = self.backup_cli.put('/subscription/backup')
         self.assertTrue(response.status_code in [200, 455])
 
     def test02_get_info(self):
-        response = self.backup_cli.get('/ipfs-subscription/backup')
+        response = self.backup_cli.get('/subscription/backup')
         self.assertEqual(response.status_code, 200)
 
     def test03_backup(self):
-        r = self.cli.post('/ipfs-vault/content?to=hive_node',
+        r = self.cli.post('/vault/content?to=hive_node',
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
         time.sleep(10)
 
     @unittest.skip
     def test03_backup_force(self):
-        r = self.cli.post('/ipfs-vault/content?to=hive_node&is_force=True',
+        r = self.cli.post('/vault/content?to=hive_node&is_force=True',
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
 
     def test04_state(self):
-        r = self.cli.get('/ipfs-vault/content')
+        r = self.cli.get('/vault/content')
         self.assertEqual(r.status_code, 200)
 
     def test05_restore(self):
-        r = self.cli.post('/ipfs-vault/content?from=hive_node',
+        r = self.cli.post('/vault/content?from=hive_node',
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
         time.sleep(10)
 
     @unittest.skip
     def test05_restore_force(self):
-        r = self.cli.post('/ipfs-vault/content?from=hive_node&is_force=True',
+        r = self.cli.post('/vault/content?from=hive_node&is_force=True',
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
 
@@ -70,7 +70,7 @@ class IpfsBackupTestCase(unittest.TestCase):
         # PREPARE: backup and remove the vault for local test.
         self.__class__._unsubscribe_vault_on_backup_node()
         # do promotion.
-        r = self.backup_cli.post('/ipfs-backup/promotion')
+        r = self.backup_cli.post('/backup/promotion')
         self.assertEqual(r.status_code, 201)
         # check the vault state.
         response = self.backup_cli.get('/subscription/vault')
@@ -78,7 +78,7 @@ class IpfsBackupTestCase(unittest.TestCase):
 
     @unittest.skip
     def test07_unsubscribe(self):
-        response = self.backup_cli.delete('/ipfs-subscription/backup')
+        response = self.backup_cli.delete('/subscription/backup')
         self.assertEqual(response.status_code, 204)
         self.__class__._unsubscribe_vault_on_backup_node()
 

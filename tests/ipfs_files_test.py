@@ -35,38 +35,38 @@ class IpfsFilesTestCase(unittest.TestCase):
 
     def test01_upload_file(self):
         with open(self.src_file_cache, 'rb') as f:
-            response = self.cli.put(f'/ipfs-files/{self.src_file_name}', f.read(), is_json=False)
+            response = self.cli.put(f'/files/{self.src_file_name}', f.read(), is_json=False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_file_name)
         self.__check_remote_file_exist(self.src_file_name)
 
     def test01_upload_file2(self):
-        response = self.cli.put(f'/ipfs-files/{self.src_file_name2}',
+        response = self.cli.put(f'/files/{self.src_file_name2}',
                                 self.src_file_content.encode(), is_json=False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_file_name2)
         self.__check_remote_file_exist(self.src_file_name2)
 
     def test02_download_file(self):
-        response = self.cli.get(f'/ipfs-files/{self.src_file_name}')
+        response = self.cli.get(f'/files/{self.src_file_name}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.src_file_content)
 
     def test03_move_file(self):
-        response = self.cli.patch(f'/ipfs-files/{self.src_file_name}?to={self.dst_file_name}')
+        response = self.cli.patch(f'/files/{self.src_file_name}?to={self.dst_file_name}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.dst_file_name)
         self.__check_remote_file_exist(self.dst_file_name)
 
     def test04_copy_file(self):
-        response = self.cli.put(f'/ipfs-files/{self.dst_file_name}?dest={self.src_file_name}')
+        response = self.cli.put(f'/files/{self.dst_file_name}?dest={self.src_file_name}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_file_name)
         self.__check_remote_file_exist(self.dst_file_name)
         self.__check_remote_file_exist(self.src_file_name)
 
     def test05_list_folder(self):
-        response = self.cli.get(f'/ipfs-files/{self.folder_name}?comp=children')
+        response = self.cli.get(f'/files/{self.folder_name}?comp=children')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('value' in response.json())
         self.assertEqual(type(response.json()['value']), list)
@@ -77,7 +77,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.__check_remote_file_exist(self.src_file_name)
 
     def test07_get_hash(self):
-        response = self.cli.get(f'/ipfs-files/{self.src_file_name}?comp=hash')
+        response = self.cli.get(f'/files/{self.src_file_name}?comp=hash')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_file_name)
 
@@ -87,13 +87,13 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.__delete_file(self.dst_file_name)
 
     def __check_remote_file_exist(self, file_name):
-        response = self.cli.get(f'/ipfs-files/{file_name}?comp=metadata')
+        response = self.cli.get(f'/files/{file_name}?comp=metadata')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), file_name)
         return response.json()
 
     def __delete_file(self, file_name):
-        response = self.cli.delete(f'/ipfs-files/{file_name}')
+        response = self.cli.delete(f'/files/{file_name}')
         self.assertEqual(response.status_code, 204)
 
 

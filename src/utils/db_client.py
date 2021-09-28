@@ -52,8 +52,13 @@ class DatabaseClient:
         col = self.get_origin_collection(db_name, collection_name)
         return col is not None
 
-    def get_user_collection(self, did, app_id, collection_name, is_create=False):
-        return self.get_origin_collection(gene_mongo_db_name(did, app_id), collection_name, is_create)
+    def get_user_collection(self, did, app_did, collection_name, is_create=False):
+        return self.get_origin_collection(self.get_user_database_name(did, app_did), collection_name, is_create)
+
+    def get_user_database_name(self, did, app_did):
+        db_name = gene_mongo_db_name(did, app_did)
+        logging.info(f'Choose the use database: {did}, {app_did}, {db_name}')
+        return db_name
 
     def get_origin_collection(self, db_name, collection_name, is_create=False):
         db = self.__get_connection()[db_name]
@@ -74,7 +79,7 @@ class DatabaseClient:
         user_apps = self.get_all_user_apps()
         result = []
         for app in user_apps:
-            db_name = gene_mongo_db_name(app[USER_DID], app[APP_ID])
+            db_name = self.get_user_database_name(app[USER_DID], app[APP_ID])
             if db_name in names:
                 result.append(db_name)
         return result
@@ -110,7 +115,7 @@ class DatabaseClient:
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
 
     def find_one(self, did, app_id, collection_name, col_filter, options=None, is_create=False, is_raise=True):
-        return self.find_one_origin(gene_mongo_db_name(did, app_id),
+        return self.find_one_origin(self.get_user_database_name(did, app_id),
                                     collection_name, col_filter, options, is_create=is_create, is_raise=is_raise)
 
     def find_one_origin(self, db_name, collection_name, col_filter, options=None, is_create=False, is_raise=True):
@@ -122,7 +127,7 @@ class DatabaseClient:
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
     def insert_one(self, did, app_id, collection_name, document, options=None, is_create=False):
-        return self.insert_one_origin(gene_mongo_db_name(did, app_id), collection_name, document, options, is_create)
+        return self.insert_one_origin(self.get_user_database_name(did, app_id), collection_name, document, options, is_create)
 
     def insert_one_origin(self, db_name, collection_name, document, options=None, is_create=False, is_extra=True):
         col = self.get_origin_collection(db_name, collection_name, is_create)
@@ -141,7 +146,7 @@ class DatabaseClient:
         }
 
     def update_one(self, did, app_id, collection_name, col_filter, col_update, options=None, is_extra=False):
-        return self.update_one_origin(gene_mongo_db_name(did, app_id), collection_name,
+        return self.update_one_origin(self.get_user_database_name(did, app_id), collection_name,
                                       col_filter, col_update, options=options, is_extra=is_extra)
 
     def update_one_origin(self, db_name, collection_name, col_filter, col_update,
@@ -171,7 +176,7 @@ class DatabaseClient:
         }
 
     def delete_one(self, did, app_id, collection_name, col_filter, is_check_exist=True):
-        return self.delete_one_origin(gene_mongo_db_name(did, app_id),
+        return self.delete_one_origin(self.get_user_database_name(did, app_id),
                                       collection_name, col_filter, is_check_exist=is_check_exist)
 
     def delete_one_origin(self, db_name, collection_name, col_filter, is_check_exist=True):
@@ -203,7 +208,7 @@ class DatabaseClient:
 
     def create_collection(self, did, app_did, collection_name):
         try:
-            self.__get_connection()[gene_mongo_db_name(did, app_did)].create_collection(collection_name)
+            self.__get_connection()[self.get_user_database_name(did, app_did)].create_collection(collection_name)
         except CollectionInvalid as e:
             logging.error('The collection already exists.')
             raise AlreadyExistsException()
@@ -211,7 +216,7 @@ class DatabaseClient:
     def delete_collection(self, did, app_did, collection_name, is_check_exist=True):
         if is_check_exist and not self.get_user_collection(did, app_did, collection_name):
             raise CollectionNotFoundException()
-        self.__get_connection()[gene_mongo_db_name(did, app_did)].drop_collection(collection_name)
+        self.__get_connection()[self.get_user_database_name(did, app_did)].drop_collection(collection_name)
 
     def delete_collection_origin(self, db_name, collection_name):
         if self.get_origin_collection(db_name, collection_name):
@@ -219,7 +224,7 @@ class DatabaseClient:
         self.__get_connection()[db_name].drop_collection(collection_name)
 
     def remove_database(self, did, app_did):
-        self.__get_connection().drop_database(gene_mongo_db_name(did, app_did))
+        self.__get_connection().drop_database(self.get_user_database_name(did, app_did))
 
     def timestamp_to_epoch(self, timestamp):
         if timestamp < 0:

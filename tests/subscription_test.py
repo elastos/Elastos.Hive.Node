@@ -47,15 +47,15 @@ class SubscriptionTestCase(unittest.TestCase):
         self.assertTrue('pricingPlans' in response.json())
 
     def test07_backup_subscribe_free(self):
-        response = self.backup_cli.put('/subscription/backup')
+        response = self.backup_cli.put('/node-subscription/backup')
         self.assertTrue(response.status_code in [200, 455])
 
     def test08_backup_get_info(self):
-        response = self.backup_cli.get('/subscription/backup')
+        response = self.backup_cli.get('/node-subscription/backup')
         self.assertEqual(response.status_code, 200)
 
     def test09_backup_unsubscribe(self):
-        response = self.backup_cli.delete('/subscription/backup')
+        response = self.backup_cli.delete('/node-subscription/backup')
         self.assertEqual(response.status_code, 204)
 
 

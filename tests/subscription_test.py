@@ -48,17 +48,17 @@ class SubscriptionTestCase(unittest.TestCase):
 
     @unittest.skip
     def test07_backup_subscribe(self):
-        response = self.backup_cli.put('/node-subscription/backup')
+        response = self.backup_cli.put('/subscription-deprecated/backup')
         self.assertTrue(response.status_code in [200, 455])
 
     @unittest.skip
     def test08_backup_get_info(self):
-        response = self.backup_cli.get('/node-subscription/backup')
+        response = self.backup_cli.get('/subscription-deprecated/backup')
         self.assertEqual(response.status_code, 200)
 
     @unittest.skip
     def test09_backup_unsubscribe(self):
-        response = self.backup_cli.delete('/node-subscription/backup')
+        response = self.backup_cli.delete('/subscription-deprecated/backup')
         self.assertEqual(response.status_code, 204)
 
 

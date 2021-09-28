@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+# TODO: deprecated
 URL_DID_SIGN_IN = '/api/v2/did/signin'
 URL_DID_AUTH = '/api/v2/did/auth'
 URL_DID_BACKUP_AUTH = '/api/v2/did/backup_auth'
@@ -12,7 +13,7 @@ URL_BACKUP_PATCH_DELTA = '/api/v2/internal_backup/patch_delta'
 URL_BACKUP_PATCH_FILE = '/api/v2/internal_backup/patch_file'
 URL_RESTORE_FINISH = '/api/v2/internal_restore/finished_confirmation'
 
-# TODO: remove later
+# TODO: deprecated
 URL_IPFS_BACKUP_PIN_CIDS = '/api/v2/ipfs-backup-internal/pin_cids'
 URL_IPFS_BACKUP_GET_CIDS = '/api/v2/ipfs-backup-internal/get_cids'
 URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'

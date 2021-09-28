@@ -61,7 +61,7 @@ class ScriptingTestCase(unittest.TestCase):
             'target_did': self.did,
             'target_app_did': self.app_did,
         }
-        response = self.cli2.patch(f'/node-scripting/{script_name}', body)
+        response = self.cli2.patch(f'/scripting-deprecated/{script_name}', body)
         self.assertEqual(response.status_code, 200)
         return response.text if is_raw else json.loads(response.text)
 
@@ -94,7 +94,7 @@ class ScriptingTestCase(unittest.TestCase):
         })
 
     def test03_call_script_url_insert(self):
-        response = self.cli2.get(f'/node-scripting/database_insert/{self.did}@{self.app_did}'
+        response = self.cli2.get(f'/scripting-deprecated/database_insert/{self.did}@{self.app_did}'
                                  '/%7B%22author%22%3A%22John2%22%2C%22content%22%3A%22message2%22%7D')
         self.assertEqual(response.status_code, 200)
 
@@ -196,7 +196,7 @@ class ScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-        response = self.cli2.put(f'/node-scripting/stream/{self.__call_script_for_transaction_id(name)}',
+        response = self.cli2.put(f'/scripting-deprecated/stream/{self.__call_script_for_transaction_id(name)}',
                                  self.file_content.encode(), is_json=False)
         self.assertEqual(response.status_code, 200)
 
@@ -212,7 +212,7 @@ class ScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-        response = self.cli.get(f'/node-scripting/stream/{self.__call_script_for_transaction_id(name)}')
+        response = self.cli.get(f'/scripting-deprecated/stream/{self.__call_script_for_transaction_id(name)}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.file_content)
 

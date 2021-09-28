@@ -97,15 +97,17 @@ function test () {
 
     # Run tests
     pytest --disable-pytest-warnings -xs tests/subscription_test.py
-    pytest --disable-pytest-warnings -xs tests/backup_test.py
     pytest --disable-pytest-warnings -xs tests/payment_test.py
-    pytest --disable-pytest-warnings -xs tests/scripting_test.py
-    pytest --disable-pytest-warnings -xs tests/files_test.py
     pytest --disable-pytest-warnings -xs tests/database_test.py
     pytest --disable-pytest-warnings -xs tests/about_test.py
     pytest --disable-pytest-warnings -xs tests/ipfs_files_test.py
     pytest --disable-pytest-warnings -xs tests/ipfs_scripting_test.py
     pytest --disable-pytest-warnings -xs tests/ipfs_backup_test.py
+
+# INFO: skip this
+#    pytest --disable-pytest-warnings -xs tests/files_test.py
+#    pytest --disable-pytest-warnings -xs tests/scripting_test.py
+#    pytest --disable-pytest-warnings -xs tests/backup_test.py
 
     rm -f hive.log
     rm -f test_patch.delta

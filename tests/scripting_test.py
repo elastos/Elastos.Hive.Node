@@ -185,7 +185,7 @@ class ScriptingTestCase(unittest.TestCase):
         self.assertIsNotNone(body)
 
     def test06_file_upload(self):
-        name = 'upload_file'
+        name = 'file_upload'
         self.__register_script(name, {
             "executable": {
                 "output": True,
@@ -201,7 +201,7 @@ class ScriptingTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test07_file_download(self):
-        name = 'download_file'
+        name = 'file_download'
         self.__register_script(name, {
             "executable": {
                 "output": True,
@@ -254,6 +254,14 @@ class ScriptingTestCase(unittest.TestCase):
 
     def test11_delete_script(self):
         response = self.cli.delete('/scripting/database_insert')
+        response = self.cli.delete('/scripting/database_find')
+        response = self.cli.delete('/scripting/database_find2')
+        response = self.cli.delete('/scripting/database_update')
+        response = self.cli.delete('/scripting/database_delete')
+        response = self.cli.delete('/scripting/file_upload')
+        response = self.cli.delete('/scripting/file_download')
+        response = self.cli.delete('/scripting/file_properties')
+        response = self.cli.delete('/scripting/file_hash')
         self.assertEqual(response.status_code, 204)
 
     def __set_and_call_script(self, name, script_body, run_body=None):

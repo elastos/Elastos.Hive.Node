@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for files module.
+Testing file for the files module.
 """
 
 import unittest

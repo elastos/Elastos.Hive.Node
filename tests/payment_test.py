@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for payment module.
+Testing file for the payment module.
 """
 
 import unittest

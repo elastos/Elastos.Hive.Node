@@ -3,10 +3,10 @@
 """
 The view of database module.
 """
-from flask import Blueprint, request
+from flask import Blueprint
 from src.modules.database.database import Database
 from src.utils.http_exception import InvalidParameterException
-from src.utils.http_request import params
+from src.utils.http_request import params, rqargs
 
 blueprint = Blueprint('database', __name__)
 database = Database()
@@ -14,8 +14,6 @@ database = Database()
 
 def init_app(app, hive_setting):
     """ This will be called by application initializer. """
-    # global scripting
-    # scripting = Scripting(app=app, hive_setting=hive_setting)
     app.register_blueprint(blueprint)
 
 
@@ -217,10 +215,17 @@ def insert_or_count_document(collection_name):
         HTTP/1.1 404 Not Found
 
     """
-    op = request.args.get('op')
+    op, _ = rqargs.get_str('op')
+    json_body, msg = params.get_body()
+    if not msg:
+        return InvalidParameterException(msg=msg).get_error_response()
     if op == 'count':
-        return database.count_document(collection_name, request.get_json(force=True, silent=True))
-    return database.insert_document(collection_name, request.get_json(force=True, silent=True))
+        if 'filter' in json_body and type(json_body.get('filter')) is not dict:
+            return InvalidParameterException().get_error_response()
+        return database.count_document(collection_name, json_body)
+    if 'document' not in json_body or type(json_body.get('document')) not in (list, tuple):
+        return InvalidParameterException().get_error_response()
+    return database.insert_document(collection_name, json_body)
 
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['PATCH'])
@@ -287,10 +292,17 @@ def update_document(collection_name):
         HTTP/1.1 404 Not Found
 
     """
-    updateone = request.args.get('updateone')
-    if updateone and updateone != 'true' and updateone != 'false':
-        return InvalidParameterException(msg='Invalid parameter updateone.').get_error_response()
-    return database.update_document(collection_name, request.get_json(force=True, silent=True), updateone == 'true')
+    is_update_one, msg = rqargs.get_bool('updateone')
+    if msg:
+        return InvalidParameterException(msg=msg).get_error_response()
+    json_body, msg = params.get_body()
+    if msg:
+        return InvalidParameterException(msg=msg).get_error_response()
+    if 'filter' in json_body and type(json_body.get('filter')) is not dict:
+        return InvalidParameterException(msg='Invalid parameter filter.').get_error_response()
+    if 'update' not in json_body or type(json_body.get('update')) is not dict:
+        return InvalidParameterException(msg='Invalid parameter update.').get_error_response()
+    return database.update_document(collection_name, json_body, is_update_one)
 
 
 @blueprint.route('/api/v2/vault/db/collection/<collection_name>', methods=['DELETE'])
@@ -340,10 +352,13 @@ def delete_document(collection_name):
         HTTP/1.1 404 Not Found
 
     """
-    deleteone = request.args.get('deleteone')
-    if deleteone and deleteone != 'true' and deleteone != 'false':
-        return InvalidParameterException(msg='Invalid parameter deleteone.').get_error_response()
-    return database.delete_document(collection_name, request.get_json(force=True, silent=True), deleteone == 'true')
+    is_delete_one, msg = rqargs.get_bool('deleteone')
+    if msg:
+        return InvalidParameterException(msg=msg).get_error_response()
+    col_filter, msg = params.get_dict('filter')
+    if msg:
+        return InvalidParameterException(msg=msg).get_error_response()
+    return database.delete_document(collection_name, col_filter, is_delete_one)
 
 
 @blueprint.route('/api/v2/vault/db/<collection_name>', methods=['GET'])
@@ -406,10 +421,16 @@ def find_document(collection_name):
         HTTP/1.1 404 Not Found
 
     """
-    return database.find_document(collection_name,
-                                  request.args.get('filter'),
-                                  request.args.get('skip'),
-                                  request.args.get('limit'))
+    col_filter, msg = rqargs.get_dict('filter')
+    if msg:
+        return InvalidParameterException(msg=msg).get_error_response()
+    skip, msg = rqargs.get_dict('skip')
+    if msg or skip < 0:
+        return InvalidParameterException(msg='Invalid parameter skip.').get_error_response()
+    limit, msg = rqargs.get_dict('limit')
+    if msg or limit < 0:
+        return InvalidParameterException(msg='Invalid parameter limit.').get_error_response()
+    return database.find_document(collection_name, col_filter, skip, limit)
 
 
 @blueprint.route('/api/v2/vault/db/query', methods=['POST'])
@@ -492,4 +513,8 @@ def query_document():
 
     """
     json_body, collection_name = params.get2('collection')
+    if not json_body or not collection_name:
+        return InvalidParameterException(msg='Request body empty or not collection name.').get_error_response()
+    if 'filter' in json_body and type(json_body.get('filter')) is not dict:
+        return InvalidParameterException(msg='Invalid parameter filter.').get_error_response()
     return database.query_document(collection_name, json_body)

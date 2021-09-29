@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for scripting module.
+Testing file for the scripting module.
 """
 import logging
 import unittest

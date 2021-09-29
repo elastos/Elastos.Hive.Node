@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for ipfs-files module.
+Testing file for the ipfs-files module.
 """
 import os
 import unittest
@@ -47,10 +47,18 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.json().get('name'), self.src_file_name2)
         self.__check_remote_file_exist(self.src_file_name2)
 
+    def test01_upload_file_invalid_parameter(self):
+        response = self.cli.put(f'/files/', self.src_file_content.encode(), is_json=False)
+        self.assertEqual(response.status_code, 405)
+
     def test02_download_file(self):
         response = self.cli.get(f'/files/{self.src_file_name}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.src_file_content)
+
+    def test02_download_file_invalid_parameter(self):
+        response = self.cli.get(f'/files/')
+        self.assertEqual(response.status_code, 400)
 
     def test03_move_file(self):
         response = self.cli.patch(f'/files/{self.src_file_name}?to={self.dst_file_name}')
@@ -58,12 +66,20 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.json().get('name'), self.dst_file_name)
         self.__check_remote_file_exist(self.dst_file_name)
 
+    def test03_move_file_invalid_parameter(self):
+        response = self.cli.patch(f'/files/{self.src_file_name}?to=')
+        self.assertEqual(response.status_code, 400)
+
     def test04_copy_file(self):
         response = self.cli.put(f'/files/{self.dst_file_name}?dest={self.src_file_name}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_file_name)
         self.__check_remote_file_exist(self.dst_file_name)
         self.__check_remote_file_exist(self.src_file_name)
+
+    def test04_copy_file_invalid_parameter(self):
+        response = self.cli.put(f'/files/{self.dst_file_name}?dest=')
+        self.assertEqual(response.status_code, 400)
 
     def test05_list_folder(self):
         response = self.cli.get(f'/files/{self.folder_name}?comp=children')
@@ -76,15 +92,27 @@ class IpfsFilesTestCase(unittest.TestCase):
     def test06_get_properties(self):
         self.__check_remote_file_exist(self.src_file_name)
 
+    def test06_get_properties_invalid_parameter(self):
+        response = self.cli.get(f'/files/?comp=metadata')
+        self.assertEqual(response.status_code, 400)
+
     def test07_get_hash(self):
         response = self.cli.get(f'/files/{self.src_file_name}?comp=hash')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_file_name)
 
+    def test07_get_hash_invalid_parameter(self):
+        response = self.cli.get(f'/files/?comp=hash')
+        self.assertEqual(response.status_code, 400)
+
     def test08_delete_file(self):
         self.__delete_file(self.src_file_name)
         self.__delete_file(self.src_file_name2)
         self.__delete_file(self.dst_file_name)
+
+    def test08_delete_file_invalid_parameter(self):
+        response = self.cli.delete(f'/files/')
+        self.assertEqual(response.status_code, 405)
 
     def __check_remote_file_exist(self, file_name):
         response = self.cli.get(f'/files/{file_name}?comp=metadata')

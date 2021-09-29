@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for database module.
+Testing file for the database module.
 """
 
 import unittest

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for ipfs-scripting module.
+Testing file for the ipfs-scripting module.
 """
 import unittest
 import json

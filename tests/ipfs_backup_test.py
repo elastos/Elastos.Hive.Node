@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for ipfs-backup module.
+Testing file for the ipfs-backup module.
 """
 import time
 import unittest

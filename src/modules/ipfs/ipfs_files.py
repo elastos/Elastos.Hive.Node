@@ -34,9 +34,6 @@ class IpfsFiles:
 
     @hive_restful_response
     def upload_file(self, path):
-        if not path:
-            raise InvalidParameterException()
-
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         self.upload_file_with_path(did, app_did, path)
         return {
@@ -45,9 +42,6 @@ class IpfsFiles:
 
     @hive_stream_response
     def download_file(self, path):
-        if not path:
-            raise InvalidParameterException()
-
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         return self.download_file_with_path(did, app_did, path)
 
@@ -60,9 +54,6 @@ class IpfsFiles:
         :param path:
         :return:
         """
-        if not path:
-            raise InvalidParameterException()
-
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         col_filter = {DID: did,
                       APP_DID: app_did,
@@ -80,20 +71,10 @@ class IpfsFiles:
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
-        if not src_path or not dst_path:
-            raise InvalidParameterException()
-        elif src_path == dst_path:
-            raise InvalidParameterException(msg='The source filename and destination filename must not be same.')
-
         return self.move_file_really(src_path, dst_path)
 
     @hive_restful_response
     def copy_file(self, src_path, dst_path):
-        if not src_path or not dst_path:
-            raise InvalidParameterException()
-        elif src_path == dst_path:
-            raise InvalidParameterException(msg='The source filename and destination filename must not be same.')
-
         return self.move_file_really(src_path, dst_path, True)
 
     @hive_restful_response
@@ -119,12 +100,8 @@ class IpfsFiles:
 
     @hive_restful_response
     def get_properties(self, path):
-        if not path:
-            raise InvalidParameterException()
-
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         doc = self.check_file_exists(did, app_did, path)
-
         return {
             'name': doc[COL_IPFS_FILES_PATH],
             'is_file': doc[COL_IPFS_FILES_IS_FILE],
@@ -135,12 +112,8 @@ class IpfsFiles:
 
     @hive_restful_response
     def get_hash(self, path):
-        if not path:
-            raise InvalidParameterException()
-
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         doc = self.check_file_exists(did, app_did, path)
-
         return {
             'name': doc[COL_IPFS_FILES_PATH],
             'algorithm': 'SHA256',

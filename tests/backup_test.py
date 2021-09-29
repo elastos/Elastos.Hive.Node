@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for backup module.
+Testing file for the backup module.
 """
 import unittest
 

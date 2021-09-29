@@ -31,9 +31,6 @@ class Auth(Entity, metaclass=Singleton):
 
     @hive_restful_response
     def sign_in(self, doc):
-        if not doc:
-            raise BadRequestException(msg='Invalid parameter')
-
         app_instance_did = self.__get_app_instance_did(doc)
         return {
             "challenge": self.__create_challenge(app_instance_did, *self.__save_nonce_to_db(app_instance_did))
@@ -92,9 +89,6 @@ class Auth(Entity, metaclass=Singleton):
 
     @hive_restful_response
     def auth(self, challenge_response):
-        if not challenge_response:
-            raise BadRequestException(msg='Invalid parameter')
-
         credential_info = self.__get_auth_info_from_challenge_response(challenge_response, ['appDid', ])
         access_token = self.__create_access_token(credential_info, "AccessToken")
 

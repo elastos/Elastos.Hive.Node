@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Testing file for about module.
+Testing file for the about module.
 """
 
 import unittest

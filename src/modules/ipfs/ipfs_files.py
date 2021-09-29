@@ -23,11 +23,12 @@ from src.utils.http_response import hive_restful_response, hive_stream_response
 class IpfsFiles:
     def __init__(self):
         """
-        Use IPFS node as the file storage.
-        1. Every did has a local files cache.
-        2. Every did/app_did has its own files collection.
-        3. When uploading the file, cache it locally. Then upload to the IPFS node with the timed script.
-        4. The files with same content is relating to the same CID of the IPFS node. So it can not be unpined in IPFS.
+        IPFS node is being used to store immutable block data (files):
+        1. Each user_did/app_did has the sandboxing to cache application data;
+        2. Each user_did/app_did has the mongodb collection to manage the metadata on the block data on IPFS node;
+        3. Once a block data (usually file) has been uploaded to hive node, it would be cached on local filesystem
+        first, afterwards it also would be uploaded and pined to the paired IPFS node.
+        4. The CID to the block data on IPFS would be managed as the field of metadata in the collection.
         """
         pass
 
@@ -37,7 +38,7 @@ class IpfsFiles:
             raise InvalidParameterException()
 
         did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        self.upload_file_by_did(did, app_did, path)
+        self.upload_file_with_path(did, app_did, path)
         return {
             'name': path
         }
@@ -48,7 +49,7 @@ class IpfsFiles:
             raise InvalidParameterException()
 
         did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
-        return self.download_file_by_did(did, app_did, path)
+        return self.download_file_with_path(did, app_did, path)
 
     @hive_restful_response
     def delete_file(self, path):
@@ -146,7 +147,7 @@ class IpfsFiles:
             'hash': doc[COL_IPFS_FILES_SHA256]
         }
 
-    def upload_file_by_did(self, did, app_did, path: str):
+    def upload_file_with_path(self, did, app_did, path: str):
         """
         Upload file really.
             1. generate the local file name and save the content to local.
@@ -237,7 +238,7 @@ class IpfsFiles:
             self.decrease_refcount_cid(cid)
         logging.info(f'[ipfs-files] Remove an existing file {rel_path}')
 
-    def download_file_by_did(self, did, app_did, path: str):
+    def download_file_with_path(self, did, app_did, path: str):
         """
         Download file by did.
         1. check file caches.

@@ -78,7 +78,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.__check_remote_file_exist(self.src_file_name)
 
     def test04_copy_file_invalid_parameter(self):
-        response = self.cli.put(f'/files/{self.dst_file_name}?dest=')
+        response = self.cli.put(f'/files/{self.dst_file_name}?dest={self.dst_file_name}')
         self.assertEqual(response.status_code, 400)
 
     def test05_list_folder(self):

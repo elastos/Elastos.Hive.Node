@@ -217,10 +217,10 @@ def insert_or_count_document(collection_name):
     """
     op, _ = rqargs.get_str('op')
     json_body, msg = params.get_body()
-    if not msg:
-        return InvalidParameterException(msg=msg).get_error_response()
+    if msg or not json_body:
+        return InvalidParameterException(msg=f'Invalid request body.').get_error_response()
     if op == 'count':
-        if 'filter' in json_body and type(json_body.get('filter')) is not dict:
+        if 'filter' not in json_body or type(json_body.get('filter')) is not dict:
             return InvalidParameterException().get_error_response()
         return database.count_document(collection_name, json_body)
     if 'document' not in json_body or type(json_body.get('document')) not in (list, tuple):
@@ -296,8 +296,8 @@ def update_document(collection_name):
     if msg:
         return InvalidParameterException(msg=msg).get_error_response()
     json_body, msg = params.get_body()
-    if msg:
-        return InvalidParameterException(msg=msg).get_error_response()
+    if msg or not json_body:
+        return InvalidParameterException(msg=f'Invalid request body.').get_error_response()
     if 'filter' in json_body and type(json_body.get('filter')) is not dict:
         return InvalidParameterException(msg='Invalid parameter filter.').get_error_response()
     if 'update' not in json_body or type(json_body.get('update')) is not dict:
@@ -424,10 +424,10 @@ def find_document(collection_name):
     col_filter, msg = rqargs.get_dict('filter')
     if msg:
         return InvalidParameterException(msg=msg).get_error_response()
-    skip, msg = rqargs.get_dict('skip')
+    skip, msg = rqargs.get_int('skip')
     if msg or skip < 0:
         return InvalidParameterException(msg='Invalid parameter skip.').get_error_response()
-    limit, msg = rqargs.get_dict('limit')
+    limit, msg = rqargs.get_int('limit')
     if msg or limit < 0:
         return InvalidParameterException(msg='Invalid parameter limit.').get_error_response()
     return database.find_document(collection_name, col_filter, skip, limit)
@@ -512,9 +512,11 @@ def query_document():
         HTTP/1.1 404 Not Found
 
     """
-    json_body, collection_name = params.get2('collection')
-    if not json_body or not collection_name:
-        return InvalidParameterException(msg='Request body empty or not collection name.').get_error_response()
-    if 'filter' in json_body and type(json_body.get('filter')) is not dict:
+    json_body, msg = params.get_body()
+    if msg:
+        return InvalidParameterException(msg=msg).get_error_response()
+    if 'collection' not in json_body or not json_body['collection']:
+        return InvalidParameterException(msg='No collection name in the request body.').get_error_response()
+    if 'filter' not in json_body or type(json_body.get('filter')) is not dict:
         return InvalidParameterException(msg='Invalid parameter filter.').get_error_response()
-    return database.query_document(collection_name, json_body)
+    return database.query_document(json_body['collection'], json_body)

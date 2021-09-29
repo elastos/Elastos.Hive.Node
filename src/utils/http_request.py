@@ -14,10 +14,10 @@ class RequestParams:
 
     def get(self, key, def_val=None):
         # TODO:
-        return self.get2(key, def_val)[1]
+        return self.__get2(key, def_val)[1]
 
-    def get2(self, key, def_val=None):
-        # TODO:
+    def __get2(self, key, def_val=None):
+        # TODO: remove directly.
         body = request.get_json(force=True, silent=True)
         if not body or type(body) is not dict:
             return None, None
@@ -71,17 +71,22 @@ class RequestArgs:
         return request.args.get(key, def_val), None
 
     def get_bool(self, key, def_val=False):
-        val_str = request.args.get(key)
-        if val_str != 'true' or val_str != 'false':
+        val_str, _ = self.get_str(key)
+        if val_str != '' and val_str != 'true' and val_str != 'false':
             return def_val, f'Invalid parameter {key}.'
         return val_str == 'true', None
 
     def get_dict(self, key):
-        val_str = request.args.get(key)
-        result = json.loads(val_str) if (val_str, None) else ({}, None)
-        if type(result) is not dict:
-            return {}, f'Invalid parameter {key}.'
-        return result, None
+        val_str, msg = self.get_str(key)
+        if msg:
+            return {}, msg
+        try:
+            result = json.loads(val_str) if (val_str, None) else ({}, None)
+            if type(result) is not dict:
+                return {}, f'Invalid parameter {key}.'
+            return result, None
+        except Exception as e:
+            return {}, f'Invalid parameter {key}, not json format.'
 
 
 params = RequestParams()

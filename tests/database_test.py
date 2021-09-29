@@ -56,6 +56,10 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(len(response.json().get('inserted_ids')), 4)
 
+    def test02_insert_document_invalid_parameter(self):
+        response = self.cli.post(f'/db/collection/{self.collection_name}')
+        self.assertEqual(response.status_code, 400)
+
     def test03_update_document(self):
         response = self.cli.patch(f'/db/collection/{self.collection_name}', body={
             "filter": {
@@ -71,6 +75,10 @@ class DatabaseTestCase(unittest.TestCase):
             }})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('matched_count'), 2)
+
+    def test03_update_document_invalid_parameter(self):
+        response = self.cli.patch(f'/db/collection/{self.collection_name}')
+        self.assertEqual(response.status_code, 400)
 
     def test03_update_one_document(self):
         response = self.cli.patch(f'/db/collection/{self.collection_name}?updateone=true', body={
@@ -101,10 +109,18 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json().get('count'), 2)
 
+    def test04_count_document_invalid_parameter(self):
+        response = self.cli.post(f'/db/collection/{self.collection_name}?op=count')
+        self.assertEqual(response.status_code, 400)
+
     def test05_find_document(self):
         response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"john doe2"}&skip=0')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('items' in response.json())
+
+    def test05_find_document_invalid_parameter(self):
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter=&skip=')
+        self.assertEqual(response.status_code, 400)
 
     def test06_query_document(self):
         response = self.cli.post(f'/db/query', body={
@@ -127,12 +143,20 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertTrue('items' in response.json())
 
+    def test06_query_document_invalid_parameter(self):
+        response = self.cli.post(f'/db/query')
+        self.assertEqual(response.status_code, 400)
+
     def test07_delete_one_document(self):
         response = self.cli.delete(f'/db/collection/{self.collection_name}?deleteone=true', body={
             "filter": {
                 "author": "john doe1_2",
             }}, is_json=True)
         self.assertEqual(response.status_code, 204)
+
+    def test07_delete_one_document_invalid_parameter(self):
+        response = self.cli.delete(f'/db/collection/{self.collection_name}?deleteone=true')
+        self.assertEqual(response.status_code, 400)
 
     def test07_delete_document(self):
         response = self.cli.delete(f'/db/collection/{self.collection_name}', body={

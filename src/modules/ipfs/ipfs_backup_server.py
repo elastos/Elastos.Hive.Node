@@ -100,7 +100,8 @@ class IpfsBackupServer:
         request_metadata = self._get_verified_request_metadata(did, req)
         logging.info('[IpfsBackupServer] Success to get verified request metadata.')
         self._check_verified_request_metadata(request_metadata, req,
-                                              is_promotion=is_promotion, vault_max_size=vault_max_size)
+                                              is_promotion=is_promotion,
+                                              vault_max_size=vault_max_size)
         logging.info('[IpfsBackupServer] Success to check the verified request metadata.')
         return request_metadata
 

@@ -42,18 +42,18 @@ class Auth(Entity, metaclass=Singleton):
         if not app_instance_doc or lib.DIDDocument_IsValid(app_instance_doc) != 1:
             raise BadRequestException(msg='The did document is invalid in getting app instance did.')
 
-        did = lib.DIDDocument_GetSubject(app_instance_doc)
-        if not did:
+        app_instance_did = lib.DIDDocument_GetSubject(app_instance_doc)
+        if not app_instance_did:
             raise BadRequestException(msg='Can not get did from document in getting app instance did.')
 
-        spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
+        spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(app_instance_did)).decode()
         try:
             with open(self.hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_did_str, "w") as f:
                 f.write(doc_str)
         except Exception as e:
             logging.getLogger("HiveAuth").error(f"Exception in sign_in:{str(e)} in getting app instance did")
 
-        return "did:" + ffi.string(lib.DID_GetMethod(did)).decode() + ":" + spec_did_str
+        return "did:" + ffi.string(lib.DID_GetMethod(app_instance_did)).decode() + ":" + spec_did_str
 
     def __save_nonce_to_db(self, app_instance_did):
         nonce, expire_time = create_nonce(), int(datetime.now().timestamp()) + self.hive_setting.AUTH_CHALLENGE_EXPIRED
@@ -67,7 +67,7 @@ class Auth(Entity, metaclass=Singleton):
             raise BadRequestException(msg='Failed to generate nonce.')
         return nonce, expire_time
 
-    def __create_challenge(self, did, nonce, expire_time):
+    def __create_challenge(self, app_instance_did, nonce, expire_time):
         """
         Create challenge for sign in response.
         """
@@ -77,7 +77,7 @@ class Auth(Entity, metaclass=Singleton):
         lib.JWTBuilder_SetHeader(builder, "type".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
         lib.JWTBuilder_SetSubject(builder, "DIDAuthChallenge".encode())
-        lib.JWTBuilder_SetAudience(builder, did.encode())
+        lib.JWTBuilder_SetAudience(builder, app_instance_did.encode())
         lib.JWTBuilder_SetClaim(builder, "nonce".encode(), nonce.encode())
         lib.JWTBuilder_SetExpiration(builder, expire_time)
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)

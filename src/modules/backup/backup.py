@@ -20,22 +20,23 @@ class Backup:
 
     @hive_restful_response
     def get_state(self):
-        did, _ = check_auth_and_vault(VAULT_ACCESS_R)
-        return self.client.get_state(did)
+        user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
+        return self.client.get_state(user_did)
 
     @hive_restful_response
     def backup(self, credential):
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
-        self.client.check_backup_status(did)
-        self.client.execute_backup(did, credential_info, self.client.get_access_token(credential, credential_info))
+        self.client.check_backup_status(user_did)
+        self.client.execute_backup(user_did, credential_info, self.client.get_access_token(credential, credential_info))
 
     @hive_restful_response
     def restore(self, credential):
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         credential_info = self.auth.get_backup_credential_info(credential)
-        self.client.check_backup_status(did, True)
-        self.client.execute_restore(did, credential_info, self.client.get_access_token(credential, credential_info))
+        self.client.check_backup_status(user_did, True)
+        self.client.execute_restore(user_did, credential_info,
+                                    self.client.get_access_token(credential, credential_info))
 
     @hive_restful_response
     def promotion(self):

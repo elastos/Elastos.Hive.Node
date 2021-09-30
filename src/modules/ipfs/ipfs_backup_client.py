@@ -56,35 +56,35 @@ class IpfsBackupClient:
 
     @hive_restful_response
     def get_state(self):
-        did, _ = check_auth_and_vault(VAULT_ACCESS_R)
-        return self.get_state_from_request(did)
+        user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
+        return self.get_state_from_request(user_did)
 
     @hive_restful_response
     def backup(self, credential, is_force):
-        did, _ = check_auth_and_vault(VAULT_ACCESS_R)
+        user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
-            self.check_state_for_backup_or_restore(did)
-        req = self.save_request(did, credential, credential_info)
-        BackupExecutor(did, self, req, is_force=is_force).start()
+            self.check_state_for_backup_or_restore(user_did)
+        req = self.save_request(user_did, credential, credential_info)
+        BackupExecutor(user_did, self, req, is_force=is_force).start()
 
     @hive_restful_response
     def restore(self, credential, is_force):
-        did, _ = check_auth_and_vault(VAULT_ACCESS_R)
+        user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
-            self.check_state_for_backup_or_restore(did)
-        self.save_request(did, credential, credential_info, is_restore=True)
-        RestoreExecutor(did, self).start()
+            self.check_state_for_backup_or_restore(user_did)
+        self.save_request(user_did, credential, credential_info, is_restore=True)
+        RestoreExecutor(user_did, self).start()
 
-    def check_state_for_backup_or_restore(self, did):
-        result = self.get_state_from_request(did)
+    def check_state_for_backup_or_restore(self, user_did):
+        result = self.get_state_from_request(user_did)
         if result['result'] == BACKUP_REQUEST_STATE_PROCESS:
             raise BadRequestException(msg=f'The {result["state"]} is in process. Please try later.')
 
-    def get_state_from_request(self, did):
+    def get_state_from_request(self, user_did):
         state, result, msg = BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, ''
-        req = self.get_request_by_did(did)
+        req = self.get_request_by_did(user_did)
         if req:
             state = req.get(BACKUP_REQUEST_ACTION)
             result = req.get(BACKUP_REQUEST_STATE)
@@ -99,20 +99,20 @@ class IpfsBackupClient:
             'message': msg if msg else '',
         }
 
-    def get_request_by_did(self, did):
-        col_filter = {USER_DID: did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
+    def get_request_by_did(self, user_did):
+        col_filter = {USER_DID: user_did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
         return cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, col_filter,
                                    is_create=True, is_raise=False)
 
-    def save_request(self, did, credential, credential_info, is_restore=False):
+    def save_request(self, user_did, credential, credential_info, is_restore=False):
         access_token = self.get_access_token(credential, credential_info)
         target_host, target_did = credential_info['targetHost'], credential_info['targetDID']
-        req = self.get_request_by_did(did)
+        req = self.get_request_by_did(user_did)
         if not req:
-            self.insert_request(did, target_host, target_did, access_token, is_restore=is_restore)
+            self.insert_request(user_did, target_host, target_did, access_token, is_restore=is_restore)
         else:
-            self.update_request(did, target_host, target_did, access_token, req, is_restore=is_restore)
-        return self.get_request_by_did(did)
+            self.update_request(user_did, target_host, target_did, access_token, req, is_restore=is_restore)
+        return self.get_request_by_did(user_did)
 
     def get_access_token(self, credential, credential_info):
         target_host = credential_info['targetHost']
@@ -120,9 +120,9 @@ class IpfsBackupClient:
             self.auth.backup_client_sign_in(target_host, credential, 'DIDBackupAuthResponse')
         return self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
 
-    def insert_request(self, did, target_host, target_did, access_token, is_restore=False):
+    def insert_request(self, user_did, target_host, target_did, access_token, is_restore=False):
         req = {
-            USER_DID: did,
+            USER_DID: user_did,
             BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE,
             BACKUP_REQUEST_ACTION: BACKUP_REQUEST_ACTION_RESTORE if is_restore else BACKUP_REQUEST_ACTION_BACKUP,
             BACKUP_REQUEST_STATE: BACKUP_REQUEST_STATE_PROCESS,
@@ -133,7 +133,7 @@ class IpfsBackupClient:
         }
         cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, req, is_create=True)
 
-    def update_request(self, did, target_host, target_did, access_token, req, is_restore=False):
+    def update_request(self, user_did, target_host, target_did, access_token, req, is_restore=False):
         if request.args.get('is_multi') != 'True':
             # INFO: Use url parameter 'is_multi' to skip this check.
             cur_target_host = req.get(BACKUP_REQUEST_TARGET_HOST)
@@ -150,15 +150,15 @@ class IpfsBackupClient:
             BACKUP_REQUEST_TARGET_DID: target_did,
             BACKUP_REQUEST_TARGET_TOKEN: access_token
         }
-        self.update_backup_request(did, update)
+        self.update_backup_request(user_did, update)
 
     # the flowing is for the executors.
 
-    def update_request_state(self, did, state, msg=None):
-        self.update_backup_request(did, {BACKUP_REQUEST_STATE: state, BACKUP_REQUEST_STATE_MSG: msg})
+    def update_request_state(self, user_did, state, msg=None):
+        self.update_backup_request(user_did, {BACKUP_REQUEST_STATE: state, BACKUP_REQUEST_STATE_MSG: msg})
 
-    def dump_to_database_cids(self, did):
-        db_names = cli.get_all_user_database_names(did)
+    def dump_to_database_cids(self, user_did):
+        db_names = cli.get_all_user_database_names(user_did)
         databases = list()
         for db_name in db_names:
             d = {
@@ -167,7 +167,7 @@ class IpfsBackupClient:
             }
             is_success = export_mongo_db_to_full_path(d['name'], d['path'])
             if not is_success:
-                raise BadRequestException(f'Failed to dump {d["name"]} for {did}')
+                raise BadRequestException(f'Failed to dump {d["name"]} for {user_did}')
             d['sha256'] = fm.get_file_content_sha256(d['path'])
             d['size'] = d['path'].stat().st_size
             d['cid'] = fm.ipfs_upload_file_from_path(d['path'])
@@ -175,18 +175,18 @@ class IpfsBackupClient:
             databases.append(d)
         return databases
 
-    def get_file_cids_by_user_did(self, did):
-        return fm.get_file_cid_metadatas(did)
+    def get_file_cids_by_user_did(self, user_did):
+        return fm.get_file_cid_metadatas(user_did)
 
-    def send_request_metadata_to_server(self, did, cid, sha256, size, is_force):
-        req = self.get_request_by_did(did)
+    def send_request_metadata_to_server(self, user_did, cid, sha256, size, is_force):
+        req = self.get_request_by_did(user_did)
         body = {'cid': cid, 'sha256': sha256, 'size': size, 'is_force': is_force}
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_IPFS_BACKUP_SERVER_BACKUP,
                        req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
 
-    def recv_request_metadata_from_server(self, did):
-        request_metadata = self._get_verified_request_metadata_from_server(did)
-        self.check_can_be_restore(did, request_metadata)
+    def recv_request_metadata_from_server(self, user_did):
+        request_metadata = self._get_verified_request_metadata_from_server(user_did)
+        self.check_can_be_restore(user_did, request_metadata)
         return request_metadata
 
     def restore_database_by_dump_files(self, request_metadata):
@@ -205,30 +205,30 @@ class IpfsBackupClient:
             temp_file.unlink()
             logging.info(f'[IpfsBackupClient] Success to restore the dump file for database {d["name"]}.')
 
-    def _get_verified_request_metadata_from_server(self, did):
-        req = self.get_request_by_did(did)
+    def _get_verified_request_metadata_from_server(self, user_did):
+        req = self.get_request_by_did(user_did)
         body = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_IPFS_BACKUP_SERVER_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])
         return fm.ipfs_download_file_content(body['cid'], is_proxy=True, sha256=body['sha256'], size=body['size'])
 
-    def check_can_be_restore(self, did, request_metadata):
-        if request_metadata['vault_size'] > fm.get_vault_max_size(did):
+    def check_can_be_restore(self, user_did, request_metadata):
+        if request_metadata['vault_size'] > fm.get_vault_max_size(user_did):
             raise InsufficientStorageException(msg='No enough space for restore.')
 
-    def update_backup_request(self, did, update):
-        col_filter = {USER_DID: did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
+    def update_backup_request(self, user_did, update):
+        col_filter = {USER_DID: user_did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
         cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, col_filter, {'$set': update}, is_extra=True)
 
-    def retry_backup_request(self, did):
-        req = self.get_request_by_did(did)
+    def retry_backup_request(self, user_did):
+        req = self.get_request_by_did(user_did)
         if not req or req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_PROCESS:
             return
         elif req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_PROCESS:
             return
         logging.info(f"[IpfsBackupClient] Found uncompleted request({req.get(USER_DID)}), retry.")
         if req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_BACKUP:
-            BackupExecutor(did, self, req, start_delay=30).start()
+            BackupExecutor(user_did, self, req, start_delay=30).start()
         elif req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_RESTORE:
-            RestoreExecutor(did, self, start_delay=30).start()
+            RestoreExecutor(user_did, self, start_delay=30).start()
         else:
             logging.error(f'[IpfsBackupClient] Unknown action({req.get(BACKUP_REQUEST_ACTION)}), skip.')

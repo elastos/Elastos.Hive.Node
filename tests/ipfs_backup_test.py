@@ -45,7 +45,7 @@ class IpfsBackupTestCase(unittest.TestCase):
 
     @unittest.skip
     def test03_backup_force(self):
-        r = self.cli.post('/vault/content?to=hive_node&is_force=True',
+        r = self.cli.post('/vault/content?to=hive_node&is_force=true',
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
 
@@ -61,7 +61,7 @@ class IpfsBackupTestCase(unittest.TestCase):
 
     @unittest.skip
     def test05_restore_force(self):
-        r = self.cli.post('/vault/content?from=hive_node&is_force=True',
+        r = self.cli.post('/vault/content?from=hive_node&is_force=true',
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
 

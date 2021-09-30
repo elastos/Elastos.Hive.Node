@@ -134,9 +134,9 @@ def backup_restore():
     to = request.args.get('to')
     fr = request.args.get('from')
     if to == 'hive_node':
-        return backup.backup(params.get('credential'))
+        return backup.backup(params.get_str('credential')[0])
     elif fr == 'hive_node':
-        return backup.restore(params.get('credential'))
+        return backup.restore(params.get_str('credential')[0])
     elif to == 'google_drive':
         raise NotImplementedException()
     elif fr == 'google_drive':
@@ -161,7 +161,7 @@ def internal_get_backup_service():
 def internal_backup_finish():
     """ Notify the backup service the process has been completed.
     The backup service will verify the checksum list of the files. """
-    return server.backup_finish(params.get('checksum_list'))
+    return server.backup_finish(params.get_list('checksum_list')[0])
 
 
 @blueprint.route(URL_BACKUP_FILES, methods=['GET'])

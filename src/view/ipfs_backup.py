@@ -9,7 +9,8 @@ from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.utils.consts import URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_BACKUP_STATE, \
     URL_IPFS_BACKUP_SERVER_RESTORE
-from src.utils.http_request import params
+from src.utils.http_exception import InvalidParameterException
+from src.utils.http_request import params, rqargs
 
 blueprint = Blueprint('ipfs-backup', __name__)
 backup_client: IpfsBackupClient = None
@@ -31,13 +32,16 @@ def get_state():
 
 @blueprint.route('/api/v2/vault/content', methods=['POST'])
 def backup_restore():
-    to = request.args.get('to')
-    fr = request.args.get('from')
-    is_force = request.args.get('is_force', 'False') == 'True'
+    to, _ = rqargs.get_str('to')
+    fr, _ = rqargs.get_str('from')
+    is_force, _ = rqargs.get_bool('is_force')
+    credential, msg = params.get_str('credential')
+    if msg or not credential:
+        return InvalidParameterException(msg='Invalid parameter.').get_error_response()
     if to == 'hive_node':
-        return backup_client.backup(params.get('credential'), is_force)
+        return backup_client.backup(credential, is_force)
     elif fr == 'hive_node':
-        return backup_client.restore(params.get('credential'), is_force)
+        return backup_client.restore(credential, is_force)
 
 
 # ipfs-promotion on the backup server side
@@ -53,8 +57,8 @@ def promotion():
 
 @blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP, methods=['POST'])
 def internal_backup():
-    return backup_server.internal_backup(params.get('cid'), params.get('sha256'), params.get('size'),
-                                         params.get('is_force', False))
+    return backup_server.internal_backup(params.get_str('cid')[0], params.get_str('sha256')[0],
+                                         params.get_str('size')[0], params.get_bool('is_force')[0])
 
 
 @blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP_STATE, methods=['GET'])

@@ -238,8 +238,6 @@ class Auth(Entity, metaclass=Singleton):
     def get_backup_credential_info(self, credential):
         """ for vault /backup """
         from src.utils_v1.auth import get_credential_info
-        if not credential:
-            raise InvalidParameterException('The credential must provide.')
         credential_info, err = get_credential_info(credential, ["targetHost", "targetDID"])
         if credential_info is None:
             raise InvalidParameterException(msg=f'Failed to get credential info: {err}')

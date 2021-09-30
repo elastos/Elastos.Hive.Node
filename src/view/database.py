@@ -216,14 +216,14 @@ def insert_or_count_document(collection_name):
 
     """
     op, _ = rqargs.get_str('op')
-    json_body, msg = params.get_body()
+    json_body, msg = params.get_root()
     if msg or not json_body:
         return InvalidParameterException(msg=f'Invalid request body.').get_error_response()
     if op == 'count':
         if 'filter' not in json_body or type(json_body.get('filter')) is not dict:
             return InvalidParameterException().get_error_response()
         return database.count_document(collection_name, json_body)
-    if 'document' not in json_body or type(json_body.get('document')) not in (list, tuple):
+    if 'document' not in json_body or type(json_body.get('document')) != list:
         return InvalidParameterException().get_error_response()
     return database.insert_document(collection_name, json_body)
 
@@ -295,7 +295,7 @@ def update_document(collection_name):
     is_update_one, msg = rqargs.get_bool('updateone')
     if msg:
         return InvalidParameterException(msg=msg).get_error_response()
-    json_body, msg = params.get_body()
+    json_body, msg = params.get_root()
     if msg or not json_body:
         return InvalidParameterException(msg=f'Invalid request body.').get_error_response()
     if 'filter' in json_body and type(json_body.get('filter')) is not dict:
@@ -512,7 +512,7 @@ def query_document():
         HTTP/1.1 404 Not Found
 
     """
-    json_body, msg = params.get_body()
+    json_body, msg = params.get_root()
     if msg:
         return InvalidParameterException(msg=msg).get_error_response()
     if 'collection' not in json_body or not json_body['collection']:

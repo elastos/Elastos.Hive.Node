@@ -23,33 +23,33 @@ class Database:
 
     @hive_restful_response
     def create_collection(self, collection_name):
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        cli.create_collection(did, app_did, collection_name)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        cli.create_collection(user_did, app_did, collection_name)
         return {'name': collection_name}
 
     @hive_restful_response
     def delete_collection(self, collection_name):
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
-        cli.delete_collection(did, app_did, collection_name, is_check_exist=False)
-        update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
+        cli.delete_collection(user_did, app_did, collection_name, is_check_exist=False)
+        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
 
     def __get_collection(self, collection_name, vault_permission):
-        did, app_did = check_auth_and_vault(vault_permission)
-        col = cli.get_user_collection(did, app_did, collection_name)
+        user_did, app_did = check_auth_and_vault(vault_permission)
+        col = cli.get_user_collection(user_did, app_did, collection_name)
         if not col:
             raise CollectionNotFoundException(msg=f'The collection {collection_name} does not found.')
-        return did, app_did, col
+        return user_did, app_did, col
 
     @hive_restful_response
     def insert_document(self, collection_name, json_body):
-        did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
+        user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
         documents = []
         for document in json_body["document"]:
             document["created"] = datetime.utcnow()
             document["modified"] = datetime.utcnow()
             documents.append(convert_oid(document))
         ret = col.insert_many(documents, **options_filter(json_body, ("bypass_document_validation", "ordered")))
-        update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))
+        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
         return {
             "acknowledged": ret.acknowledged,
             "inserted_ids": [str(_id) for _id in ret.inserted_ids]
@@ -57,7 +57,7 @@ class Database:
 
     @hive_restful_response
     def update_document(self, collection_name, json_body, is_update_one):
-        did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
+        user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
         update = json_body["update"]
         if "$set" in update:
             update["$set"]["modified"] = datetime.utcnow()
@@ -68,7 +68,7 @@ class Database:
             ret = col.update_many(convert_oid(json_body["filter"]), convert_oid(update, update=True),
                                   **options_filter(json_body, ("upsert", "bypass_document_validation")))
 
-        update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))
+        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
         return {
             "acknowledged": ret.acknowledged,
             "matched_count": ret.matched_count,
@@ -78,28 +78,28 @@ class Database:
 
     @hive_restful_response
     def delete_document(self, collection_name, col_filter, is_delete_one):
-        did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
+        user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
         if is_delete_one:
             col.delete_one(convert_oid(col_filter))
         else:
             col.delete_many(convert_oid(col_filter))
-        update_vault_db_use_storage_byte(did, get_mongo_database_size(did, app_did))
+        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
 
     @hive_restful_response
     def count_document(self, collection_name, json_body):
-        did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
+        user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
         count = col.count_documents(convert_oid(json_body["filter"] if json_body and 'filter' in json_body else {}),
                                     **options_filter(json_body, ("skip", "limit", "maxTimeMS")))
         return {"count": count}
 
     @hive_restful_response
     def find_document(self, collection_name, col_filter, skip, limit):
-        did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
+        user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
         return self.__do_find(col, col_filter, {'skip': skip, 'limit': limit})
 
     @hive_restful_response
     def query_document(self, collection_name, json_body):
-        did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
+        user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
         return self.__do_find(col, json_body.get('filter'),
                               options_filter(json_body, ("projection",
                                                          "skip",

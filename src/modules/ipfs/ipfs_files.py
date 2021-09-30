@@ -34,16 +34,16 @@ class IpfsFiles:
 
     @hive_restful_response
     def upload_file(self, path):
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        self.upload_file_with_path(did, app_did, path)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        self.upload_file_with_path(user_did, app_did, path)
         return {
             'name': path
         }
 
     @hive_stream_response
     def download_file(self, path):
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
-        return self.download_file_with_path(did, app_did, path)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
+        return self.download_file_with_path(user_did, app_did, path)
 
     @hive_restful_response
     def delete_file(self, path):
@@ -54,20 +54,20 @@ class IpfsFiles:
         :param path:
         :return:
         """
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        col_filter = {DID: did,
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        col_filter = {DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter, is_raise=False)
+        doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_raise=False)
         if not doc:
             return
 
-        file_path = fm.ipfs_get_file_path(did, app_did, path)
+        file_path = fm.ipfs_get_file_path(user_did, app_did, path)
         if file_path.exists():
             file_path.unlink()
 
-        self.delete_file_metadata(did, app_did, path, doc[COL_IPFS_FILES_IPFS_CID])
-        inc_vault_file_use_storage_byte(did, 0 - doc[SIZE])
+        self.delete_file_metadata(user_did, app_did, path, doc[COL_IPFS_FILES_IPFS_CID])
+        inc_vault_file_use_storage_byte(user_did, 0 - doc[SIZE])
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
@@ -84,14 +84,14 @@ class IpfsFiles:
         :param path: Empty means root folder.
         :return: File list.
         """
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        col_filter = {DID: did, APP_DID: app_did}
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        col_filter = {DID: user_did, APP_DID: app_did}
         if path:
             folder_path = path if path[len(path) - 1] == '/' else f'{path}/'
             col_filter[COL_IPFS_FILES_PATH] = {
                 '$regex': f'^{folder_path}'
             }
-        docs = cli.find_many(did, app_did, COL_IPFS_FILES, col_filter)
+        docs = cli.find_many(user_did, app_did, COL_IPFS_FILES, col_filter)
         if not docs and path:
             raise InvalidParameterException(f'The directory {path} is not exist.')
         return {
@@ -100,8 +100,8 @@ class IpfsFiles:
 
     @hive_restful_response
     def get_properties(self, path):
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
-        doc = self.check_file_exists(did, app_did, path)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
+        doc = self.check_file_exists(user_did, app_did, path)
         return {
             'name': doc[COL_IPFS_FILES_PATH],
             'is_file': doc[COL_IPFS_FILES_IS_FILE],
@@ -112,28 +112,28 @@ class IpfsFiles:
 
     @hive_restful_response
     def get_hash(self, path):
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
-        doc = self.check_file_exists(did, app_did, path)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
+        doc = self.check_file_exists(user_did, app_did, path)
         return {
             'name': doc[COL_IPFS_FILES_PATH],
             'algorithm': 'SHA256',
             'hash': doc[COL_IPFS_FILES_SHA256]
         }
 
-    def upload_file_with_path(self, did, app_did, path: str):
+    def upload_file_with_path(self, user_did, app_did, path: str):
         """
         Upload file really.
             1. generate the local file name and save the content to local.
             2. add file document to the vault_files collection or update doc by remove cid.
             3. return None.
             4. run a timely script to upload file to IPFS node and update the relating file documents.
-        :param did: the user did
+        :param user_did: the user did
         :param app_did: the application did
         :param path: the file relative path, not None
         :return: None
         """
         # remove the existing cache file.
-        file_path = fm.ipfs_get_file_path(did, app_did, path)
+        file_path = fm.ipfs_get_file_path(user_did, app_did, path)
         if file_path.exists():
             file_path.unlink()
         else:
@@ -144,22 +144,22 @@ class IpfsFiles:
         fm.write_file_by_request_stream(temp_file)
 
         # insert or update file metadata.
-        col_filter = {DID: did,
+        col_filter = {DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
+        doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
         if not doc:
-            self.add_file_to_metadata(did, app_did, path, temp_file)
+            self.add_file_to_metadata(user_did, app_did, path, temp_file)
         else:
-            self.update_file_metadata(did, app_did, path, temp_file, doc)
+            self.update_file_metadata(user_did, app_did, path, temp_file, doc)
 
         # set temporary file as cache.
         shutil.move(temp_file.as_posix(), file_path.as_posix())
 
-    def add_file_to_metadata(self, did, app_did, rel_path: str, file_path: Path):
+    def add_file_to_metadata(self, user_did, app_did, rel_path: str, file_path: Path):
         cid = fm.ipfs_upload_file_from_path(file_path)
         file_doc = {
-            DID: did,
+            DID: user_did,
             APP_DID: app_did,
             COL_IPFS_FILES_PATH: rel_path,
             COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(file_path),
@@ -168,16 +168,16 @@ class IpfsFiles:
             COL_IPFS_FILES_IPFS_CID: cid,
         }
         self.increase_refcount_cid(cid)
-        result = cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
-        inc_vault_file_use_storage_byte(did, file_doc[SIZE])
+        result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
+        inc_vault_file_use_storage_byte(user_did, file_doc[SIZE])
         logging.info(f'[ipfs-files] Add a new file {rel_path}')
 
-    def update_file_metadata(self, did, app_did, rel_path: str, file_path: Path, old_doc=None):
-        col_filter = {DID: did,
+    def update_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, old_doc=None):
+        col_filter = {DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
         if not old_doc:
-            old_doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
+            old_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
             if not old_doc:
                 logging.error(f'The file {rel_path} does not exist. Update can not be done.')
                 return
@@ -197,33 +197,33 @@ class IpfsFiles:
         update = {'$set': {COL_IPFS_FILES_SHA256: sha256,
                            SIZE: size,
                            COL_IPFS_FILES_IPFS_CID: cid}}
-        result = cli.update_one(did, app_did, COL_IPFS_FILES, col_filter, update, is_extra=True)
+        result = cli.update_one(user_did, app_did, COL_IPFS_FILES, col_filter, update, is_extra=True)
         if cid != old_doc[COL_IPFS_FILES_IPFS_CID]:
             self.decrease_refcount_cid(old_doc[COL_IPFS_FILES_IPFS_CID])
         logging.info(f'[ipfs-files] Update an existing file {rel_path}')
 
-    def delete_file_metadata(self, did, app_did, rel_path, cid):
-        col_filter = {DID: did,
+    def delete_file_metadata(self, user_did, app_did, rel_path, cid):
+        col_filter = {DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
-        result = cli.delete_one(did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
+        result = cli.delete_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
         if result['deleted_count'] > 0:
             self.decrease_refcount_cid(cid)
         logging.info(f'[ipfs-files] Remove an existing file {rel_path}')
 
-    def download_file_with_path(self, did, app_did, path: str):
+    def download_file_with_path(self, user_did, app_did, path: str):
         """
         Download file by did.
         1. check file caches.
         2. download file from IPFS to files cache if no cache.
         3. return the file content as the response.
-        :param did: The user did.
+        :param user_did: The user did.
         :param app_did:
         :param path:
         :return:
         """
-        doc = self.check_file_exists(did, app_did, path)
-        file_path = fm.ipfs_get_file_path(did, app_did, path)
+        doc = self.check_file_exists(user_did, app_did, path)
+        file_path = fm.ipfs_get_file_path(user_did, app_did, path)
         if not file_path.exists():
             fm.ipfs_download_file_to_path(doc[COL_IPFS_FILES_IPFS_CID], file_path)
         return fm.get_response_by_file_path(file_path)
@@ -239,19 +239,19 @@ class IpfsFiles:
         :param is_copy: True means copy file, else move.
         :return: Json data of the response.
         """
-        did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
 
-        src_filter = {DID: did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
-        dst_filter = {DID: did, APP_DID: app_did, COL_IPFS_FILES_PATH: dst_path}
-        src_doc = cli.find_one(did, app_did, COL_IPFS_FILES, src_filter)
-        dst_doc = cli.find_one(did, app_did, COL_IPFS_FILES, dst_filter)
+        src_filter = {DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
+        dst_filter = {DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: dst_path}
+        src_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, src_filter)
+        dst_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, dst_filter)
         if not src_doc:
             raise FileNotFoundException(msg=f'Source file {src_path} does not exist.')
         if dst_doc:
             raise AlreadyExistsException(msg=f'Destination file {dst_path} exists.')
 
-        full_src_path = fm.ipfs_get_file_path(did, app_did, src_path)
-        full_dst_path = fm.ipfs_get_file_path(did, app_did, dst_path)
+        full_src_path = fm.ipfs_get_file_path(user_did, app_did, src_path)
+        full_dst_path = fm.ipfs_get_file_path(user_did, app_did, dst_path)
         if full_dst_path.exists():
             full_dst_path.unlink()
         if full_src_path.exists():
@@ -262,7 +262,7 @@ class IpfsFiles:
 
         if is_copy:
             file_doc = {
-                DID: did,
+                DID: user_did,
                 APP_DID: app_did,
                 COL_IPFS_FILES_PATH: dst_path,
                 COL_IPFS_FILES_SHA256: src_doc[COL_IPFS_FILES_SHA256],
@@ -271,10 +271,10 @@ class IpfsFiles:
                 COL_IPFS_FILES_IPFS_CID: src_doc[COL_IPFS_FILES_IPFS_CID],
             }
             self.increase_refcount_cid(src_doc[COL_IPFS_FILES_IPFS_CID])
-            cli.insert_one(did, app_did, COL_IPFS_FILES, file_doc)
-            inc_vault_file_use_storage_byte(did, src_doc[SIZE])
+            cli.insert_one(user_did, app_did, COL_IPFS_FILES, file_doc)
+            inc_vault_file_use_storage_byte(user_did, src_doc[SIZE])
         else:
-            cli.update_one(did, app_did, COL_IPFS_FILES, src_filter,
+            cli.update_one(user_did, app_did, COL_IPFS_FILES, src_filter,
                            {'$set': {COL_IPFS_FILES_PATH: dst_path}}, is_extra=True)
         return {
             'name': dst_path
@@ -287,11 +287,11 @@ class IpfsFiles:
             'size': file_doc[SIZE],
         }
 
-    def check_file_exists(self, did, app_did, path: str):
-        col_filter = {DID: did,
+    def check_file_exists(self, user_did, app_did, path: str):
+        col_filter = {DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(did, app_did, COL_IPFS_FILES, col_filter)
+        doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter)
         if not doc:
             raise FileNotFoundException(msg=f'Can not find the file metadata with path: {path}')
         return doc

@@ -43,6 +43,10 @@ class IpfsBackupTestCase(unittest.TestCase):
         self.assertEqual(r.status_code, 201)
         time.sleep(10)
 
+    def test03_backup_invalid_parameter(self):
+        r = self.cli.post('/vault/content?to=hive_node')
+        self.assertEqual(r.status_code, 400)
+
     @unittest.skip
     def test03_backup_force(self):
         r = self.cli.post('/vault/content?to=hive_node&is_force=true',
@@ -58,6 +62,10 @@ class IpfsBackupTestCase(unittest.TestCase):
                           body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
         time.sleep(10)
+
+    def test05_restore_invalid_parameter(self):
+        r = self.cli.post('/vault/content?from=hive_node')
+        self.assertEqual(r.status_code, 400)
 
     @unittest.skip
     def test05_restore_force(self):

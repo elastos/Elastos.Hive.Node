@@ -27,23 +27,6 @@ class BaseParams:
             return def_val, f'The parameter {key} does not valid.'
         return val, None
 
-    def get_bool(self, key, def_val=False):
-        val_str, _ = self.get_str(key)
-        if val_str != '' and val_str != 'true' and val_str != 'false':
-            return def_val, f'Invalid parameter {key}.'
-        return val_str == 'true', None
-
-    def get_int(self, key, def_val=0):
-        val_str, msg = self.get_str(key)
-        if msg:
-            return def_val, msg
-        elif not val_str:
-            return def_val, None
-        try:
-            return int(val_str), None
-        except ValueError:
-            return def_val, f'Invalid parameter {key}.'
-
     def get_list(self, key):
         root, msg = self.get_root()
         if msg:
@@ -66,6 +49,24 @@ class RequestParams(BaseParams):
             return {}, f'Invalid request body.'
         return body, None
 
+    def get_int(self, key, def_val=0):
+        root, msg = self.get_root()
+        if msg:
+            return def_val, msg
+        val = root.get(key)
+        if type(val) != int:
+            return def_val, f'Invalid parameter {key}.'
+        return val, None
+
+    def get_bool(self, key, def_val=False):
+        root, msg = self.get_root()
+        if msg:
+            return def_val, msg
+        val = root.get(key)
+        if type(val) != bool:
+            return def_val, f'Invalid parameter {key}.'
+        return val, None
+
     def get_dict(self, key):
         body, msg = self.get_root()
         if msg:
@@ -81,6 +82,26 @@ class RequestParams(BaseParams):
 class RequestArgs(BaseParams):
     def __init__(self):
         super().__init__()
+
+    def get_root(self):
+        return request.args, None
+
+    def get_int(self, key, def_val=0):
+        val_str, msg = self.get_str(key)
+        if msg:
+            return def_val, msg
+        elif not val_str:
+            return def_val, None
+        try:
+            return int(val_str), None
+        except ValueError:
+            return def_val, f'Invalid parameter {key}.'
+
+    def get_bool(self, key, def_val=False):
+        val_str, _ = self.get_str(key)
+        if val_str != '' and val_str != 'true' and val_str != 'false':
+            return def_val, f'Invalid parameter {key}.'
+        return val_str == 'true', None
 
     def get_dict(self, key):
         val_str, msg = self.get_str(key)

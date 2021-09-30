@@ -424,12 +424,9 @@ def find_document(collection_name):
     col_filter, msg = rqargs.get_dict('filter')
     if msg:
         return InvalidParameterException(msg=msg).get_error_response()
-    skip, msg = rqargs.get_int('skip')
-    if msg or skip < 0:
-        return InvalidParameterException(msg='Invalid parameter skip.').get_error_response()
-    limit, msg = rqargs.get_int('limit')
-    if msg or limit < 0:
-        return InvalidParameterException(msg='Invalid parameter limit.').get_error_response()
+    skip, limit = rqargs.get_int('skip')[0], rqargs.get_int('limit')[0]
+    if skip < 0 or limit < 0:
+        return InvalidParameterException(msg='Invalid parameter skip or limit.').get_error_response()
     return database.find_document(collection_name, col_filter, skip, limit)
 
 

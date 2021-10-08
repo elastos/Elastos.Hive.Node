@@ -84,7 +84,7 @@ def task_adapt_local_file_to_ipfs():
     for user in cli.get_all_user_apps():
         try:
             user_did, app_did = user[USER_DID], user[APP_ID]
-            logging.info(f'[task_adapt_local_file_to_ipfs] Adapt for user({user_did}), app_id({app_did})')
+            logging.info(f'[task_adapt_local_file_to_ipfs] Adapt for user({user_did}), app_did({app_did})')
             name = gene_mongo_db_name(user_did, app_did)
             files_root = get_save_files_path(user_did, app_did)
             if not files_root.exists():

@@ -29,7 +29,7 @@ class VaultSubscription(metaclass=Singleton):
 
     @hive_restful_response
     def subscribe(self):
-        user_did, app_id = check_auth()
+        user_did, app_did = check_auth()
         self.get_checked_vault(user_did, is_not_exist_raise=False)
         return self.__get_vault_info(self.create_vault(user_did, self.get_price_plan('vault', 'Free')))
 
@@ -68,13 +68,13 @@ class VaultSubscription(metaclass=Singleton):
 
     @hive_restful_response
     def unsubscribe(self):
-        user_did, app_id = check_auth()
+        user_did, app_did = check_auth()
         document = self.get_checked_vault(user_did, is_raise=False)
         if not document:
             # INFO: do not raise here.
             return
         delete_user_vault_data(user_did)
-        cli.remove_database(user_did, app_id)
+        cli.remove_database(user_did, app_did)
         self.payment.archive_orders(user_did)
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did}, is_check_exist=False)
 
@@ -87,7 +87,7 @@ class VaultSubscription(metaclass=Singleton):
         raise NotImplementedException()
 
     def __update_vault_state(self, status):
-        user_did, app_id = check_auth()
+        user_did, app_did = check_auth()
         self.get_checked_vault(user_did)
         col_filter = {VAULT_SERVICE_DID: user_did}
         doc = {VAULT_SERVICE_DID: user_did,
@@ -97,7 +97,7 @@ class VaultSubscription(metaclass=Singleton):
 
     @hive_restful_response
     def get_info(self):
-        user_did, app_id = check_auth()
+        user_did, app_did = check_auth()
         doc = self.get_checked_vault(user_did)
         return self.__get_vault_info(doc)
 

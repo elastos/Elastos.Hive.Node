@@ -41,23 +41,23 @@ class FileManager:
             self._http = HttpClient()
         return self._http
 
-    def get_vault_storage_size(self, did):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {DID: did})
+    def get_vault_storage_size(self, user_did):
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {DID: user_did})
         if not doc:
             raise VaultNotFoundException(msg='Vault not found for get storage size.')
         return int(doc[VAULT_SERVICE_FILE_USE_STORAGE] + doc[VAULT_SERVICE_DB_USE_STORAGE])
 
-    def get_vault_max_size(self, did):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {DID: did})
+    def get_vault_max_size(self, user_did):
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {DID: user_did})
         if not doc:
             raise VaultNotFoundException(msg='Vault not found for get max size.')
         return int(doc[VAULT_SERVICE_MAX_STORAGE])
 
-    def update_vault_files_usage(self, did, size):
-        inc_vault_file_use_storage_byte(did, size, is_reset=True)
+    def update_vault_files_usage(self, user_did, size):
+        inc_vault_file_use_storage_byte(user_did, size, is_reset=True)
 
-    def update_vault_dbs_usage(self, did, size):
-        update_vault_db_use_storage_byte(did, size)
+    def update_vault_dbs_usage(self, user_did, size):
+        update_vault_db_use_storage_byte(user_did, size)
 
     def get_file_checksum_list(self, root_path: Path) -> list:
         """
@@ -156,19 +156,19 @@ class FileManager:
         if file_path.exists() and file_path.is_file():
             file_path.unlink()
 
-    def delete_vault_file(self, did, name):
-        self.delete_file((get_vault_backup_path(did) / name).resolve())
+    def delete_vault_file(self, user_did, name):
+        self.delete_file((get_vault_backup_path(user_did) / name).resolve())
 
     def ipfs_gen_cache_file_name(self, path: str):
         return path.replace('/', '_').replace('\\', '_')
 
-    def ipfs_get_file_path(self, did, app_did, path: str):
+    def ipfs_get_file_path(self, user_did, app_did, path: str):
         # name = self.ipfs_gen_cache_file_name(path)
-        # cache_path = st_get_ipfs_cache_path(did)
+        # cache_path = st_get_ipfs_cache_path(user_did)
         # return cache_path / name
 
         # INFO: change to vault files folder for keeping sync with v1.
-        return get_save_files_path(did, app_did) / path
+        return get_save_files_path(user_did, app_did) / path
 
     def get_file_content_sha256(self, file_path: Path):
         buf_size = 65536  # lets read stuff in 64kb chunks!
@@ -181,8 +181,8 @@ class FileManager:
                 sha.update(data)
         return sha.hexdigest()
 
-    def ipfs_uploading_file(self, did, app_did, path: str):
-        file_path = self.ipfs_get_file_path(did, app_did, path)
+    def ipfs_uploading_file(self, user_did, app_did, path: str):
+        file_path = self.ipfs_get_file_path(user_did, app_did, path)
         return self.ipfs_upload_file_from_path(file_path)
 
     def get_response_by_file_path(self, path: Path):
@@ -227,21 +227,21 @@ class FileManager:
     def ipfs_unpin_cid(self, cid):
         response = self.http.post(self.ipfs_url + f'/api/v0/pin/rm?arg=/ipfs/{cid}&recursive=true', None, None, is_body=False, success_code=200)
 
-    def get_file_cids(self, did):
-        databases = cli.get_all_user_databases(did)
+    def get_file_cids(self, user_did):
+        databases = cli.get_all_user_databases(user_did)
         total_size, cids = 0, set()
         for d in databases:
-            docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: did}, is_create=False, is_raise=False)
+            docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: user_did}, is_create=False, is_raise=False)
             if docs:
                 cids.update([doc[COL_IPFS_FILES_IPFS_CID] for doc in docs])
                 total_size += sum([doc[SIZE] for doc in docs])
         return total_size, list(cids)
 
-    def get_file_cid_metadatas(self, did):
-        databases = cli.get_all_user_database_names(did)
+    def get_file_cid_metadatas(self, user_did):
+        databases = cli.get_all_user_database_names(user_did)
         total_size, cids = 0, list()
         for d in databases:
-            docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: did}, is_create=False, is_raise=False)
+            docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: user_did}, is_create=False, is_raise=False)
             for doc in docs:
                 mt = self._get_cid_metadata_from_list(cids, doc)
                 if mt:

@@ -11,9 +11,9 @@ def retry_ipfs_backup():
     2. handle all backup request in the backup node.
     """
     user_dids = cli.get_all_user_dids()
-    for did in user_dids:
-        ipfs_backup.backup_client.retry_backup_request(did)
-        ipfs_backup.backup_server.retry_backup_request(did)
+    for user_did in user_dids:
+        ipfs_backup.backup_client.retry_backup_request(user_did)
+        ipfs_backup.backup_server.retry_backup_request(user_did)
 
 
 def init_app(app, mode):

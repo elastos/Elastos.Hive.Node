@@ -52,12 +52,12 @@ class DatabaseClient:
         col = self.get_origin_collection(db_name, collection_name)
         return col is not None
 
-    def get_user_collection(self, did, app_did, collection_name, is_create=False):
-        return self.get_origin_collection(self.get_user_database_name(did, app_did), collection_name, is_create)
+    def get_user_collection(self, user_did, app_did, collection_name, is_create=False):
+        return self.get_origin_collection(self.get_user_database_name(user_did, app_did), collection_name, is_create)
 
-    def get_user_database_name(self, did, app_did):
-        db_name = gene_mongo_db_name(did, app_did)
-        logging.info(f'Choose the use database: {did}, {app_did}, {db_name}')
+    def get_user_database_name(self, user_did, app_did):
+        db_name = gene_mongo_db_name(user_did, app_did)
+        logging.info(f'Choose the use database: {user_did}, {app_did}, {db_name}')
         return db_name
 
     def get_origin_collection(self, db_name, collection_name, is_create=False):
@@ -72,9 +72,9 @@ class DatabaseClient:
     def get_all_database_names(self):
         return self.__get_connection().list_database_names()
 
-    def get_all_user_database_names(self, did=None):
+    def get_all_user_database_names(self, user_did=None):
         names = [name for name in self.get_all_database_names() if name.startswith(get_user_database_prefix())]
-        if not did:
+        if not user_did:
             return names
         user_apps = self.get_all_user_apps()
         result = []
@@ -84,14 +84,14 @@ class DatabaseClient:
                 result.append(db_name)
         return result
 
-    def get_vault_service(self, did):
-        return self.__get_connection()[DID_INFO_DB_NAME][VAULT_SERVICE_COL].find_one({VAULT_SERVICE_DID: did})
+    def get_vault_service(self, user_did):
+        return self.__get_connection()[DID_INFO_DB_NAME][VAULT_SERVICE_COL].find_one({VAULT_SERVICE_DID: user_did})
 
-    def check_vault_access(self, did, access_vault=None):
+    def check_vault_access(self, user_did, access_vault=None):
         """
         Check if the vault can be accessed by specific permission
         """
-        info = self.get_vault_service(did)
+        info = self.get_vault_service(user_did)
         if not info:
             raise VaultNotFoundException()
 
@@ -100,8 +100,8 @@ class DatabaseClient:
         #         and info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
         #     raise ForbiddenException(msg="The vault can't be written.")
 
-    def find_many(self, did, app_id, collection_name, col_filter, options=None):
-        col = self.get_user_collection(did, app_id, collection_name)
+    def find_many(self, user_did, app_id, collection_name, col_filter, options=None):
+        col = self.get_user_collection(user_did, app_id, collection_name)
         if not col:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
@@ -114,8 +114,8 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
 
-    def find_one(self, did, app_id, collection_name, col_filter, options=None, is_create=False, is_raise=True):
-        return self.find_one_origin(self.get_user_database_name(did, app_id),
+    def find_one(self, user_did, app_id, collection_name, col_filter, options=None, is_create=False, is_raise=True):
+        return self.find_one_origin(self.get_user_database_name(user_did, app_id),
                                     collection_name, col_filter, options, is_create=is_create, is_raise=is_raise)
 
     def find_one_origin(self, db_name, collection_name, col_filter, options=None, is_create=False, is_raise=True):
@@ -126,8 +126,8 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
-    def insert_one(self, did, app_id, collection_name, document, options=None, is_create=False):
-        return self.insert_one_origin(self.get_user_database_name(did, app_id), collection_name, document, options, is_create)
+    def insert_one(self, user_did, app_id, collection_name, document, options=None, is_create=False):
+        return self.insert_one_origin(self.get_user_database_name(user_did, app_id), collection_name, document, options, is_create)
 
     def insert_one_origin(self, db_name, collection_name, document, options=None, is_create=False, is_extra=True):
         col = self.get_origin_collection(db_name, collection_name, is_create)
@@ -145,8 +145,8 @@ class DatabaseClient:
             "inserted_id": str(result.inserted_id) if result.inserted_id else ''
         }
 
-    def update_one(self, did, app_id, collection_name, col_filter, col_update, options=None, is_extra=False):
-        return self.update_one_origin(self.get_user_database_name(did, app_id), collection_name,
+    def update_one(self, user_did, app_id, collection_name, col_filter, col_update, options=None, is_extra=False):
+        return self.update_one_origin(self.get_user_database_name(user_did, app_id), collection_name,
                                       col_filter, col_update, options=options, is_extra=is_extra)
 
     def update_one_origin(self, db_name, collection_name, col_filter, col_update,
@@ -175,8 +175,8 @@ class DatabaseClient:
             "upserted_id": str(result.upserted_id) if result.upserted_id else '',
         }
 
-    def delete_one(self, did, app_id, collection_name, col_filter, is_check_exist=True):
-        return self.delete_one_origin(self.get_user_database_name(did, app_id),
+    def delete_one(self, user_did, app_id, collection_name, col_filter, is_check_exist=True):
+        return self.delete_one_origin(self.get_user_database_name(user_did, app_id),
                                       collection_name, col_filter, is_check_exist=is_check_exist)
 
     def delete_one_origin(self, db_name, collection_name, col_filter, is_check_exist=True):
@@ -206,25 +206,25 @@ class DatabaseClient:
         except Exception as e:
             raise BadRequestException('Failed to save the file content to local.')
 
-    def create_collection(self, did, app_did, collection_name):
+    def create_collection(self, user_did, app_did, collection_name):
         try:
-            self.__get_connection()[self.get_user_database_name(did, app_did)].create_collection(collection_name)
+            self.__get_connection()[self.get_user_database_name(user_did, app_did)].create_collection(collection_name)
         except CollectionInvalid as e:
             logging.error('The collection already exists.')
             raise AlreadyExistsException()
 
-    def delete_collection(self, did, app_did, collection_name, is_check_exist=True):
-        if is_check_exist and not self.get_user_collection(did, app_did, collection_name):
+    def delete_collection(self, user_did, app_did, collection_name, is_check_exist=True):
+        if is_check_exist and not self.get_user_collection(user_did, app_did, collection_name):
             raise CollectionNotFoundException()
-        self.__get_connection()[self.get_user_database_name(did, app_did)].drop_collection(collection_name)
+        self.__get_connection()[self.get_user_database_name(user_did, app_did)].drop_collection(collection_name)
 
     def delete_collection_origin(self, db_name, collection_name):
         if self.get_origin_collection(db_name, collection_name):
             raise CollectionNotFoundException()
         self.__get_connection()[db_name].drop_collection(collection_name)
 
-    def remove_database(self, did, app_did):
-        self.__get_connection().drop_database(self.get_user_database_name(did, app_did))
+    def remove_database(self, user_did, app_did):
+        self.__get_connection().drop_database(self.get_user_database_name(user_did, app_did))
 
     def timestamp_to_epoch(self, timestamp):
         if timestamp < 0:
@@ -233,11 +233,11 @@ class DatabaseClient:
         s = datetime(1970, 1, 1, 0, 0, 0)
         return int((t - s).total_seconds())
 
-    def get_all_user_apps(self, did=None):
+    def get_all_user_apps(self, user_did=None):
         # INFO: Need consider the adaptation of the old user information.
         query = {APP_INSTANCE_DID: {'$exists': True}, APP_ID: {'$exists': True}, USER_DID: {'$exists': True}}
-        if did:
-            query[USER_DID] = did
+        if user_did:
+            query[USER_DID] = user_did
         docs = self.find_many_origin(DID_INFO_DB_NAME,
                                      DID_INFO_REGISTER_COL, query, is_create=False, is_raise=False)
         if not docs:
@@ -248,18 +248,18 @@ class DatabaseClient:
         user_apps = self.get_all_user_apps()
         return list(set([d[USER_DID] for d in user_apps]))
 
-    def export_mongodb(self, did):
-        did_info_list = get_all_did_info_by_did(did)
+    def export_mongodb(self, user_did):
+        did_info_list = get_all_did_info_by_did(user_did)
         for did_info in did_info_list:
             export_mongo_db(did_info[USER_DID], did_info[APP_ID])
 
-    def import_mongodb(self, did):
+    def import_mongodb(self, user_did):
         """ same as import_mongo_db """
-        mongodb_root = get_save_mongo_db_path(did)
+        mongodb_root = get_save_mongo_db_path(user_did)
         self.restore_database(mongodb_root)
 
-    def import_mongodb_in_backup_server(self, did):
-        vault_dir = get_vault_backup_path(did)
+    def import_mongodb_in_backup_server(self, user_did):
+        vault_dir = get_vault_backup_path(user_did)
         self.restore_database(vault_dir)
 
     def restore_database(self, root_dir: Path):

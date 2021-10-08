@@ -83,13 +83,13 @@ def task_adapt_local_file_to_ipfs():
 
     for user in cli.get_all_user_apps():
         try:
-            did, app_did = user[USER_DID], user[APP_ID]
-            logging.info(f'[task_adapt_local_file_to_ipfs] Adapt for user({did}), app_id({app_did})')
-            name = gene_mongo_db_name(did, app_did)
-            files_root = get_save_files_path(did, app_did)
+            user_did, app_did = user[USER_DID], user[APP_ID]
+            logging.info(f'[task_adapt_local_file_to_ipfs] Adapt for user({user_did}), app_id({app_did})')
+            name = gene_mongo_db_name(user_did, app_did)
+            files_root = get_save_files_path(user_did, app_did)
             if not files_root.exists():
                 continue
-            adapt_local_files_by_folder(did, app_did, name, files_root)
+            adapt_local_files_by_folder(user_did, app_did, name, files_root)
         except Exception as e:
             logging.error(f'[task_adapt_local_file_to_ipfs] Failed to handle user:'
                           f'{str(user)}, {traceback.format_exc()}, skip')
@@ -97,9 +97,9 @@ def task_adapt_local_file_to_ipfs():
     logging.info('[task_adapt_local_file_to_ipfs] leave.')
 
 
-def adapt_local_files_by_folder(did, app_did, database_name, files_root):
+def adapt_local_files_by_folder(user_did, app_did, database_name, files_root):
     files = fm.get_files_recursively(files_root)
-    col_filter = {DID: did, APP_DID: app_did}
+    col_filter = {DID: user_did, APP_DID: app_did}
     file_docs = cli.find_many_origin(database_name, COL_IPFS_FILES, col_filter, is_create=False, is_raise=False)
     ipfs_files = IpfsFiles()
 
@@ -108,16 +108,16 @@ def adapt_local_files_by_folder(did, app_did, database_name, files_root):
         rel_path = file.relative_to(files_root).as_posix()
         matches = list(filter(lambda d: d[COL_IPFS_FILES_PATH] == rel_path, file_docs))
         if not matches:
-            ipfs_files.add_file_to_metadata(did, app_did, rel_path, file)
+            ipfs_files.add_file_to_metadata(user_did, app_did, rel_path, file)
             continue
         doc = matches[0]
-        ipfs_files.update_file_metadata(did, app_did, rel_path, file, old_doc=doc)
+        ipfs_files.update_file_metadata(user_did, app_did, rel_path, file, old_doc=doc)
 
     # handle delete
     rel_paths = [n.relative_to(files_root).as_posix() for n in files]
     remove_list = [d for d in file_docs if d[COL_IPFS_FILES_PATH] not in rel_paths]
     for d in remove_list:
-        ipfs_files.delete_file_metadata(did, app_did, d[COL_IPFS_FILES_PATH], d[COL_IPFS_FILES_IPFS_CID])
+        ipfs_files.delete_file_metadata(user_did, app_did, d[COL_IPFS_FILES_PATH], d[COL_IPFS_FILES_IPFS_CID])
 
 
 # Shutdown your cron thread if the web process is stopped

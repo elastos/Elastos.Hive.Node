@@ -29,14 +29,14 @@ class VaultSubscription(metaclass=Singleton):
 
     @hive_restful_response
     def subscribe(self):
-        did, app_id = check_auth()
-        self.get_checked_vault(did, is_not_exist_raise=False)
-        return self.__get_vault_info(self.create_vault(did, self.get_price_plan('vault', 'Free')))
+        user_did, app_id = check_auth()
+        self.get_checked_vault(user_did, is_not_exist_raise=False)
+        return self.__get_vault_info(self.create_vault(user_did, self.get_price_plan('vault', 'Free')))
 
-    def create_vault(self, did, price_plan, is_upgraded=False):
+    def create_vault(self, user_did, price_plan, is_upgraded=False):
         now = datetime.utcnow().timestamp()  # seconds in UTC
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
-        doc = {VAULT_SERVICE_DID: did,
+        doc = {VAULT_SERVICE_DID: user_did,
                VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,
                VAULT_SERVICE_FILE_USE_STORAGE: 0,
                VAULT_SERVICE_DB_USE_STORAGE: 0,
@@ -48,7 +48,7 @@ class VaultSubscription(metaclass=Singleton):
                VAULT_SERVICE_PRICING_USING: price_plan['name']}
         cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, doc, is_create=True, is_extra=False)
         # INFO: user database will create with first collection creation.
-        if not fm.create_dir(get_vault_path(did)):
+        if not fm.create_dir(get_vault_path(user_did)):
             raise BadRequestException('Failed to create folder for the user.')
         return doc
 
@@ -68,15 +68,15 @@ class VaultSubscription(metaclass=Singleton):
 
     @hive_restful_response
     def unsubscribe(self):
-        did, app_id = check_auth()
-        document = self.get_checked_vault(did, is_raise=False)
+        user_did, app_id = check_auth()
+        document = self.get_checked_vault(user_did, is_raise=False)
         if not document:
             # INFO: do not raise here.
             return
-        delete_user_vault_data(did)
-        cli.remove_database(did, app_id)
-        self.payment.archive_orders(did)
-        cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did}, is_check_exist=False)
+        delete_user_vault_data(user_did)
+        cli.remove_database(user_did, app_id)
+        self.payment.archive_orders(user_did)
+        cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did}, is_check_exist=False)
 
     @hive_restful_response
     def activate(self):
@@ -87,18 +87,18 @@ class VaultSubscription(metaclass=Singleton):
         raise NotImplementedException()
 
     def __update_vault_state(self, status):
-        did, app_id = check_auth()
-        self.get_checked_vault(did)
-        col_filter = {VAULT_SERVICE_DID: did}
-        doc = {VAULT_SERVICE_DID: did,
+        user_did, app_id = check_auth()
+        self.get_checked_vault(user_did)
+        col_filter = {VAULT_SERVICE_DID: user_did}
+        doc = {VAULT_SERVICE_DID: user_did,
                VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp(),
                VAULT_SERVICE_STATE: status}
         cli.update_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter, {"$set": doc})
 
     @hive_restful_response
     def get_info(self):
-        did, app_id = check_auth()
-        doc = self.get_checked_vault(did)
+        user_did, app_id = check_auth()
+        doc = self.get_checked_vault(user_did)
         return self.__get_vault_info(doc)
 
     @hive_restful_response
@@ -137,8 +137,8 @@ class VaultSubscription(metaclass=Singleton):
     def get_price_plans_version(self):
         return PaymentConfig.get_all_package_info().get('version', '1.0')
 
-    def get_checked_vault(self, did, is_raise=True, is_not_exist_raise=True):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: did},
+    def get_checked_vault(self, user_did, is_raise=True, is_not_exist_raise=True):
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did},
                                   is_raise=False, is_create=True)
         if is_raise and is_not_exist_raise and not doc:
             raise VaultNotFoundException()
@@ -146,7 +146,7 @@ class VaultSubscription(metaclass=Singleton):
             raise AlreadyExistsException(msg='The vault already exists.')
         return doc
 
-    def upgrade_vault_plan(self, did, vault, pricing_name):
+    def upgrade_vault_plan(self, user_did, vault, pricing_name):
         remain_days = 0
         now = datetime.utcnow().timestamp()  # seconds in UTC
         plan = self.get_price_plan('vault', pricing_name)
@@ -155,7 +155,7 @@ class VaultSubscription(metaclass=Singleton):
             remain_days = self._get_remain_days(cur_plan, vault[VAULT_SERVICE_END_TIME], now, plan)
 
         end_time = -1 if plan['serviceDays'] == -1 else now + (plan['serviceDays'] + remain_days) * 24 * 60 * 60
-        col_filter = {VAULT_SERVICE_DID: did}
+        col_filter = {VAULT_SERVICE_DID: user_did}
         update = {VAULT_SERVICE_PRICING_USING: pricing_name,
                   VAULT_SERVICE_MAX_STORAGE: int(plan["maxStorage"]) * 1024 * 1024,
                   VAULT_SERVICE_START_TIME: now,
@@ -175,6 +175,6 @@ class VaultSubscription(metaclass=Singleton):
         days = (cur_end_timestamp - now_timestamp) / (24 * 60 * 60)
         return days * cur_plan['amount'] / plan['amount']
 
-    def get_vault_max_size(self, did):
-        doc = self.get_checked_vault(did, is_raise=True)
+    def get_vault_max_size(self, user_did):
+        doc = self.get_checked_vault(user_did, is_raise=True)
         return doc[VAULT_SERVICE_MAX_STORAGE]

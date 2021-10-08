@@ -168,9 +168,9 @@ def query_delete_one(col, content):
         return None, f"Exception: method: 'query_delete_one', Err: {str(e)}"
 
 
-def gene_mongo_db_name(did, app_id):
+def gene_mongo_db_name(did, app_did):
     md5 = hashlib.md5()
-    md5.update((did + "_" + app_id).encode("utf-8"))
+    md5.update((did + "_" + app_did).encode("utf-8"))
     return get_user_database_prefix() + str(md5.hexdigest())
 
 
@@ -178,9 +178,9 @@ def get_user_database_prefix():
     return 'hive_user_db_' if not hive_setting.is_mongodb_atlas() else 'hu_'
 
 
-def get_collection(did, app_id, collection):
+def get_collection(did, app_did, collection):
     connection = create_db_client()
-    db_name = gene_mongo_db_name(did, app_id)
+    db_name = gene_mongo_db_name(did, app_did)
     db = connection[db_name]
     if collection not in db.list_collection_names():
         return None
@@ -188,15 +188,15 @@ def get_collection(did, app_id, collection):
     return col
 
 
-def delete_mongo_database(did, app_id):
+def delete_mongo_database(did, app_did):
     connection = create_db_client()
-    db_name = gene_mongo_db_name(did, app_id)
+    db_name = gene_mongo_db_name(did, app_did)
     connection.drop_database(db_name)
 
 
-def get_mongo_database_size(did, app_id):
+def get_mongo_database_size(did, app_did):
     connection = create_db_client()
-    db_name = gene_mongo_db_name(did, app_id)
+    db_name = gene_mongo_db_name(did, app_did)
     db = connection[db_name]
     status = db.command("dbstats")
     storage_size = status["storageSize"]
@@ -213,7 +213,7 @@ def get_save_mongo_db_path(did):
     return path.resolve()
 
 
-def export_mongo_db(did, app_id):
+def export_mongo_db(did, app_did):
     """ Export every database as tar file to folder HIVE_DATA/vaults/<did>/mongo_db """
     save_path = get_save_mongo_db_path(did)
     if not save_path.exists():
@@ -221,7 +221,7 @@ def export_mongo_db(did, app_id):
             return False
 
     # dump the data of the database 'db_name' to file 'dump_file'
-    db_name = gene_mongo_db_name(did, app_id)
+    db_name = gene_mongo_db_name(did, app_did)
     from src.utils.db_client import cli
     if not cli.is_database_exists(db_name):
         return False

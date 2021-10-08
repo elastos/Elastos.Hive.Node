@@ -20,13 +20,13 @@ def get_vault_path(did):
     return path.resolve()
 
 
-def get_save_files_path(did, app_id):
+def get_save_files_path(did, app_did):
     """ get files root path """
     path = Path(hive_setting.VAULTS_BASE_DIR)
     if path.is_absolute():
-        path = path / did_tail_part(did) / app_id / "files"
+        path = path / did_tail_part(did) / app_did / "files"
     else:
-        path = path.resolve() / did_tail_part(did) / app_id / "files"
+        path = path.resolve() / did_tail_part(did) / app_did / "files"
     return path.resolve()
 
 
@@ -34,14 +34,14 @@ def filter_path_root(name):
     return name[1:] if len(name) > 0 and name[0] == "/" else name
 
 
-def query_upload_get_filepath(did, app_id, file_name):
+def query_upload_get_filepath(did, app_did, file_name):
     """
     Create the parent folder of the file and return the full path of the file.
     Return: full file path, error message
     """
     err = {}
 
-    path = get_save_files_path(did, app_id)
+    path = get_save_files_path(did, app_did)
     full_path_name = (path / file_name).resolve()
 
     if not create_full_path_dir(full_path_name.parent):
@@ -58,12 +58,12 @@ def query_upload_get_filepath(did, app_id, file_name):
     return full_path_name, err
 
 
-def query_download(did, app_id, file_name):
+def query_download(did, app_did, file_name):
     if file_name is None:
         return None, BAD_REQUEST
     filename = filter_path_root(file_name)
 
-    path = get_save_files_path(did, app_id)
+    path = get_save_files_path(did, app_did)
     file_full_name = (path / filename).resolve()
 
     if not file_full_name.exists():
@@ -83,14 +83,14 @@ def query_download(did, app_id, file_name):
                         size=size).make_response(), SUCCESS
 
 
-def query_properties(did, app_id, name):
+def query_properties(did, app_did, name):
     """
     Return: file property information of relative file name.
     """
     data, err = {}, {}
 
     name = filter_path_root(name)
-    path = get_save_files_path(did, app_id)
+    path = get_save_files_path(did, app_did)
     full_path_name = (path / name).resolve()
 
     if not full_path_name.exists():
@@ -108,11 +108,11 @@ def query_properties(did, app_id, name):
     return data, err
 
 
-def query_hash(did, app_id, name):
+def query_hash(did, app_did, name):
     data, err = {}, {}
 
     name = filter_path_root(name)
-    path = get_save_files_path(did, app_id)
+    path = get_save_files_path(did, app_did)
     full_path_name = (path / name).resolve()
 
     if not full_path_name.exists() or (not full_path_name.is_file()):

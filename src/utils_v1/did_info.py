@@ -35,12 +35,12 @@ def update_did_info_by_app_instance_did(app_instance_did, nonce, expired):
     return ret
 
 
-def update_token_of_did_info(did, app_id, app_instance_did, nonce, token, expired):
+def update_token_of_did_info(did, app_did, app_instance_did, nonce, token, expired):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {APP_INSTANCE_DID: app_instance_did, DID_INFO_NONCE: nonce}
-    value = {"$set": {USER_DID: did, APP_ID: app_id, DID_INFO_TOKEN: token, DID_INFO_TOKEN_EXPIRED: expired}}
+    value = {"$set": {USER_DID: did, APP_ID: app_did, DID_INFO_TOKEN: token, DID_INFO_TOKEN_EXPIRED: expired}}
     ret = col.update_one(query, value)
     return ret
 
@@ -53,11 +53,11 @@ def get_all_did_info():
     return infos
 
 
-def delete_did_info(did, app_id):
+def delete_did_info(did, app_did):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {USER_DID: did, APP_ID: app_id}
+    query = {USER_DID: did, APP_ID: app_did}
     col.delete_many(query)
 
 
@@ -88,20 +88,20 @@ def get_did_info_by_app_instance_did(app_instance_did):
     return info
 
 
-def get_did_info_by_did_appid(did, app_id):
+def get_did_info_by_did_appid(did, app_did):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {USER_DID: did, APP_ID: app_id}
+    query = {USER_DID: did, APP_ID: app_did}
     info = col.find_one(query)
     return info
 
 
-def save_token_to_db(did, app_id, token, expired):
+def save_token_to_db(did, app_did, token, expired):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
-    query = {USER_DID: did, APP_ID: app_id}
+    query = {USER_DID: did, APP_ID: app_did}
     value = {"$set": {
         DID_INFO_TOKEN: token,
         DID_INFO_TOKEN_EXPIRED: expired,
@@ -120,9 +120,9 @@ def get_did_info_by_token(token):
     return info
 
 
-def get_collection(did, app_id, collection):
+def get_collection(did, app_did, collection):
     connection = create_db_client()
-    db_name = gene_mongo_db_name(did, app_id)
+    db_name = gene_mongo_db_name(did, app_did)
     db = connection[db_name]
     col = db[collection]
     return col

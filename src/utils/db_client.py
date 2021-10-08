@@ -100,8 +100,8 @@ class DatabaseClient:
         #         and info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
         #     raise ForbiddenException(msg="The vault can't be written.")
 
-    def find_many(self, user_did, app_id, collection_name, col_filter, options=None):
-        col = self.get_user_collection(user_did, app_id, collection_name)
+    def find_many(self, user_did, app_did, collection_name, col_filter, options=None):
+        col = self.get_user_collection(user_did, app_did, collection_name)
         if not col:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
@@ -114,8 +114,8 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
 
-    def find_one(self, user_did, app_id, collection_name, col_filter, options=None, is_create=False, is_raise=True):
-        return self.find_one_origin(self.get_user_database_name(user_did, app_id),
+    def find_one(self, user_did, app_did, collection_name, col_filter, options=None, is_create=False, is_raise=True):
+        return self.find_one_origin(self.get_user_database_name(user_did, app_did),
                                     collection_name, col_filter, options, is_create=is_create, is_raise=is_raise)
 
     def find_one_origin(self, db_name, collection_name, col_filter, options=None, is_create=False, is_raise=True):
@@ -126,8 +126,8 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
-    def insert_one(self, user_did, app_id, collection_name, document, options=None, is_create=False):
-        return self.insert_one_origin(self.get_user_database_name(user_did, app_id), collection_name, document, options, is_create)
+    def insert_one(self, user_did, app_did, collection_name, document, options=None, is_create=False):
+        return self.insert_one_origin(self.get_user_database_name(user_did, app_did), collection_name, document, options, is_create)
 
     def insert_one_origin(self, db_name, collection_name, document, options=None, is_create=False, is_extra=True):
         col = self.get_origin_collection(db_name, collection_name, is_create)
@@ -145,8 +145,8 @@ class DatabaseClient:
             "inserted_id": str(result.inserted_id) if result.inserted_id else ''
         }
 
-    def update_one(self, user_did, app_id, collection_name, col_filter, col_update, options=None, is_extra=False):
-        return self.update_one_origin(self.get_user_database_name(user_did, app_id), collection_name,
+    def update_one(self, user_did, app_did, collection_name, col_filter, col_update, options=None, is_extra=False):
+        return self.update_one_origin(self.get_user_database_name(user_did, app_did), collection_name,
                                       col_filter, col_update, options=options, is_extra=is_extra)
 
     def update_one_origin(self, db_name, collection_name, col_filter, col_update,
@@ -175,8 +175,8 @@ class DatabaseClient:
             "upserted_id": str(result.upserted_id) if result.upserted_id else '',
         }
 
-    def delete_one(self, user_did, app_id, collection_name, col_filter, is_check_exist=True):
-        return self.delete_one_origin(self.get_user_database_name(user_did, app_id),
+    def delete_one(self, user_did, app_did, collection_name, col_filter, is_check_exist=True):
+        return self.delete_one_origin(self.get_user_database_name(user_did, app_did),
                                       collection_name, col_filter, is_check_exist=is_check_exist)
 
     def delete_one_origin(self, db_name, collection_name, col_filter, is_check_exist=True):

@@ -59,11 +59,11 @@ def fix_dollar_keys(data, is_save=True):
 
 
 class Condition:
-    def __init__(self, condition_data, params, user_did, app_id):
+    def __init__(self, condition_data, params, user_did, app_did):
         self.condition_data = condition_data if condition_data else {}
         self.params = params
         self.user_did = user_did
-        self.app_id = app_id
+        self.app_did = app_did
 
     @staticmethod
     def validate_data(json_data):
@@ -118,7 +118,7 @@ class Condition:
     def __is_satisfied_query_has_result(self, con_body_data, context):
         col_name = con_body_data['collection']
         col_filter = con_body_data.get('filter', {})
-        msg = populate_with_params_values(self.user_did, self.app_id, col_filter, self.params)
+        msg = populate_with_params_values(self.user_did, self.app_did, col_filter, self.params)
         if msg:
             raise BadRequestException(msg='Cannot find parameter: ' + msg)
 
@@ -132,10 +132,10 @@ class Condition:
 
 
 class Context:
-    def __init__(self, context_data, user_did, app_id):
-        self.user_did, self.app_did = user_did, app_id
+    def __init__(self, context_data, user_did, app_did):
+        self.user_did, self.app_did = user_did, app_did
         self.target_did = user_did
-        self.target_app_did = app_id
+        self.target_app_did = app_did
         if context_data:
             self.target_did = context_data['target_did']
             self.target_app_did = context_data['target_app_did']
@@ -221,7 +221,7 @@ class Executable:
         return self.script.user_did
 
     def get_app_id(self):
-        return self.script.app_id
+        return self.script.app_did
 
     def get_target_did(self):
         return self.script.context.target_did
@@ -480,11 +480,11 @@ class FileHashExecutable(Executable):
 
 
 class Script:
-    def __init__(self, script_name, run_data, user_did, app_id, hive_setting=None, scripting=None, is_ipfs=False):
+    def __init__(self, script_name, run_data, user_did, app_did, hive_setting=None, scripting=None, is_ipfs=False):
         self.user_did = user_did
-        self.app_id = app_id
+        self.app_did = app_did
         self.name = script_name
-        self.context = Context(run_data.get('context', None) if run_data else None, user_did, app_id)
+        self.context = Context(run_data.get('context', None) if run_data else None, user_did, app_did)
         self.params = run_data.get('params', None) if run_data else None
         self.condition = None
         self.executables = []
@@ -526,7 +526,8 @@ class Script:
 
         result = dict()
         for executable in self.executables:
-            self.condition = Condition(script_data.get('condition'), executable.get_params(), self.user_did, self.app_id)
+            self.condition = Condition(script_data.get('condition'),
+                                       executable.get_params(), self.user_did, self.app_did)
             if not self.context.can_anonymous_access(self.anonymous_user, self.anonymous_app) \
                     and not self.condition.is_satisfied(self.context):
                 raise BadRequestException(msg="Caller can't match the condition or access anonymously for the script.")
@@ -548,17 +549,17 @@ class Scripting:
 
     @hive_restful_response
     def set_script(self, script_name):
-        user_did, app_id = check_auth_and_vault(VAULT_ACCESS_WR)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
 
         json_data = request.get_json(force=True, silent=True)
         Script.validate_script_data(json_data)
 
-        result = self.__upsert_script_to_database(script_name, json_data, user_did, app_id)
-        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_id))
+        result = self.__upsert_script_to_database(script_name, json_data, user_did, app_did)
+        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
         return result
 
-    def __upsert_script_to_database(self, script_name, json_data, user_did, app_id):
-        col = cli.get_user_collection(user_did, app_id, SCRIPTING_SCRIPT_COLLECTION, is_create=True)
+    def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
+        col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, is_create=True)
         json_data['name'] = script_name
         fix_dollar_keys(json_data['executable'])
         ret = col.replace_one({"name": script_name}, convert_oid(json_data),
@@ -572,22 +573,22 @@ class Scripting:
 
     @hive_restful_response
     def delete_script(self, script_name):
-        user_did, app_id = check_auth_and_vault(VAULT_ACCESS_DEL)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
 
-        col = cli.get_user_collection(user_did, app_id, SCRIPTING_SCRIPT_COLLECTION)
+        col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION)
         if not col:
             raise NotFoundException(NotFoundException.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
 
         ret = col.delete_many({'name': script_name})
         if ret.deleted_count > 0:
-            update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_id))
+            update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
 
     @hive_restful_response
     def run_script(self, script_name):
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
-        user_did, app_id = check_auth()
-        return Script(script_name, json_data, user_did, app_id,
+        user_did, app_did = check_auth()
+        return Script(script_name, json_data, user_did, app_did,
                       self.hive_setting, scripting=self, is_ipfs=self.is_ipfs).execute()
 
     @hive_restful_response
@@ -601,8 +602,8 @@ class Scripting:
                 'target_app_did': target_app_did
             }
         Script.validate_run_data(json_data)
-        user_did, app_id = check_auth()
-        return Script(script_name, json_data, user_did, app_id,
+        user_did, app_did = check_auth()
+        return Script(script_name, json_data, user_did, app_did,
                       self.hive_setting, scripting=self, is_ipfs=self.is_ipfs).execute()
 
     def get_files(self):

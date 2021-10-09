@@ -4,7 +4,7 @@ from decouple import config
 DID_INFO_DB_NAME = config('DID_INFO_DB_NAME', default="hive_manage_info", cast=str)
 
 DID_INFO_REGISTER_COL = "auth_register"
-USER_DID = "userDid"
+USER_DID = "userDid"  # compatible with v1
 APP_ID = "appDid"
 APP_INSTANCE_DID = "appInstanceDid"
 DID_INFO_NONCE = "nonce"
@@ -30,7 +30,7 @@ VAULT_BACKUP_INFO_TYPE_GOOGLE_DRIVE = "google_drive"
 VAULT_BACKUP_INFO_TYPE_HIVE_NODE = "hive_node"
 
 VAULT_ORDER_COL = "vault_orders"
-VAULT_ORDER_DID = "did"
+# VAULT_ORDER_DID = "did"
 VAULT_ORDER_APP_ID = "app_id"
 VAULT_ORDER_PACKAGE_INFO = "pricing_info"
 VAULT_ORDER_TXIDS = "pay_txids"
@@ -41,7 +41,7 @@ VAULT_ORDER_PAY_TIME = "pay_time"
 VAULT_ORDER_MODIFY_TIME = "modify_time"
 
 VAULT_SERVICE_COL = "vault_service"
-VAULT_SERVICE_DID = "did"
+VAULT_SERVICE_DID = "did"  # compatible with v1
 VAULT_SERVICE_MAX_STORAGE = "max_storage"
 VAULT_SERVICE_FILE_USE_STORAGE = "file_use_storage"
 VAULT_SERVICE_DB_USE_STORAGE = "db_use_storage"
@@ -53,7 +53,7 @@ VAULT_SERVICE_STATE = "state"
 # constants of db end
 
 VAULT_BACKUP_SERVICE_COL = "vault_backup_service"
-VAULT_BACKUP_SERVICE_DID = "did"
+VAULT_BACKUP_SERVICE_DID = "did"  # only for v1
 VAULT_BACKUP_SERVICE_MAX_STORAGE = "max_storage"
 VAULT_BACKUP_SERVICE_USE_STORAGE = "use_storage"
 VAULT_BACKUP_SERVICE_MODIFY_TIME = "modify_time"

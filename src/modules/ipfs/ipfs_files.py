@@ -11,8 +11,8 @@ from src import hive_setting
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R, DID_INFO_DB_NAME
 from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
-from src.utils.consts import COL_IPFS_FILES, DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
-    COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_CID_REF, CID, COUNT, CREATE_TIME, MODIFY_TIME
+from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
+    COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_CID_REF, CID, COUNT, USR_DID
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
@@ -55,7 +55,7 @@ class IpfsFiles:
         :return:
         """
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        col_filter = {DID: user_did,
+        col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
         doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_raise=False)
@@ -85,7 +85,7 @@ class IpfsFiles:
         :return: File list.
         """
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        col_filter = {DID: user_did, APP_DID: app_did}
+        col_filter = {USR_DID: user_did, APP_DID: app_did}
         if path:
             folder_path = path if path[len(path) - 1] == '/' else f'{path}/'
             col_filter[COL_IPFS_FILES_PATH] = {
@@ -144,7 +144,7 @@ class IpfsFiles:
         fm.write_file_by_request_stream(temp_file)
 
         # insert or update file metadata.
-        col_filter = {DID: user_did,
+        col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
         doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
@@ -159,7 +159,7 @@ class IpfsFiles:
     def add_file_to_metadata(self, user_did, app_did, rel_path: str, file_path: Path):
         cid = fm.ipfs_upload_file_from_path(file_path)
         file_doc = {
-            DID: user_did,
+            USR_DID: user_did,
             APP_DID: app_did,
             COL_IPFS_FILES_PATH: rel_path,
             COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(file_path),
@@ -173,7 +173,7 @@ class IpfsFiles:
         logging.info(f'[ipfs-files] Add a new file {rel_path}')
 
     def update_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, old_doc=None):
-        col_filter = {DID: user_did,
+        col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
         if not old_doc:
@@ -203,7 +203,7 @@ class IpfsFiles:
         logging.info(f'[ipfs-files] Update an existing file {rel_path}')
 
     def delete_file_metadata(self, user_did, app_did, rel_path, cid):
-        col_filter = {DID: user_did,
+        col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
         result = cli.delete_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
@@ -241,8 +241,8 @@ class IpfsFiles:
         """
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
 
-        src_filter = {DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
-        dst_filter = {DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: dst_path}
+        src_filter = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
+        dst_filter = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: dst_path}
         src_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, src_filter)
         dst_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, dst_filter)
         if not src_doc:
@@ -262,7 +262,7 @@ class IpfsFiles:
 
         if is_copy:
             file_doc = {
-                DID: user_did,
+                USR_DID: user_did,
                 APP_DID: app_did,
                 COL_IPFS_FILES_PATH: dst_path,
                 COL_IPFS_FILES_SHA256: src_doc[COL_IPFS_FILES_SHA256],
@@ -288,7 +288,7 @@ class IpfsFiles:
         }
 
     def check_file_exists(self, user_did, app_did, path: str):
-        col_filter = {DID: user_did,
+        col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
         doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter)

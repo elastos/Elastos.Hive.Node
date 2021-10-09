@@ -11,10 +11,10 @@ from bson import ObjectId
 from src.utils_v1.constants import DID_INFO_DB_NAME
 from src.modules.auth.auth import Auth
 from src.modules.scripting.scripting import validate_exists
-from src.utils.consts import COL_ORDERS, DID, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, \
+from src.utils.consts import COL_ORDERS, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, \
     COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, COL_ORDERS_PROOF, CREATE_TIME, MODIFY_TIME, \
-    COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, OWNER_ID, \
-    COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_PAID
+    COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, \
+    COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_PAID, USR_DID
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth, check_auth_and_vault
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, \
@@ -72,7 +72,7 @@ class Payment(metaclass=Singleton):
     def _create_order(self, user_did, subscription, plan):
         now = datetime.utcnow().timestamp()
         doc = {
-            DID: user_did,
+            USR_DID: user_did,
             COL_ORDERS_SUBSCRIPTION: subscription,
             COL_ORDERS_PRICING_NAME: plan['name'],
             COL_ORDERS_ELA_AMOUNT: plan['amount'],
@@ -147,7 +147,7 @@ class Payment(metaclass=Singleton):
         if not order_id:
             raise InvalidParameterException(msg='Order id MUST be provided.')
 
-        col_filter = {'_id': ObjectId(order_id), DID: user_did}
+        col_filter = {'_id': ObjectId(order_id), USR_DID: user_did}
         if is_pay_order:
             col_filter[COL_ORDERS_STATUS] = COL_ORDERS_STATUS_NORMAL
         order = cli.find_one_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, is_raise=False)
@@ -198,7 +198,7 @@ class Payment(metaclass=Singleton):
     def _create_receipt(self, user_did, order, transaction_id, paid_did):
         now = datetime.utcnow().timestamp()
         receipt = {
-            DID: user_did,
+            USR_DID: user_did,
             COL_RECEIPTS_ORDER_ID: str(order['_id']),
             COL_RECEIPTS_TRANSACTION_ID: transaction_id,
             COL_RECEIPTS_PAID_DID: paid_did,
@@ -256,6 +256,6 @@ class Payment(metaclass=Singleton):
             MODIFY_TIME: datetime.utcnow().timestamp(),
         }
         if cli.is_col_exists(DID_INFO_DB_NAME, COL_ORDERS):
-            cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {DID: user_did}, {'$set': update}, is_many=True)
+            cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {USR_DID: user_did}, {'$set': update}, is_many=True)
         if cli.is_col_exists(DID_INFO_DB_NAME, COL_RECEIPTS):
-            cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {DID: user_did}, {'$set': update}, is_many=True)
+            cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {USR_DID: user_did}, {'$set': update}, is_many=True)

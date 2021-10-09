@@ -34,7 +34,7 @@ from src.utils.consts import BACKUP_REQUEST_TYPE, BACKUP_REQUEST_TYPE_HIVE_NODE,
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
     URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_RESTORE, URL_IPFS_BACKUP_SERVER_BACKUP_STATE, \
-    COL_IPFS_BACKUP_CLIENT
+    COL_IPFS_BACKUP_CLIENT, USR_DID
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
@@ -43,7 +43,7 @@ from src.utils.http_exception import InvalidParameterException, BadRequestExcept
     InsufficientStorageException
 from src.utils.http_response import hive_restful_response
 from src.utils_v1.common import gene_temp_file_name
-from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME, USER_DID
+from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME
 from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, import_mongo_db_by_full_path
 
 
@@ -100,7 +100,7 @@ class IpfsBackupClient:
         }
 
     def get_request_by_did(self, user_did):
-        col_filter = {USER_DID: user_did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
+        col_filter = {USR_DID: user_did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
         return cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, col_filter,
                                    is_create=True, is_raise=False)
 
@@ -122,7 +122,7 @@ class IpfsBackupClient:
 
     def insert_request(self, user_did, target_host, target_did, access_token, is_restore=False):
         req = {
-            USER_DID: user_did,
+            USR_DID: user_did,
             BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE,
             BACKUP_REQUEST_ACTION: BACKUP_REQUEST_ACTION_RESTORE if is_restore else BACKUP_REQUEST_ACTION_BACKUP,
             BACKUP_REQUEST_STATE: BACKUP_REQUEST_STATE_PROCESS,
@@ -216,7 +216,7 @@ class IpfsBackupClient:
             raise InsufficientStorageException(msg='No enough space for restore.')
 
     def update_backup_request(self, user_did, update):
-        col_filter = {USER_DID: user_did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
+        col_filter = {USR_DID: user_did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
         cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, col_filter, {'$set': update}, is_extra=True)
 
     def retry_backup_request(self, user_did):
@@ -225,7 +225,7 @@ class IpfsBackupClient:
             return
         elif req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_PROCESS:
             return
-        logging.info(f"[IpfsBackupClient] Found uncompleted request({req.get(USER_DID)}), retry.")
+        logging.info(f"[IpfsBackupClient] Found uncompleted request({req.get(USR_DID)}), retry.")
         if req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_BACKUP:
             BackupExecutor(user_did, self, req, start_delay=30).start()
         elif req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_RESTORE:

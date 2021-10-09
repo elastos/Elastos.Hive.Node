@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime
 
 from src.modules.ipfs.ipfs_files import IpfsFiles
-from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED
+from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID
 from src.utils.file_manager import fm
 from src.utils.http_exception import HiveException
 from src.utils_v1.common import gene_temp_file_name
@@ -54,8 +54,7 @@ class ExecutorBase(threading.Thread):
                        'cid': d['cid'],
                        'size': d['size'],
                        'count': d['count']} for d in file_cids],
-            # TODO:
-            'did': self.user_did,
+            USR_DID: self.user_did,
             "vault_size": fm.get_vault_storage_size(self.user_did),
             "vault_package_size": sum([d['size'] for d in database_cids]) + total_file_size,
             "create_time": datetime.now().timestamp(),

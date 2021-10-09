@@ -26,6 +26,7 @@ URL_IPFS_BACKUP_SERVER_RESTORE = '/api/v2/ipfs-backup-server/restore'
 BACKUP_FILE_SUFFIX = '.backup'
 
 DID = 'did'
+USR_DID = 'user_did'
 APP_DID = 'app_did'
 OWNER_ID = 'owner_id'
 CREATE_TIME = 'create_time'

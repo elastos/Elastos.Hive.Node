@@ -9,11 +9,12 @@ from pathlib import Path
 
 from flask import request
 
+from src import hive_setting
 from src.utils_v1.common import get_file_checksum_list, gene_temp_file_name, \
     create_full_path_dir
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, VAULT_BACKUP_INFO_STATE, USER_DID, \
     VAULT_BACKUP_INFO_TIME, VAULT_BACKUP_INFO_TYPE, VAULT_BACKUP_INFO_TYPE_HIVE_NODE, VAULT_BACKUP_INFO_MSG, \
-    VAULT_BACKUP_INFO_DRIVE, VAULT_BACKUP_INFO_TOKEN, VAULT_BACKUP_SERVICE_MAX_STORAGE, APP_ID, CHUNK_SIZE, \
+    VAULT_BACKUP_INFO_DRIVE, VAULT_BACKUP_INFO_TOKEN, VAULT_BACKUP_SERVICE_MAX_STORAGE, CHUNK_SIZE, \
     VAULT_BACKUP_SERVICE_COL, VAULT_BACKUP_SERVICE_DID, VAULT_BACKUP_SERVICE_USE_STORAGE, \
     VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, VAULT_BACKUP_SERVICE_MODIFY_TIME, \
     VAULT_BACKUP_SERVICE_STATE, VAULT_BACKUP_SERVICE_USING
@@ -31,8 +32,8 @@ from src.utils.http_client import HttpClient, HttpServer
 from src.utils.http_exception import BackupIsInProcessingException, InsufficientStorageException, \
     InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \
     NotImplementedException
-from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
-    URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA, URL_IPFS_BACKUP_PIN_CIDS, \
+from src.utils.consts import URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, URL_BACKUP_PATCH_HASH, \
+    URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA, URL_IPFS_BACKUP_PIN_CIDS, \
     BACKUP_FILE_SUFFIX, URL_IPFS_BACKUP_GET_DBFILES, STATE, STATE_RUNNING, STATE_FINISH, URL_IPFS_BACKUP_STATE, DID, \
     ORIGINAL_SIZE
 from src.utils.file_manager import fm
@@ -49,14 +50,13 @@ def slog():
 
 
 class BackupClient:
-    def __init__(self, app=None, hive_setting=None, is_ipfs=False):
+    def __init__(self, is_ipfs=False):
         self.http = HttpClient()
         self.backup_thread = None
-        self.hive_setting = hive_setting
         self.mongo_host, self.mongo_port = None, None
         if hive_setting:
-            self.mongo_host, self.mongo_port = self.hive_setting.MONGO_HOST, self.hive_setting.MONGO_PORT
-        self.auth = Auth(app, hive_setting)
+            self.mongo_host, self.mongo_port = hive_setting.MONGO_HOST, hive_setting.MONGO_PORT
+        self.auth = Auth()
         self.is_ipfs = is_ipfs
 
     def check_backup_status(self, user_did, is_restore=False):
@@ -90,7 +90,7 @@ class BackupClient:
 
         clog().debug('start new thread for backup processing.')
 
-        if self.hive_setting.BACKUP_IS_SYNC:
+        if hive_setting.BACKUP_IS_SYNC:
             self.__class__.backup_main(user_did, self)
         else:
             _thread.start_new_thread(self.__class__.backup_main, (user_did, self))
@@ -264,7 +264,7 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
                               options={'upsert': True}, is_create=True)
 
-        if self.hive_setting.BACKUP_IS_SYNC:
+        if hive_setting.BACKUP_IS_SYNC:
             self.__class__.restore_main(user_did, self)
         else:
             _thread.start_new_thread(self.__class__.restore_main, (user_did, self))
@@ -331,10 +331,10 @@ class BackupClient:
 
 
 class BackupServer:
-    def __init__(self, app=None, hive_setting=None, is_ipfs=False):
+    def __init__(self, is_ipfs=False):
         self.http_server = HttpServer()
         self.is_ipfs = is_ipfs
-        self.client = BackupClient(app, hive_setting, is_ipfs=is_ipfs)
+        self.client = BackupClient(is_ipfs=is_ipfs)
 
     def _check_auth_backup(self, is_raise=True, is_create=False, is_check_size=False):
         user_did, app_did = check_auth2()

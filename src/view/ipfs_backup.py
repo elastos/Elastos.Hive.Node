@@ -3,7 +3,7 @@
 """
 The view of ipfs-backup module for file saving and viewing.
 """
-from flask import Blueprint, request
+from flask import Blueprint
 
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
@@ -13,15 +13,12 @@ from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import params, rqargs
 
 blueprint = Blueprint('ipfs-backup', __name__)
-backup_client: IpfsBackupClient = None
-backup_server: IpfsBackupServer = None
+backup_client = IpfsBackupClient()
+backup_server = IpfsBackupServer()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
-    global backup_client, backup_server
-    backup_client = IpfsBackupClient(app=app, hive_setting=hive_setting)
-    backup_server = IpfsBackupServer(app=app, hive_setting=hive_setting)
     app.register_blueprint(blueprint)
 
 

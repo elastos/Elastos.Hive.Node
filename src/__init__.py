@@ -60,7 +60,7 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     # init v1 APIs
     main.init_app(app, mode)
 
-    view.init_app(app, mode)
+    view.init_app(app)
     scheduler_init(app)
     if hive_setting.ENABLE_CORS:
         CORS(app, supports_credentials=True)

@@ -18,7 +18,7 @@ auth = None
 def get_auth():
     global auth
     if auth is None:
-        auth = Auth(None, hive_setting)
+        auth = Auth()
     return auth
 
 

@@ -12,7 +12,7 @@ blueprint = Blueprint('database', __name__)
 database = Database()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
     app.register_blueprint(blueprint)
 

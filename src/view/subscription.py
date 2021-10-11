@@ -9,15 +9,12 @@ from src.modules.backup.backup_server import BackupServer
 from src.modules.subscription.subscription import VaultSubscription
 
 blueprint = Blueprint('subscription', __name__)
-vault_subscription: VaultSubscription = None
-backup_server: BackupServer = None
+vault_subscription = VaultSubscription()
+backup_server = BackupServer()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
-    global vault_subscription, backup_server
-    vault_subscription = VaultSubscription(app, hive_setting)
-    backup_server = BackupServer(app, hive_setting)
     app.register_blueprint(blueprint)
 
 

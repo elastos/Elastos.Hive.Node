@@ -3,7 +3,7 @@
 """
 The view of ipfs module for files and scripting.
 """
-from flask import Blueprint, request
+from flask import Blueprint
 
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.http_exception import BadRequestException, InvalidParameterException
@@ -13,7 +13,7 @@ blueprint = Blueprint('ipfs-files', __name__)
 ipfs_files = IpfsFiles()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
     app.register_blueprint(blueprint)
 

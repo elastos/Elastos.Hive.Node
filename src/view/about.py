@@ -8,13 +8,11 @@ from flask import Blueprint, request
 from src.modules.about.about import About
 
 blueprint = Blueprint('about', __name__)
-about: About = None
+about: About = About()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
-    global about
-    about = About(app, hive_setting)
     app.register_blueprint(blueprint)
 
 

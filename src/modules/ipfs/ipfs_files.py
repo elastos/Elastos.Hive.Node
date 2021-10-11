@@ -62,9 +62,9 @@ class IpfsFiles:
         if not doc:
             return
 
-        file_path = fm.ipfs_get_file_path(user_did, app_did, path)
-        if file_path.exists():
-            file_path.unlink()
+        cache_file = fm.ipfs_get_cache_root(user_did) / doc[COL_IPFS_FILES_IPFS_CID]
+        if cache_file.exists():
+            cache_file.unlink()
 
         self.delete_file_metadata(user_did, app_did, path, doc[COL_IPFS_FILES_IPFS_CID])
         inc_vault_file_use_storage_byte(user_did, 0 - doc[SIZE])
@@ -123,22 +123,15 @@ class IpfsFiles:
     def upload_file_with_path(self, user_did, app_did, path: str):
         """
         Upload file really.
-            1. generate the local file name and save the content to local.
-            2. add file document to the vault_files collection or update doc by remove cid.
-            3. return None.
-            4. run a timely script to upload file to IPFS node and update the relating file documents.
+            1. get the content of the file and save to a temp file
+            2. upload the temp file to IPFS node and get CID.
+            3. save the metadata of the temp file to the collection.
+            4. move the temp file to cache folder.
         :param user_did: the user did
         :param app_did: the application did
         :param path: the file relative path, not None
         :return: None
         """
-        # remove the existing cache file.
-        file_path = fm.ipfs_get_file_path(user_did, app_did, path)
-        if file_path.exists():
-            file_path.unlink()
-        else:
-            fm.create_dir(file_path.parent)
-
         # upload to the temporary file and then to IPFS node.
         temp_file = gene_temp_file_name()
         fm.write_file_by_request_stream(temp_file)
@@ -149,12 +142,16 @@ class IpfsFiles:
                       COL_IPFS_FILES_PATH: path}
         doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
         if not doc:
-            self.add_file_to_metadata(user_did, app_did, path, temp_file)
+            cid = self.add_file_to_metadata(user_did, app_did, path, temp_file)
         else:
-            self.update_file_metadata(user_did, app_did, path, temp_file, doc)
+            cid = self.update_file_metadata(user_did, app_did, path, temp_file, doc)
 
         # set temporary file as cache.
-        shutil.move(temp_file.as_posix(), file_path.as_posix())
+        if cid:
+            cache_file = fm.ipfs_get_cache_root(user_did) / cid
+            if cache_file.exists():
+                cache_file.unlink()
+            shutil.move(temp_file.as_posix(), cache_file.as_posix())
 
     def add_file_to_metadata(self, user_did, app_did, rel_path: str, file_path: Path):
         cid = fm.ipfs_upload_file_from_path(file_path)
@@ -171,6 +168,7 @@ class IpfsFiles:
         result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
         inc_vault_file_use_storage_byte(user_did, file_doc[SIZE])
         logging.info(f'[ipfs-files] Add a new file {rel_path}')
+        return cid
 
     def update_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, old_doc=None):
         col_filter = {USR_DID: user_did,
@@ -180,7 +178,7 @@ class IpfsFiles:
             old_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
             if not old_doc:
                 logging.error(f'The file {rel_path} does not exist. Update can not be done.')
-                return
+                return None
 
         # check if the same file.
         sha256 = fm.get_file_content_sha256(file_path)
@@ -189,7 +187,7 @@ class IpfsFiles:
         if size == old_doc[SIZE] and sha256 == old_doc[COL_IPFS_FILES_SHA256] \
                 and cid == old_doc[COL_IPFS_FILES_IPFS_CID]:
             logging.info(f'The file {rel_path} is same, no need update.')
-            return
+            return None
 
         # do update really.
         if cid != old_doc[COL_IPFS_FILES_IPFS_CID]:
@@ -201,6 +199,7 @@ class IpfsFiles:
         if cid != old_doc[COL_IPFS_FILES_IPFS_CID]:
             self.decrease_refcount_cid(old_doc[COL_IPFS_FILES_IPFS_CID])
         logging.info(f'[ipfs-files] Update an existing file {rel_path}')
+        return cid
 
     def delete_file_metadata(self, user_did, app_did, rel_path, cid):
         col_filter = {USR_DID: user_did,
@@ -223,10 +222,10 @@ class IpfsFiles:
         :return:
         """
         doc = self.check_file_exists(user_did, app_did, path)
-        file_path = fm.ipfs_get_file_path(user_did, app_did, path)
-        if not file_path.exists():
-            fm.ipfs_download_file_to_path(doc[COL_IPFS_FILES_IPFS_CID], file_path)
-        return fm.get_response_by_file_path(file_path)
+        cache_file = fm.ipfs_get_cache_root(user_did) / doc[COL_IPFS_FILES_IPFS_CID]
+        if not cache_file.exists():
+            fm.ipfs_download_file_to_path(doc[COL_IPFS_FILES_IPFS_CID], cache_file)
+        return fm.get_response_by_file_path(cache_file)
 
     def move_file_really(self, src_path, dst_path, is_copy=False):
         """
@@ -249,16 +248,6 @@ class IpfsFiles:
             raise FileNotFoundException(msg=f'Source file {src_path} does not exist.')
         if dst_doc:
             raise AlreadyExistsException(msg=f'Destination file {dst_path} exists.')
-
-        full_src_path = fm.ipfs_get_file_path(user_did, app_did, src_path)
-        full_dst_path = fm.ipfs_get_file_path(user_did, app_did, dst_path)
-        if full_dst_path.exists():
-            full_dst_path.unlink()
-        if full_src_path.exists():
-            if is_copy:
-                shutil.copy2(full_src_path.as_posix(), full_dst_path.as_posix())
-            else:
-                shutil.move(full_src_path.as_posix(), full_dst_path.as_posix())
 
         if is_copy:
             file_doc = {

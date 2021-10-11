@@ -5,6 +5,7 @@ Scheduler tasks for the hive node.
 """
 import logging
 import traceback
+import time
 
 import pymongo
 from flask_apscheduler import APScheduler
@@ -14,6 +15,7 @@ from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_PATH, DID, APP_DID
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
+from src.utils_v1.common import get_temp_path
 from src.utils_v1.constants import USER_DID, APP_ID
 from src.utils_v1.did_file_info import get_save_files_path
 from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name
@@ -28,7 +30,7 @@ def scheduler_init(app):
 
 
 # TODO: remove this later.
-# @scheduler.task(trigger='interval', id='task_upload_ipfs_files', minutes=10)
+# @scheduler.task('interval', id='task_upload_ipfs_files', minutes=10)
 def task_upload_ipfs_files():
     """ Task for syncing file content to ipfs server and updating cid on metadata.
     This task only updates the IPFS CID of the file.
@@ -70,7 +72,7 @@ def upload_ipfs_files_by_db(db_name):
 
 
 # TODO: update this process later, this will be implemented as other design.
-# @scheduler.task(trigger='interval', id='task_adapt_local_file_to_ipfs', minutes=10)
+# @scheduler.task('interval', id='task_adapt_local_file_to_ipfs', minutes=10)
 def task_adapt_local_file_to_ipfs():
     """ Task for keeping sync with ipfs metadata.
     This do not handle the cid of the ipfs server.
@@ -120,9 +122,24 @@ def adapt_local_files_by_folder(user_did, app_did, database_name, files_root):
         ipfs_files.delete_file_metadata(user_did, app_did, d[COL_IPFS_FILES_PATH], d[COL_IPFS_FILES_IPFS_CID])
 
 
+@scheduler.task('interval', id='task_clean_temp_files', hours=6)
+def task_clean_temp_files():
+    """ Delete all temporary files created before 12 hours. """
+    logging.info('[task_clean_temp_files] enter.')
+    temp_path = get_temp_path()
+    valid_timestamp = time.time() - 6 * 3600
+    files = fm.get_files_recursively(temp_path)
+    for f in files:
+        if f.stat().st_mtime < valid_timestamp:
+            f.unlink()
+            logging.info(f'[task_clean_temp_files] Temporary file {f.as_posix()} removed.')
+    logging.info('[task_clean_temp_files] leave.')
+
+
 # Shutdown your cron thread if the web process is stopped
 # atexit.register(lambda: scheduler.shutdown(wait=False))
 
 if __name__ == '__main__':
     # task_upload_ipfs_files()
-    task_adapt_local_file_to_ipfs()
+    # task_adapt_local_file_to_ipfs()
+    task_clean_temp_files()

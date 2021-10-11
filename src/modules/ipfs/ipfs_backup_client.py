@@ -48,10 +48,8 @@ from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, imp
 
 
 class IpfsBackupClient:
-    def __init__(self, app=None, hive_setting=None):
-        self.app = app
-        self.hive_setting = hive_setting
-        self.auth = Auth(app, hive_setting)
+    def __init__(self):
+        self.auth = Auth()
         self.http = HttpClient()
 
     @hive_restful_response

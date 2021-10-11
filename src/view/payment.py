@@ -8,13 +8,11 @@ from flask import Blueprint, request
 from src.modules.payment.payment import Payment
 
 blueprint = Blueprint('payment', __name__)
-payment: Payment = None
+payment: Payment = Payment()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
-    global payment
-    payment = Payment(app, hive_setting)
     app.register_blueprint(blueprint)
 
 

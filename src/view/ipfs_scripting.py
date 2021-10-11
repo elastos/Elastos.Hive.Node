@@ -13,10 +13,8 @@ blueprint = Blueprint('ipfs-scripting', __name__)
 scripting = Scripting(is_ipfs=True)
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
-    global scripting
-    scripting = Scripting(app=app, hive_setting=hive_setting, is_ipfs=True)
     app.register_blueprint(blueprint)
 
 

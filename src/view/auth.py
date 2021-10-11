@@ -11,13 +11,11 @@ from src.utils.http_request import params
 from src.utils.consts import URL_DID_SIGN_IN, URL_DID_AUTH, URL_DID_BACKUP_AUTH
 
 blueprint = Blueprint('auth', __name__)
-auth: Auth = None
+auth: Auth = Auth()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
-    global auth
-    auth = Auth(app, hive_setting)
     app.register_blueprint(blueprint)
 
 

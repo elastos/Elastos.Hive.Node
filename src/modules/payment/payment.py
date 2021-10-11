@@ -8,6 +8,7 @@ from datetime import datetime
 
 from bson import ObjectId
 
+from src import hive_setting
 from src.utils_v1.constants import DID_INFO_DB_NAME
 from src.modules.auth.auth import Auth
 from src.modules.scripting.scripting import validate_exists
@@ -26,18 +27,17 @@ from src.utils_v1.payment.payment_config import PaymentConfig
 
 
 class Payment(metaclass=Singleton):
-    def __init__(self, app, hive_setting):
-        self.app, self.hive_setting = app, hive_setting
+    def __init__(self):
         self.ela_address = hive_setting.HIVE_PAYMENT_ADDRESS
         PaymentConfig.init_config()
-        self.auth = Auth(app, hive_setting)
+        self.auth = Auth()
         self.vault_subscription = None
         self.ela_resolver = ElaResolver(hive_setting.ELA_RESOLVER)
 
     def _get_vault_subscription(self):
         if not self.vault_subscription:
             from src.modules.subscription.subscription import VaultSubscription
-            self.vault_subscription = VaultSubscription(self.app, self.hive_setting)
+            self.vault_subscription = VaultSubscription()
         return self.vault_subscription
 
     @hive_restful_response

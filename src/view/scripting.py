@@ -12,10 +12,8 @@ blueprint = Blueprint('scripting-deprecated', __name__)
 scripting = Scripting()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
-    global scripting
-    scripting = Scripting(app=app, hive_setting=hive_setting)
     app.register_blueprint(blueprint)
 
 

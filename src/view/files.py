@@ -12,10 +12,8 @@ blueprint = Blueprint('files-deprecated', __name__)
 files = Files()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
-    # global scripting
-    # scripting = Scripting(app=app, hive_setting=hive_setting)
     app.register_blueprint(blueprint)
 
 

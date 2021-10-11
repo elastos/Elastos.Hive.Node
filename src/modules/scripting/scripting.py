@@ -9,6 +9,7 @@ import jwt
 from flask import request
 from bson import ObjectId
 
+from src import hive_setting
 from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
@@ -302,7 +303,7 @@ class Executable:
                 "row_id": data.get('inserted_id', None),
                 "target_did": self.get_target_did(),
                 "target_app_did": self.get_target_app_did()
-            }, self.script.hive_setting.DID_STOREPASS, algorithm='HS256')
+            }, hive_setting.DID_STOREPASS, algorithm='HS256')
         }
         if action_type == 'download' and self.is_ipfs and self.script.anonymous_app and self.script.anonymous_user:
             result['anonymous_url'] = anonymous_url
@@ -480,7 +481,7 @@ class FileHashExecutable(Executable):
 
 
 class Script:
-    def __init__(self, script_name, run_data, user_did, app_did, hive_setting=None, scripting=None, is_ipfs=False):
+    def __init__(self, script_name, run_data, user_did, app_did, scripting=None, is_ipfs=False):
         self.user_did = user_did
         self.app_did = app_did
         self.name = script_name
@@ -490,7 +491,6 @@ class Script:
         self.executables = []
         self.anonymous_user = False
         self.anonymous_app = False
-        self.hive_setting = hive_setting
         self.scripting = scripting
         self.is_ipfs = is_ipfs
 
@@ -540,9 +540,7 @@ class Script:
 
 
 class Scripting:
-    def __init__(self, app=None, hive_setting=None, is_ipfs=False):
-        self.app = app
-        self.hive_setting = hive_setting
+    def __init__(self, is_ipfs=False):
         self.files = None
         self.is_ipfs = is_ipfs
         self.ipfs_files = IpfsFiles()
@@ -588,8 +586,7 @@ class Scripting:
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
         user_did, app_did = check_auth()
-        return Script(script_name, json_data, user_did, app_did,
-                      self.hive_setting, scripting=self, is_ipfs=self.is_ipfs).execute()
+        return Script(script_name, json_data, user_did, app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
 
     @hive_restful_response
     def run_script_url(self, script_name, target_did, target_app_did, params):
@@ -603,8 +600,7 @@ class Scripting:
             }
         Script.validate_run_data(json_data)
         user_did, app_did = check_auth()
-        return Script(script_name, json_data, user_did, app_did,
-                      self.hive_setting, scripting=self, is_ipfs=self.is_ipfs).execute()
+        return Script(script_name, json_data, user_did, app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
 
     def get_files(self):
         if not self.files:
@@ -654,7 +650,7 @@ class Scripting:
 
     def parse_transaction_id(self, transaction_id):
         try:
-            trans = jwt.decode(transaction_id, self.hive_setting.DID_STOREPASS, algorithms=['HS256'])
+            trans = jwt.decode(transaction_id, hive_setting.DID_STOREPASS, algorithms=['HS256'])
             return trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
         except Exception as e:
             raise BadRequestException(msg=f"Invalid transaction id '{transaction_id}'")

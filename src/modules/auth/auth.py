@@ -10,6 +10,7 @@ from datetime import datetime
 
 from src.utils_v1.did.eladid import ffi, lib
 
+from src import hive_setting
 from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED
 from src.utils_v1.did.entity import Entity
 from src.utils_v1.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
@@ -23,8 +24,7 @@ from src.utils.singleton import Singleton
 
 
 class Auth(Entity, metaclass=Singleton):
-    def __init__(self, app=None, hive_setting=None):
-        self.hive_setting = hive_setting
+    def __init__(self):
         self.storepass = hive_setting.DID_STOREPASS
         Entity.__init__(self, "hive.auth", mnemonic=hive_setting.DID_MNEMONIC, passphrase=hive_setting.DID_PASSPHRASE)
         self.http = HttpClient()
@@ -48,7 +48,7 @@ class Auth(Entity, metaclass=Singleton):
 
         spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(app_instance_did)).decode()
         try:
-            with open(self.hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_did_str, "w") as f:
+            with open(hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_did_str, "w") as f:
                 f.write(doc_str)
         except Exception as e:
             logging.getLogger("HiveAuth").error(f"Exception in sign_in:{str(e)} in getting app instance did")
@@ -56,7 +56,7 @@ class Auth(Entity, metaclass=Singleton):
         return "did:" + ffi.string(lib.DID_GetMethod(app_instance_did)).decode() + ":" + spec_did_str
 
     def __save_nonce_to_db(self, app_instance_did):
-        nonce, expire_time = create_nonce(), int(datetime.now().timestamp()) + self.hive_setting.AUTH_CHALLENGE_EXPIRED
+        nonce, expire_time = create_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
         try:
             if not get_did_info_by_app_instance_did(app_instance_did):
                 add_did_nonce_to_db(app_instance_did, nonce, expire_time)
@@ -193,7 +193,7 @@ class Auth(Entity, metaclass=Singleton):
         exp_time = lib.Credential_GetExpirationDate(vc)
         if exp_time <= 0:
             raise BadRequestException("The credential's expiration date does not exist.")
-        return min(int(datetime.now().timestamp()) + self.hive_setting.ACCESS_TOKEN_EXPIRED, exp_time)
+        return min(int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED, exp_time)
 
     def __create_access_token(self, credential_info, subject):
         doc = lib.DIDStore_LoadDID(self.store, self.did)
@@ -284,7 +284,7 @@ class Auth(Entity, metaclass=Singleton):
         if vp_json is None:
             raise InvalidParameterException(
                 msg=f'backup_sign_in: failed to create presentation.')
-        challenge_response = self.create_vp_token(vp_json, subject, issuer, self.hive_setting.AUTH_CHALLENGE_EXPIRED)
+        challenge_response = self.create_vp_token(vp_json, subject, issuer, hive_setting.AUTH_CHALLENGE_EXPIRED)
         if challenge_response is None:
             raise InvalidParameterException(
                 msg=f'backup_sign_in: failed to create the challenge response.')
@@ -375,7 +375,7 @@ class Auth(Entity, metaclass=Singleton):
             lib.JWT_Destroy(jws)
             raise BadRequestException(msg=f'the order_id of the proof not match: {props_json.get("order_id")}')
 
-        if self.hive_setting.PAYMENT_CHECK_EXPIRED:
+        if hive_setting.PAYMENT_CHECK_EXPIRED:
             expired = lib.JWT_GetExpiration(jws)
             now = int(datetime.now().timestamp())
             if now > expired:

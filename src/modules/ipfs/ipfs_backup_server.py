@@ -22,11 +22,9 @@ from src.utils_v1.payment.payment_config import PaymentConfig
 
 
 class IpfsBackupServer:
-    def __init__(self, app=None, hive_setting=None):
-        self.app = app
-        self.hive_setting = hive_setting
-        self.vault = VaultSubscription(app, hive_setting)
-        self.client = IpfsBackupClient(app, hive_setting)
+    def __init__(self):
+        self.vault = VaultSubscription()
+        self.client = IpfsBackupClient()
 
     @hive_restful_response
     def promotion(self):

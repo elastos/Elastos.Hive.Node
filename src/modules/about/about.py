@@ -3,17 +3,18 @@
 """
 The entrance for backup module.
 """
+from src import hive_setting
 from src.utils.http_response import hive_restful_response
 
 
 class About:
-    def __init__(self, app, hive_setting):
-        self.hive_setting = hive_setting
+    def __init__(self):
+        pass
 
     @hive_restful_response
     def get_version(self):
         """ This value comes from tag name and must be '***v<major>.<minor>.<patch>' or '<major>.<minor>.<patch>' """
-        src = self.hive_setting.HIVE_VERSION
+        src = hive_setting.HIVE_VERSION
         index = src.rfind('v')
         if index >= 0:
             src = src[index + 1:]
@@ -27,5 +28,5 @@ class About:
     @hive_restful_response
     def get_commit_id(self):
         return {
-            'commit_id': self.hive_setting.HIVE_COMMIT_HASH
+            'commit_id': hive_setting.HIVE_COMMIT_HASH
         }

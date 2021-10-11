@@ -13,15 +13,12 @@ from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_F
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
 
 blueprint = Blueprint('backup-deprecated', __name__)
-backup: Backup = None
-server: BackupServer = None
+backup = Backup()
+server = BackupServer()
 
 
-def init_app(app, hive_setting):
+def init_app(app):
     """ This will be called by application initializer. """
-    global backup, server
-    backup = Backup(app=app, hive_setting=hive_setting)
-    server = BackupServer()
     app.register_blueprint(blueprint)
 
 

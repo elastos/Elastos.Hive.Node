@@ -24,8 +24,8 @@ from src.utils_v1.auth import get_current_node_did_string
 
 
 class VaultSubscription(metaclass=Singleton):
-    def __init__(self, app, hive_setting):
-        self.payment = Payment(app, hive_setting)
+    def __init__(self):
+        self.payment = Payment()
 
     @hive_restful_response
     def subscribe(self):

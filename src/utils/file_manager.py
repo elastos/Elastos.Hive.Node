@@ -20,7 +20,7 @@ from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE
-from src.utils_v1.did_file_info import get_save_files_path
+from src.utils_v1.did_file_info import get_save_files_path, get_user_did_path
 from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
 from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte, update_vault_db_use_storage_byte
@@ -169,6 +169,12 @@ class FileManager:
 
         # INFO: change to vault files folder for keeping sync with v1.
         return get_save_files_path(user_did, app_did) / path
+
+    def ipfs_get_cache_root(self, user_did):
+        root = get_user_did_path(user_did) / 'cache'
+        if not root.exists():
+            self.create_dir(root)
+        return root
 
     def get_file_content_sha256(self, file_path: Path):
         buf_size = 65536  # lets read stuff in 64kb chunks!

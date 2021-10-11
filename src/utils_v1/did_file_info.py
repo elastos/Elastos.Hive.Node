@@ -22,12 +22,13 @@ def get_vault_path(did):
 
 def get_save_files_path(did, app_did):
     """ get files root path """
+    return get_user_did_path(did) / app_did / 'files'
+
+
+def get_user_did_path(did):
+    """ get the path of the user did """
     path = Path(hive_setting.VAULTS_BASE_DIR)
-    if path.is_absolute():
-        path = path / did_tail_part(did) / app_did / "files"
-    else:
-        path = path.resolve() / did_tail_part(did) / app_did / "files"
-    return path.resolve()
+    return (path / did_tail_part(did)) if path.is_absolute() else (path.resolve() / did_tail_part(did))
 
 
 def filter_path_root(name):

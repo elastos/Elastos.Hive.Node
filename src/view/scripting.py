@@ -9,11 +9,13 @@ import json
 from src.modules.scripting.scripting import Scripting
 
 blueprint = Blueprint('scripting-deprecated', __name__)
-scripting = Scripting()
+scripting: Scripting = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global scripting
+    scripting = Scripting()
     app.register_blueprint(blueprint)
 
 

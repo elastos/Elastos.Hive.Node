@@ -9,11 +9,13 @@ from src.modules.files.files import Files
 from src.utils.http_exception import BadRequestException
 
 blueprint = Blueprint('files-deprecated', __name__)
-files = Files()
+files: Files = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global files
+    files = Files()
     app.register_blueprint(blueprint)
 
 

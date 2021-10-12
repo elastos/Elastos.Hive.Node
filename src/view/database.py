@@ -9,11 +9,13 @@ from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import params, rqargs
 
 blueprint = Blueprint('database', __name__)
-database = Database()
+database: Database = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global database
+    database = Database()
     app.register_blueprint(blueprint)
 
 

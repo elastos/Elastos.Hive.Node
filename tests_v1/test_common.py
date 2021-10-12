@@ -23,6 +23,7 @@ token2 = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraW
 
 
 def setup_test_auth_token():
+    # TODO: make sure only on document in the auth_register collection.
     info = get_did_info_by_did_appid(did, app_id)
     if info:
         global token

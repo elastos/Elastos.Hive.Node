@@ -9,12 +9,14 @@ from src.modules.backup.backup_server import BackupServer
 from src.modules.subscription.subscription import VaultSubscription
 
 blueprint = Blueprint('subscription', __name__)
-vault_subscription = VaultSubscription()
-backup_server = BackupServer()
+vault_subscription: VaultSubscription = None
+backup_server: BackupServer = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global vault_subscription, backup_server
+    vault_subscription, backup_server = VaultSubscription(), BackupServer()
     app.register_blueprint(blueprint)
 
 

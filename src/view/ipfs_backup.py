@@ -13,12 +13,14 @@ from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import params, rqargs
 
 blueprint = Blueprint('ipfs-backup', __name__)
-backup_client = IpfsBackupClient()
-backup_server = IpfsBackupServer()
+backup_client: IpfsBackupClient = None
+backup_server: IpfsBackupServer = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global backup_client, backup_server
+    backup_client, backup_server = IpfsBackupClient(), IpfsBackupServer()
     app.register_blueprint(blueprint)
 
 

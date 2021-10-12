@@ -10,11 +10,13 @@ from flask import Blueprint
 from src.modules.scripting.scripting import Scripting
 
 blueprint = Blueprint('ipfs-scripting', __name__)
-scripting = Scripting(is_ipfs=True)
+scripting: Scripting = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global scripting
+    scripting = Scripting(is_ipfs=True)
     app.register_blueprint(blueprint)
 
 

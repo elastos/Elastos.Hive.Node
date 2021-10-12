@@ -8,11 +8,13 @@ from flask import Blueprint, request
 from src.modules.about.about import About
 
 blueprint = Blueprint('about', __name__)
-about: About = About()
+about: About = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global about
+    about = About()
     app.register_blueprint(blueprint)
 
 

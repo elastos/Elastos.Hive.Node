@@ -8,11 +8,13 @@ from flask import Blueprint, request
 from src.modules.payment.payment import Payment
 
 blueprint = Blueprint('payment', __name__)
-payment: Payment = Payment()
+payment: Payment = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global payment
+    payment = Payment()
     app.register_blueprint(blueprint)
 
 

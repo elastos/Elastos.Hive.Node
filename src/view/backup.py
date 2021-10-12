@@ -13,12 +13,14 @@ from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_F
     URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
 
 blueprint = Blueprint('backup-deprecated', __name__)
-backup = Backup()
-server = BackupServer()
+backup: Backup = None
+server: BackupServer = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global backup, server
+    backup, server = Backup(), BackupServer()
     app.register_blueprint(blueprint)
 
 

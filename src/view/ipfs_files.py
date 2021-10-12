@@ -10,11 +10,13 @@ from src.utils.http_exception import BadRequestException, InvalidParameterExcept
 from src.utils.http_request import rqargs
 
 blueprint = Blueprint('ipfs-files', __name__)
-ipfs_files = IpfsFiles()
+ipfs_files: IpfsFiles() = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
+    global ipfs_files
+    ipfs_files = IpfsFiles()
     app.register_blueprint(blueprint)
 
 

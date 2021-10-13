@@ -11,7 +11,7 @@ from src.utils_v1.did_mongo_db_resource import populate_options_find_many, \
     query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
 from src.utils_v1.error_code import BAD_REQUEST, SUCCESS
-from src.utils_v1.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
+from src.utils_v1.payment.vault_service_manage import can_access_vault, update_used_storage_for_mongodb_data
 
 
 def massage_keys_with_dollar_signs(d):

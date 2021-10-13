@@ -19,7 +19,7 @@ from src.utils_v1.did_file_info import query_upload_get_filepath, query_hash
 from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size, \
     populate_options_find_many, populate_options_insert_one, populate_options_update_one
 from src.utils_v1.did_scripting import populate_with_params_values
-from src.utils_v1.payment.vault_service_manage import update_vault_db_use_storage_byte
+from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
@@ -295,7 +295,7 @@ class Executable:
         if not data.get('inserted_id', None):
             raise BadRequestException('Cannot retrieve the transaction ID.')
 
-        update_vault_db_use_storage_byte(self.get_target_did(),
+        update_used_storage_for_mongodb_data(self.get_target_did(),
                                          get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
         result = {
@@ -372,7 +372,7 @@ class InsertExecutable(Executable):
                               document,
                               populate_options_insert_one(self.body))
 
-        update_vault_db_use_storage_byte(self.get_did(),
+        update_used_storage_for_mongodb_data(self.get_did(),
                                          get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
         return self.get_output_data(data)
@@ -397,7 +397,7 @@ class UpdateExecutable(Executable):
                               col_update,
                               populate_options_update_one(self.body))
 
-        update_vault_db_use_storage_byte(self.get_did(),
+        update_used_storage_for_mongodb_data(self.get_did(),
                                          get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
         return self.get_output_data(data)
@@ -415,7 +415,7 @@ class DeleteExecutable(Executable):
                               self.get_collection_name(),
                               self.get_populated_filter())
 
-        update_vault_db_use_storage_byte(self.get_did(),
+        update_used_storage_for_mongodb_data(self.get_did(),
                                          get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
         return self.get_output_data(data)
@@ -553,7 +553,7 @@ class Scripting:
         Script.validate_script_data(json_data)
 
         result = self.__upsert_script_to_database(script_name, json_data, user_did, app_did)
-        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
+        update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
         return result
 
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
@@ -579,7 +579,7 @@ class Scripting:
 
         ret = col.delete_many({'name': script_name})
         if ret.deleted_count > 0:
-            update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
+            update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
 
     @hive_restful_response
     def run_script(self, script_name):
@@ -639,7 +639,7 @@ class Scripting:
 
         # recalculate the storage usage of the database
         cli.delete_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
-        update_vault_db_use_storage_byte(target_did, get_mongo_database_size(target_did, target_app_did))
+        update_used_storage_for_mongodb_data(target_did, get_mongo_database_size(target_did, target_app_did))
 
         # return the content of the file
         return data

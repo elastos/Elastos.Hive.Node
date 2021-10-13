@@ -23,7 +23,7 @@ from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_C
 from src.utils_v1.did_file_info import get_save_files_path, get_user_did_path
 from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
-from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte, update_vault_db_use_storage_byte
+from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data, update_used_storage_for_mongodb_data
 from src.utils_v1.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
 from src.utils.http_exception import BadRequestException, VaultNotFoundException
 
@@ -54,10 +54,10 @@ class FileManager:
         return int(doc[VAULT_SERVICE_MAX_STORAGE])
 
     def update_vault_files_usage(self, user_did, size):
-        inc_vault_file_use_storage_byte(user_did, size, is_reset=True)
+        update_used_storage_for_files_data(user_did, size, is_reset=True)
 
     def update_vault_dbs_usage(self, user_did, size):
-        update_vault_db_use_storage_byte(user_did, size)
+        update_used_storage_for_mongodb_data(user_did, size)
 
     def get_file_checksum_list(self, root_path: Path) -> list:
         """

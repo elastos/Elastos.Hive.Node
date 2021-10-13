@@ -13,7 +13,7 @@ from src.utils_v1.constants import VAULT_ACCESS_WR, CHUNK_SIZE, VAULT_ACCESS_R
 from src.utils_v1.did_file_info import query_upload_get_filepath, query_download, filter_path_root, get_save_files_path, \
     get_dir_size, query_hash
 from src.utils_v1.error_code import BAD_REQUEST, NOT_FOUND, FORBIDDEN
-from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
+from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.http_exception import BadRequestException, FileNotFoundException, InvalidParameterException, \
     AlreadyExistsException
@@ -44,7 +44,7 @@ class Files:
         full_path, old_file_size = self._upload_file_from_request_stream(user_did, app_did, path)
         inc_size = os.path.getsize(full_path.as_posix()) - old_file_size
         if inc_size != 0:
-            inc_vault_file_use_storage_byte(user_did, inc_size)
+            update_used_storage_for_files_data(user_did, inc_size)
 
     def _upload_file_from_request_stream(self, user_did, app_did, path):
         full_path, err = query_upload_get_filepath(user_did, app_did, path)
@@ -101,11 +101,11 @@ class Files:
             if full_path.is_dir():
                 dir_size = get_dir_size(full_path.as_posix(), 0.0)
                 shutil.rmtree(full_path)
-                inc_vault_file_use_storage_byte(user_did, -dir_size)
+                update_used_storage_for_files_data(user_did, -dir_size)
             else:
                 file_size = os.path.getsize(full_path.as_posix())
                 full_path.unlink()
-                inc_vault_file_use_storage_byte(user_did, -file_size)
+                update_used_storage_for_files_data(user_did, -file_size)
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
@@ -139,11 +139,11 @@ class Files:
             if full_src_path.is_file():
                 shutil.copy2(full_src_path.as_posix(), full_dst_path.as_posix())
                 file_size = os.path.getsize(full_dst_path.as_posix())
-                inc_vault_file_use_storage_byte(user_did, file_size)
+                update_used_storage_for_files_data(user_did, file_size)
             else:
                 shutil.copytree(full_src_path.as_posix(), full_dst_path.as_posix())
                 dir_size = get_dir_size(full_dst_path.as_posix(), 0.0)
-                inc_vault_file_use_storage_byte(user_did, dir_size)
+                update_used_storage_for_files_data(user_did, dir_size)
         return {
             'name': dst_path
         }

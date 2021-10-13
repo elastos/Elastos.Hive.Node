@@ -1,3 +1,5 @@
+import threading
+
 import sentry_sdk
 
 from . import view, view_db, view_file, view_scripting, view_payment, interceptor, scheduler, view_internal, \
@@ -12,6 +14,20 @@ from ..util.did.did_init import init_did_backend
 from ..util.payment.vault_service_manage import count_vault_storage_job
 
 logging.getLogger().level = logging.INFO
+
+
+class RefreshVaultStorageUsage(threading.Thread):
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        # Reset the storage size of all vaults when initialize.
+        try:
+            logging.info(f'[RefreshVaultStorageUsage] Start init all vaults usage.')
+            count_vault_storage_job()
+            logging.info(f'[RefreshVaultStorageUsage] Init vault usage successfully')
+        except Exception as e:
+            logging.error(f'[RefreshVaultStorageUsage] Init vault usage failed {str(e)}')
 
 
 def init_app(app, mode):
@@ -40,9 +56,5 @@ def init_app(app, mode):
         scheduler.scheduler_init(app, paused=True)
     else:
         scheduler.scheduler_init(app, paused=False)
-    # Reset the storage size of all vaults when initialize.
-    try:
-        count_vault_storage_job()
-        logging.getLogger("Hive").info(f'Init vault usage successfully')
-    except Exception as e:
-        logging.getLogger("Hive").error(f'Init vault usage failed {str(e)}')
+
+    RefreshVaultStorageUsage().start()

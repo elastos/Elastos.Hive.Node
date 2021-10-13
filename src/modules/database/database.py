@@ -10,7 +10,7 @@ from bson import json_util
 
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_DEL, VAULT_ACCESS_R
 from src.utils_v1.did_mongo_db_resource import get_mongo_database_size, convert_oid, options_filter
-from src.utils_v1.payment.vault_service_manage import update_vault_db_use_storage_byte
+from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.http_exception import BadRequestException, CollectionNotFoundException, InvalidParameterException
@@ -31,7 +31,7 @@ class Database:
     def delete_collection(self, collection_name):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
         cli.delete_collection(user_did, app_did, collection_name, is_check_exist=False)
-        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
+        update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
 
     def __get_collection(self, collection_name, vault_permission):
         user_did, app_did = check_auth_and_vault(vault_permission)
@@ -49,7 +49,7 @@ class Database:
             document["modified"] = datetime.utcnow()
             documents.append(convert_oid(document))
         ret = col.insert_many(documents, **options_filter(json_body, ("bypass_document_validation", "ordered")))
-        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
+        update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
         return {
             "acknowledged": ret.acknowledged,
             "inserted_ids": [str(_id) for _id in ret.inserted_ids]
@@ -68,7 +68,7 @@ class Database:
             ret = col.update_many(convert_oid(json_body["filter"]), convert_oid(update, update=True),
                                   **options_filter(json_body, ("upsert", "bypass_document_validation")))
 
-        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
+        update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
         return {
             "acknowledged": ret.acknowledged,
             "matched_count": ret.matched_count,
@@ -83,7 +83,7 @@ class Database:
             col.delete_one(convert_oid(col_filter))
         else:
             col.delete_many(convert_oid(col_filter))
-        update_vault_db_use_storage_byte(user_did, get_mongo_database_size(user_did, app_did))
+        update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
 
     @hive_restful_response
     def count_document(self, collection_name, json_body):

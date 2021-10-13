@@ -10,7 +10,7 @@ from pathlib import Path
 from src import hive_setting
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R, DID_INFO_DB_NAME
-from src.utils_v1.payment.vault_service_manage import inc_vault_file_use_storage_byte
+from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data
 from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
     COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_CID_REF, CID, COUNT, USR_DID
 from src.utils.db_client import cli
@@ -67,7 +67,7 @@ class IpfsFiles:
             cache_file.unlink()
 
         self.delete_file_metadata(user_did, app_did, path, doc[COL_IPFS_FILES_IPFS_CID])
-        inc_vault_file_use_storage_byte(user_did, 0 - doc[SIZE])
+        update_used_storage_for_files_data(user_did, 0 - doc[SIZE])
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
@@ -166,7 +166,7 @@ class IpfsFiles:
         }
         self.increase_refcount_cid(cid)
         result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
-        inc_vault_file_use_storage_byte(user_did, file_doc[SIZE])
+        update_used_storage_for_files_data(user_did, file_doc[SIZE])
         logging.info(f'[ipfs-files] Add a new file {rel_path}')
         return cid
 
@@ -261,7 +261,7 @@ class IpfsFiles:
             }
             self.increase_refcount_cid(src_doc[COL_IPFS_FILES_IPFS_CID])
             cli.insert_one(user_did, app_did, COL_IPFS_FILES, file_doc)
-            inc_vault_file_use_storage_byte(user_did, src_doc[SIZE])
+            update_used_storage_for_files_data(user_did, src_doc[SIZE])
         else:
             cli.update_one(user_did, app_did, COL_IPFS_FILES, src_filter,
                            {'$set': {COL_IPFS_FILES_PATH: dst_path}}, is_extra=True)

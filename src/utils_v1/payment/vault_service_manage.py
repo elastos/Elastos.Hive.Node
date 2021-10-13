@@ -244,31 +244,41 @@ def __less_than_max_storage(did):
         return False
 
 
-def inc_vault_file_use_storage_byte(did, size, is_reset=False):
+"""
+# update the total used amount for files data in the vault owned by specific user did.
+# user_did: user did who owns vault data;
+# varied_amount: varying amount in byte, could be negative value, which means data is being removed.
+"""
+def update_used_storage_for_files_data(user_did, varying_size, is_reset=False):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
-    query = {VAULT_SERVICE_DID: did}
+    query = {VAULT_SERVICE_DID: user_did}
     info = col.find_one(query)
-    info[VAULT_SERVICE_FILE_USE_STORAGE] = size if is_reset else (info[VAULT_SERVICE_FILE_USE_STORAGE] + size)
+    info[VAULT_SERVICE_FILE_USE_STORAGE] = varying_size if is_reset else (info[VAULT_SERVICE_FILE_USE_STORAGE] + varying_size)
     now = datetime.utcnow().timestamp()
     info[VAULT_SERVICE_MODIFY_TIME] = now
-    query = {VAULT_SERVICE_DID: did}
+    query = {VAULT_SERVICE_DID: user_did}
     value = {"$set": info}
     ret = col.update_one(query, value)
     return ret
 
 
-def update_vault_db_use_storage_byte(did, size):
+"""
+# update the total used amount for database data in the vault owned by specific user did.
+# user_did: user did who owns vault data;
+# varied_amount: varying amount in byte, could be negative value, which means data is being removed.
+"""
+def update_used_storage_for_mongodb_data(user_did, varying_size):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
-    query = {VAULT_SERVICE_DID: did}
+    query = {VAULT_SERVICE_DID: user_did}
     now = datetime.utcnow().timestamp()
     dic = {
-        VAULT_SERVICE_DB_USE_STORAGE: size,
+        VAULT_SERVICE_DB_USE_STORAGE: varying_size,
         VAULT_SERVICE_MODIFY_TIME: now
     }
-    value = {"$set": dic}
+    value = {"$set": user_did}
     ret = col.update_one(query, value)
     return ret

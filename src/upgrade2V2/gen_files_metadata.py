@@ -1,7 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Generate the file metadata of the vaults.
+Generate the file metadata of the vaults. The metadata format is like this:
+{
+    "<user_did>": {
+        "<app_did>": [{
+            "path": '<relative_path>,
+            "sha256": <str>,
+            "size": <int>,
+            "created": <timestamp, float>,
+            "updated": <timestamp, float>
+        }]
+    }
+}
 """
 import json
 import sys
@@ -23,6 +34,10 @@ def get_files_metadata_file(data_root: Path):
 
 def get_app_files_root(app_root: Path):
     return app_root / 'files'
+
+
+def generate_app_files_root(vaults_root: Path, user_did, app_did):
+    return get_app_files_root(vaults_root / str.split(user_did, ':')[2] / app_did)
 
 
 def get_file_info(relative_dir_name, file: Path):
@@ -72,7 +87,7 @@ def generate_vaults(data_root: Path):
 
 def main():
     if len(sys.argv) != 2:
-        print(f'Usage: python gen_files_metadata.py <HIVE_DATA>')
+        print(f'Usage: python {sys.argv[0]} <HIVE_DATA>')
         return
 
     data_root = Path(sys.argv[1])
@@ -80,9 +95,9 @@ def main():
         print(f'Invalid data root: {data_root.as_posix()}')
         return
 
-    result = generate_vaults(data_root)
+    files_metadata = generate_vaults(data_root)
     with get_files_metadata_file(data_root).open('w') as f:
-        json.dump(result, f)
+        json.dump(files_metadata, f)
 
 
 if __name__ == '__main__':

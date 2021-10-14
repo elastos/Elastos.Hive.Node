@@ -70,7 +70,6 @@ class Payment(metaclass=Singleton):
         return subscription, plan
 
     def _create_order(self, user_did, subscription, plan):
-        now = datetime.utcnow().timestamp()
         doc = {
             USR_DID: user_did,
             COL_ORDERS_SUBSCRIPTION: subscription,
@@ -78,17 +77,15 @@ class Payment(metaclass=Singleton):
             COL_ORDERS_ELA_AMOUNT: plan['amount'],
             COL_ORDERS_ELA_ADDRESS: self.ela_address,
             COL_ORDERS_PROOF: '',
-            COL_ORDERS_STATUS: COL_ORDERS_STATUS_NORMAL,
-            CREATE_TIME: now,
-            MODIFY_TIME: now
+            COL_ORDERS_STATUS: COL_ORDERS_STATUS_NORMAL
         }
 
-        res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_ORDERS, doc, is_create=True, is_extra=False)
+        res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_ORDERS, doc, is_create=True)
 
         doc['_id'] = res['inserted_id']
         doc[COL_ORDERS_PROOF] = self.auth.create_order_proof(user_did, doc['_id'])
         cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(doc['_id'])},
-                              {'$set': {COL_ORDERS_PROOF: doc[COL_ORDERS_PROOF]}})
+                              {'$set': {COL_ORDERS_PROOF: doc[COL_ORDERS_PROOF]}}, is_extra=True)
 
         return doc
 
@@ -120,7 +117,8 @@ class Payment(metaclass=Singleton):
             COL_ORDERS_STATUS: status,
             MODIFY_TIME: datetime.utcnow().timestamp(),
         }
-        cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(order_id)}, {'$set': update})
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(order_id)}, {'$set': update},
+                              is_extra=True)
 
     def _get_receipt_vo(self, order, receipt):
         return {
@@ -203,17 +201,15 @@ class Payment(metaclass=Singleton):
             COL_RECEIPTS_TRANSACTION_ID: transaction_id,
             COL_RECEIPTS_PAID_DID: paid_did,
             COL_ORDERS_PROOF: '',
-            COL_ORDERS_STATUS: COL_ORDERS_STATUS_NORMAL,
-            CREATE_TIME: now,
-            MODIFY_TIME: now
+            COL_ORDERS_STATUS: COL_ORDERS_STATUS_NORMAL
         }
-        res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, receipt, is_create=True, is_extra=False)
+        res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, receipt, is_create=True)
 
         receipt['_id'] = res['inserted_id']
         receipt[COL_ORDERS_PROOF] = self.auth.create_order_proof(
             user_did, receipt['_id'], amount=order[COL_ORDERS_ELA_AMOUNT], is_receipt=True)
         cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {'_id': ObjectId(receipt['_id'])},
-                              {'$set': {COL_ORDERS_PROOF: receipt[COL_ORDERS_PROOF]}})
+                              {'$set': {COL_ORDERS_PROOF: receipt[COL_ORDERS_PROOF]}}, is_extra=True)
         return receipt
 
     @hive_restful_response
@@ -256,6 +252,8 @@ class Payment(metaclass=Singleton):
             MODIFY_TIME: datetime.utcnow().timestamp(),
         }
         if cli.is_col_exists(DID_INFO_DB_NAME, COL_ORDERS):
-            cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {USR_DID: user_did}, {'$set': update}, is_many=True)
+            cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {USR_DID: user_did}, {'$set': update},
+                                  is_many=True, is_extra=True)
         if cli.is_col_exists(DID_INFO_DB_NAME, COL_RECEIPTS):
-            cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {USR_DID: user_did}, {'$set': update}, is_many=True)
+            cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {USR_DID: user_did}, {'$set': update},
+                                  is_many=True, is_extra=True)

@@ -167,11 +167,12 @@ class IpfsFiles:
         }
         self.increase_refcount_cid(cid)
         result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, metadata, create_on_absence=True)
-        update_used_storage_for_files_data(user_did, file_doc[SIZE])
+        update_used_storage_for_files_data(user_did, metadata[SIZE])
         logging.info(f'[ipfs-files] Add a new file {rel_path}')
         return cid
 
-    def update_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, existing_metadata=None):
+    def update_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path,
+                             existing_metadata=None, is_only_import=False):
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
@@ -193,7 +194,6 @@ class IpfsFiles:
         # update the metadata of new file.
         if cid != existing_metadata[COL_IPFS_FILES_IPFS_CID]:
             self.increase_refcount_cid(cid)
-
         updated_metadata = {'$set': {COL_IPFS_FILES_SHA256: sha256,
                             SIZE: size,
                             COL_IPFS_FILES_IPFS_CID: cid}}
@@ -202,6 +202,9 @@ class IpfsFiles:
         ## dereference the existing cid to IPFS.
         if cid != existing_metadata[COL_IPFS_FILES_IPFS_CID]:
             self.decrease_refcount_cid(existing_metadata[COL_IPFS_FILES_IPFS_CID])
+
+        if not is_only_import and size != existing_metadata[SIZE]:
+            update_used_storage_for_files_data(user_did, size - existing_metadata[SIZE])
 
         logging.info(f'[ipfs-files] The existing file with {rel_path} has been updated')
         return cid
@@ -283,11 +286,12 @@ class IpfsFiles:
             'size': file_doc[SIZE],
         }
 
-    def get_file_metadata(self, user_did, app_did, path: str):
+    def get_file_metadata(self, user_did, app_did, path: str, throw_exception=True):
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
-        metadata = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter)
+        metadata = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter,
+                                create_on_absence=True, throw_exception=throw_exception)
         if not metadata:
             raise FileNotFoundException(msg=f'No file metadata with path: {path} found')
         return metadata

@@ -11,7 +11,7 @@ $ python gen_files_metadata.py <HIVE_DATA>
 1.2 Import files metadata to v2.
 
 ```shell script
-$ python init_files_metada.py <HIVE_DATA>/vaults.metadata.json
+$ python init_files_metadata.py <HIVE_DATA>/vaults.metadata.json
 ```
 
 2. The vault files need to be synced from v1 to v2 when v1 ends.

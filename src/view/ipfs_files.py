@@ -10,7 +10,7 @@ from src.utils.http_exception import BadRequestException, InvalidParameterExcept
 from src.utils.http_request import rqargs
 
 blueprint = Blueprint('ipfs-files', __name__)
-ipfs_files: IpfsFiles() = None
+ipfs_files: IpfsFiles = None
 
 
 def init_app(app):

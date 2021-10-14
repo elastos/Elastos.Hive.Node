@@ -81,5 +81,5 @@ def make_port(is_first=False):
     :return: the app of the flask
     """
     if is_first:
-        view.init_app(app, HIVE_MODE_PROD)
+        view.init_app(app)
     return app

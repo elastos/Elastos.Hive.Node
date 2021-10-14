@@ -124,7 +124,7 @@ venv.bak/
 .idea
 **/logs/*
 **/_build
-**/_static
+#**/_static
 
 # Spyder project settings
 .spyderproject

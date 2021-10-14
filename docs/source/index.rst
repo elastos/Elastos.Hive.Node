@@ -321,3 +321,198 @@ get commit id
 .. autoflask:: src:make_port()
   :undoc-static:
   :endpoints: about.get_commit_id
+
+Appendix A: Collections
+=======================
+
+auth_register
+-------------
+
+This common collection is for sign-in and auth.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "appInstanceDid": <str>,
+        "userDid": <str>,
+        "nonce": <for generate token: str>,
+        "nonce_expired": <int>,
+        "appDid": <str>,
+        "token": <str>,
+        "token_expired": <int>
+    }
+
+vault_service
+-------------
+
+This common collection keeps the information for the vault.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "did": <user_did: str>,
+        "max_storage": <int>,
+        "file_use_storage": <int>,
+        "db_use_storage": <int>,
+        "start_time": <timestamp: float>,
+        "end_time": <timestamp, -1 means no end time: float>,
+        "modify_time": <timestamp: float>,
+        "state": <vault status: str>,
+        "pricing_using": <pricing name: str>
+    }
+
+vault_order
+-----------
+
+This common collection keeps the information for the payment order.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "user_did": <str>,
+        "subscription": <"vault", "backup": str>,
+        "pricing_name": <pricing name: str>,
+        "ela_amount": <float>,
+        "ela_address": <str>,
+        "proof": <str>,
+        "status": <str>,
+        "created": <timestamp: float>,
+        "modified": <timestamp: float>
+    }
+
+vault_receipt
+-------------
+
+This common collection keeps the information for the payment receipt.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "user_did": <str>,
+        "order_id": <str>,
+        "transaction_id": <str>,
+        "paid_did": <str>,
+        "proof": <str>,
+        "status": <str>,
+        "created": <timestamp: float>,
+        "modified": <timestamp: float>
+    }
+
+ipfs_backup_client
+------------------
+
+This common collection keeps the backup information in the vault node.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "user_did": <str>,
+        "type": "hive_node",
+        "action": <"backup", "restore": str>,
+        "state": <str>,
+        "state_msg": <str>,
+        "target_host": <str>,
+        "target_did": <str>,
+        "target_token": <str>,
+        "created": <timestamp: float>,
+        "modified": <timestamp: float>
+    }
+
+ipfs_cid_ref
+------------
+
+This common collection keeps the IPFS CID reference count in the vault or backup node.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "cid": <str>,
+        "count": <int>,
+        "created": <timestamp: float>,
+        "modified": <timestamp: float>
+    }
+
+ipfs_backup_server
+------------------
+
+This common collection keeps the backup information in the backup node.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "user_did": <str>,
+        "backup_using": <pricing name: str>,
+        "max_storage": <int>,
+        "use_storage": <int>,
+        "start_time": <timestamp: float>,
+        "end_time": <timestamp, -1 means no end time: float>,
+        "created": <timestamp: float>,
+        "modified": <timestamp: float>,
+        "req_action": <"backup", "restore": str>,
+        "req_cid": <str>,
+        "req_sha256": <str>,
+        "req_size": <int>,
+        "req_state": <str>,
+        "req_state_msg": <str>
+    }
+
+ipfs_files
+----------
+
+This user collection keeps the metadata of the files.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "user_did": <str>,
+        "app_did": <str>,
+        "path": <file relative path: str>,
+        "sha256": <str>,
+        "is_file": <bool>
+        "size": <int>,
+        "ipfs_cid": <int>,
+        "created": <timestamp: float>,
+        "modified": <timestamp: float>
+    }
+
+scripts
+-------
+
+This user collection keeps the scripts from scripting module.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "name": <script name: str>,
+        "executable": <executable definition: dict>,
+        "condition": <condition definition: dict>,
+        "allowAnonymousUser": <bool>,
+        "allowAnonymousApp": <bool>
+    }
+
+scripts_temptx
+--------------
+
+This user collection keeps the transaction information for scripts.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "document": {
+            "file_name": <file relative path: str>,
+            "fileapi_type": <"upload", "download": str>
+        },
+        "anonymous": <bool>,
+        "created": <timestamp: float>,
+        "modified": <timestamp: float>
+    }

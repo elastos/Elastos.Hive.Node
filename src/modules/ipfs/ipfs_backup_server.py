@@ -158,7 +158,7 @@ class IpfsBackupServer:
                VAULT_BACKUP_SERVICE_START_TIME: now,
                VAULT_BACKUP_SERVICE_END_TIME: end_time
                }
-        cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, doc, is_create=True, is_extra=True)
+        cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, doc, create_on_absence=True, is_extra=True)
         return doc
 
     def _get_vault_info(self, doc):
@@ -180,7 +180,7 @@ class IpfsBackupServer:
 
     def find_backup_request(self, user_did, is_raise=True):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {USR_DID: user_did},
-                                  is_create=True, is_raise=False)
+                                  create_on_absence=True, throw_exception=False)
         if is_raise and not doc:
             raise BackupNotFoundException()
         return doc

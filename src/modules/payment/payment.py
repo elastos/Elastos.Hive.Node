@@ -150,13 +150,13 @@ class Payment(metaclass=Singleton):
         col_filter = {'_id': ObjectId(order_id), USR_DID: user_did}
         if is_pay_order:
             col_filter[COL_ORDERS_STATUS] = COL_ORDERS_STATUS_NORMAL
-        order = cli.find_one_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, is_raise=False)
+        order = cli.find_one_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, throw_exception=False)
         if not order:
             raise InvalidParameterException(msg='Order id is invalid because of not finding the order.')
 
         if is_pay_order:
             receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
-                                          {COL_RECEIPTS_ORDER_ID: order_id}, is_raise=False)
+                                          {COL_RECEIPTS_ORDER_ID: order_id}, throw_exception=False)
             if receipt:
                 raise InvalidParameterException(msg='Order id is invalid because of existing the relating receipt.')
 
@@ -170,7 +170,7 @@ class Payment(metaclass=Singleton):
 
     def _check_transaction_id_local(self, transaction_id):
         receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
-                                      {COL_RECEIPTS_TRANSACTION_ID: transaction_id}, is_raise=False)
+                                      {COL_RECEIPTS_TRANSACTION_ID: transaction_id}, throw_exception=False)
         if receipt:
             raise InvalidParameterException(msg=f'Transaction id {transaction_id} has already been used.')
 
@@ -227,7 +227,7 @@ class Payment(metaclass=Singleton):
             col_filter[COL_ORDERS_SUBSCRIPTION] = subscription
         if order_id:
             col_filter[COL_RECEIPTS_ORDER_ID] = order_id
-        orders = cli.find_many_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, is_raise=False)
+        orders = cli.find_many_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, throw_exception=False)
         if not orders:
             raise OrderNotFoundException(msg='Can not get the matched orders.')
         return {'orders': list(map(lambda o: {'order_id': str(o['_id']),
@@ -244,7 +244,7 @@ class Payment(metaclass=Singleton):
         user_did, app_did = check_auth()
         order = self._check_param_order_id(user_did, order_id)
         receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
-                                      {COL_RECEIPTS_ORDER_ID: order_id}, is_raise=False)
+                                      {COL_RECEIPTS_ORDER_ID: order_id}, throw_exception=False)
         if not receipt:
             raise ReceiptNotFoundException(msg='Receipt can not be found by order_id.')
         return self._get_receipt_vo(order, receipt)

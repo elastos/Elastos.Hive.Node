@@ -5,11 +5,11 @@ Generate the file metadata of the vaults. The metadata format is like this:
 {
     "<user_did>": {
         "<app_did>": [{
-            "path": '<relative_path>,
+            "path": <relative_path>,
             "sha256": <str>,
             "size": <int>,
             "created": <timestamp, float>,
-            "updated": <timestamp, float>
+            "modified": <timestamp, float>
         }]
     }
 }
@@ -46,7 +46,7 @@ def get_file_info(relative_dir_name, file: Path):
         'sha256': fm.get_file_content_sha256(file),
         'size': file.stat().st_size,
         'created': fm.get_file_ctime(file.as_posix()),
-        'updated': file.stat().st_mtime
+        'modified': file.stat().st_mtime
     }
 
 

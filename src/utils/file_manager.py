@@ -17,7 +17,7 @@ from flask import request
 
 from src.settings import hive_setting
 from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE, COL_IPFS_FILES_SHA256, \
-    COL_IPFS_FILES_PATH
+    COL_IPFS_FILES_PATH, USR_DID, APP_DID
 from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE, \
@@ -239,7 +239,7 @@ class FileManager:
         databases = cli.get_all_user_databases(user_did)
         total_size, cids = 0, set()
         for d in databases:
-            docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: user_did}, is_create=False, is_raise=False)
+            docs = cli.find_many_origin(d, COL_IPFS_FILES, {USR_DID: user_did}, is_create=False, is_raise=False)
             if docs:
                 cids.update([doc[COL_IPFS_FILES_IPFS_CID] for doc in docs])
                 total_size += sum([doc[SIZE] for doc in docs])
@@ -249,7 +249,7 @@ class FileManager:
         databases = cli.get_all_user_database_names(user_did)
         total_size, cids = 0, list()
         for d in databases:
-            docs = cli.find_many_origin(d, COL_IPFS_FILES, {DID: user_did}, is_create=False, is_raise=False)
+            docs = cli.find_many_origin(d, COL_IPFS_FILES, {USR_DID: user_did}, is_create=False, is_raise=False)
             for doc in docs:
                 mt = self._get_cid_metadata_from_list(cids, doc)
                 if mt:
@@ -261,6 +261,20 @@ class FileManager:
                                  'count': 1})
             total_size += sum([doc[SIZE] for doc in docs])
         return total_size, cids
+
+    def get_app_file_metadatas(self, user_did, app_did) -> list:
+        result = []
+        docs = cli.find_many(user_did, app_did, COL_IPFS_FILES, {USR_DID: user_did, APP_DID: app_did}, is_raise=False)
+        for doc in docs:
+            result.append({
+                "path": doc[COL_IPFS_FILES_PATH],
+                "sha256": doc[COL_IPFS_FILES_SHA256],
+                "size": doc[SIZE],
+                "cid": doc[COL_IPFS_FILES_IPFS_CID],
+                "created": doc['created'],
+                "modified": doc['modified']
+            })
+        return result
 
     def ipfs_pin_cid(self, cid):
         # TODO: optimize this as ipfs not support pin other node file to local node.

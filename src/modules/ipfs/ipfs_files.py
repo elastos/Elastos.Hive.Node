@@ -136,25 +136,27 @@ class IpfsFiles:
         # upload to the temporary file and then to IPFS node.
         temp_file = gene_temp_file_name()
         fm.write_file_by_request_stream(temp_file)
+        self.upload_file_from_local(user_did, app_did, path, temp_file)
 
+    def upload_file_from_local(self, user_did, app_did, path: str, local_path: Path, only_import=False):
         # insert or update file metadata.
-        col_filter = {USR_DID: user_did,
-                      APP_DID: app_did,
-                      COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, create_on_absence=True, throw_exception=False)
+        doc = self.check_file_exists(user_did, app_did, path, trow_exception=False)
         if not doc:
-            cid = self.create_file_metadata(user_did, app_did, path, temp_file)
+            cid = self.create_file_metadata(user_did, app_did, path, local_path, only_import=only_import)
         else:
-            cid = self.update_file_metadata(user_did, app_did, path, temp_file, doc)
+            cid = self.update_file_metadata(user_did, app_did, path, local_path, doc, only_import=only_import)
 
         # set temporary file as cache.
         if cid:
             cache_file = fm.ipfs_get_cache_root(user_did) / cid
             if cache_file.exists():
                 cache_file.unlink()
-            shutil.move(temp_file.as_posix(), cache_file.as_posix())
+            if only_import:
+                shutil.copy(local_path.as_posix(), cache_file.as_posix())
+            else:
+                shutil.move(local_path.as_posix(), cache_file.as_posix())
 
-    def create_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path):
+    def create_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, only_import=False):
         cid = fm.ipfs_upload_file_from_path(file_path)
         metadata = {
             USR_DID: user_did,
@@ -167,12 +169,13 @@ class IpfsFiles:
         }
         self.increase_refcount_cid(cid)
         result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, metadata, create_on_absence=True)
-        update_used_storage_for_files_data(user_did, metadata[SIZE])
+        if not only_import:
+            update_used_storage_for_files_data(user_did, metadata[SIZE])
         logging.info(f'[ipfs-files] Add a new file {rel_path}')
         return cid
 
     def update_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path,
-                             existing_metadata=None, is_only_import=False):
+                             existing_metadata=None, only_import=False):
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
@@ -203,7 +206,7 @@ class IpfsFiles:
         if cid != existing_metadata[COL_IPFS_FILES_IPFS_CID]:
             self.decrease_refcount_cid(existing_metadata[COL_IPFS_FILES_IPFS_CID])
 
-        if not is_only_import and size != existing_metadata[SIZE]:
+        if not only_import and size != existing_metadata[SIZE]:
             update_used_storage_for_files_data(user_did, size - existing_metadata[SIZE])
 
         logging.info(f'[ipfs-files] The existing file with {rel_path} has been updated')
@@ -214,7 +217,7 @@ class IpfsFiles:
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
         result = cli.delete_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
-        if result['deleted_count'] > 0:
+        if result['deleted_count'] > 0 and cid:
             self.decrease_refcount_cid(cid)
         logging.info(f'[ipfs-files] Remove an existing file {rel_path}')
 

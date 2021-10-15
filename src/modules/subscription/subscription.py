@@ -139,7 +139,7 @@ class VaultSubscription(metaclass=Singleton):
 
     def get_checked_vault(self, user_did, is_raise=True, is_not_exist_raise=True):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did},
-                                  is_raise=False, is_create=True)
+                                  create_on_absence=True, throw_exception=False)
         if is_raise and is_not_exist_raise and not doc:
             raise VaultNotFoundException()
         if is_raise and not is_not_exist_raise and doc:

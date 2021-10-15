@@ -100,7 +100,7 @@ class IpfsBackupClient:
     def get_request_by_did(self, user_did):
         col_filter = {USR_DID: user_did, BACKUP_REQUEST_TYPE: BACKUP_REQUEST_TYPE_HIVE_NODE}
         return cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, col_filter,
-                                   is_create=True, is_raise=False)
+                                   create_on_absence=True, throw_exception=False)
 
     def save_request(self, user_did, credential, credential_info, is_restore=False):
         access_token = self.get_access_token(credential, credential_info)

@@ -106,22 +106,22 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
 
-    def find_many_origin(self, db_name, collection_name, col_filter, options=None, is_create=True, is_raise=True):
+    def find_many_origin(self, db_name, collection_name, col_filter, options=None, is_create=True, throw_exception=True):
         col = self.get_origin_collection(db_name, collection_name, is_create=is_create)
         if not col:
-            if not is_raise:
+            if not throw_exception:
                 return []
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
 
-    def find_one(self, user_did, app_did, collection_name, col_filter, options=None, is_create=False, is_raise=True):
+    def find_one(self, user_did, app_did, collection_name, col_filter, options=None, create_on_absence=False, throw_exception=True):
         return self.find_one_origin(self.get_user_database_name(user_did, app_did),
-                                    collection_name, col_filter, options, is_create=is_create, is_raise=is_raise)
+                                    collection_name, col_filter, options, create_on_absence=create_on_absence, throw_exception=throw_exception)
 
-    def find_one_origin(self, db_name, collection_name, col_filter, options=None, is_create=False, is_raise=True):
-        col = self.get_origin_collection(db_name, collection_name, is_create=is_create)
-        if not is_create and not col:
-            if not is_raise:
+    def find_one_origin(self, db_name, collection_name, col_filter, options=None, create_on_absence=False, throw_exception=True):
+        col = self.get_origin_collection(db_name, collection_name, is_create=create_on_absence)
+        if not create_on_absence and not col:
+            if not throw_exception:
                 return None
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
@@ -239,7 +239,7 @@ class DatabaseClient:
         if user_did:
             query[USER_DID] = user_did
         docs = self.find_many_origin(DID_INFO_DB_NAME,
-                                     DID_INFO_REGISTER_COL, query, is_create=False, is_raise=False)
+                                     DID_INFO_REGISTER_COL, query, is_create=False, throw_exception=False)
         if not docs:
             return list()
         return get_unique_dict_item_from_list([{USER_DID: d[USER_DID], APP_ID: d[APP_ID]} for d in docs])

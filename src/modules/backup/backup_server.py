@@ -60,7 +60,7 @@ class BackupClient:
         self.is_ipfs = is_ipfs
 
     def check_backup_status(self, user_did, is_restore=False):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {USER_DID: user_did}, is_create=True)
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {USER_DID: user_did}, create_on_absence=True)
         if doc and doc[VAULT_BACKUP_INFO_STATE] != VAULT_BACKUP_STATE_STOP \
                 and doc[VAULT_BACKUP_INFO_TIME] < (datetime.utcnow().timestamp() - 60 * 60 * 24):
             raise BackupIsInProcessingException('The backup/restore is in process.')
@@ -282,7 +282,7 @@ class BackupClient:
                 raise BadRequestException(msg='Failed to finish restore.')
 
     def get_state(self, user_did):
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {USER_DID: user_did}, is_create=True)
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_INFO_COL, {USER_DID: user_did}, create_on_absence=True)
         state, result = 'stop', 'success'
         if doc:
             state, result = doc[VAULT_BACKUP_INFO_STATE], doc[VAULT_BACKUP_INFO_MSG]
@@ -339,7 +339,7 @@ class BackupServer:
     def _check_auth_backup(self, is_raise=True, is_create=False, is_check_size=False):
         user_did, app_did = check_auth2()
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: user_did},
-                                  is_create=is_create, is_raise=False)
+                                  create_on_absence=is_create, throw_exception=False)
         if is_raise and not doc:
             raise BackupNotFoundException()
         if is_raise and is_check_size and doc \

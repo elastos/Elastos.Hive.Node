@@ -58,7 +58,7 @@ class IpfsFiles:
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_raise=False)
+        doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, throw_exception=False)
         if not doc:
             return
 
@@ -122,11 +122,11 @@ class IpfsFiles:
 
     def upload_file_with_path(self, user_did, app_did, path: str):
         """
-        Upload file really.
-            1. get the content of the file and save to a temp file
-            2. upload the temp file to IPFS node and get CID.
-            3. save the metadata of the temp file to the collection.
-            4. move the temp file to cache folder.
+        The routine to process the file uploading:
+            1. Receive the content of uploaded file and cache it a temp file;
+            2. Add this file onto IPFS node and return with CID;
+            3. Create a new metadata with the CID and store them as document;
+            4. Cached the temp file to specific cache directory.
         :param user_did: the user did
         :param app_did: the application did
         :param path: the file relative path, not None
@@ -140,7 +140,7 @@ class IpfsFiles:
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
+        doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, create_on_absence=True, throw_exception=False)
         if not doc:
             cid = self.add_file_to_metadata(user_did, app_did, path, temp_file)
         else:
@@ -165,7 +165,7 @@ class IpfsFiles:
             COL_IPFS_FILES_IPFS_CID: cid,
         }
         self.increase_refcount_cid(cid)
-        result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, file_doc, is_create=True)
+        result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, file_doc, create_on_absence=True)
         update_used_storage_for_files_data(user_did, file_doc[SIZE])
         logging.info(f'[ipfs-files] Add a new file {rel_path}')
         return cid
@@ -175,7 +175,7 @@ class IpfsFiles:
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
         if not old_doc:
-            old_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_create=True, is_raise=False)
+            old_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, create_on_absence=True, throw_exception=False)
             if not old_doc:
                 logging.error(f'The file {rel_path} does not exist. Update can not be done.')
                 return None
@@ -293,13 +293,13 @@ class IpfsFiles:
             logging.error(f'CID must be provided for increase.')
             return
 
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_raise=False)
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, throw_exception=False)
         if not doc:
             doc = {
                 CID: cid,
                 COUNT: count
             }
-            cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, doc, is_create=True)
+            cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, doc, create_on_absence=True)
         else:
             self._update_refcount_cid(cid, doc[COUNT] + count)
 
@@ -308,7 +308,7 @@ class IpfsFiles:
             logging.error(f'CID must exist for decrease.')
             return
 
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_raise=False)
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, throw_exception=False)
         if not doc:
             fm.ipfs_unpin_cid(cid)
             return

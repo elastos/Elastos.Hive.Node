@@ -115,7 +115,7 @@ class FileManager:
 
     def write_file_by_request_stream(self, file_path: Path):
         if not self.create_parent_dir(file_path):
-            raise BadRequestException(msg=f'Failed to create parent folder for file {file_path.name}.')
+            raise BadRequestException(msg=f'Failed to create parent directory to hold file {file_path.name}.')
 
         def on_save_to_temp(temp_file):
             with open(temp_file.as_posix(), "bw") as f:

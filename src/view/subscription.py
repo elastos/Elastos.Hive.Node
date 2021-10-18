@@ -6,11 +6,12 @@ The view of subscription module.
 from flask import Blueprint, request
 
 from src.modules.backup.backup_server import BackupServer
+from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.modules.subscription.subscription import VaultSubscription
 
 blueprint = Blueprint('subscription', __name__)
 vault_subscription: VaultSubscription = None
-backup_server: BackupServer = None
+backup_server: IpfsBackupServer = None
 
 
 def init_app(app):
@@ -245,7 +246,7 @@ def vault_unsubscribe():
 # blow is for backup.
 
 
-@blueprint.route('/api/v2/subscription-deprecated/backup', methods=['GET'])
+@blueprint.route('/api/v2/subscription/backup', methods=['GET'])
 def backup_get_info():
     """ Get the information of the owned backup service.
 
@@ -290,7 +291,7 @@ def backup_get_info():
     return backup_server.get_info()
 
 
-@blueprint.route('/api/v2/subscription-deprecated/backup', methods=['PUT'])
+@blueprint.route('/api/v2/subscription/backup', methods=['PUT'])
 def backup_subscribe():
     """ Subscribe to a remote backup service on the specific hive node.
     With the backup service, the data of the vault service can backup for data security.
@@ -343,7 +344,7 @@ def backup_activate_deactivate():
         return backup_server.deactivate()
 
 
-@blueprint.route('/api/v2/subscription-deprecated/backup', methods=['DELETE'])
+@blueprint.route('/api/v2/subscription/backup', methods=['DELETE'])
 def backup_unsubscribe():
     """ Unsubscribe from the remote backup service on a specific hive node.
 

@@ -1,30 +1,30 @@
 # -*- coding: utf-8 -*-
 
 """
-The view of backup module.
+The view of ipfs-backup module for file saving and viewing.
 """
-from flask import Blueprint, request
+from flask import Blueprint
 
-from src.modules.backup.backup import Backup
-from src.modules.backup.backup_server import BackupServer
-from src.utils.http_request import params
-from src.utils.http_exception import NotImplementedException
-from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \
-    URL_BACKUP_PATCH_HASH, URL_BACKUP_PATCH_FILE, URL_RESTORE_FINISH, URL_BACKUP_PATCH_DELTA
+from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
+from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
+from src.utils.consts import URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_BACKUP_STATE, \
+    URL_IPFS_BACKUP_SERVER_RESTORE
+from src.utils.http_exception import InvalidParameterException
+from src.utils.http_request import params, rqargs
 
-blueprint = Blueprint('backup-deprecated', __name__)
-backup: Backup = None
-server: BackupServer = None
+blueprint = Blueprint('backup', __name__)
+backup_client: IpfsBackupClient = None
+backup_server: IpfsBackupServer = None
 
 
 def init_app(app):
     """ This will be called by application initializer. """
-    global backup, server
-    backup, server = Backup(), BackupServer()
+    global backup_client, backup_server
+    backup_client, backup_server = IpfsBackupClient(), IpfsBackupServer()
     app.register_blueprint(blueprint)
 
 
-@blueprint.route('/api/v2/vault-deprecated/content', methods=['GET'])
+@blueprint.route('/api/v2/vault/content', methods=['GET'])
 def get_state():
     """ Get the status of the backup processing.
 
@@ -61,10 +61,10 @@ def get_state():
         HTTP/1.1 403 Forbidden
 
     """
-    return backup.get_state()
+    return backup_client.get_state()
 
 
-@blueprint.route('/api/v2/vault-deprecated/content', methods=['POST'])
+@blueprint.route('/api/v2/vault/content', methods=['POST'])
 def backup_restore():
     """ Backup or restore the data of the vault service.
     Backup the data to another hive node by the credential if contains URL parameter is **to=hive_node**.
@@ -130,78 +130,81 @@ def backup_restore():
         HTTP/1.1 403 Forbidden
 
     """
-    to = request.args.get('to')
-    fr = request.args.get('from')
+    to, fr, is_force = rqargs.get_str('to')[0], rqargs.get_str('from')[0], rqargs.get_bool('is_force')[0]
+    credential, msg = params.get_str('credential')
+    if msg or not credential:
+        return InvalidParameterException(msg='Invalid parameter.').get_error_response()
     if to == 'hive_node':
-        return backup.backup(params.get_str('credential')[0])
+        return backup_client.backup(credential, is_force)
     elif fr == 'hive_node':
-        return backup.restore(params.get_str('credential')[0])
-    elif to == 'google_drive':
-        raise NotImplementedException()
-    elif fr == 'google_drive':
-        raise NotImplementedException()
+        return backup_client.restore(credential, is_force)
+    else:
+        return InvalidParameterException(msg='Invalid parameter, to or fr need be set.').get_error_response()
 
 
-@blueprint.route('/api/v2/backup-deprecated/promotion', methods=['POST'])
+# ipfs-promotion on the backup server side
+
+
+@blueprint.route('/api/v2/backup/promotion', methods=['POST'])
 def promotion():
-    return backup.promotion()
+    """ Promote a backup service to the vault service on backup node.
 
-###############################################################################
-# Below is internal backup APIs, provided by the backup server.
+    .. :quickref: 06 Backup; Promote
 
+    **Request**:
 
-@blueprint.route(URL_BACKUP_SERVICE, methods=['GET'])
-def internal_get_backup_service():
-    """ Get the information of the backup service """
-    return server.get_backup_service()
+    .. sourcecode:: http
 
+        None
 
-@blueprint.route(URL_BACKUP_FINISH, methods=['POST'])
-def internal_backup_finish():
-    """ Notify the backup service the process has been completed.
-    The backup service will verify the checksum list of the files. """
-    return server.backup_finish(params.get_list('checksum_list')[0])
+    **Response OK**:
 
+    .. sourcecode:: http
 
-@blueprint.route(URL_BACKUP_FILES, methods=['GET'])
-def internal_backup_files():
-    """ Get the checksum list of the files for compare on client side. """
-    return server.backup_files()
+        HTTP/1.1 200 OK
 
+    **Response Error**:
 
-@blueprint.route(URL_BACKUP_FILE, methods=['GET'])
-def internal_backup_get_file():
-    """ Get the content of the file """
-    return server.backup_get_file(request.args.get('file'))
+    .. sourcecode:: http
 
+        HTTP/1.1 401 Unauthorized
 
-@blueprint.route(URL_BACKUP_FILE, methods=['PUT'])
-def internal_backup_upload_file():
-    """ Upload the content of the file to backup server """
-    return server.backup_upload_file(request.args.get('file'))
+    .. sourcecode:: http
 
+        HTTP/1.1 403 Forbidden
 
-@blueprint.route(URL_BACKUP_FILE, methods=['DELETE'])
-def internal_backup_delete_file():
-    """ Delete the file by the name """
-    return server.backup_delete_file(request.args.get('file'))
+    .. sourcecode:: http
 
+        HTTP/1.1 404 Not Found
 
-@blueprint.route(URL_BACKUP_PATCH_HASH, methods=['GET'])
-def internal_backup_get_file_hash():
-    return server.backup_get_file_hash(request.args.get('file'))
+    .. sourcecode:: http
+
+        HTTP/1.1 455 Already Exists
+
+    .. sourcecode:: http
+
+        HTTP/1.1 507 Insufficient Storage
+
+    """
+    return backup_server.promotion()
 
 
-@blueprint.route(URL_BACKUP_PATCH_DELTA, methods=['POST'])
-def internal_backup_get_file_delta():
-    return server.backup_get_file_delta(request.args.get('file'))
+# ipfs-backup internal APIs on the backup server side
 
 
-@blueprint.route(URL_BACKUP_PATCH_FILE, methods=['POST'])
-def internal_backup_patch_file():
-    return server.backup_patch_file(request.args.get('file'))
+@blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP, methods=['POST'])
+def internal_backup():
+    return backup_server.internal_backup(params.get_str('cid')[0],
+                                         params.get_str('sha256')[0],
+                                         params.get_int('size')[0],
+                                         params.get_bool('is_force')[0])
 
 
-@blueprint.route(URL_RESTORE_FINISH, methods=['GET'])
-def internal_restore_finish():
-    return server.restore_finish()
+@blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP_STATE, methods=['GET'])
+def internal_backup_state():
+    return backup_server.internal_backup_state()
+
+
+@blueprint.route(URL_IPFS_BACKUP_SERVER_RESTORE, methods=['GET'])
+def internal_restore():
+    return backup_server.internal_restore()

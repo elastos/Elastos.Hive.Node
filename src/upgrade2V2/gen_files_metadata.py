@@ -15,6 +15,7 @@ Generate the file metadata of the vaults. The metadata format is like this:
 }
 """
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -98,6 +99,8 @@ def main():
     files_metadata = generate_vaults(data_root)
     with get_files_metadata_file(data_root).open('w') as f:
         json.dump(files_metadata, f)
+
+    logging.info('all things done!')
 
 
 if __name__ == '__main__':

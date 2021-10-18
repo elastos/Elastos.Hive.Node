@@ -128,18 +128,20 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
-    def insert_one(self, user_did, app_did, collection_name, document, options=None, is_create=False):
-        return self.insert_one_origin(self.get_user_database_name(user_did, app_did), collection_name, document, options, is_create)
+    def insert_one(self, user_did, app_did, collection_name, document, options=None, is_create=False, **kwargs):
+        return self.insert_one_origin(self.get_user_database_name(user_did, app_did), collection_name, document,
+                                      options, is_create, **kwargs)
 
-    def insert_one_origin(self, db_name, collection_name, document, options=None, is_create=False, is_extra=True):
+    def insert_one_origin(self, db_name, collection_name, document, options=None,
+                          is_create=False, is_extra=True, **kwargs):
         col = self.get_origin_collection(db_name, collection_name, is_create)
         if not col:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
         if is_extra:
             now_timestamp = datetime.now().timestamp()
-            document['created'] = now_timestamp
-            document['modified'] = now_timestamp
+            document['created'] = now_timestamp if not kwargs.get('created') else kwargs.get('created')
+            document['modified'] = now_timestamp if not kwargs.get('modified') else kwargs.get('modified')
 
         result = col.insert_one(convert_oid(document), **(options if options else {}))
         return {
@@ -147,12 +149,14 @@ class DatabaseClient:
             "inserted_id": str(result.inserted_id) if result.inserted_id else ''
         }
 
-    def update_one(self, user_did, app_did, collection_name, col_filter, col_update, options=None, is_extra=False):
+    def update_one(self, user_did, app_did, collection_name, col_filter, col_update, options=None,
+                   is_extra=False, **kwargs):
         return self.update_one_origin(self.get_user_database_name(user_did, app_did), collection_name,
-                                      col_filter, col_update, options=options, is_extra=is_extra)
+                                      col_filter, col_update,
+                                      options=options, is_extra=is_extra, **kwargs)
 
     def update_one_origin(self, db_name, collection_name, col_filter, col_update,
-                          options=None, is_create=False, is_many=False, is_extra=False):
+                          options=None, is_create=False, is_many=False, is_extra=False, **kwargs):
         col = self.get_origin_collection(db_name, collection_name, is_create=is_create)
         if not col:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
@@ -164,7 +168,7 @@ class DatabaseClient:
             else:
                 col_update["$setOnInsert"] = {"created": now_timestamp}
             if "$set" in col_update:
-                col_update["$set"]["modified"] = now_timestamp
+                col_update["$set"]["modified"] = now_timestamp if not kwargs.get('modified') else kwargs.get('modified')
 
         if is_many:
             result = col.update_many(convert_oid(col_filter), convert_oid(col_update, update=True), **(options if options else {}))

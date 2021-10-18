@@ -140,7 +140,7 @@ class IpfsFiles:
 
     def upload_file_from_local(self, user_did, app_did, path: str, local_path: Path, only_import=False, **kwargs):
         # insert or update file metadata.
-        doc = self.check_file_exists(user_did, app_did, path, trow_exception=False)
+        doc = self.get_file_metadata(user_did, app_did, path, throw_exception=False)
         if not doc:
             cid = self.create_file_metadata(user_did, app_did, path, local_path,
                                             only_import=only_import, **kwargs)
@@ -299,7 +299,9 @@ class IpfsFiles:
         metadata = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter,
                                 create_on_absence=True, throw_exception=throw_exception)
         if not metadata:
-            raise FileNotFoundException(msg=f'No file metadata with path: {path} found')
+            if throw_exception:
+                raise FileNotFoundException(msg=f'No file metadata with path: {path} found')
+            return None
         return metadata
 
     def get_ipfs_file_access_url(self, metadata):

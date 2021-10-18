@@ -12,7 +12,7 @@ from src.utils.db_client import cli
 from src.utils.did_auth import check_auth2
 from src.utils.file_manager import fm
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
-    InsufficientStorageException
+    InsufficientStorageException, NotImplementedException
 from src.utils.http_response import hive_restful_response
 from src.utils_v1.auth import get_current_node_did_string
 from src.utils_v1.constants import DID_INFO_DB_NAME, \
@@ -143,6 +143,14 @@ class IpfsBackupServer:
     def get_info(self):
         _, _, doc = self._check_auth_backup()
         return self._get_vault_info(doc)
+
+    @hive_restful_response
+    def activate(self):
+        raise NotImplementedException()
+
+    @hive_restful_response
+    def deactivate(self):
+        raise NotImplementedException()
 
     def _check_auth_backup(self, is_raise=True):
         user_did, app_did = check_auth2()

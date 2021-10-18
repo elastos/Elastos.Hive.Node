@@ -19,11 +19,11 @@ Summary
     subscription.vault_get_price_plan,
     database.create_collection, database.delete_collection, database.insert_or_count_document,
     database.update_document, database.delete_document, database.find_document, database.query_document,
-    files-deprecated.reading_operation, files-deprecated.writing_operation, files-deprecated.move_file,
-    files-deprecated.delete_file,
-    scripting-deprecated.register_script, scripting-deprecated.call_script, scripting-deprecated.call_script_url,
-    scripting-deprecated.delete_script, scripting-deprecated.upload_file, scripting-deprecated.download_file,
-    backup-deprecated.get_state, backup-deprecated.backup_restore,
+    files.reading_operation, files.writing_operation, files.move_file,
+    files.delete_file,
+    scripting.register_script, scripting.call_script, scripting.call_script_url,
+    scripting.delete_script, scripting.upload_file, scripting.download_file,
+    backup.get_state, backup.backup_restore, backup.promotion,
     payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info,
     about.get_version, about.get_commit_id
 
@@ -173,28 +173,28 @@ download/properties/hash/list
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: files-deprecated.reading_operation
+  :endpoints: files.reading_operation
 
 copy/upload
 -----------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: files-deprecated.writing_operation
+  :endpoints: files.writing_operation
 
 move
 ----
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: files-deprecated.move_file
+  :endpoints: files.move_file
 
 delete
 ------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: files-deprecated.delete_file
+  :endpoints: files.delete_file
 
 05 Scripting
 ============
@@ -206,42 +206,42 @@ register script
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: scripting-deprecated.register_script
+  :endpoints: scripting.register_script
 
 call script
 -----------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: scripting-deprecated.call_script
+  :endpoints: scripting.call_script
 
 call script url
 ---------------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: scripting-deprecated.call_script_url
+  :endpoints: scripting.call_script_url
 
 unregister script
 -----------------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: scripting-deprecated.delete_script
+  :endpoints: scripting.delete_script
 
 upload file
 -----------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: scripting-deprecated.upload_file
+  :endpoints: scripting.upload_file
 
 download file
 -------------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: scripting-deprecated.download_file
+  :endpoints: scripting.download_file
 
 06 Backup
 =========
@@ -254,14 +254,21 @@ get state
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: backup-deprecated.get_state
+  :endpoints: backup.get_state
 
 backup & restore
 ----------------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: backup-deprecated.backup_restore
+  :endpoints: backup.backup_restore
+
+promote
+----------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: backup.promotion
 
 07 Payment
 ==========

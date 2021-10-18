@@ -138,13 +138,15 @@ class IpfsFiles:
         fm.write_file_by_request_stream(temp_file)
         self.upload_file_from_local(user_did, app_did, path, temp_file)
 
-    def upload_file_from_local(self, user_did, app_did, path: str, local_path: Path, only_import=False):
+    def upload_file_from_local(self, user_did, app_did, path: str, local_path: Path, only_import=False, **kwargs):
         # insert or update file metadata.
         doc = self.check_file_exists(user_did, app_did, path, trow_exception=False)
         if not doc:
-            cid = self.create_file_metadata(user_did, app_did, path, local_path, only_import=only_import)
+            cid = self.create_file_metadata(user_did, app_did, path, local_path,
+                                            only_import=only_import, **kwargs)
         else:
-            cid = self.update_file_metadata(user_did, app_did, path, local_path, doc, only_import=only_import)
+            cid = self.update_file_metadata(user_did, app_did, path, local_path, doc,
+                                            only_import=only_import, **kwargs)
 
         # set temporary file as cache.
         if cid:
@@ -156,7 +158,7 @@ class IpfsFiles:
             else:
                 shutil.move(local_path.as_posix(), cache_file.as_posix())
 
-    def create_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, only_import=False):
+    def create_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, only_import=False, **kwargs):
         cid = fm.ipfs_upload_file_from_path(file_path)
         metadata = {
             USR_DID: user_did,
@@ -168,14 +170,14 @@ class IpfsFiles:
             COL_IPFS_FILES_IPFS_CID: cid,
         }
         self.increase_refcount_cid(cid)
-        result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, metadata, create_on_absence=True)
+        result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, metadata, create_on_absence=True, **kwargs)
         if not only_import:
             update_used_storage_for_files_data(user_did, metadata[SIZE])
         logging.info(f'[ipfs-files] Add a new file {rel_path}')
         return cid
 
     def update_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path,
-                             existing_metadata=None, only_import=False):
+                             existing_metadata=None, only_import=False, **kwargs):
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
@@ -200,7 +202,8 @@ class IpfsFiles:
         updated_metadata = {'$set': {COL_IPFS_FILES_SHA256: sha256,
                             SIZE: size,
                             COL_IPFS_FILES_IPFS_CID: cid}}
-        result = cli.update_one(user_did, app_did, COL_IPFS_FILES, col_filter, updated_metadata, is_extra=True)
+        result = cli.update_one(user_did, app_did, COL_IPFS_FILES, col_filter, updated_metadata,
+                                is_extra=True, **kwargs)
 
         ## dereference the existing cid to IPFS.
         if cid != existing_metadata[COL_IPFS_FILES_IPFS_CID]:

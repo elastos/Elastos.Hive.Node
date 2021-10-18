@@ -272,7 +272,7 @@ class Executable:
         anonymous_url = ''
         if self.is_ipfs:
             if action_type == 'download':
-                metadata = self.ipfs_files.check_file_exists(self.get_target_did(),
+                metadata = self.ipfs_files.get_file_metadata(self.get_target_did(),
                                                              self.get_target_app_did(),
                                                              body['path'])
                 anonymous_url = self.ipfs_files.get_ipfs_file_access_url(metadata)
@@ -446,7 +446,7 @@ class FilePropertiesExecutable(Executable):
         body = self.get_populated_body()
         logging.info(f'get file properties: is_ipfs={self.is_ipfs}, path={body["path"]}')
         if self.is_ipfs:
-            doc = self.ipfs_files.check_file_exists(self.get_target_did(), self.get_target_app_did(), body['path'])
+            doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
             return self.get_output_data({
                 "type": "file" if doc[COL_IPFS_FILES_IS_FILE] else "folder",
                 "name": body['path'],
@@ -472,7 +472,7 @@ class FileHashExecutable(Executable):
         body = self.get_populated_body()
         logging.info(f'get file hash: is_ipfs={self.is_ipfs}, path={body["path"]}')
         if self.is_ipfs:
-            doc = self.ipfs_files.check_file_exists(self.get_target_did(), self.get_target_app_did(), body['path'])
+            doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
             return self.get_output_data({"SHA256": doc[COL_IPFS_FILES_SHA256]})
         data, err = query_hash(self.get_target_did(), self.get_target_app_did(), body['path'])
         if err:

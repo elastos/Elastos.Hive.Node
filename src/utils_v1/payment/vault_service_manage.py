@@ -279,6 +279,6 @@ def update_used_storage_for_mongodb_data(user_did, varying_size):
         VAULT_SERVICE_DB_USE_STORAGE: varying_size,
         VAULT_SERVICE_MODIFY_TIME: now
     }
-    value = {"$set": user_did}
+    value = {"$set": dic}
     ret = col.update_one(query, value)
     return ret

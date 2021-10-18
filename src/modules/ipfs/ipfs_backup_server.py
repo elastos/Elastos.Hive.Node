@@ -5,7 +5,7 @@ from datetime import datetime
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.subscription.subscription import VaultSubscription
-from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \
+from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_INPROGRESS, BKSERVER_REQ_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
     BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER, USR_DID
 from src.utils.db_client import cli
@@ -50,12 +50,12 @@ class IpfsBackupServer:
     @hive_restful_response
     def internal_backup(self, cid, sha256, size, is_force):
         user_did, app_did, doc = self._check_auth_backup()
-        if not is_force and doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
+        if not is_force and doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
             raise BadRequestException(msg='Failed because backup is in processing.')
         fm.ipfs_pin_cid(cid)
         update = {
             BKSERVER_REQ_ACTION: BACKUP_REQUEST_ACTION_BACKUP,
-            BKSERVER_REQ_STATE: BACKUP_REQUEST_STATE_PROCESS,
+            BKSERVER_REQ_STATE: BACKUP_REQUEST_STATE_INPROGRESS,
             BKSERVER_REQ_STATE_MSG: None,
             BKSERVER_REQ_CID: cid,
             BKSERVER_REQ_SHA256: sha256,
@@ -76,7 +76,7 @@ class IpfsBackupServer:
     @hive_restful_response
     def internal_restore(self):
         user_did, app_did, doc = self._check_auth_backup()
-        if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
+        if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
             raise BadRequestException(msg='Failed because backup is in processing..')
         elif doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_FAILED:
             raise BadRequestException(msg='Cannot execute restore because last backup is failed.')
@@ -195,7 +195,7 @@ class IpfsBackupServer:
 
     def retry_backup_request(self, user_did):
         req = self.find_backup_request(user_did, is_raise=False)
-        if not req or req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_PROCESS:
+        if not req or req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
             return
         logging.info(f"[IpfsBackupServer] Found uncompleted request({req.get(USR_DID)}), retry.")
         BackupServerExecutor(user_did, self, req, start_delay=30).start()

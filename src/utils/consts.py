@@ -19,9 +19,9 @@ URL_IPFS_BACKUP_GET_CIDS = '/api/v2/ipfs-backup-internal/get_cids'
 URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'
 URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
 
-URL_IPFS_BACKUP_SERVER_BACKUP = '/api/v2/ipfs-backup-server/backup'
-URL_IPFS_BACKUP_SERVER_BACKUP_STATE = '/api/v2/ipfs-backup-server/backup-state'
-URL_IPFS_BACKUP_SERVER_RESTORE = '/api/v2/ipfs-backup-server/restore'
+URL_VAULT_BACKUP_SERVICE_BACKUP = '/api/v2/vault-backup-service/backup'
+URL_VAULT_BACKUP_SERVICE_RESTORE = '/api/v2/vault-backup-service/restore'
+URL_VAULT_BACKUP_SERVICE_STATE = '/api/v2/vault-backup-service/state'
 
 BACKUP_FILE_SUFFIX = '.backup'
 
@@ -69,18 +69,22 @@ COL_IPFS_CID_REF = 'ipfs_cid_ref'
 
 COL_IPFS_BACKUP_CLIENT = 'ipfs_backup_client'
 COL_IPFS_BACKUP_SERVER = 'ipfs_backup_server'
+
 BACKUP_REQUEST_TYPE = 'type'
 BACKUP_REQUEST_TYPE_HIVE_NODE = 'hive_node'
 BACKUP_REQUEST_TYPE_GOOGLE_DRIVER = 'google_driver'
+
 BACKUP_REQUEST_ACTION = 'action'
 BACKUP_REQUEST_ACTION_BACKUP = 'backup'
 BACKUP_REQUEST_ACTION_RESTORE = 'restore'
+
 BACKUP_REQUEST_STATE = 'state'
 BACKUP_REQUEST_STATE_STOP = 'stop'
-BACKUP_REQUEST_STATE_PROCESS = 'process'
+BACKUP_REQUEST_STATE_INPROGRESS = 'process'
 BACKUP_REQUEST_STATE_SUCCESS = 'success'
 BACKUP_REQUEST_STATE_FAILED = 'failed'
 BACKUP_REQUEST_STATE_MSG = 'state_msg'
+
 BACKUP_REQUEST_TARGET_HOST = 'target_host'
 BACKUP_REQUEST_TARGET_DID = 'target_did'
 BACKUP_REQUEST_TARGET_TOKEN = 'target_token'

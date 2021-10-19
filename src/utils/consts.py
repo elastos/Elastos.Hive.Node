@@ -19,9 +19,9 @@ URL_IPFS_BACKUP_GET_CIDS = '/api/v2/ipfs-backup-internal/get_cids'
 URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'
 URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
 
-URL_IPFS_BACKUP_SERVER_BACKUP = '/api/v2/ipfs-backup-server/backup'
-URL_IPFS_BACKUP_SERVER_BACKUP_STATE = '/api/v2/ipfs-backup-server/backup-state'
-URL_IPFS_BACKUP_SERVER_RESTORE = '/api/v2/ipfs-backup-server/restore'
+URL_VAULT_BACKUP_SERVICE_BACKUP = '/api/v2/vault-backup-service/backup'
+URL_VAULT_BACKUP_SERVICE_RESTORE = '/api/v2/vault-backup-service/restore'
+URL_VAULT_BACKUP_SERVICE_STATE = '/api/v2/vault-backup-service/state'
 
 BACKUP_FILE_SUFFIX = '.backup'
 

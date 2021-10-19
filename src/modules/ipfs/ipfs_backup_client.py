@@ -33,7 +33,7 @@ from src.utils.consts import BACKUP_REQUEST_TYPE, BACKUP_REQUEST_TYPE_HIVE_NODE,
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_INPROGRESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
-    URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_RESTORE, URL_IPFS_BACKUP_SERVER_BACKUP_STATE, \
+    URL_VAULT_BACKUP_SERVICE_BACKUP, URL_VAULT_BACKUP_SERVICE_RESTORE, URL_VAULT_BACKUP_SERVICE_STATE, \
     COL_IPFS_BACKUP_CLIENT, USR_DID
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
@@ -91,7 +91,7 @@ class IpfsBackupClient:
             ## request to remote backup node to retrieve the current backup progress state if
             ## its being backuped.
             if state == BACKUP_REQUEST_ACTION_BACKUP and result == BACKUP_REQUEST_STATE_SUCCESS:
-                body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_IPFS_BACKUP_SERVER_BACKUP_STATE,
+                body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_VAULT_BACKUP_SERVICE_STATE,
                                      req.get(BACKUP_REQUEST_TARGET_TOKEN))
                 result, msg = body['result'], body['message']
         return {
@@ -192,7 +192,7 @@ class IpfsBackupClient:
     def send_request_metadata_to_server(self, user_did, cid, sha256, size, is_force):
         req = self.get_request_by_did(user_did)
         body = {'cid': cid, 'sha256': sha256, 'size': size, 'is_force': is_force}
-        self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_IPFS_BACKUP_SERVER_BACKUP,
+        self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_VAULT_BACKUP_SERVICE_BACKUP,
                        req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
 
     def recv_request_metadata_from_server(self, user_did):
@@ -218,7 +218,7 @@ class IpfsBackupClient:
 
     def _get_verified_request_metadata_from_server(self, user_did):
         req = self.get_request_by_did(user_did)
-        body = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_IPFS_BACKUP_SERVER_RESTORE,
+        body = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_VAULT_BACKUP_SERVICE_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])
         return fm.ipfs_download_file_content(body['cid'], is_proxy=True, sha256=body['sha256'], size=body['size'])
 

@@ -7,8 +7,8 @@ from flask import Blueprint
 
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
-from src.utils.consts import URL_IPFS_BACKUP_SERVER_BACKUP, URL_IPFS_BACKUP_SERVER_BACKUP_STATE, \
-    URL_IPFS_BACKUP_SERVER_RESTORE
+from src.utils.consts import URL_VAULT_BACKUP_SERVICE_BACKUP, URL_VAULT_BACKUP_SERVICE_STATE, \
+    URL_VAULT_BACKUP_SERVICE_RESTORE
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import params, rqargs
 
@@ -192,7 +192,7 @@ def promotion():
 # ipfs-backup internal APIs on the backup server side
 
 
-@blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP, methods=['POST'])
+@blueprint.route(URL_VAULT_BACKUP_SERVICE_BACKUP, methods=['POST'])
 def internal_backup():
     return backup_server.internal_backup(params.get_str('cid')[0],
                                          params.get_str('sha256')[0],
@@ -200,11 +200,11 @@ def internal_backup():
                                          params.get_bool('is_force')[0])
 
 
-@blueprint.route(URL_IPFS_BACKUP_SERVER_BACKUP_STATE, methods=['GET'])
+@blueprint.route(URL_VAULT_BACKUP_SERVICE_STATE, methods=['GET'])
 def internal_backup_state():
     return backup_server.internal_backup_state()
 
 
-@blueprint.route(URL_IPFS_BACKUP_SERVER_RESTORE, methods=['GET'])
+@blueprint.route(URL_VAULT_BACKUP_SERVICE_RESTORE, methods=['GET'])
 def internal_restore():
     return backup_server.internal_restore()

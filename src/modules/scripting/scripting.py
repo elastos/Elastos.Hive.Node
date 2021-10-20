@@ -291,7 +291,7 @@ class Executable:
                                       "fileapi_type": action_type
                                   },
                                   'anonymous': self.script.anonymous_app and self.script.anonymous_user
-                              }, is_create=True)
+                              }, create_on_absence=True)
         if not data.get('inserted_id', None):
             raise BadRequestException('Cannot retrieve the transaction ID.')
 
@@ -373,7 +373,7 @@ class InsertExecutable(Executable):
                               populate_options_insert_one(self.body))
 
         update_used_storage_for_mongodb_data(self.get_did(),
-                                         get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
         return self.get_output_data(data)
 
@@ -557,7 +557,7 @@ class Scripting:
         return result
 
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
-        col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, is_create=True)
+        col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
         json_data['name'] = script_name
         fix_dollar_keys(json_data['executable'])
         ret = col.replace_one({"name": script_name}, convert_oid(json_data),

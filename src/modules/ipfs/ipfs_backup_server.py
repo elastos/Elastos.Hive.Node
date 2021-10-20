@@ -119,14 +119,14 @@ class IpfsBackupServer:
 
     @hive_restful_response
     def subscribe(self):
-        user_did, app_did, doc = self._check_auth_backup(is_raise=False)
+        user_did, app_did, doc = self._check_auth_backup(throw_exception=False)
         if doc:
             raise AlreadyExistsException('The backup service is already subscribed.')
         return self._get_vault_info(self._create_backup(user_did, PaymentConfig.get_free_backup_info()))
 
     @hive_restful_response
     def unsubscribe(self):
-        user_did, _, doc = self._check_auth_backup(is_raise=False)
+        user_did, _, doc = self._check_auth_backup(throw_exception=False)
         if not doc:
             return
 
@@ -152,9 +152,9 @@ class IpfsBackupServer:
     def deactivate(self):
         raise NotImplementedException()
 
-    def _check_auth_backup(self, is_raise=True):
+    def _check_auth_backup(self, throw_exception=True):
         user_did, app_did = check_auth2()
-        return user_did, app_did, self.find_backup_request(user_did, is_raise=is_raise)
+        return user_did, app_did, self.find_backup_request(user_did, throw_exception=throw_exception)
 
     def _create_backup(self, user_did, price_plan):
         now = datetime.utcnow().timestamp()
@@ -186,15 +186,15 @@ class IpfsBackupServer:
         col_filter = {USR_DID: user_did}
         cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, col_filter, {'$set': update}, is_extra=True)
 
-    def find_backup_request(self, user_did, is_raise=True):
+    def find_backup_request(self, user_did, throw_exception=True):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {USR_DID: user_did},
                                   create_on_absence=True, throw_exception=False)
-        if is_raise and not doc:
+        if throw_exception and not doc:
             raise BackupNotFoundException()
         return doc
 
     def retry_backup_request(self, user_did):
-        req = self.find_backup_request(user_did, is_raise=False)
+        req = self.find_backup_request(user_did, throw_exception=False)
         if not req or req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
             return
         logging.info(f"[IpfsBackupServer] Found uncompleted request({req.get(USR_DID)}), retry.")

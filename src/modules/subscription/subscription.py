@@ -46,7 +46,7 @@ class VaultSubscription(metaclass=Singleton):
                VAULT_SERVICE_MODIFY_TIME: now,
                VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
                VAULT_SERVICE_PRICING_USING: price_plan['name']}
-        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, doc, is_create=True, is_extra=False)
+        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, doc, create_on_absence=True, is_extra=False)
         # INFO: user database will create with first collection creation.
         if not fm.create_dir(get_vault_path(user_did)):
             raise BadRequestException('Failed to create folder for the user.')
@@ -69,7 +69,7 @@ class VaultSubscription(metaclass=Singleton):
     @hive_restful_response
     def unsubscribe(self):
         user_did, app_did = check_auth()
-        document = self.get_checked_vault(user_did, is_raise=False)
+        document = self.get_checked_vault(user_did, throw_exception=False)
         if not document:
             # INFO: do not raise here.
             return
@@ -137,12 +137,12 @@ class VaultSubscription(metaclass=Singleton):
     def get_price_plans_version(self):
         return PaymentConfig.get_all_package_info().get('version', '1.0')
 
-    def get_checked_vault(self, user_did, is_raise=True, is_not_exist_raise=True):
+    def get_checked_vault(self, user_did, throw_exception=True, is_not_exist_raise=True):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did},
                                   create_on_absence=True, throw_exception=False)
-        if is_raise and is_not_exist_raise and not doc:
+        if throw_exception and is_not_exist_raise and not doc:
             raise VaultNotFoundException()
-        if is_raise and not is_not_exist_raise and doc:
+        if throw_exception and not is_not_exist_raise and doc:
             raise AlreadyExistsException(msg='The vault already exists.')
         return doc
 
@@ -176,5 +176,5 @@ class VaultSubscription(metaclass=Singleton):
         return days * cur_plan['amount'] / plan['amount']
 
     def get_vault_max_size(self, user_did):
-        doc = self.get_checked_vault(user_did, is_raise=True)
+        doc = self.get_checked_vault(user_did, throw_exception=True)
         return doc[VAULT_SERVICE_MAX_STORAGE]

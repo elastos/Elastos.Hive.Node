@@ -239,7 +239,8 @@ class FileManager:
         databases = cli.get_all_user_databases(user_did)
         total_size, cids = 0, set()
         for d in databases:
-            docs = cli.find_many_origin(d, COL_IPFS_FILES, {USR_DID: user_did}, is_create=False, is_raise=False)
+            docs = cli.find_many_origin(d, COL_IPFS_FILES, {USR_DID: user_did},
+                                        create_on_absence=False, throw_exception=False)
             if docs:
                 cids.update([doc[COL_IPFS_FILES_IPFS_CID] for doc in docs])
                 total_size += sum([doc[SIZE] for doc in docs])
@@ -249,7 +250,8 @@ class FileManager:
         databases = cli.get_all_user_database_names(user_did)
         total_size, cids = 0, list()
         for d in databases:
-            docs = cli.find_many_origin(d, COL_IPFS_FILES, {USR_DID: user_did}, is_create=False, is_raise=False)
+            docs = cli.find_many_origin(d, COL_IPFS_FILES, {USR_DID: user_did},
+                                        create_on_absence=False, throw_exception=False)
             for doc in docs:
                 mt = self._get_cid_metadata_from_list(cids, doc)
                 if mt:
@@ -264,7 +266,8 @@ class FileManager:
 
     def get_app_file_metadatas(self, user_did, app_did) -> list:
         result = []
-        docs = cli.find_many(user_did, app_did, COL_IPFS_FILES, {USR_DID: user_did, APP_DID: app_did}, is_raise=False)
+        docs = cli.find_many(user_did, app_did, COL_IPFS_FILES,
+                             {USR_DID: user_did, APP_DID: app_did}, throw_exception=False)
         for doc in docs:
             result.append({
                 "path": doc[COL_IPFS_FILES_PATH],

@@ -10,12 +10,7 @@ ADD requirements.txt /src/
 
 WORKDIR /src
 
-RUN pip install --upgrade pip
-
-RUN pip install -r requirements.txt && \
-    pip install gunicorn
-
-RUN touch /root/.config/rclone/rclone.conf
+RUN pip install -r requirements.txt
 
 ADD . /src/
 
@@ -23,4 +18,4 @@ ENV LD_LIBRARY_PATH="/src/hive/util/did/"
 
 EXPOSE 5000
 
-CMD ["gunicorn","-b","0.0.0.0:5000","-k","gevent","src:create_app()"]
+CMD [ "python3", "manage.py",  "runserver", "--host", "0.0.0.0" ]

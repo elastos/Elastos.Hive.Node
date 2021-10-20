@@ -133,7 +133,7 @@ class IpfsBackupClient:
             BACKUP_REQUEST_TARGET_DID: target_did,
             BACKUP_REQUEST_TARGET_TOKEN: access_token
         }
-        cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, new_doc, is_create=True)
+        cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, new_doc, create_on_absence=True)
 
     def update_request(self, user_did, target_host, target_did, access_token, req, is_restore=False):
         if request.args.get('is_multi') != 'True':

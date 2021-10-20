@@ -52,7 +52,7 @@ def upload_ipfs_files_by_db(db_name):
     # find 10 docs and ordered by ascending.
     col_filter = {COL_IPFS_FILES_IPFS_CID: {'$exists': True, '$eq': None}}
     options = {'limit': 10, 'sort': [('modified', pymongo.ASCENDING), ]}
-    file_docs = cli.find_many_origin(db_name, COL_IPFS_FILES, col_filter, is_raise=False, options=options)
+    file_docs = cli.find_many_origin(db_name, COL_IPFS_FILES, col_filter, throw_exception=False, options=options)
     logging.info(f'[task_upload_ipfs_files] get {len(file_docs) if file_docs else 0} '
                  f'{db_name} files for uploading to ipfs node')
     if not file_docs:
@@ -102,7 +102,8 @@ def task_adapt_local_file_to_ipfs():
 def adapt_local_files_by_folder(user_did, app_did, database_name, files_root):
     files = fm.get_files_recursively(files_root)
     col_filter = {DID: user_did, APP_DID: app_did}
-    file_docs = cli.find_many_origin(database_name, COL_IPFS_FILES, col_filter, is_create=False, is_raise=False)
+    file_docs = cli.find_many_origin(database_name, COL_IPFS_FILES, col_filter,
+                                     create_on_absence=False, throw_exception=False)
     ipfs_files = IpfsFiles()
 
     # handle new and update
@@ -110,7 +111,7 @@ def adapt_local_files_by_folder(user_did, app_did, database_name, files_root):
         rel_path = file.relative_to(files_root).as_posix()
         matches = list(filter(lambda d: d[COL_IPFS_FILES_PATH] == rel_path, file_docs))
         if not matches:
-            ipfs_files.add_file_to_metadata(user_did, app_did, rel_path, file)
+            ipfs_files.create_file_metadata(user_did, app_did, rel_path, file)
             continue
         doc = matches[0]
         ipfs_files.update_file_metadata(user_did, app_did, rel_path, file, old_doc=doc)

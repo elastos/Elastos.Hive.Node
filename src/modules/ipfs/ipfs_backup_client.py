@@ -60,7 +60,7 @@ class IpfsBackupClient:
     @hive_restful_response
     def backup(self, credential, is_force):
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
-        credential_info  = self.auth.get_backup_credential_info(credential)
+        credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
             self.check_backup_restore_in_progress(user_did)
         req = self.save_request(user_did, credential, credential_info)
@@ -84,12 +84,12 @@ class IpfsBackupClient:
         state, result, msg = BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, ''
         req = self.get_request_by_did(user_did)
         if req:
-            state  = req.get(BACKUP_REQUEST_ACTION)
+            state = req.get(BACKUP_REQUEST_ACTION)
             result = req.get(BACKUP_REQUEST_STATE)
-            msg    = req.get(BACKUP_REQUEST_STATE_MSG)
+            msg = req.get(BACKUP_REQUEST_STATE_MSG)
 
-            ## request to remote backup node to retrieve the current backup progress state if
-            ## its being backuped.
+            # request to remote backup node to retrieve the current backup progress state if
+            # its being backuped.
             if state == BACKUP_REQUEST_ACTION_BACKUP and result == BACKUP_REQUEST_STATE_SUCCESS:
                 body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_VAULT_BACKUP_SERVICE_STATE,
                                      req.get(BACKUP_REQUEST_TARGET_TOKEN))
@@ -136,13 +136,13 @@ class IpfsBackupClient:
         cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, new_doc, create_on_absence=True)
 
     def update_request(self, user_did, target_host, target_did, access_token, req, is_restore=False):
-        if request.args.get('is_multi') != 'True':
-            # INFO: Use url parameter 'is_multi' to skip this check.
-            cur_target_host = req.get(BACKUP_REQUEST_TARGET_HOST)
-            cur_target_did = req.get(BACKUP_REQUEST_TARGET_DID)
-            if cur_target_host and cur_target_did \
-                    and (cur_target_host != target_host or cur_target_did != target_did):
-                raise InvalidParameterException(msg='Do not support backup to multi hive node.')
+        # if request.args.get('is_multi') != 'True':
+        #     # INFO: Use url parameter 'is_multi' to skip this check.
+        #     cur_target_host = req.get(BACKUP_REQUEST_TARGET_HOST)
+        #     cur_target_did = req.get(BACKUP_REQUEST_TARGET_DID)
+        #     if cur_target_host and cur_target_did \
+        #             and (cur_target_host != target_host or cur_target_did != target_did):
+        #         raise InvalidParameterException(msg='Do not support backup to multi hive node.')
 
         updated_doc = {
             BACKUP_REQUEST_ACTION: BACKUP_REQUEST_ACTION_RESTORE if is_restore else BACKUP_REQUEST_ACTION_BACKUP,

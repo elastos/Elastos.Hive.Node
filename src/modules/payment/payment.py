@@ -80,7 +80,7 @@ class Payment(metaclass=Singleton):
             COL_ORDERS_STATUS: COL_ORDERS_STATUS_NORMAL
         }
 
-        res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_ORDERS, doc, is_create=True)
+        res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_ORDERS, doc, create_on_absence=True)
 
         doc['_id'] = res['inserted_id']
         doc[COL_ORDERS_PROOF] = self.auth.create_order_proof(user_did, doc['_id'])
@@ -203,7 +203,7 @@ class Payment(metaclass=Singleton):
             COL_ORDERS_PROOF: '',
             COL_ORDERS_STATUS: COL_ORDERS_STATUS_NORMAL
         }
-        res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, receipt, is_create=True)
+        res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, receipt, create_on_absence=True)
 
         receipt['_id'] = res['inserted_id']
         receipt[COL_ORDERS_PROOF] = self.auth.create_order_proof(

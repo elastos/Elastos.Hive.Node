@@ -312,7 +312,8 @@ class IpfsFiles:
             logging.error(f'CID must be provided for increase.')
             return
 
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, throw_exception=False)
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid},
+                                  create_on_absence=True, throw_exception=False)
         if not doc:
             doc = {
                 CID: cid,
@@ -327,7 +328,8 @@ class IpfsFiles:
             logging.error(f'CID must exist for decrease.')
             return
 
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, throw_exception=False)
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid},
+                                  create_on_absence=True, throw_exception=False)
         if not doc:
             fm.ipfs_unpin_cid(cid)
             return
@@ -342,4 +344,5 @@ class IpfsFiles:
         update = {'$set': {
             COUNT: count,
         }}
-        cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, col_filter, update, is_extra=True)
+        cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, col_filter, update,
+                              create_on_absence=True, is_extra=True)

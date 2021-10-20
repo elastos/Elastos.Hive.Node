@@ -86,7 +86,7 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp(),
                                         VAULT_BACKUP_INFO_DRIVE: credential_info['targetHost'],
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
-                              options={'upsert': True}, is_create=True)
+                              options={'upsert': True}, create_on_absence=True)
 
         clog().debug('start new thread for backup processing.')
 
@@ -262,7 +262,7 @@ class BackupClient:
                                         VAULT_BACKUP_INFO_TIME: datetime.utcnow().timestamp(),
                                         VAULT_BACKUP_INFO_DRIVE: credential_info['targetHost'],
                                         VAULT_BACKUP_INFO_TOKEN: access_token}},
-                              options={'upsert': True}, is_create=True)
+                              options={'upsert': True}, create_on_absence=True)
 
         if hive_setting.BACKUP_IS_SYNC:
             self.__class__.restore_main(user_did, self)
@@ -336,19 +336,19 @@ class BackupServer:
         self.is_ipfs = is_ipfs
         self.client = BackupClient(is_ipfs=is_ipfs)
 
-    def _check_auth_backup(self, is_raise=True, is_create=False, is_check_size=False):
+    def _check_auth_backup(self, throw_exception=True, create_on_absence=False, is_check_size=False):
         user_did, app_did = check_auth2()
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: user_did},
-                                  create_on_absence=is_create, throw_exception=False)
-        if is_raise and not doc:
+                                  create_on_absence=create_on_absence, throw_exception=False)
+        if throw_exception and not doc:
             raise BackupNotFoundException()
-        if is_raise and is_check_size and doc \
+        if throw_exception and is_check_size and doc \
                 and doc[VAULT_BACKUP_SERVICE_USE_STORAGE] > doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
             raise InsufficientStorageException(msg='No more available space for backup.')
         return user_did, app_did, doc
 
     def _subscribe_free(self):
-        user_did, app_did, doc = self._check_auth_backup(is_raise=False, is_create=True)
+        user_did, app_did, doc = self._check_auth_backup(throw_exception=False, create_on_absence=True)
         if doc:
             raise AlreadyExistsException('The backup service is already subscribed.')
         return self._get_vault_info(self._create_backup(user_did, PaymentConfig.get_free_backup_info()))
@@ -368,7 +368,7 @@ class BackupServer:
                VAULT_BACKUP_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
                VAULT_BACKUP_SERVICE_USING: price_plan['name']
                }
-        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, doc, is_create=True)
+        cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, doc, create_on_absence=True)
         return doc
 
     def _get_vault_info(self, doc):
@@ -387,7 +387,7 @@ class BackupServer:
 
     @hive_restful_response
     def unsubscribe(self):
-        user_did, _, doc = self._check_auth_backup(is_raise=False)
+        user_did, _, doc = self._check_auth_backup(throw_exception=False)
         if not doc:
             return
         backup_root = get_vault_backup_path(user_did)
@@ -408,12 +408,12 @@ class BackupServer:
 
     @hive_restful_response
     def get_info(self):
-        _, _, doc = self._check_auth_backup(is_create=True)
+        _, _, doc = self._check_auth_backup(create_on_absence=True)
         return self._get_vault_info(doc)
 
     @hive_restful_response
     def get_backup_service(self):
-        _, _, doc = self._check_auth_backup(is_create=True)
+        _, _, doc = self._check_auth_backup(create_on_absence=True)
         del doc["_id"]
         return doc
 
@@ -556,7 +556,7 @@ class BackupServer:
             raise BadRequestException(msg='No backup data exists.')
 
         from src.view.subscription import vault_subscription
-        vault = vault_subscription.get_checked_vault(user_did, is_raise=False)
+        vault = vault_subscription.get_checked_vault(user_did, throw_exception=False)
         if vault:
             raise AlreadyExistsException(msg='The vault already exists, no need promotion.')
 

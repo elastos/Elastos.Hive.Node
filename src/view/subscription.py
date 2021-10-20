@@ -17,7 +17,7 @@ backup_server: IpfsBackupServer = None
 def init_app(app):
     """ This will be called by application initializer. """
     global vault_subscription, backup_server
-    vault_subscription, backup_server = VaultSubscription(), BackupServer()
+    vault_subscription, backup_server = VaultSubscription(), IpfsBackupServer()
     app.register_blueprint(blueprint)
 
 

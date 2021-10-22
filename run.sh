@@ -1,21 +1,43 @@
 #!/usr/bin/env bash
 
 function start_db () {
-    docker container stop hive-mongo || true && docker container rm -f hive-mongo || true
+    docker container list --all | grep hive-mongo > /dev/null \
+              && docker container stop hive-mongo > /dev/null \
+              && docker container rm -f hive-mongo > /dev/null
+    echo -n "Hive-Mongo Container: "
     docker run -d --name hive-mongo                     \
-        --network hive                                  \
+        --network hive-service                          \
         -v ${PWD}/.mongodb-data:/data/db                \
         -p 27020:27017                                  \
-        mongo:4.4.0
+        mongo:4.4.0 | cut -c -9
 }
 
-function start_test_db () {
-    docker container stop hive-test-mongo || true && docker container rm -f hive-test-mongo || true
-    docker run -d --name hive-test-mongo                \
-        --network hive                                  \
-        -v ${PWD}/.mongodb-test-data:/data/db           \
-        -p 27022:27017                                  \
-        mongo:4.4.0
+function start_ipfs() {
+    docker container list --all | grep hive-ipfs > /dev/null \
+              && docker container stop hive-ipfs > /dev/null \
+              && docker container rm -f hive-ipfs > /dev/null
+    echo -n "Hive-IPFS Container: "
+    mkdir -p ${PWD}/.ipfs-data/ipfs-docker-staging ; mkdir -p ${PWD}/.ipfs-data/ipfs-docker-data
+    docker run -d --name ipfs-node                            \
+        -v ${PWD}/.ipfs-data/ipfs-docker-staging:/export      \
+        -v ${PWD}/.ipfs-data/ipfs-docker-data:/data/ipfs      \
+        -p 8080:8080 -p 4001:4001 -p 127.0.0.1:5001:5001      \
+        ipfs/go-ipfs:latest | cut -c -9
+}
+
+function start_node() {
+  docker container list --all | grep hive-node > /dev/null    \
+            && docker container stop hive-node > /dev/null    \
+            && docker container rm -f hive-node > /dev/null
+  docker image rm -f elastos/hive-node
+  docker build -t elastos/hive-node . > /dev/null
+  echo -n "Hive-Node Container: "
+  docker run -d --name hive-node    \
+      --network hive-service        \
+      -v ${PWD}/.data:/src/data     \
+      -v ${PWD}/.env:/src/.env      \
+      -p 5000:5000                  \
+      elastos/hive-node | cut -c -9
 }
 
 function setup_venv () {
@@ -44,42 +66,84 @@ function setup_venv () {
     esac
 }
 
-function start_docker () {
-    docker network create hive
+function prepare_env_file() {
+    if [ -f ".env" ]; then
+        return
+    fi
 
-    start_db
+    cp .env.example .env
 
+    DID_MNEMONIC=$(grep 'DID_MNEMONIC' .env | sed 's/DID_MNEMONIC="//;s/"//')
+    echo -n "Your DID MNEMONIC: "
+    echo -e "\033[;36m ${DID_MNEMONIC} \033[0m"
+    echo -n "Confirm ? (y/n) "
+    read RESULT
+    RESULT=$(echo ${RESULT})
+    if [ ! "${RESULT}" == "y" ];then
+        echo -n "Please input your DID MNEMONIC: "
+        read DID_MNEMONIC
+        DID_MNEMONIC=$(echo ${DID_MNEMONIC})
+        [ "${DID_MNEMONIC}" = "" ] && echo "You don't input DID MNEMONIC" && exit 1
+        sed -i "/DID_MNEMONIC/s/^.*$/DID_MNEMONIC=\"${DID_MNEMONIC}\"/" .env
+    fi
+
+
+    echo -n "Please input your DID MNEMONIC PASSPHRASE: "
+    read DID_PASSPHRASE
+    DID_PASSPHRASE=$(echo ${DID_PASSPHRASE})
+    sed -i "/DID_PASSPHRASE/s/^.*$/DID_PASSPHRASE=${DID_PASSPHRASE}/" .env
+    echo -n "Please input your DID MNEMONIC SECRET: "
+    read DID_STOREPASS
+    DID_STOREPASS=$(echo ${DID_STOREPASS})
+    [ "${DID_STOREPASS}" != "" ] && sed -i "/DID_STOREPASS/s/^.*$/DID_STOREPASS=${DID_STOREPASS}/" .env
+
+    sed -i "/DID_RESOLVER/s/^.*$/DID_RESOLVER=http:\/\/api.elastos.io:20606/" .env
+    sed -i "/ELA_RESOLVER/s/^.*$/ELA_RESOLVER=http:\/\/api.elastos.io:20336/" .env
+    sed -i "/MONGO_HOST/s/^.*$/MONGO_HOST=hive-mongo/" .env
+    sed -i "/MONGO_PORT/s/^.*$/MONGO_PORT=27017/" .env
+}
+
+function check_docker() {
     echo "Running using docker..."
-    docker container stop hive-node || true && docker container rm -f hive-node || true
-    docker build -t elastos/hive-node .
-    docker run -d --name hive-node               \
-      --network hive                          \
-      -v ${PWD}/.data:/src/data                \
-      -v ${PWD}/.env:/src/.env                \
-      -p 5000:5000                            \
-      elastos/hive-node
+    docker version > /dev/null 2>&1
+    if [ ! $? -eq 0 ];then
+        echo "You don't have docker installed. Please run the below commands to install docker"
+        echo "
+$ curl -fsSL https://get.docker.com -o get-docker.sh
+$ sudo sh get-docker.sh
+$ sudo usermod -aG docker $(whoami)
+        "
+        exit
+    fi
+}
+
+function prepare_before_running() {
+    check_docker
+    prepare_env_file
+    docker network ls | grep hive-service > /dev/null || docker network create hive-service
+    start_db
+    start_ipfs
+}
+
+function start_docker () {
+    echo "Running by docker..."
+    prepare_before_running
+    start_node
+    source wait_node.sh
 }
 
 function start_direct () {
-    docker network create hive
-
-    start_db
-
-    echo "Running directly on the machine..."
-    ps -ef | grep gunicorn | awk '{print $2}' | xargs kill -9
-
+    echo "Running directly only..."
+    prepare_before_running
     setup_venv
-
     LD_LIBRARY_PATH="$PWD/hive/util/did/" python manage.py runserver
 }
 
 function test () {
-    docker network create hive
-
-    start_db
-    start_test_db
-
+    echo "Running directly only..."
+    prepare_before_running
     setup_venv
+    LD_LIBRARY_PATH="$PWD/hive/util/did/" python manage.py runserver &
 
     rm -rf data
     rm -f hive.log
@@ -103,15 +167,20 @@ function test () {
     pytest --disable-pytest-warnings -xs tests/scripting_test.py
     pytest --disable-pytest-warnings -xs tests/payment_test.py
     pytest --disable-pytest-warnings -xs tests/backup_test.py
-
-    rm -f hive.log
-    rm -f test_patch.delta
-
-#    docker container stop hive-mongo && docker container rm -f hive-mongo
-#    docker container stop hive-test-mongo && docker container rm -f hive-test-mongo
 }
 
-export HIVE_NODE_HOME="."
+function stop() {
+    hive_node=$(docker container list --all | grep hive-node | awk '{print $1}')
+    if [ -n "${hive_node}" ];then
+    	docker container stop ${hive_node}
+    	docker container rm ${hive_node}
+    fi
+    hive_mongo=$(docker container list --all | grep hive-mongo | awk '{print $1}')
+    if [ -n "${hive_mongo}" ];then
+    	docker container stop ${hive_mongo}
+    	docker container rm ${hive_mongo}
+    fi
+}
 
 case "$1" in
     direct)
@@ -122,6 +191,9 @@ case "$1" in
         ;;
     test)
         test
+        ;;
+    stop)
+        stop
         ;;
     *)
     echo "Usage: run.sh {docker|direct|test}"

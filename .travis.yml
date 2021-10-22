@@ -26,6 +26,7 @@ script:
 
   - ./wait_node.sh
   - pytest --disable-pytest-warnings -xs tests/about_test.py
+  - pytest --disable-pytest-warnings -xs tests/auth_test.py
   - pytest --disable-pytest-warnings -xs tests/subscription_test.py
   - pytest --disable-pytest-warnings -xs tests/database_test.py
   - pytest --disable-pytest-warnings -xs tests/files_test.py

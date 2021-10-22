@@ -19,10 +19,11 @@ function start_ipfs() {
     echo -n "Hive-IPFS Container: "
     mkdir -p ${PWD}/.ipfs-data/ipfs-docker-staging ; mkdir -p ${PWD}/.ipfs-data/ipfs-docker-data
     docker run -d --name hive-ipfs                            \
+        --network hive-service                                \
         -v ${PWD}/.ipfs-data/ipfs-docker-staging:/export      \
         -v ${PWD}/.ipfs-data/ipfs-docker-data:/data/ipfs      \
-        -p 8080:8080 -p 4001:4001 -p 127.0.0.1:5002:5002      \
-        ipfs/go-ipfs:latest | cut -c -9
+        -p 127.0.0.1:5002:5001                                \
+        ipfs/go-ipfs:master-2021-09-10-ef0428a | cut -c -9
 }
 
 function start_node() {
@@ -103,7 +104,7 @@ function prepare_env_file() {
     sed -i '' -e "/ELA_RESOLVER/s/^.*$/ELA_RESOLVER=http:\/\/api.elastos.io:20336/" .env
     sed -i '' -e "/^MONGO_HOST/s/^.*$/MONGO_HOST=hive-mongo/" .env
     sed -i '' -e "/^MONGO_PORT/s/^.*$/MONGO_PORT=27017/" .env
-    sed -i '' -e "/^IPFS_NODE_URL/s/^.*$/IPFS_NODE_URL=http:\/\/hive-ipfs:5002/" .env
+    sed -i '' -e "/^IPFS_NODE_URL/s/^.*$/IPFS_NODE_URL=http:\/\/hive-ipfs:5001/" .env
     sed -i '' -e "/^IPFS_PROXY_URL/s/^.*$/IPFS_PROXY_URL=http:\/\/hive-ipfs:8080/" .env
 }
 
@@ -165,6 +166,7 @@ function test () {
 
     # Run tests
     pytest --disable-pytest-warnings -xs tests/about_test.py
+    pytest --disable-pytest-warnings -xs tests/auth_test.py
     pytest --disable-pytest-warnings -xs tests/subscription_test.py
     pytest --disable-pytest-warnings -xs tests/database_test.py
     pytest --disable-pytest-warnings -xs tests/files_test.py

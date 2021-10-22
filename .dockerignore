@@ -9,3 +9,10 @@ data
 did_user_data
 test_did_user_data
 hive.log
+.DS_Store
+.git
+.gitignore
+.idea
+.pytest_cache
+.rclone_config
+.travis.yml

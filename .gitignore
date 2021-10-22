@@ -172,3 +172,4 @@ hive.log
 !.elasticbeanstalk/*.global.yml
 
 /tests/cache/test2.txt
+.ipfs-data

@@ -18,10 +18,10 @@ function start_ipfs() {
               && docker container rm -f hive-ipfs > /dev/null
     echo -n "Hive-IPFS Container: "
     mkdir -p ${PWD}/.ipfs-data/ipfs-docker-staging ; mkdir -p ${PWD}/.ipfs-data/ipfs-docker-data
-    docker run -d --name ipfs-node                            \
+    docker run -d --name hive-ipfs                            \
         -v ${PWD}/.ipfs-data/ipfs-docker-staging:/export      \
         -v ${PWD}/.ipfs-data/ipfs-docker-data:/data/ipfs      \
-        -p 8080:8080 -p 4001:4001 -p 127.0.0.1:5001:5001      \
+        -p 8080:8080 -p 4001:4001 -p 127.0.0.1:5002:5002      \
         ipfs/go-ipfs:latest | cut -c -9
 }
 
@@ -32,6 +32,7 @@ function start_node() {
   docker image rm -f elastos/hive-node
   docker build -t elastos/hive-node . > /dev/null
   echo -n "Hive-Node Container: "
+  mkdir .data
   docker run -d --name hive-node    \
       --network hive-service        \
       -v ${PWD}/.data:/src/data     \
@@ -68,10 +69,11 @@ function setup_venv () {
 
 function prepare_env_file() {
     if [ -f ".env" ]; then
+        echo "[WARNING] .env file is already exists. Try to remove it and restart this script if want to reset."
         return
     fi
 
-    cp .env.example .env
+    cp config/.env.example .env
 
     DID_MNEMONIC=$(grep 'DID_MNEMONIC' .env | sed 's/DID_MNEMONIC="//;s/"//')
     echo -n "Your DID MNEMONIC: "
@@ -84,23 +86,25 @@ function prepare_env_file() {
         read DID_MNEMONIC
         DID_MNEMONIC=$(echo ${DID_MNEMONIC})
         [ "${DID_MNEMONIC}" = "" ] && echo "You don't input DID MNEMONIC" && exit 1
-        sed -i "/DID_MNEMONIC/s/^.*$/DID_MNEMONIC=\"${DID_MNEMONIC}\"/" .env
+        sed -i '' -e "/DID_MNEMONIC/s/^.*$/DID_MNEMONIC=\"${DID_MNEMONIC}\"/" .env
     fi
 
 
     echo -n "Please input your DID MNEMONIC PASSPHRASE: "
     read DID_PASSPHRASE
     DID_PASSPHRASE=$(echo ${DID_PASSPHRASE})
-    sed -i "/DID_PASSPHRASE/s/^.*$/DID_PASSPHRASE=${DID_PASSPHRASE}/" .env
+    sed -i '' -e "/DID_PASSPHRASE/s/^.*$/DID_PASSPHRASE=${DID_PASSPHRASE}/" .env
     echo -n "Please input your DID MNEMONIC SECRET: "
     read DID_STOREPASS
     DID_STOREPASS=$(echo ${DID_STOREPASS})
-    [ "${DID_STOREPASS}" != "" ] && sed -i "/DID_STOREPASS/s/^.*$/DID_STOREPASS=${DID_STOREPASS}/" .env
+    [ "${DID_STOREPASS}" != "" ] && sed -i '' -e "/DID_STOREPASS/s/^.*$/DID_STOREPASS=${DID_STOREPASS}/" .env
 
-    sed -i "/DID_RESOLVER/s/^.*$/DID_RESOLVER=http:\/\/api.elastos.io:20606/" .env
-    sed -i "/ELA_RESOLVER/s/^.*$/ELA_RESOLVER=http:\/\/api.elastos.io:20336/" .env
-    sed -i "/MONGO_HOST/s/^.*$/MONGO_HOST=hive-mongo/" .env
-    sed -i "/MONGO_PORT/s/^.*$/MONGO_PORT=27017/" .env
+    sed -i '' -e "/DID_RESOLVER/s/^.*$/DID_RESOLVER=http:\/\/api.elastos.io:20606/" .env
+    sed -i '' -e "/ELA_RESOLVER/s/^.*$/ELA_RESOLVER=http:\/\/api.elastos.io:20336/" .env
+    sed -i '' -e "/^MONGO_HOST/s/^.*$/MONGO_HOST=hive-mongo/" .env
+    sed -i '' -e "/^MONGO_PORT/s/^.*$/MONGO_PORT=27017/" .env
+    sed -i '' -e "/^IPFS_NODE_URL/s/^.*$/IPFS_NODE_URL=http:\/\/hive-ipfs:5002/" .env
+    sed -i '' -e "/^IPFS_PROXY_URL/s/^.*$/IPFS_PROXY_URL=http:\/\/hive-ipfs:8080/" .env
 }
 
 function check_docker() {

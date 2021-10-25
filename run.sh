@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 
+if [[ $(uname) == "Darwin" ]]; then
+    # mac
+    SEDI=(-i '' -e)
+    IMG_IPFS=ipfs/go-ipfs:master-2021-09-10-ef0428a
+else
+    # linux
+    SEDI=(-i)
+    IMG_IPFS=linuxserver/ipfs:arm64v8-v2.12.0-ls20
+fi
+
 function start_db () {
     docker container list --all | grep hive-mongo > /dev/null \
               && docker container stop hive-mongo > /dev/null \
@@ -16,14 +26,14 @@ function start_ipfs() {
     docker container list --all | grep hive-ipfs > /dev/null \
               && docker container stop hive-ipfs > /dev/null \
               && docker container rm -f hive-ipfs > /dev/null
-    echo -n "Hive-IPFS Container: "
     mkdir -p ${PWD}/.ipfs-data/ipfs-docker-staging ; mkdir -p ${PWD}/.ipfs-data/ipfs-docker-data
+    echo -n "Hive-IPFS Container: "
     docker run -d --name hive-ipfs                            \
         --network hive-service                                \
         -v ${PWD}/.ipfs-data/ipfs-docker-staging:/export      \
         -v ${PWD}/.ipfs-data/ipfs-docker-data:/data/ipfs      \
         -p 127.0.0.1:5002:5001                                \
-        ipfs/go-ipfs:master-2021-09-10-ef0428a | cut -c -9
+        $IMG_IPFS | cut -c -9
 }
 
 function start_node() {
@@ -32,8 +42,8 @@ function start_node() {
             && docker container rm -f hive-node > /dev/null
   docker image rm -f elastos/hive-node
   docker build -t elastos/hive-node . > /dev/null
-  echo -n "Hive-Node Container: "
   mkdir .data
+  echo -n "Hive-Node Container: "
   docker run -d --name hive-node    \
       --network hive-service        \
       -v ${PWD}/.data:/src/data     \
@@ -43,7 +53,7 @@ function start_node() {
 }
 
 function setup_venv () {
-  echo "setup_venv"
+    echo "setup_venv"
     case `uname` in
     Linux )
         #virtualenv -p `which python3.6` .venv
@@ -87,25 +97,25 @@ function prepare_env_file() {
         read DID_MNEMONIC
         DID_MNEMONIC=$(echo ${DID_MNEMONIC})
         [ "${DID_MNEMONIC}" = "" ] && echo "You don't input DID MNEMONIC" && exit 1
-        sed -i '' -e "/DID_MNEMONIC/s/^.*$/DID_MNEMONIC=\"${DID_MNEMONIC}\"/" .env
+        sed "${SEDI[@]}"  "/^DID_MNEMONIC/s/^.*$/DID_MNEMONIC=\"${DID_MNEMONIC}\"/" .env
     fi
-
 
     echo -n "Please input your DID MNEMONIC PASSPHRASE: "
     read DID_PASSPHRASE
     DID_PASSPHRASE=$(echo ${DID_PASSPHRASE})
-    sed -i '' -e "/DID_PASSPHRASE/s/^.*$/DID_PASSPHRASE=${DID_PASSPHRASE}/" .env
+    sed "${SEDI[@]}" "/^DID_PASSPHRASE/s/^.*$/DID_PASSPHRASE=${DID_PASSPHRASE}/" .env
+
     echo -n "Please input your DID MNEMONIC SECRET: "
     read DID_STOREPASS
     DID_STOREPASS=$(echo ${DID_STOREPASS})
-    [ "${DID_STOREPASS}" != "" ] && sed -i '' -e "/DID_STOREPASS/s/^.*$/DID_STOREPASS=${DID_STOREPASS}/" .env
+    [ "${DID_STOREPASS}" != "" ] && sed "${SEDI[@]}"  "/^DID_STOREPASS/s/^.*$/DID_STOREPASS=${DID_STOREPASS}/" .env
 
-    sed -i '' -e "/DID_RESOLVER/s/^.*$/DID_RESOLVER=http:\/\/api.elastos.io:20606/" .env
-    sed -i '' -e "/ELA_RESOLVER/s/^.*$/ELA_RESOLVER=http:\/\/api.elastos.io:20336/" .env
-    sed -i '' -e "/^MONGO_HOST/s/^.*$/MONGO_HOST=hive-mongo/" .env
-    sed -i '' -e "/^MONGO_PORT/s/^.*$/MONGO_PORT=27017/" .env
-    sed -i '' -e "/^IPFS_NODE_URL/s/^.*$/IPFS_NODE_URL=http:\/\/hive-ipfs:5001/" .env
-    sed -i '' -e "/^IPFS_PROXY_URL/s/^.*$/IPFS_PROXY_URL=http:\/\/hive-ipfs:8080/" .env
+    sed "${SEDI[@]}"  "/^DID_RESOLVER/s/^.*$/DID_RESOLVER=http:\/\/api.elastos.io:20606/" .env
+    sed "${SEDI[@]}"  "/^ELA_RESOLVER/s/^.*$/ELA_RESOLVER=http:\/\/api.elastos.io:20336/" .env
+    sed "${SEDI[@]}"  "/^MONGO_HOST/s/^.*$/MONGO_HOST=hive-mongo/" .env
+    sed "${SEDI[@]}"  "/^MONGO_PORT/s/^.*$/MONGO_PORT=27017/" .env
+    sed "${SEDI[@]}"  "/^IPFS_NODE_URL/s/^.*$/IPFS_NODE_URL=http:\/\/hive-ipfs:5001/" .env
+    sed "${SEDI[@]}"  "/^IPFS_PROXY_URL/s/^.*$/IPFS_PROXY_URL=http:\/\/hive-ipfs:8080/" .env
 }
 
 function check_docker() {

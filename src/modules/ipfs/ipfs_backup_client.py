@@ -57,7 +57,7 @@ class IpfsBackupClient:
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         return self.get_remote_backup_state(user_did);
 
-    '''
+    """
     The client application request to backup vault data to target backup node.
      - Check a backup/restore proess already is inprogress; if not, then
      - Record the backup request in case to restart the backup/restore process
@@ -66,7 +66,7 @@ class IpfsBackupClient:
         --- send this CID value to remote backup hive node;
         --- remote backup hive node will synchronize valut data from IPFS network to
             its local IPFS node via the root CID.
-    '''
+    """
     @hive_restful_response
     def backup(self, credential, is_force):
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
@@ -76,7 +76,7 @@ class IpfsBackupClient:
         req = self.save_request(user_did, credential, credential_info)
         BackupExecutor(user_did, self, req, is_force=is_force).start()
 
-    '''
+    """
     The client application request to store vault data from the backup node.
      - Check a backup/restore proess already is inprogress; if not, then
      - Record the backup request in case to restart the backup/restore process
@@ -84,7 +84,7 @@ class IpfsBackupClient:
         --- Get a root CID from the backup node;
         --- Synhorize the vault data from local IPFS node (but currently from Gatway node)
             via root CID
-    '''
+    """
     @hive_restful_response
     def restore(self, credential, is_force):
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
@@ -187,37 +187,72 @@ class IpfsBackupClient:
         _filter = {USR_DID: user_did, BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE}
         cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, _filter, {'$set': updated_doc}, is_extra=True)
 
-    def dump_to_database_cids(self, user_did):
-        db_names = cli.get_all_user_database_names(user_did)
-        databases = list()
-        for db_name in db_names:
+
+    """
+    Each application holds its database under same user did.
+    The steps to dump each database data to each application under the specific did:
+    - dump the specific database to a snapshot file;
+    - upload this snapshot file into IPFS node
+    """
+    def dump_database_data_to_backup_cids(self, user_did):
+        names = cli.get_all_user_database_names(user_did)
+        metadata_list = list()
+        for name in names:
             d = {
                 'path': gene_temp_file_name(),
-                'name': db_name
+                'name': name
             }
-            is_success = export_mongo_db_to_full_path(d['name'], d['path'])
-            if not is_success:
+            ## dump the database data to snapshot file.
+            succeeded = export_mongo_db_to_full_path(d['name'], d['path'])
+            if not succeeded:
                 raise BadRequestException(f'Failed to dump {d["name"]} for {user_did}')
+
+            ## upload this snapshot file onto IPFS node.
+            d['cid'] = fm.ipfs_upload_file_from_path(d['path'])
             d['sha256'] = fm.get_file_content_sha256(d['path'])
             d['size'] = d['path'].stat().st_size
-            d['cid'] = fm.ipfs_upload_file_from_path(d['path'])
             d['path'].unlink()
-            databases.append(d)
-        return databases
 
-    def get_file_cids_by_user_did(self, user_did):
+            metadata_list.append(d)
+        return metadata_list
+
+    """
+    All files data have been uploaded to IPFS node and save with array of cids.
+    The method here is to get array of cids to save it as json document then.
+    """
+    def get_files_data_as_backup_cids(self, user_did):
         return fm.get_file_cid_metadatas(user_did)
 
-    def send_request_metadata_to_server(self, user_did, cid, sha256, size, is_force):
+    """
+    All vault data would be uploaded onto IPFS node and identified by CID.
+    then this CID would be sent to backup node along with certain other meta information.
+    """
+    def send_root_backup_cid_to_backup_node(self, user_did, cid, sha256, size, is_force):
+        body = {'cid': cid,
+                'sha256': sha256,
+                'size': size,
+                'is_force': is_force}
+
         req = self.get_request(user_did)
-        body = {'cid': cid, 'sha256': sha256, 'size': size, 'is_force': is_force}
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_VAULT_BACKUP_SERVICE_BACKUP,
                        req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
 
-    def recv_request_metadata_from_server(self, user_did):
-        request_metadata = self._get_verified_request_metadata_from_server(user_did)
-        self.check_can_be_restore(user_did, request_metadata)
-        return request_metadata
+
+    """
+    When restoring vault data from a sepcific backup node, it will condcut the following steps:
+    - get the root cid to recover vault data;
+    - get a json document by the root cid, where the json document contains a list of CIDs
+      to the files and database data on IPFS network.
+    """
+    def get_vault_data_cid_from_backup_node(self, user_did):
+        req = self.get_request(user_did)
+        data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_VAULT_BACKUP_SERVICE_RESTORE,
+                             req[BACKUP_REQUEST_TARGET_TOKEN])
+        vault_metadata = fm.ipfs_download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
+
+        if vault_metadata['vault_size'] > fm.get_vault_max_size(user_did):
+            raise InsufficientStorageException(msg='No alowed enough space to restore vault data from backup node.')
+        return vault_metadata
 
     def restore_database_by_dump_files(self, request_metadata):
         databases = request_metadata['databases']
@@ -234,16 +269,6 @@ class IpfsBackupClient:
             import_mongo_db_by_full_path(temp_file)
             temp_file.unlink()
             logging.info(f'[IpfsBackupClient] Success to restore the dump file for database {d["name"]}.')
-
-    def _get_verified_request_metadata_from_server(self, user_did):
-        req = self.get_request(user_did)
-        body = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_VAULT_BACKUP_SERVICE_RESTORE,
-                             req[BACKUP_REQUEST_TARGET_TOKEN])
-        return fm.ipfs_download_file_content(body['cid'], is_proxy=True, sha256=body['sha256'], size=body['size'])
-
-    def check_can_be_restore(self, user_did, request_metadata):
-        if request_metadata['vault_size'] > fm.get_vault_max_size(user_did):
-            raise InsufficientStorageException(msg='No enough space for restore.')
 
     def retry_backup_request(self, user_did):
         req = self.get_request(user_did)

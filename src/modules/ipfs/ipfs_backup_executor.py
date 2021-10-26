@@ -44,7 +44,16 @@ class ExecutorBase(threading.Thread):
         # INFO: override this.
         pass
 
-    def get_request_metadata_cid(self, database_cids, file_cids, total_file_size):
+    def generate_root_backup_cid(self, database_cids, files_cids, total_file_size):
+        """
+        Create a json doc containing basic root informations:
+        - database data DIDs;
+        - files data DIDs;
+        - total amount of vault data;
+        - total amount of backup data to sync.
+        - create timestamp.
+        """
+
         data = {
             'databases': [{'name': d['name'],
                            'sha256': d['sha256'],
@@ -56,12 +65,14 @@ class ExecutorBase(threading.Thread):
                        'count': d['count']} for d in file_cids],
             USR_DID: self.user_did,
             "vault_size": fm.get_vault_storage_size(self.user_did),
-            "vault_package_size": sum([d['size'] for d in database_cids]) + total_file_size,
+            "backup_size": sum([d['size'] for d in database_cids]) + total_file_size,
             "create_time": datetime.now().timestamp(),
         }
+
         temp_file = gene_temp_file_name()
         with temp_file.open('w') as f:
             json.dump(data, f)
+
         sha256 = fm.get_file_content_sha256(temp_file)
         size = temp_file.stat().st_size
         cid = fm.ipfs_upload_file_from_path(temp_file)
@@ -119,14 +130,14 @@ class BackupExecutor(ExecutorBase):
         self.req = req
 
     def execute(self):
-        database_cids = self.owner.dump_to_database_cids(self.user_did)
-        logging.info('[BackupExecutor] Success to dump databases to CIDs.')
-        total_file_size, file_cids = self.owner.get_file_cids_by_user_did(self.user_did)
-        logging.info('[BackupExecutor] Success to get all file CIDs.')
-        cid, sha256, size = self.get_request_metadata_cid(database_cids, file_cids, total_file_size)
-        logging.info('[BackupExecutor] Success to get metadata CID')
-        self.owner.send_request_metadata_to_server(self.user_did, cid, sha256, size, self.is_force)
-        logging.info('[BackupExecutor] Success to send metadata CID to the backup node.')
+        database_cids = self.owner.dump_database_data_to_backup_cids(self.user_did)
+        logging.info('[BackupExecutor] Dumped the database data to IPFS node and returned with array of CIDs')
+        filedata_size, file_cids = self.owner.get_files_data_as_backup_cids(self.user_did)
+        logging.info('[BackupExecutor] Got an array of CIDs to file data')
+        cid, sha256, size = self.generate_root_backup_cid(database_cids, file_cids, filedata_size)
+        logging.info('[BackupExecutor] Generated the root backup CID to vault data.')
+        self.owner.send_root_backup_cid_to_backup_node(self.user_did, cid, sha256, size, self.is_force)
+        logging.info('[BackupExecutor] Send the root backup CID to the backup node.')
 
 
 class RestoreExecutor(ExecutorBase):
@@ -134,7 +145,7 @@ class RestoreExecutor(ExecutorBase):
         super().__init__(user_did, client, action='restore', **kwargs)
 
     def execute(self):
-        request_metadata = self.owner.recv_request_metadata_from_server(self.user_did)
+        request_metadata = self.owner.get_vault_data_cid_from_backup_node(self.user_did)
         logging.info('[RestoreExecutor] Success to get request metadata from the backup node.')
         self.__class__.pin_cids_to_local_ipfs(request_metadata, is_only_file=True)
         logging.info('[RestoreExecutor] Success to pin files CIDs.')
@@ -154,5 +165,5 @@ class BackupServerExecutor(ExecutorBase):
         logging.info('[BackupServerExecutor] Success to get request metadata.')
         self.__class__.pin_cids_to_local_ipfs(request_metadata)
         logging.info('[BackupServerExecutor] Success to get pin all CIDs.')
-        self.owner.update_storage_usage(self.user_did, request_metadata['vault_package_size'])
+        self.owner.update_storage_usage(self.user_did, request_metadata['backup_size'])
         logging.info('[BackupServerExecutor] Success to update storage size.')

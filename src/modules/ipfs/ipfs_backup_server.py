@@ -40,7 +40,9 @@ class IpfsBackupServer:
         vault = self.vault.create_vault(user_did, self.vault.get_price_plan('vault', 'Free'), is_upgraded=True)
         request_metadata = self.get_server_request_metadata(user_did, doc, is_promotion=True,
                                                             vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
-        self.client.check_can_be_restore(user_did, request_metadata)
+        if request_metadata['vault_size'] > fm.get_vault_max_size(user_did):
+            raise InsufficientStorageException(msg="No enough space to restore vault data");
+
         ExecutorBase.pin_cids_to_local_ipfs(request_metadata,
                                             is_only_file=True,
                                             is_file_pin_to_ipfs=False)
@@ -112,7 +114,7 @@ class IpfsBackupServer:
             if request_metadata['vault_size'] > vault_max_size:
                 raise InsufficientStorageException(msg='No enough space for promotion.')
         else:
-            if request_metadata['vault_package_size'] > req[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
+            if request_metadata['backup_size'] > req[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
                 raise InsufficientStorageException(msg='No enough space for backup on the backup node.')
 
     # ipfs-subscription

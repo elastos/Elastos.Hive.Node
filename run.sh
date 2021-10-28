@@ -3,11 +3,9 @@
 if [[ $(uname) == "Darwin" ]]; then
     # mac
     SEDI=(-i '' -e)
-    IMG_IPFS=ipfs/go-ipfs:master-2021-09-10-ef0428a
 else
     # linux
     SEDI=(-i)
-    IMG_IPFS=linuxserver/ipfs:arm64v8-v2.12.0-ls20
 fi
 
 function start_db () {
@@ -33,7 +31,7 @@ function start_ipfs() {
         -v ${PWD}/.ipfs-data/ipfs-docker-staging:/export      \
         -v ${PWD}/.ipfs-data/ipfs-docker-data:/data/ipfs      \
         -p 127.0.0.1:5002:5001                                \
-        $IMG_IPFS | cut -c -9
+        lscr.io/linuxserver/ipfs | cut -c -9
 }
 
 function start_node() {

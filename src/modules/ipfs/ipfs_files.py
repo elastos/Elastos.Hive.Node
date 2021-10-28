@@ -55,6 +55,9 @@ class IpfsFiles:
         :return:
         """
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        self.delete_file_with_path(user_did, app_did, path)
+
+    def delete_file_with_path(self, user_did, app_did, path):
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
@@ -71,11 +74,13 @@ class IpfsFiles:
 
     @hive_restful_response
     def move_file(self, src_path, dst_path):
-        return self.move_copy_file(src_path, dst_path)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        return self.move_copy_file(user_did, app_did, src_path, dst_path)
 
     @hive_restful_response
     def copy_file(self, src_path, dst_path):
-        return self.move_copy_file(src_path, dst_path, True)
+        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        return self.move_copy_file(user_did, app_did, src_path, dst_path, is_copy=True)
 
     @hive_restful_response
     def list_folder(self, path):
@@ -85,6 +90,12 @@ class IpfsFiles:
         :return: File list.
         """
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        docs = self.list_folder_with_path(user_did, app_did, path)
+        return {
+            'value': list(map(lambda d: self._get_list_file_info_by_doc(d), docs))
+        }
+
+    def list_folder_with_path(self, user_did, app_did, path):
         col_filter = {USR_DID: user_did, APP_DID: app_did}
         if path:
             folder_path = path if path[len(path) - 1] == '/' else f'{path}/'
@@ -94,9 +105,7 @@ class IpfsFiles:
         docs = cli.find_many(user_did, app_did, COL_IPFS_FILES, col_filter)
         if not docs and path:
             raise InvalidParameterException(f'The directory {path} is not exist.')
-        return {
-            'value': list(map(lambda d: self._get_list_file_info_by_doc(d), docs))
-        }
+        return docs
 
     @hive_restful_response
     def get_properties(self, path):
@@ -242,20 +251,20 @@ class IpfsFiles:
             fm.ipfs_download_file_to_path(metadata[COL_IPFS_FILES_IPFS_CID], cached_file)
         return fm.get_response_by_file_path(cached_file)
 
-    def move_copy_file(self, src_path, dst_path, is_copy=False):
+    def move_copy_file(self, user_did, app_did, src_path, dst_path, is_copy=False):
         """
         Move/Copy file with the following steps:
         1. Check source file existing and file with destination name existing. If not, then
         2. Move or copy file;
         3. Update metadata
 
+        :param user_did:
+        :param app_did:
         :param src_path: The path of the source file.
         :param dst_path: The path of the destination file.
         :param is_copy: True means copy file, else move.
         :return: Json data of the response.
         """
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-
         src_filter = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
         dst_filter = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: dst_path}
         src_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, src_filter)

@@ -9,20 +9,22 @@ import logging
 
 from flask import request
 
+from hive.util.server_response import ServerResponse
 from src.utils.http_exception import HiveException, InternalServerErrorException
 
 
+server_response = ServerResponse("CallV2")
+
+
 def __get_restful_response_wrapper(func, is_download=False, is_code=False):
-    def wrapper(self, *args, **kwargs):
-        logging.getLogger('http response').info(f'enter {request.full_path}, {request.method}')
+    def wrapper(*args, **kwargs):
         try:
-            return HiveException.get_success_response(func(self, *args, **kwargs),
-                                                      is_download=is_download,
-                                                      is_code=is_code)
+            logging.getLogger('http response').info(f'enter {request.full_path}, {request.method}')
+            return HiveException.get_success_response(func(*args, **kwargs), is_download=is_download, is_code=is_code)
         except HiveException as e:
             return e.get_error_response()
         except Exception as e:
-            logging.error(f'UNEXPECTED: {traceback.format_exc()}')
+            logging.getLogger('http response').error(f'UNEXPECTED: {traceback.format_exc()}')
             return InternalServerErrorException(msg=traceback.format_exc()).get_error_response()
     return wrapper
 
@@ -48,3 +50,23 @@ def hive_restful_code_response(func):
 
 def hive_stream_response(func):
     return __get_restful_response_wrapper(func, is_download=True)
+
+
+def v2_wrapper(func, is_download=False):
+    """ Wrapper for v1 modules to call v2 module functions.
+    If need call files.upload(name), please call like this:
+        result, resp_err = v2_wrapper(files.upload)(name)
+        if resp_err:
+            return resp_err
+    """
+    def wrapper(*args, **kwargs):
+        try:
+            logging.getLogger('v2 wrapper').info(f'enter {request.full_path}, {request.method}')
+            res_data = HiveException.get_success_response(func(*args, **kwargs), is_download=is_download)
+            return res_data, None
+        except HiveException as e:
+            return server_response.response_err(e.code, e.msg)
+        except Exception as e:
+            logging.getLogger('v2 wrapper').error(f'UNEXPECTED: {traceback.format_exc()}')
+            return server_response.response_err(500, traceback.format_exc().get_error_response())
+    return wrapper

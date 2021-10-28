@@ -2,12 +2,13 @@ from flask import Blueprint
 
 from hive.main.hive_file import HiveFile
 
-h_file = HiveFile()
-
 hive_file = Blueprint('hive_file', __name__)
+h_file: HiveFile = None
 
 
 def init_app(app):
+    global h_file
+    h_file = HiveFile()
     h_file.init_app(app)
     app.register_blueprint(hive_file)
 

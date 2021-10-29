@@ -4,12 +4,14 @@ from flask import Blueprint, request
 
 from hive.main.hive_scripting import HiveScripting
 
-h_scripting = HiveScripting()
+h_scripting: HiveScripting = None
 
 hive_scripting = Blueprint('hive_scripting', __name__)
 
 
 def init_app(app):
+    global h_scripting
+    h_scripting = HiveScripting()
     h_scripting.init_app(app)
     app.register_blueprint(hive_scripting)
 

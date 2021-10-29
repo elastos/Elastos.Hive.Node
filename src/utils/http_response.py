@@ -52,7 +52,7 @@ def hive_stream_response(func):
     return __get_restful_response_wrapper(func, is_download=True)
 
 
-def v2_wrapper(func, is_download=False):
+def v2_wrapper(func):
     """ Wrapper for v1 modules to call v2 module functions.
     If need call files.upload(name), please call like this:
         result, resp_err = v2_wrapper(files.upload)(name)
@@ -62,11 +62,10 @@ def v2_wrapper(func, is_download=False):
     def wrapper(*args, **kwargs):
         try:
             logging.getLogger('v2 wrapper').info(f'enter {request.full_path}, {request.method}')
-            res_data = HiveException.get_success_response(func(*args, **kwargs), is_download=is_download)
-            return res_data, None
+            return func(*args, **kwargs), None
         except HiveException as e:
-            return server_response.response_err(e.code, e.msg)
+            return None, server_response.response_err(e.code, e.msg)
         except Exception as e:
             logging.getLogger('v2 wrapper').error(f'UNEXPECTED: {traceback.format_exc()}')
-            return server_response.response_err(500, traceback.format_exc().get_error_response())
+            return None, server_response.response_err(500, traceback.format_exc().get_error_response())
     return wrapper

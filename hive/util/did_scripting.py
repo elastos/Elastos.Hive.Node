@@ -2,6 +2,7 @@ import jwt
 
 from flask import request
 
+from hive.main.hive_file import HiveFile
 from hive.settings import hive_setting
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS, \
     SCRIPTING_EXECUTABLE_CALLER_APP_DID, VAULT_ACCESS_R, VAULT_ACCESS_WR, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
@@ -12,6 +13,9 @@ from hive.util.did_mongo_db_resource import populate_options_find_many, \
     get_mongo_database_size
 from hive.util.error_code import BAD_REQUEST, SUCCESS
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
+from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.utils.consts import COL_IPFS_FILES_SHA256
+from src.utils.http_response import v2_wrapper
 
 
 def massage_keys_with_dollar_signs(d):
@@ -322,9 +326,11 @@ def run_executable_file_properties(did, app_did, target_did, target_app_did, exe
             return None, f"Exception: {str(e)}"
         name = v
 
-    data, err = query_properties(target_did, target_app_did, name)
-    if err:
-        return None, f"Exception: Could not get properties of file. Status={err['status_code']} Error='{err['description']}'"
+    metadata, resp_err = v2_wrapper(IpfsFiles().list_folder_with_path)(target_did, target_app_did, name)
+    if resp_err:
+        return None, f'Exception: Could not get the properties of the file. Status={resp_err[1]} Error={resp_err[0]}'
+    data = HiveFile.get_info_by_metadata(metadata)
+
     return data, None
 
 
@@ -343,7 +349,9 @@ def run_executable_file_hash(did, app_did, target_did, target_app_did, executabl
             return None, f"Exception: {str(e)}"
         name = v
 
-    data, err = query_hash(target_did, target_app_did, name)
-    if err:
-        return None, f"Exception: Could not get hash of file. Status={err['status_code']} Error='{err['description']}'"
+    metadata, resp_err = v2_wrapper(IpfsFiles().list_folder_with_path)(target_did, target_app_did, name)
+    if resp_err:
+        return None, f'Exception: Could not get the hash of the file. Status={resp_err[1]} Error={resp_err[0]}'
+    data = {"SHA256": metadata[COL_IPFS_FILES_SHA256]}
+
     return data, None

@@ -81,11 +81,12 @@ class HiveFile:
         metadata, resp_err = v2_wrapper(self.ipfs_files.get_file_metadata)(did, app_id, content['path'])
         if resp_err:
             return resp_err
-        data = self.get_info_by_metadata(metadata)
+        data = HiveFile.get_info_by_metadata(metadata)
 
         return self.response.response_ok(data)
 
-    def get_info_by_metadata(self, metadata):
+    @staticmethod
+    def get_info_by_metadata(metadata):
         return {
             "type": "file" if metadata[COL_IPFS_FILES_IS_FILE] else "folder",
             "name": metadata[COL_IPFS_FILES_PATH],
@@ -105,7 +106,7 @@ class HiveFile:
         docs, resp_err = v2_wrapper(self.ipfs_files.list_folder_with_path)(did, app_id, request.args.get('path'))
         if resp_err:
             return resp_err
-        file_info_list = list(map(lambda d: self.get_info_by_metadata(d), docs))
+        file_info_list = list(map(lambda d: HiveFile.get_info_by_metadata(d), docs))
 
         return self.response.response_ok({"file_info_list": file_info_list})
 

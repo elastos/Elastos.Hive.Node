@@ -28,12 +28,15 @@ from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZE
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
+from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.utils.http_response import v2_wrapper
 
 
 class HiveScripting:
     def __init__(self, app=None):
         self.app = app
         self.response = ServerResponse("HiveScripting")
+        self.ipfs_files = IpfsFiles()
 
     def init_app(self, app):
         self.app = app
@@ -396,24 +399,9 @@ class HiveScripting:
             logging.debug(err[1])
             return self.response.response_err(err[0], err[1])
 
-        file_name = filter_path_root(file_name)
-        full_path_name, err = query_upload_get_filepath(target_did, target_app_did, file_name)
-        if err:
-            logging.debug(f"Error while executing file upload via scripting: {err['description']}")
-            return self.response.response_err(err["status_code"], err["description"])
-        try:
-            with open(full_path_name, "bw") as f:
-                chunk_size = 4096
-                while True:
-                    chunk = request.stream.read(chunk_size)
-                    if len(chunk) == 0:
-                        break
-                    f.write(chunk)
-            file_size = os.path.getsize(full_path_name.as_posix())
-            inc_vault_file_use_storage_byte(target_did, file_size)
-        except Exception as e:
-            logging.debug(f"Error while executing file upload via scripting: {str(e)}")
-            return self.response.response_err(INTERNAL_SERVER_ERROR, f"Exception: {str(e)}")
+        _, resp_err = v2_wrapper(self.ipfs_files.upload_file_with_path)(target_did, target_app_did, file_name)
+        if resp_err:
+            return resp_err
 
         err_message = self.run_script_fileapi_teardown(row_id, target_did, target_app_did, "upload")
         if err_message:
@@ -428,10 +416,11 @@ class HiveScripting:
             logging.debug(err[1])
             return self.response.response_err(err[0], err[1])
 
-        data, status_code = query_download(target_did, target_app_did, file_name)
-        if status_code != SUCCESS:
-            logging.debug(f"Error while executing file download via scripting: Could not download file")
-            return self.response.response_err(status_code, "Could not download file")
+        data, resp_err = v2_wrapper(self.ipfs_files.download_file_with_path)(
+            target_did, target_app_did, request.args.get('path')
+        )
+        if resp_err:
+            return resp_err
 
         err_message = self.run_script_fileapi_teardown(row_id, target_did, target_app_did, "download")
         if err_message:

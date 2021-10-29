@@ -326,7 +326,7 @@ def run_executable_file_properties(did, app_did, target_did, target_app_did, exe
             return None, f"Exception: {str(e)}"
         name = v
 
-    metadata, resp_err = v2_wrapper(IpfsFiles().list_folder_with_path)(target_did, target_app_did, name)
+    metadata, resp_err = v2_wrapper(IpfsFiles().get_file_metadata)(target_did, target_app_did, name)
     if resp_err:
         return None, f'Exception: Could not get the properties of the file. Status={resp_err[1]} Error={resp_err[0]}'
     data = HiveFile.get_info_by_metadata(metadata)
@@ -349,7 +349,7 @@ def run_executable_file_hash(did, app_did, target_did, target_app_did, executabl
             return None, f"Exception: {str(e)}"
         name = v
 
-    metadata, resp_err = v2_wrapper(IpfsFiles().list_folder_with_path)(target_did, target_app_did, name)
+    metadata, resp_err = v2_wrapper(IpfsFiles().get_file_metadata)(target_did, target_app_did, name)
     if resp_err:
         return None, f'Exception: Could not get the hash of the file. Status={resp_err[1]} Error={resp_err[0]}'
     data = {"SHA256": metadata[COL_IPFS_FILES_SHA256]}

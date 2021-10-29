@@ -62,7 +62,7 @@ class ExecutorBase(threading.Thread):
             'files': [{'sha256': d['sha256'],
                        'cid': d['cid'],
                        'size': d['size'],
-                       'count': d['count']} for d in file_cids],
+                       'count': d['count']} for d in files_cids],
             USR_DID: self.user_did,
             "vault_size": fm.get_vault_storage_size(self.user_did),
             "backup_size": sum([d['size'] for d in database_cids]) + total_file_size,

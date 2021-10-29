@@ -417,7 +417,7 @@ class HiveScripting:
             return self.response.response_err(err[0], err[1])
 
         data, resp_err = v2_wrapper(self.ipfs_files.download_file_with_path)(
-            target_did, target_app_did, request.args.get('path')
+            target_did, target_app_did, file_name
         )
         if resp_err:
             return resp_err

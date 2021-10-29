@@ -351,19 +351,20 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
-    @unittest.skip("Just for manually test.")
-    def test_00_upload_file(self):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_8_upload_file")
+    def test01_upload_file(self):
+        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test01_upload_file")
+        file_path, script_name = 'scripting/test_01.txt', "script_upload_file"
+        file_content, executable_name = f'{file_path} content 12345678', 'upload_file'
         r, s = self.parse_response(
             self.test_client.post('/api/v1/scripting/set_script',
                                   data=json.dumps(
                                       {
-                                          "name": "script_upload_file",
+                                          "name": script_name,
                                           "allowAnonymousUser": True,
                                           "allowAnonymousApp": True,
                                           "executable": {
                                               "output": True,
-                                              "name": 'upload_file',
+                                              "name": executable_name,
                                               "type": "fileUpload",
                                               "body": {
                                                   "path": "$params.path"
@@ -379,29 +380,30 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
             self.test_client.post('/api/v1/scripting/run_script',
                                   data=json.dumps(
                                       {
-                                          "name": "script_upload_file",
+                                          "name": script_name,
                                           "context": {
                                               "target_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
                                               "target_app_did": "appid"
                                           },
                                           'params': {
-                                              'path': 'fred/test_0.txt'
+                                              'path': file_path
                                           }
                                       }
                                   ))
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
-        transaction_id = r['upload_file']['transaction_id']
+        transaction_id = r[executable_name]['transaction_id']
         r, s = self.parse_response(
-            self.test_client.post(f'/api/v1/scripting/run_script_upload/{transaction_id}', data='12345678')
+            self.test_client.post(f'/api/v1/scripting/run_script_upload/{transaction_id}',
+                                  data=file_content)
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
 
-    @unittest.skip("Just for manually test.")
-    def test_00_upload_file_by_url(self):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_00_upload_file_by_url")
+    def test02_upload_file_by_url(self):
+        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test02_upload_file_by_url")
+        file_path = 'scripting/test_02.txt'
         r, s = self.parse_response(
             self.test_client.post('/api/v1/scripting/set_script',
                                   data=json.dumps(
@@ -426,14 +428,158 @@ class HiveMongoScriptingTestCase(unittest.TestCase):
         r, s = self.parse_response(
             self.test_client.get('/api/v1/scripting/run_script_url/'
                                  'did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN@appid/'
-                                 'script_upload_file?params={"path":"fred/test_0.txt"}')
+                                 f'script_upload_file?params={{"path":"{file_path}"}}')
         )
         transaction_id = r['upload_file']['transaction_id']
         r, s = self.parse_response(
-            self.test_client.post(f'/api/v1/scripting/run_script_upload/{transaction_id}', data='12345678')
+            self.test_client.post(f'/api/v1/scripting/run_script_upload/{transaction_id}',
+                                  data=f'{file_path} content 12345678')
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
+
+    def test03_download_file(self):
+        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test03_download_file")
+        file_path, script_name = 'scripting/test_01.txt', "script_download_file"
+        file_content, executable_name = f'{file_path} content 12345678', 'download_file'
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/scripting/set_script',
+                                  data=json.dumps(
+                                      {
+                                          "name": script_name,
+                                          "allowAnonymousUser": True,
+                                          "allowAnonymousApp": True,
+                                          "executable": {
+                                              "output": True,
+                                              "name": executable_name,
+                                              "type": "fileDownload",
+                                              "body": {
+                                                  "path": "$params.path"
+                                              }
+                                          }
+                                      }
+                                  ),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/scripting/run_script',
+                                  data=json.dumps(
+                                      {
+                                          "name": script_name,
+                                          "context": {
+                                              "target_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
+                                              "target_app_did": "appid"
+                                          },
+                                          'params': {
+                                              'path': file_path
+                                          }
+                                      }
+                                  ))
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        transaction_id = r[executable_name]['transaction_id']
+        r = self.test_client.post(f'/api/v1/scripting/run_script_download/{transaction_id}')
+        self.assert200(r.status_code)
+        self.assertEqual(r.get_data(as_text=True), file_content)
+
+    def test04_file_properties(self):
+        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test04_file_properties")
+        file_path, script_name, executable_name = 'scripting/test_01.txt', "script_file_properties", 'file_properties'
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/scripting/set_script',
+                                  data=json.dumps(
+                                      {
+                                          "name": script_name,
+                                          "allowAnonymousUser": True,
+                                          "allowAnonymousApp": True,
+                                          "executable": {
+                                              "output": True,
+                                              "name": executable_name,
+                                              "type": "fileProperties",
+                                              "body": {
+                                                  "path": "$params.path"
+                                              }
+                                          }
+                                      }
+                                  ),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/scripting/run_script',
+                                  data=json.dumps(
+                                      {
+                                          "name": script_name,
+                                          "context": {
+                                              "target_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
+                                              "target_app_did": "appid"
+                                          },
+                                          'params': {
+                                              'path': file_path
+                                          }
+                                      }
+                                  ))
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertTrue(executable_name in r)
+
+    def test05_file_hash(self):
+        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test05_file_hash")
+        file_path, script_name, executable_name = 'scripting/test_01.txt', "script_file_hash", 'file_hash'
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/scripting/set_script',
+                                  data=json.dumps(
+                                      {
+                                          "name": script_name,
+                                          "allowAnonymousUser": True,
+                                          "allowAnonymousApp": True,
+                                          "executable": {
+                                              "output": True,
+                                              "name": executable_name,
+                                              "type": "fileHash",
+                                              "body": {
+                                                  "path": "$params.path"
+                                              }
+                                          }
+                                      }
+                                  ),
+                                  headers=self.auth)
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/scripting/run_script',
+                                  data=json.dumps(
+                                      {
+                                          "name": script_name,
+                                          "context": {
+                                              "target_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
+                                              "target_app_did": "appid"
+                                          },
+                                          'params': {
+                                              'path': file_path
+                                          }
+                                      }
+                                  ))
+        )
+        self.assert200(s)
+        self.assertEqual(r["_status"], "OK")
+        self.assertTrue(executable_name in r)
+
+    def test06_remove_all_test_files(self):
+        self.do_remove_file('scripting/test_01.txt')
+        self.do_remove_file('scripting/test_02.txt')
+
+    def do_remove_file(self, path):
+        r, s = self.parse_response(
+            self.test_client.post('/api/v1/files/delete', data=json.dumps({"path": path}), headers=self.auth)
+        )
+        self.assert200(s)
 
     @unittest.skip("Just for manually test.")
     def test_8_1_run_script_with_url_exception(self):

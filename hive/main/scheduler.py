@@ -28,7 +28,7 @@ def scheduler_pause():
     scheduler.pause()
 
 
-@scheduler.task(trigger='interval', id='daily_routine_job', days=1)
+# @scheduler.task(trigger='interval', id='daily_routine_job', days=1)
 def daily_routine_job():
     logging.getLogger("Hive scheduler").debug(f" daily_routine_job start: {str(datetime.utcnow())}")
     count_vault_storage_job()

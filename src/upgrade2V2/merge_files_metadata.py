@@ -105,6 +105,8 @@ def main():
 
     upload_files_metadata(get_vaults_root(data_root), files_metadata, action == 'init')
 
+    logging.info('all things done!')
+
 
 if __name__ == '__main__':
     main()

@@ -67,11 +67,10 @@ class Entity:
     def get_store_password(self):
         return self.storepass
 
-    def get_error_message(self, prompt):
+    def get_error_message(self, prompt=None):
+        """ helper method to get error message from did.so """
         err_message = ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
-        if not prompt is None:
-            err_message = prompt + " error: " + err_message
-        return err_message
+        return err_message if not prompt else f'[{prompt}] {err_message}'
 
     def issue_auth_vc(self, type, props, owner):
         type0 = ffi.new("char[]", type.encode())
@@ -96,6 +95,8 @@ class Entity:
 
         vp = lib.Presentation_Create(vpid, self.did, types, 1, nonce.encode(),
                 realm.encode(), ffi.NULL, self.store, self.storepass, 1, vc)
+        if not vp:
+            logging.error(self.get_error_message())
         lib.DIDURL_Destroy(vpid)
 
         # print_err()

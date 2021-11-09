@@ -297,4 +297,7 @@ cli = DatabaseClient()
 
 
 if __name__ == '__main__':
-    pass
+    # Compute the user's database name.
+    db_name = cli.get_user_database_name('did:elastos:idXWuMoHYYhhGjigKwEidw7ZPDauPC5FU7',
+                                         'did:elastos:ig1nqyyJhwTctdLyDFbZomSbZSjyMN1uor')
+    print(db_name)

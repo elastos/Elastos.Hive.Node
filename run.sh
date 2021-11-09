@@ -156,11 +156,9 @@ function test () {
     echo "Running directly only..."
     prepare_before_running
     setup_venv
-    LD_LIBRARY_PATH="$PWD/hive/util/did/" python manage.py runserver &
 
     rm -rf data
-    rm -f hive.log
-    rm -f test_patch.delta
+    LD_LIBRARY_PATH="$PWD/hive/util/did/" python manage.py runserver &
 
     # Run tests_v1
     pytest --disable-pytest-warnings -xs tests_v1/hive_auth_test.py

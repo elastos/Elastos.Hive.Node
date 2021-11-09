@@ -104,7 +104,7 @@ class IpfsFiles:
             }
         docs = cli.find_many(user_did, app_did, COL_IPFS_FILES, col_filter)
         if not docs and path:
-            raise InvalidParameterException(f'The directory {path} is not exist.')
+            raise FileNotFoundException(f'The directory {path} does not exist.')
         return docs
 
     @hive_restful_response

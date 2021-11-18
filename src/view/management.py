@@ -150,7 +150,6 @@ def get_users():
         {
             "users": [{
                 "did": <user did|str>,
-                "last_access": <timestamp|int>,
             }]
         }
 

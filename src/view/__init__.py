@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from src.utils.db_client import cli
-from src.view import about, auth, subscription, database, files, scripting, payment, backup
+from src.view import about, auth, subscription, database, files, scripting, payment, backup, management
 
 
 def retry_ipfs_backup():
@@ -23,5 +23,6 @@ def init_app(app):
     scripting.init_app(app)
     payment.init_app(app)
     backup.init_app(app)
+    management.init_app(app)
 
     retry_ipfs_backup()

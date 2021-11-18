@@ -22,7 +22,7 @@ from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE
-from src.utils_v1.did_file_info import get_save_files_path, get_user_did_path
+from src.utils_v1.did_file_info import get_save_files_path, get_user_did_path, get_directory_size
 from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data, update_used_storage_for_mongodb_data
@@ -192,6 +192,10 @@ class FileManager:
     def ipfs_uploading_file(self, user_did, app_did, path: str):
         file_path = self.ipfs_get_file_path(user_did, app_did, path)
         return self.ipfs_upload_file_from_path(file_path)
+
+    def ipfs_get_cache_size(self, user_did):
+        root = get_user_did_path(user_did) / 'cache'
+        return get_directory_size(root.as_posix())
 
     def get_response_by_file_path(self, path: Path):
         size = path.stat().st_size

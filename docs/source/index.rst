@@ -25,7 +25,9 @@ Summary
     scripting.delete_script, scripting.upload_file, scripting.download_file,
     backup.get_state, backup.backup_restore, backup.promotion,
     payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info,
-    about.get_version, about.get_commit_id
+    about.get_version, about.get_commit_id,
+    management.get_vaults, management.get_backups, management.get_users, management.get_payments,
+    management.delete_vaults, management.delete_backups, management.get_apps, management.delete_apps
 
 01 Auth
 =======
@@ -328,6 +330,67 @@ get commit id
 .. autoflask:: src:make_port()
   :undoc-static:
   :endpoints: about.get_commit_id
+
+09 Management
+=============
+
+The management for the hive node owner or the vault owner.
+
+get vaults
+----------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: management.get_vaults
+
+get backups
+-----------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: management.get_backups
+
+get users
+---------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: management.get_users
+
+get payments
+------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: management.get_payments
+
+delete vaults
+-------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: management.delete_vaults
+
+delete backups
+--------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: management.delete_backups
+
+get applications
+----------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: management.get_apps
+
+delete apps
+-----------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: management.delete_apps
 
 Appendix A: Collections
 =======================

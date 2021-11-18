@@ -181,5 +181,9 @@ class HiveSetting:
     def ENABLE_CORS(self):
         return self.env_config('ENABLE_CORS', default='False', cast=bool)
 
+    @property
+    def OWNER_DID(self):
+        return self.env_config('OWNER_DID', default='', cast=str)
+
 
 hive_setting = HiveSetting()

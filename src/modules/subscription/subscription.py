@@ -8,7 +8,7 @@ from datetime import datetime
 from src.utils.consts import IS_UPGRADED
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
-    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING
+    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, APP_ID
 from src.utils_v1.did_file_info import get_vault_path
 from src.utils_v1.payment.payment_config import PaymentConfig
 from src.utils_v1.payment.vault_service_manage import delete_user_vault_data
@@ -69,12 +69,17 @@ class VaultSubscription(metaclass=Singleton):
     @hive_restful_response
     def unsubscribe(self):
         user_did, app_did = check_auth()
+        self.remove_vault_by_did(user_did, app_did)
+
+    def remove_vault_by_did(self, user_did, app_did):
         document = self.get_checked_vault(user_did, throw_exception=False)
         if not document:
             # INFO: do not raise here.
             return
         delete_user_vault_data(user_did)
-        cli.remove_database(user_did, app_did)
+        apps = cli.get_all_user_apps(user_did)
+        for app in apps:
+            cli.remove_database(user_did, app[APP_ID])
         self.payment.archive_orders(user_did)
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did}, is_check_exist=False)
 

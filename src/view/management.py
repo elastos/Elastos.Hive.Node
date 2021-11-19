@@ -7,6 +7,8 @@ from flask import Blueprint
 
 from src.modules.management.node_management import NodeManagement
 from src.modules.management.vault_management import VaultManagement
+from src.utils.http_exception import InvalidParameterException
+from src.utils.http_request import params
 
 blueprint = Blueprint('management', __name__)
 node_management: NodeManagement = None
@@ -272,7 +274,10 @@ def delete_vaults():
 
     """
 
-    return node_management.delete_vaults()
+    ids, _ = params.get_list('ids')
+    if not ids:
+        return InvalidParameterException(msg='the parameter ids must be provided.').get_error_response()
+    return node_management.delete_vaults(ids)
 
 
 @blueprint.route('/api/v2/management/node/vaults', methods=['DELETE'])
@@ -315,7 +320,10 @@ def delete_backups():
 
     """
 
-    return node_management.delete_backups()
+    ids, _ = params.get_list('ids')
+    if not ids:
+        return InvalidParameterException(msg='the parameter ids must be provided.').get_error_response()
+    return node_management.delete_backups(ids)
 
 
 @blueprint.route('/api/v2/management/node/apps', methods=['GET'])

@@ -6,6 +6,8 @@ The node management for the node owner.
 from bson import ObjectId
 
 from src import hive_setting
+from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
+from src.modules.subscription.subscription import VaultSubscription
 from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID, COL_RECEIPTS, COL_RECEIPTS_ORDER_ID, \
     COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, \
     COL_RECEIPTS_PAID_DID
@@ -24,6 +26,8 @@ class NodeManagement:
     def __init__(self):
         self.owner_did = hive_setting.OWNER_DID
         assert self.owner_did, 'OWNER_DID must be setup.'
+        self.subscription = VaultSubscription()
+        self.backup_server = IpfsBackupServer()
 
     @hive_restful_response
     def get_vaults(self):
@@ -64,9 +68,7 @@ class NodeManagement:
     @hive_restful_response
     def get_users(self):
         self.check_auth_owner_id()
-        return {
-            "users": cli.get_all_user_dids()
-        }
+        return {"users": cli.get_all_user_dids()}
 
     @hive_restful_response
     def get_payments(self):
@@ -78,12 +80,22 @@ class NodeManagement:
         return {"payments": list(map(lambda r: self.get_payment_results(r), receipts))}
 
     @hive_restful_response
-    def delete_vaults(self):
-        pass
+    def delete_vaults(self, ids):
+        self.check_auth_owner_id()
+        for vault_id in ids:
+            vault = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {'_id': ObjectId(vault_id)},
+                                        create_on_absence=True, throw_exception=False)
+            if vault:
+                self.subscription.remove_vault_by_did(vault[VAULT_SERVICE_DID])
 
     @hive_restful_response
-    def delete_backups(self):
-        pass
+    def delete_backups(self, ids):
+        self.check_auth_owner_id()
+        for backup_id in ids:
+            backup = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {'_id': ObjectId(backup_id)},
+                                         create_on_absence=True, throw_exception=False)
+            if backup:
+                self.subscription.remove_backup_by_did(backup[USR_DID], backup)
 
     def check_auth_owner_id(self):
         user_did, _ = check_auth()

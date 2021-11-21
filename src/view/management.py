@@ -419,4 +419,7 @@ def delete_apps():
 
     """
 
-    return vault_management.delete_apps()
+    app_dids, _ = params.get_list('app_dids')
+    if not app_dids:
+        return InvalidParameterException(msg='the parameter app_dids must be provided.').get_error_response()
+    return vault_management.delete_apps(app_dids)

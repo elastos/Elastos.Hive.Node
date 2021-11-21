@@ -61,6 +61,11 @@ class DatabaseClient:
         logging.info(f'Choose the use database: {user_did}, {app_did}, {db_name}')
         return db_name
 
+    def get_database_size(self, db_name):
+        if not self.is_database_exists(db_name):
+            return 0
+        return self.__get_connection()[db_name].command("dbstats")["totalSize"]
+
     def get_origin_collection(self, db_name, collection_name, create_on_absence=False):
         db = self.__get_connection()[db_name]
         if collection_name not in db.list_collection_names():

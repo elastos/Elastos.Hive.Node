@@ -178,6 +178,14 @@ class FileManager:
             self.create_dir(root)
         return root
 
+    def ipfs_get_app_file_usage(self, db_name):
+        if not cli.is_database_exists(db_name):
+            return 0
+        files = cli.find_many_origin(db_name, COL_IPFS_FILES, {}, throw_exception=False)
+        if not files:
+            return 0
+        return sum(map(lambda f: f[SIZE], files))
+
     def get_file_content_sha256(self, file_path: Path):
         buf_size = 65536  # lets read stuff in 64kb chunks!
         sha = hashlib.sha256()

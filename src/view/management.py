@@ -50,7 +50,7 @@ def get_vaults():
                 "file_use_storage": <int>,
                 "cache_use_storage": <int>,
                 "db_use_storage": <int>,
-                "owner_did": <user did|str>,
+                "user_did": <str>,
             }]
         }
 
@@ -280,7 +280,7 @@ def delete_vaults():
     return node_management.delete_vaults(ids)
 
 
-@blueprint.route('/api/v2/management/node/vaults', methods=['DELETE'])
+@blueprint.route('/api/v2/management/node/backups', methods=['DELETE'])
 def delete_backups():
     """ Get backups by id in this hive node.
 
@@ -326,7 +326,7 @@ def delete_backups():
     return node_management.delete_backups(ids)
 
 
-@blueprint.route('/api/v2/management/node/apps', methods=['GET'])
+@blueprint.route('/api/v2/management/vault/apps', methods=['GET'])
 def get_apps():
     """ Get all application information in the user vault.
 
@@ -379,7 +379,7 @@ def get_apps():
     return vault_management.get_apps()
 
 
-@blueprint.route('/api/v2/management/node/apps', methods=['DELETE'])
+@blueprint.route('/api/v2/management/vault/apps', methods=['DELETE'])
 def delete_apps():
     """ Delete the data of the application in the user vault.
 

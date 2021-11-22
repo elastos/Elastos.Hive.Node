@@ -203,6 +203,8 @@ class FileManager:
 
     def ipfs_get_cache_size(self, user_did):
         root = get_user_did_path(user_did) / 'cache'
+        if not root.exists():
+            return 0
         return get_directory_size(root.as_posix())
 
     def get_response_by_file_path(self, path: Path):

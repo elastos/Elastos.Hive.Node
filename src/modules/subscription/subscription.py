@@ -3,6 +3,7 @@
 """
 Entrance of the subscription module.
 """
+import logging
 from datetime import datetime
 
 from src.utils.consts import IS_UPGRADED
@@ -69,13 +70,14 @@ class VaultSubscription(metaclass=Singleton):
     @hive_restful_response
     def unsubscribe(self):
         user_did, app_did = check_auth()
-        self.remove_vault_by_did(user_did, app_did)
+        self.remove_vault_by_did(user_did)
 
-    def remove_vault_by_did(self, user_did, app_did):
+    def remove_vault_by_did(self, user_did):
         document = self.get_checked_vault(user_did, throw_exception=False)
         if not document:
             # INFO: do not raise here.
             return
+        logging.debug(f'start remove the vault of the user {user_did}, _id, {str(document["_id"])}')
         delete_user_vault_data(user_did)
         apps = cli.get_all_user_apps(user_did)
         for app in apps:

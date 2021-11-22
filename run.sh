@@ -179,6 +179,7 @@ function test () {
     pytest --disable-pytest-warnings -xs tests/scripting_test.py
     pytest --disable-pytest-warnings -xs tests/payment_test.py
     pytest --disable-pytest-warnings -xs tests/backup_test.py
+    pytest --disable-pytest-warnings -xs tests/management_test.py
 
     pkill -f manage.py
 }

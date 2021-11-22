@@ -138,8 +138,8 @@ class IpfsBackupServer:
         """ Remove all data belongs to the backup of the user. """
         logging.debug(f'start remove the backup of the user {user_did}, _id, {str(doc["_id"])}')
         if doc.get(BKSERVER_REQ_CID):
-            # TODO: remove relating CIDs.
-            fm.ipfs_unpin_cid(doc.get(BKSERVER_REQ_CID))
+            request_metadata = self._get_verified_request_metadata(user_did, doc)
+            ExecutorBase.pin_cids_to_local_ipfs(request_metadata, root_cid=doc.get(BKSERVER_REQ_CID), is_unpin=True)
 
         cli.delete_one_origin(DID_INFO_DB_NAME,
                               COL_IPFS_BACKUP_SERVER,

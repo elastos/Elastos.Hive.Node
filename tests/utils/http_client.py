@@ -44,16 +44,19 @@ class TestConfig(metaclass=Singleton):
 
 
 class RemoteResolver:
-    def __init__(self, http_client, is_did2=False):
+    def __init__(self, http_client, is_did2=False, is_owner=False):
         """ For HttpClient and only manage DIDs. """
         self.user_did = DIDApp("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap")
         self.user_did2 = DIDApp("crossUser",
                                 "stage west lava group genre ten farm pony small family february drink")
+        self.owner_did = DIDApp("owner",
+                                "clever bless future fuel obvious black subject cake art pyramid member clump")
         self.app_did = DApp("testapp", test_common.app_id,
                             "chimney limit involve fine absent topic catch chalk goat era suit leisure")
         self.test_config = TestConfig()
         self.http_client = http_client
         self.is_did2 = is_did2
+        self.is_owner = is_owner
 
     def get_token(self):
         user_did = self.get_current_user_did()
@@ -66,7 +69,7 @@ class RemoteResolver:
         return token
 
     def get_current_user_did(self):
-        return self.user_did2 if self.is_did2 else self.user_did
+        return self.owner_did if self.is_owner else (self.user_did2 if self.is_did2 else self.user_did)
 
     def get_current_user_did_str(self):
         return self.get_current_user_did().get_did_string()
@@ -143,13 +146,12 @@ def _log_http_request(func):
 
 
 class HttpClient:
-    def __init__(self, prefix_url='', is_did2=False, is_backup_node=False):
+    def __init__(self, prefix_url='', is_did2=False, is_owner=False, is_backup_node=False):
         """ For user and only manage vault or backup url accessing. """
         test_config = TestConfig()
         self.base_url = test_config.host_url if not is_backup_node else test_config.backup_url
         self.prefix_url = prefix_url if prefix_url else ''
-        self.is_did2 = is_did2
-        self.remote_resolver = RemoteResolver(self, is_did2)
+        self.remote_resolver = RemoteResolver(self, is_did2, is_owner)
         logging.debug(f'HttpClient.base_url: {self.base_url}')
 
     def __get_url(self, relative_url, is_skip_prefix=False):

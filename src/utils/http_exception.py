@@ -118,6 +118,11 @@ class BackupNotFoundException(NotFoundException):
         super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND, msg=msg)
 
 
+class ApplicationNotFoundException(NotFoundException):
+    def __init__(self, msg='The application of the user does not found.'):
+        super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND, msg=msg)
+
+
 class ScriptNotFoundException(NotFoundException):
     def __init__(self, msg='The script does not found.'):
         super().__init__(internal_code=NotFoundException.SCRIPT_NOT_FOUND, msg=msg)

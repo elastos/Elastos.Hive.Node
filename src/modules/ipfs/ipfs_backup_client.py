@@ -57,18 +57,18 @@ class IpfsBackupClient:
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         return self.get_remote_backup_state(user_did);
 
-    """
-    The client application request to backup vault data to target backup node.
-     - Check a backup/restore proess already is inprogress; if not, then
-     - Record the backup request in case to restart the backup/restore process
-     - Create a dedeicated thread to:
-        --- store all data on vault to local IPFS node to get the root CID;
-        --- send this CID value to remote backup hive node;
-        --- remote backup hive node will synchronize valut data from IPFS network to
-            its local IPFS node via the root CID.
-    """
     @hive_restful_response
     def backup(self, credential, is_force):
+        """
+        The client application request to backup vault data to target backup node.
+         - Check a backup/restore proess already is inprogress; if not, then
+         - Record the backup request in case to restart the backup/restore process
+         - Create a dedeicated thread to:
+            --- store all data on vault to local IPFS node to get the root CID;
+            --- send this CID value to remote backup hive node;
+            --- remote backup hive node will synchronize valut data from IPFS network to
+                its local IPFS node via the root CID.
+        """
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
@@ -76,17 +76,17 @@ class IpfsBackupClient:
         req = self.save_request(user_did, credential, credential_info)
         BackupExecutor(user_did, self, req, is_force=is_force).start()
 
-    """
-    The client application request to store vault data from the backup node.
-     - Check a backup/restore proess already is inprogress; if not, then
-     - Record the backup request in case to restart the backup/restore process
-     - Create a dedeicated thread to:
-        --- Get a root CID from the backup node;
-        --- Synhorize the vault data from local IPFS node (but currently from Gatway node)
-            via root CID
-    """
     @hive_restful_response
     def restore(self, credential, is_force):
+        """
+        The client application request to store vault data from the backup node.
+         - Check a backup/restore proess already is inprogress; if not, then
+         - Record the backup request in case to restart the backup/restore process
+         - Create a dedeicated thread to:
+            --- Get a root CID from the backup node;
+            --- Synhorize the vault data from local IPFS node (but currently from Gatway node)
+                via root CID
+        """
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
@@ -187,14 +187,13 @@ class IpfsBackupClient:
         _filter = {USR_DID: user_did, BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE}
         cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, _filter, {'$set': updated_doc}, is_extra=True)
 
-
-    """
-    Each application holds its database under same user did.
-    The steps to dump each database data to each application under the specific did:
-    - dump the specific database to a snapshot file;
-    - upload this snapshot file into IPFS node
-    """
     def dump_database_data_to_backup_cids(self, user_did):
+        """
+        Each application holds its database under same user did.
+        The steps to dump each database data to each application under the specific did:
+        - dump the specific database to a snapshot file;
+        - upload this snapshot file into IPFS node
+        """
         names = cli.get_all_user_database_names(user_did)
         metadata_list = list()
         for name in names:
@@ -216,18 +215,18 @@ class IpfsBackupClient:
             metadata_list.append(d)
         return metadata_list
 
-    """
-    All files data have been uploaded to IPFS node and save with array of cids.
-    The method here is to get array of cids to save it as json document then.
-    """
     def get_files_data_as_backup_cids(self, user_did):
+        """
+        All files data have been uploaded to IPFS node and save with array of cids.
+        The method here is to get array of cids to save it as json document then.
+        """
         return fm.get_file_cid_metadatas(user_did)
 
-    """
-    All vault data would be uploaded onto IPFS node and identified by CID.
-    then this CID would be sent to backup node along with certain other meta information.
-    """
     def send_root_backup_cid_to_backup_node(self, user_did, cid, sha256, size, is_force):
+        """
+        All vault data would be uploaded onto IPFS node and identified by CID.
+        then this CID would be sent to backup node along with certain other meta information.
+        """
         body = {'cid': cid,
                 'sha256': sha256,
                 'size': size,
@@ -237,14 +236,13 @@ class IpfsBackupClient:
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_VAULT_BACKUP_SERVICE_BACKUP,
                        req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
 
-
-    """
-    When restoring vault data from a sepcific backup node, it will condcut the following steps:
-    - get the root cid to recover vault data;
-    - get a json document by the root cid, where the json document contains a list of CIDs
-      to the files and database data on IPFS network.
-    """
     def get_vault_data_cid_from_backup_node(self, user_did):
+        """
+        When restoring vault data from a specific backup node, it will condcut the following steps:
+        - get the root cid to recover vault data;
+        - get a json document by the root cid, where the json document contains a list of CIDs
+          to the files and database data on IPFS network.
+        """
         req = self.get_request(user_did)
         data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_VAULT_BACKUP_SERVICE_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])

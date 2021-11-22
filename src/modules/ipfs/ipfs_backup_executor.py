@@ -97,6 +97,14 @@ class ExecutorBase(threading.Thread):
                                is_file_pin_to_ipfs=True,
                                root_cid=None,
                                is_unpin=False):
+        """
+        Handle the CIDs of the backup metadata.
+        :param request_metadata: The request json data of the backup processing.
+        :param is_only_file: Only operate the CIDs of the files. Or will handle database packages.
+        :param is_file_pin_to_ipfs: Whether need pin/unpin files to IPFS node.
+        :param root_cid: The CID for the request metadata file.
+        :param is_unpin: Pin or unpin the file on the IPFS node.
+        """
         execute_pin_unpin = fm.ipfs_pin_cid if not is_unpin else fm.ipfs_unpin_cid
         if root_cid:
             execute_pin_unpin(root_cid)
@@ -106,11 +114,11 @@ class ExecutorBase(threading.Thread):
             logging.info('[ExecutorBase] Invalid request metadata, skip pin CIDs.')
             return
 
-        ipfs_files = IpfsFiles()
-        files = request_metadata.get('files')
-        if files:
-            for f in files:
-                if is_file_pin_to_ipfs:
+        if is_file_pin_to_ipfs:
+            ipfs_files = IpfsFiles()
+            files = request_metadata.get('files')
+            if files:
+                for f in files:
                     execute_pin_unpin(f['cid'])
                     if not is_unpin:
                         ipfs_files.increase_refcount_cid(f['cid'], count=f['count'])

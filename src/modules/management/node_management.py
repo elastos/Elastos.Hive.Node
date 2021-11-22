@@ -38,13 +38,13 @@ class NodeManagement:
             raise VaultNotFoundException()
         return {
             "vaults": list(map(lambda v: {
-                "id": v['_id'],
+                "id": str(v['_id']),
                 "pricing_using": v[VAULT_SERVICE_PRICING_USING],
                 "max_storage": v[VAULT_SERVICE_MAX_STORAGE],
                 "file_use_storage": v[VAULT_SERVICE_FILE_USE_STORAGE],
                 "cache_use_storage": fm.ipfs_get_cache_size(v[VAULT_SERVICE_DID]),
                 "db_use_storage": v[VAULT_SERVICE_DB_USE_STORAGE],
-                "owner_did": v[VAULT_SERVICE_DID],
+                "user_did": v[VAULT_SERVICE_DID],
             }, vaults))
         }
 
@@ -57,7 +57,7 @@ class NodeManagement:
             raise BackupNotFoundException()
         return {
             "backups": list(map(lambda b: {
-                "id": b['_id'],
+                "id": str(b['_id']),
                 "pricing_using": b[VAULT_BACKUP_SERVICE_USING],
                 "max_storage": b[VAULT_BACKUP_SERVICE_MAX_STORAGE],
                 "use_storage": b[VAULT_BACKUP_SERVICE_USE_STORAGE],
@@ -95,7 +95,7 @@ class NodeManagement:
             backup = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {'_id': ObjectId(backup_id)},
                                          create_on_absence=True, throw_exception=False)
             if backup:
-                self.subscription.remove_backup_by_did(backup[USR_DID], backup)
+                self.backup_server.remove_backup_by_did(backup[USR_DID], backup)
 
     def check_auth_owner_id(self):
         user_did, _ = check_auth()

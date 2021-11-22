@@ -136,6 +136,7 @@ class IpfsBackupServer:
 
     def remove_backup_by_did(self, user_did, doc):
         """ Remove all data belongs to the backup of the user. """
+        logging.debug(f'start remove the backup of the user {user_did}, _id, {str(doc["_id"])}')
         if doc.get(BKSERVER_REQ_CID):
             # TODO: remove relating CIDs.
             fm.ipfs_unpin_cid(doc.get(BKSERVER_REQ_CID))

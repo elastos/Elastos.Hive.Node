@@ -38,11 +38,11 @@ class NodeManagement:
             raise VaultNotFoundException()
         return {
             "vaults": list(map(lambda v: {
-                "id": str(v['_id']),
+                # "id": str(v['_id']),
                 "pricing_using": v[VAULT_SERVICE_PRICING_USING],
                 "max_storage": v[VAULT_SERVICE_MAX_STORAGE],
                 "file_use_storage": v[VAULT_SERVICE_FILE_USE_STORAGE],
-                "cache_use_storage": fm.ipfs_get_cache_size(v[VAULT_SERVICE_DID]),
+                # "cache_use_storage": fm.ipfs_get_cache_size(v[VAULT_SERVICE_DID]),
                 "db_use_storage": v[VAULT_SERVICE_DB_USE_STORAGE],
                 "user_did": v[VAULT_SERVICE_DID],
             }, vaults))
@@ -57,11 +57,11 @@ class NodeManagement:
             raise BackupNotFoundException()
         return {
             "backups": list(map(lambda b: {
-                "id": str(b['_id']),
+                # "id": str(b['_id']),
                 "pricing_using": b[VAULT_BACKUP_SERVICE_USING],
                 "max_storage": b[VAULT_BACKUP_SERVICE_MAX_STORAGE],
                 "use_storage": b[VAULT_BACKUP_SERVICE_USE_STORAGE],
-                "owner_did": b[USR_DID],
+                "user_did": b[USR_DID],
             }, backups))
         }
 
@@ -80,19 +80,19 @@ class NodeManagement:
         return {"payments": list(map(lambda r: self.get_payment_results(r), receipts))}
 
     @hive_restful_response
-    def delete_vaults(self, ids):
+    def delete_vaults(self, user_dids):
         self.check_auth_owner_id()
-        for vault_id in ids:
-            vault = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {'_id': ObjectId(vault_id)},
+        for user_did in user_dids:
+            vault = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did},
                                         create_on_absence=True, throw_exception=False)
             if vault:
                 self.subscription.remove_vault_by_did(vault[VAULT_SERVICE_DID])
 
     @hive_restful_response
-    def delete_backups(self, ids):
+    def delete_backups(self, user_dids):
         self.check_auth_owner_id()
-        for backup_id in ids:
-            backup = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {'_id': ObjectId(backup_id)},
+        for user_did in user_dids:
+            backup = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {USR_DID: user_did},
                                          create_on_absence=True, throw_exception=False)
             if backup:
                 self.backup_server.remove_backup_by_did(backup[USR_DID], backup)

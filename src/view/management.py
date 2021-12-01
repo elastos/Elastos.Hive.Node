@@ -44,11 +44,9 @@ def get_vaults():
 
         {
             "vaults": [{
-                "id": ObjectId,
-                "pricing_using": <pricing name|str>,
+6                "pricing_using": <pricing name|str>,
                 "max_storage": <int>,
                 "file_use_storage": <int>,
-                "cache_use_storage": <int>,
                 "db_use_storage": <int>,
                 "user_did": <str>,
             }]
@@ -102,7 +100,7 @@ def get_backups():
                 "pricing_using": <pricing name|str>,
                 "max_storage": <int>,
                 "use_storage": <int>,
-                "owner_did": <user did|str>,
+                "user_did": <user did|str>,
             }]
         }
 
@@ -245,7 +243,7 @@ def delete_vaults():
     .. code-block:: json
 
         {
-            "ids": [<str>, ]
+            "user_dids": [<str>, ]
         }
 
     **Response OK**:
@@ -274,10 +272,10 @@ def delete_vaults():
 
     """
 
-    ids, _ = params.get_list('ids')
-    if not ids:
+    user_dids, _ = params.get_list('user_dids')
+    if not user_dids:
         return InvalidParameterException(msg='the parameter ids must be provided.').get_error_response()
-    return node_management.delete_vaults(ids)
+    return node_management.delete_vaults(user_dids)
 
 
 @blueprint.route('/api/v2/management/node/backups', methods=['DELETE'])
@@ -291,7 +289,7 @@ def delete_backups():
     .. sourcecode:: http
 
         {
-            "ids": [<str>, ]
+            "user_dids": [<str>, ]
         }
 
     **Response OK**:
@@ -320,10 +318,10 @@ def delete_backups():
 
     """
 
-    ids, _ = params.get_list('ids')
-    if not ids:
+    user_dids, _ = params.get_list('ids')
+    if not user_dids:
         return InvalidParameterException(msg='the parameter ids must be provided.').get_error_response()
-    return node_management.delete_backups(ids)
+    return node_management.delete_backups(user_dids)
 
 
 @blueprint.route('/api/v2/management/vault/apps', methods=['GET'])

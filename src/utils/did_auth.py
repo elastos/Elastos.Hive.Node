@@ -23,6 +23,6 @@ def check_auth2():
 
 
 def check_auth_and_vault(permission=None):
-    user_did, app_did = check_auth()
+    user_did, app_did = check_auth2()
     cli.check_vault_access(user_did, permission)
     return user_did, app_did

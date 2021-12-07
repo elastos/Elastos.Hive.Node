@@ -100,19 +100,19 @@ def get_info_from_token(token):
 
     token_splits = token.split(".")
     if token_splits is None:
-        return None, "Then token is invalid!"
+        return None, "Then token is invalid because of not containing dot!"
 
     if (len(token_splits) != 3) or token_splits[2] == "":
-        return None, "Then token is invalid!"
+        return None, "Then token is invalid because of containing invalid parts!"
 
     jws = lib.DefaultJWSParser_Parse(token.encode())
     if not jws:
-        return None, get_error_message("JWS parser")
+        return None, get_error_message("JWS parser error!")
 
     issuer = lib.JWT_GetIssuer(jws)
     if not issuer:
         lib.JWT_Destroy(jws)
-        return None, get_error_message("JWT getIssuer")
+        return None, get_error_message("JWT getIssuer error!")
 
     issuer = ffi.string(issuer).decode()
     if issuer != get_current_node_did_string():
@@ -152,15 +152,15 @@ def get_token_info():
         return None, "Can't find the Authorization!"
 
     if not author.strip().lower().startswith(("token", "bearer")):
-        return None, "Can't find the token!"
+        return None, "Can't find the token with prefix token or bearer!"
 
     auth_splits = author.split(" ")
     if len(auth_splits) < 2:
-        return None, "Can't find the token!"
+        return None, "Can't find the token value!"
 
     access_token = auth_splits[1]
     if access_token == "":
-        return None, "The token is None!"
+        return None, "The token is empty!"
 
     return get_info_from_token(access_token)
 

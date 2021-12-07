@@ -169,6 +169,7 @@ class IpfsFiles:
 
     def create_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, only_import=False, **kwargs):
         cid = fm.ipfs_upload_file_from_path(file_path)
+        self.increase_refcount_cid(cid)
         metadata = {
             USR_DID: user_did,
             APP_DID: app_did,
@@ -178,7 +179,6 @@ class IpfsFiles:
             SIZE: file_path.stat().st_size,
             COL_IPFS_FILES_IPFS_CID: cid,
         }
-        self.increase_refcount_cid(cid)
         result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, metadata, create_on_absence=True, **kwargs)
         if not only_import:
             update_used_storage_for_files_data(user_did, metadata[SIZE])
@@ -340,7 +340,6 @@ class IpfsFiles:
         doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid},
                                   create_on_absence=True, throw_exception=False)
         if not doc:
-            fm.ipfs_unpin_cid(cid)
             return
         if doc[COUNT] <= count:
             cli.delete_one_origin(DID_INFO_DB_NAME, COL_IPFS_CID_REF, {CID: cid}, is_check_exist=False)

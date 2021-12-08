@@ -18,7 +18,7 @@ from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTI
 from src.utils_v1.did_file_info import query_upload_get_filepath, query_hash
 from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size, \
     populate_options_find_many, populate_options_insert_one, populate_options_update_one
-from src.utils_v1.did_scripting import populate_with_params_values
+from src.utils_v1.did_scripting import populate_with_params_values, populate_file_body
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
@@ -258,17 +258,14 @@ class Executable:
             raise BadRequestException(msg='Cannot get parameter value for the executable filter: ' + msg)
         return col_filter
 
-    def get_populated_body(self):
-        body = self.body
-        msg = populate_with_params_values(self.get_did(), self.get_app_id(), body, self.get_params())
-        if msg:
-            raise BadRequestException(msg='Cannot get parameter value for the executable body: ' + msg)
-        return body
+    def get_populated_file_body(self):
+        populate_file_body(self.body, self.get_params())
+        return self.body
 
     def _create_transaction(self, permission, action_type):
         cli.check_vault_access(self.get_target_did(), permission)
 
-        body = self.get_populated_body()
+        body = self.get_populated_file_body()
         anonymous_url = ''
         if self.is_ipfs:
             if action_type == 'download':
@@ -443,7 +440,7 @@ class FilePropertiesExecutable(Executable):
 
     def execute(self):
         cli.check_vault_access(self.script.user_did, VAULT_ACCESS_R)
-        body = self.get_populated_body()
+        body = self.get_populated_file_body()
         logging.info(f'get file properties: is_ipfs={self.is_ipfs}, path={body["path"]}')
         if self.is_ipfs:
             doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
@@ -469,7 +466,7 @@ class FileHashExecutable(Executable):
 
     def execute(self):
         cli.check_vault_access(self.script.user_did, VAULT_ACCESS_R)
-        body = self.get_populated_body()
+        body = self.get_populated_file_body()
         logging.info(f'get file hash: is_ipfs={self.is_ipfs}, path={body["path"]}')
         if self.is_ipfs:
             doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])

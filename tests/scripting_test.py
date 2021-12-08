@@ -236,6 +236,30 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 'path': self.file_name}})
         self.assertIsNotNone(body)
 
+    def test09_file_hash2(self):
+        name = 'ipfs_file_hash'
+        body = self.__set_and_call_script(name, {'executable': {
+            'name': name,
+            'type': 'fileHash',
+            'output': True,
+            'body': {
+                'path': 'ipfs-scripting/$params.path'
+            }}}, {'params': {
+                'path': 'test.txt'}})
+        self.assertIsNotNone(body)
+
+    def test09_file_hash3(self):
+        name = 'ipfs_file_hash'
+        body = self.__set_and_call_script(name, {'executable': {
+            'name': name,
+            'type': 'fileHash',
+            'output': True,
+            'body': {
+                'path': 'ipfs-scripting/${params.path}.txt'
+            }}}, {'params': {
+                'path': 'test'}})
+        self.assertIsNotNone(body)
+
     def test10_get_anonymous_file(self):
         name = 'ipfs_get_anonymous_file'
         self.__register_script(name, {"executable": {

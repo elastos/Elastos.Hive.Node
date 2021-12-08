@@ -120,15 +120,15 @@ def init_did(mnemonic, passphrase, storepass, name, need_resolve=True):
     return store, did, doc
 
 def init_did_backend():
-    print("Initializing the [Auth] module")
-    print("    DID Resolver: " + hive_setting.DID_RESOLVER)
-    print("    DID Mnemonic: " + hive_setting.DID_MNEMONIC)
+    logging.getLogger('did_init').info("Initializing the DID backend")
+    logging.getLogger('did_init').info("    DID Resolver: " + hive_setting.DID_RESOLVER)
+    logging.getLogger('did_init').info("    DID Mnemonic: " + hive_setting.DID_MNEMONIC)
 
     ret = lib.DIDBackend_InitializeDefault(ffi.NULL, hive_setting.DID_RESOLVER.encode(), hive_setting.DID_DATA_CACHE_PATH.encode())
     if ret == -1:
         print_err("DIDBackend_InitializeDefault")
 
-    is_exist =os.path.exists(hive_setting.DID_DATA_LOCAL_DIDS)
+    is_exist = os.path.exists(hive_setting.DID_DATA_LOCAL_DIDS)
     if not is_exist:
         os.makedirs(hive_setting.DID_DATA_LOCAL_DIDS)
     lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)

@@ -31,9 +31,7 @@ class RefreshVaultStorageUsage(threading.Thread):
 
 
 def init_app(app, mode):
-    logging.getLogger("Hive").info("##############################")
-    logging.getLogger("Hive").info("HIVE BACK-END IS STARTING")
-    logging.getLogger("Hive").info("##############################")
+    logging.getLogger('v1_init').info('enter init_app')
 
     if mode != HIVE_MODE_TEST and hive_setting.HIVE_SENTRY_DSN != "":
         sentry_sdk.init(
@@ -58,3 +56,4 @@ def init_app(app, mode):
         scheduler.scheduler_init(app, paused=False)
 
     # RefreshVaultStorageUsage().start()
+    logging.getLogger('v1_init').info('leave init_app')

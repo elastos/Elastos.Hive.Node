@@ -23,7 +23,6 @@ class HiveSetting:
         config_file = Path(hive_config).resolve()
         if config_file.exists():
             self.env_config = Config(RepositoryEnv(config_file.as_posix()))
-            logging.getLogger("Setting").debug("Config file is:" + config_file.as_posix())
             print("Setting Config file is:" + config_file.as_posix())
 
     @property

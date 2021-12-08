@@ -7,7 +7,6 @@ from werkzeug.routing import BaseConverter
 import os
 
 from src.settings import hive_setting
-from src.utils.scheduler import scheduler_init
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from src.utils_v1.did.did_init import init_did_backend
 from src import view
@@ -42,36 +41,33 @@ def before_request():
         request.environ["wsgi.input_terminated"] = True
 
 
-def _init_log():
+def init_log():
     print("init log")
     with open(CONFIG_FILE) as f:
         logging.config.dictConfig(yaml.load(f, Loader=yaml.FullLoader))
-    logfile = logging.getLogger('file')
-    log_console = logging.getLogger('console')
-    logfile.debug("Debug FILE")
-    log_console.debug("Debug CONSOLE")
+    logging.getLogger('file').info("Log in file")
+    logging.getLogger('console').info("log in console")
+    logging.getLogger('src_init').info("log in console and file")
+    logging.info("log in console and file with root Logger")
 
 
 def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     hive_setting.init_config(hive_config)
-    _init_log()
-    init_did_backend()
+    init_log()
 
+    logging.getLogger("src_init").info("##############################")
+    logging.getLogger("src_init").info("HIVE NODE IS STARTING")
+    logging.getLogger("src_init").info("##############################")
+
+    init_did_backend()
     # init v1 APIs
     main.init_app(app, mode)
-
     view.init_app(app)
-    scheduler_init(app)
+
     if hive_setting.ENABLE_CORS:
         CORS(app, supports_credentials=True)
-    logging.info(f'[Initialize] ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
-    logging.info(f'[Initialize] BACKUP_IS_SYNC is {hive_setting.BACKUP_IS_SYNC}.')
-    # The logging examples, the output is in CONSOLE and hive.log:
-    #   2021-06-15 12:06:08,527 - Initialize - DEBUG - create_app
-    #   2021-06-15 12:06:08,527 - root - INFO - [Initialize] create_app is processing now.
-    logging.getLogger("Initialize").debug("create_app")
-    logging.info('[Initialize] create_app is processing now.')
-    logging.info(f'[Initialize] Is the mongodb atlas: {hive_setting.is_mongodb_atlas()}.')
+    logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
+    logging.getLogger("src_init").info(f'BACKUP_IS_SYNC is {hive_setting.BACKUP_IS_SYNC}.')
     return app
 
 

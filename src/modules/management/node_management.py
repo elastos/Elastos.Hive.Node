@@ -3,6 +3,8 @@
 """
 The node management for the node owner.
 """
+import logging
+
 from bson import ObjectId
 
 from src import hive_setting
@@ -25,6 +27,7 @@ from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SE
 class NodeManagement:
     def __init__(self):
         self.owner_did = hive_setting.OWNER_DID
+        logging.info(f'Owner DID: {self.owner_did}')
         assert self.owner_did, 'OWNER_DID must be setup.'
         self.subscription = VaultSubscription()
         self.backup_server = IpfsBackupServer()

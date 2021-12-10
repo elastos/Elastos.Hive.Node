@@ -82,9 +82,10 @@ class Auth(Entity, metaclass=Singleton):
         lib.JWTBuilder_SetExpiration(builder, expire_time)
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
         token = lib.JWTBuilder_Compact(builder)
+        msg = '' if token else self.get_error_message()
         lib.JWTBuilder_Destroy(builder)
         if not token:
-            raise BadRequestException(msg="Failed to create challenge token.")
+            raise BadRequestException(msg=f'Failed to create challenge token: {msg}')
         return ffi.string(token).decode()
 
     @hive_restful_response
@@ -120,17 +121,17 @@ class Auth(Entity, metaclass=Singleton):
     def __get_values_from_challenge_response(self, challenge_response):
         challenge_response_cstr = lib.DefaultJWSParser_Parse(challenge_response.encode())
         if not challenge_response_cstr:
-            raise BadRequestException(msg='Invalid challenge response.')
+            raise BadRequestException(msg=f'Invalid challenge response: {self.get_error_message()}')
 
         presentation_cstr = lib.JWT_GetClaimAsJson(challenge_response_cstr, "presentation".encode())
         lib.JWT_Destroy(challenge_response_cstr)
         if not presentation_cstr:
-            raise BadRequestException(msg='Can not get presentation cstr.')
+            raise BadRequestException(msg=f'Can not get presentation cstr: {self.get_error_message()}')
         presentation = lib.Presentation_FromJson(presentation_cstr)
         if not presentation or lib.Presentation_IsValid(presentation) != 1:
-            raise BadRequestException(msg='The presentation is invalid.')
+            raise BadRequestException(msg=f'The presentation is invalid: {self.get_error_message()}')
         if lib.Presentation_GetCredentialCount(presentation) < 1:
-            raise BadRequestException(msg='No presentation credential exists.')
+            raise BadRequestException(msg=f'No presentation credential exists: {self.get_error_message()}')
 
         self.__validate_presentation_realm(presentation)
         nonce, nonce_info = self.__get_presentation_nonce(presentation)
@@ -139,7 +140,7 @@ class Auth(Entity, metaclass=Singleton):
     def __get_presentation_nonce(self, presentation):
         nonce = lib.Presentation_GetNonce(presentation)
         if not nonce:
-            raise BadRequestException(msg='Failed to get presentation nonce.')
+            raise BadRequestException(msg=f'Failed to get presentation nonce: {self.get_error_message()}')
         nonce_str = ffi.string(nonce).decode()
         if not nonce_str:
             raise BadRequestException(msg='Invalid presentation nonce.')
@@ -151,10 +152,10 @@ class Auth(Entity, metaclass=Singleton):
     def __validate_presentation_realm(self, presentation):
         realm = lib.Presentation_GetRealm(presentation)
         if not realm:
-            raise BadRequestException(msg='Can not get presentation realm.')
+            raise BadRequestException(msg=f'Can not get presentation realm: {self.get_error_message()}')
         realm = ffi.string(realm).decode()
         if not realm or realm != self.get_did_string():
-            raise BadRequestException(msg='Invalid presentation realm or not match.')
+            raise BadRequestException(msg=f'Invalid presentation realm or not match.')
 
     def __get_presentation_credential_info(self, presentation_json, props=None):
         if "verifiableCredential" not in presentation_json:
@@ -198,11 +199,11 @@ class Auth(Entity, metaclass=Singleton):
     def __create_access_token(self, credential_info, subject):
         doc = lib.DIDStore_LoadDID(self.store, self.did)
         if not doc:
-            raise BadRequestException('Can not load service instance document in creating access token.')
+            raise BadRequestException(f'Can not load node did in creating access token: {self.get_error_message()}')
 
         builder = lib.DIDDocument_GetJwtBuilder(doc)
         if not builder:
-            raise BadRequestException(msg='Can not get builder from doc in creating access token.')
+            raise BadRequestException(msg=f'Can not get builder for creating access token: {self.get_error_message()}')
 
         lib.JWTBuilder_SetHeader(builder, "typ".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
@@ -212,14 +213,16 @@ class Auth(Entity, metaclass=Singleton):
 
         props = {k: credential_info[k] for k in credential_info if k not in ['id', 'expTime']}
         if not lib.JWTBuilder_SetClaim(builder, "props".encode(), json.dumps(props).encode()):
+            msg = self.get_error_message()
             lib.JWTBuilder_Destroy(builder)
-            raise BadRequestException(msg='Can not set claim in creating access token.')
+            raise BadRequestException(msg=f'Can not set claim in creating access token: {msg}')
 
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
         token = lib.JWTBuilder_Compact(builder)
+        msg = '' if token else self.get_error_message()
         lib.JWTBuilder_Destroy(builder)
         if not token:
-            raise BadRequestException(msg='Can not build token in creating access token.')
+            raise BadRequestException(msg=f'Can not build token in creating access token: {msg}')
 
         return ffi.string(token).decode()
 

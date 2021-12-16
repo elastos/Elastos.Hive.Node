@@ -293,6 +293,30 @@ class IpfsScriptingTestCase(unittest.TestCase):
             }}}, {'params': {'author': 'John'}})
         self.assertIsNotNone(body)
 
+    def test11_aggregated(self):
+        name = 'ipfs_aggregated'
+        self.__register_script(name, {
+            "executable": {
+                "output": True,
+                "name": name,
+                "type": "aggregated",
+                "body": [
+                    {
+                        "output": True,
+                        "name": name,
+                        "type": "fileDownload",
+                        "body": {
+                            "path": "$params.path"
+                        }
+                    }
+                ]},
+            "allowAnonymousUser": True,
+            "allowAnonymousApp": True
+        })
+        response = self.cli2.get(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, self.file_content)
+
     def test11_delete_script(self):
         response = self.cli.delete('/scripting/ipfs_database_insert')
         self.assertEqual(response.status_code, 204)
@@ -300,6 +324,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         response = self.cli.delete('/scripting/ipfs_database_find2')
         response = self.cli.delete('/scripting/ipfs_database_update')
         response = self.cli.delete('/scripting/ipfs_database_delete')
+        response = self.cli.delete('/scripting/ipfs_aggregated')
         response = self.cli.delete('/scripting/ipfs_file_upload')
         response = self.cli.delete('/scripting/ipfs_file_download')
         response = self.cli.delete('/scripting/ipfs_file_properties')

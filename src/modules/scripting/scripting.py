@@ -24,7 +24,7 @@ from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault, check_auth
-from src.utils.http_exception import NotFoundException, BadRequestException
+from src.utils.http_exception import NotFoundException, BadRequestException, CollectionNotFoundException
 from src.utils.http_response import hive_restful_response, hive_stream_response
 
 
@@ -154,6 +154,8 @@ class Context:
     def get_script_data(self, script_name):
         """ get the script data by target_did and target_app_did """
         col = cli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
+        if not col:
+            raise CollectionNotFoundException(msg='The collection scripts can not be found.')
         return col.find_one({'name': script_name})
 
     def can_anonymous_access(self, anonymous_user: bool, anonymous_app: bool):
@@ -193,7 +195,7 @@ class Executable:
             raise BadRequestException(msg=f"Invalid type {json_data['type']} of the executable.")
 
         if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED \
-                and (not isinstance(json_data['body'], list) or json_data['body'].length < 1):
+                and (not isinstance(json_data['body'], list) or len(json_data['body']) < 1):
             raise BadRequestException(msg=f"Executable body MUST be list for type "
                                           f"'{SCRIPTING_EXECUTABLE_TYPE_AGGREGATED}'.")
 

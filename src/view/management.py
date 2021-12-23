@@ -44,7 +44,7 @@ def get_vaults():
 
         {
             "vaults": [{
-6                "pricing_using": <pricing name|str>,
+                "pricing_using": <pricing name|str>,
                 "max_storage": <int>,
                 "file_use_storage": <int>,
                 "db_use_storage": <int>,

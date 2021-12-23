@@ -110,6 +110,7 @@ class VaultSubscription(metaclass=Singleton):
 
     @hive_restful_response
     def get_price_plans(self, subscription, name):
+        user_did, app_did = check_auth()
         all_plans = PaymentConfig.get_all_package_info()
         result = {'version': all_plans.get('version', '1.0')}
         if subscription == 'all':

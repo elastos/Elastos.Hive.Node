@@ -38,7 +38,6 @@ def register_script(script_name):
     .. code-block:: json
 
         {
-            "name": "get_messages",
             "condition": {
                 "type": "queryHasResult",
                 "name": "verify_user_permission",

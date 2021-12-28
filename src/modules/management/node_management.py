@@ -71,7 +71,7 @@ class NodeManagement:
     @hive_restful_response
     def get_users(self):
         self.check_auth_owner_id()
-        return {"users": cli.get_all_user_dids()}
+        return {"users": list(map(lambda d: {'did': d}, cli.get_all_user_dids()))}
 
     @hive_restful_response
     def get_payments(self):

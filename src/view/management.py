@@ -318,7 +318,7 @@ def delete_backups():
 
     """
 
-    user_dids, _ = params.get_list('ids')
+    user_dids, _ = params.get_list('user_dids')
     if not user_dids:
         return InvalidParameterException(msg='the parameter ids must be provided.').get_error_response()
     return node_management.delete_backups(user_dids)

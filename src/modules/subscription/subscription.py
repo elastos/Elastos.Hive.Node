@@ -9,16 +9,16 @@ from datetime import datetime
 from src.utils.consts import IS_UPGRADED
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
-    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, APP_ID
+    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, APP_ID, VAULT_ACCESS_R, USER_DID
 from src.utils_v1.did_file_info import get_vault_path
 from src.utils_v1.payment.payment_config import PaymentConfig
 from src.utils_v1.payment.vault_service_manage import delete_user_vault_data
 from src.modules.payment.payment import Payment
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
-from src.utils.did_auth import check_auth
+from src.utils.did_auth import check_auth, check_auth_and_vault
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
-    PricePlanNotFoundException, BadRequestException
+    PricePlanNotFoundException, BadRequestException, ApplicationNotFoundException
 from src.utils.http_response import hive_restful_response
 from src.utils.singleton import Singleton
 from src.utils_v1.auth import get_current_node_did_string
@@ -107,6 +107,27 @@ class VaultSubscription(metaclass=Singleton):
         user_did, app_did = check_auth()
         doc = self.get_checked_vault(user_did)
         return self.__get_vault_info(doc)
+
+    @hive_restful_response
+    def get_apps(self):
+        user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
+        apps = cli.get_all_user_apps(user_did)
+        results = list(filter(lambda b: b is not None, map(lambda a: self.get_app_detail(a), apps)))
+        if not results:
+            raise ApplicationNotFoundException()
+        return {"apps": results}
+
+    def get_app_detail(self, app):
+        name = cli.get_user_database_name(app[USER_DID], app[APP_ID])
+        if not cli.is_database_exists(name):
+            return None
+        return {
+            "user_did": app[USER_DID],
+            "app_did": app[APP_ID],
+            "database_name": name,
+            "file_use_storage": fm.ipfs_get_app_file_usage(name),
+            "db_use_storage": cli.get_database_size(name),
+        }
 
     @hive_restful_response
     def get_price_plans(self, subscription, name):

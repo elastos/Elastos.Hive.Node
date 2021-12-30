@@ -3,7 +3,7 @@ import logging
 
 from src.utils.db_client import cli
 from src.utils.scheduler import scheduler_init
-from src.view import about, auth, subscription, database, files, scripting, payment, backup, management
+from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider
 
 
 def retry_ipfs_backup():
@@ -27,7 +27,7 @@ def init_app(app):
     scripting.init_app(app)
     payment.init_app(app)
     backup.init_app(app)
-    management.init_app(app)
+    provider.init_app(app)
 
     retry_ipfs_backup()
     scheduler_init(app)

@@ -15,7 +15,6 @@ from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID, COL_RECEIPTS, COL_
     COL_RECEIPTS_PAID_DID
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth
-from src.utils.file_manager import fm
 from src.utils.http_exception import ForbiddenException, VaultNotFoundException, BackupNotFoundException, \
     ReceiptNotFoundException
 from src.utils.http_response import hive_restful_response
@@ -24,7 +23,7 @@ from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SE
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_USE_STORAGE
 
 
-class NodeManagement:
+class Provider:
     def __init__(self):
         self.owner_did = hive_setting.OWNER_DID
         logging.info(f'Owner DID: {self.owner_did}')
@@ -41,11 +40,9 @@ class NodeManagement:
             raise VaultNotFoundException()
         return {
             "vaults": list(map(lambda v: {
-                # "id": str(v['_id']),
                 "pricing_using": v[VAULT_SERVICE_PRICING_USING],
                 "max_storage": v[VAULT_SERVICE_MAX_STORAGE],
                 "file_use_storage": v[VAULT_SERVICE_FILE_USE_STORAGE],
-                # "cache_use_storage": fm.ipfs_get_cache_size(v[VAULT_SERVICE_DID]),
                 "db_use_storage": v[VAULT_SERVICE_DB_USE_STORAGE],
                 "user_did": v[VAULT_SERVICE_DID],
             }, vaults))
@@ -60,7 +57,6 @@ class NodeManagement:
             raise BackupNotFoundException()
         return {
             "backups": list(map(lambda b: {
-                # "id": str(b['_id']),
                 "pricing_using": b[VAULT_BACKUP_SERVICE_USING],
                 "max_storage": b[VAULT_BACKUP_SERVICE_MAX_STORAGE],
                 "use_storage": b[VAULT_BACKUP_SERVICE_USE_STORAGE],
@@ -69,43 +65,20 @@ class NodeManagement:
         }
 
     @hive_restful_response
-    def get_users(self):
-        self.check_auth_owner_id()
-        return {"users": list(map(lambda d: {'did': d}, cli.get_all_user_dids()))}
-
-    @hive_restful_response
-    def get_payments(self):
+    def get_filled_orders(self):
         self.check_auth_owner_id()
         receipts = cli.find_many_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {},
                                         create_on_absence=True, throw_exception=False)
         if not receipts:
             raise ReceiptNotFoundException(msg='Payment not found.')
-        return {"payments": list(map(lambda r: self.get_payment_results(r), receipts))}
-
-    @hive_restful_response
-    def delete_vaults(self, user_dids):
-        self.check_auth_owner_id()
-        for user_did in user_dids:
-            vault = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did},
-                                        create_on_absence=True, throw_exception=False)
-            if vault:
-                self.subscription.remove_vault_by_did(vault[VAULT_SERVICE_DID])
-
-    @hive_restful_response
-    def delete_backups(self, user_dids):
-        self.check_auth_owner_id()
-        for user_did in user_dids:
-            backup = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {USR_DID: user_did},
-                                         create_on_absence=True, throw_exception=False)
-            if backup:
-                self.backup_server.remove_backup_by_did(backup[USR_DID], backup)
+        return {"payments": list(map(lambda r: self.get_filled_order(r), receipts))}
 
     def check_auth_owner_id(self):
         user_did, _ = check_auth()
         if user_did != self.owner_did:
             raise ForbiddenException(msg='No permission for accessing node information.')
 
-    def get_payment_results(self, receipt):
+    def get_filled_order(self, receipt):
         order = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {'_id': ObjectId(receipt[COL_RECEIPTS_ORDER_ID])},
                                     create_on_absence=True, throw_exception=False)
         return {

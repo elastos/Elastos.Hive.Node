@@ -149,6 +149,59 @@ def vault_get_info():
     return vault_subscription.get_info()
 
 
+@blueprint.route('/api/v2/subscription/app_stats', methods=['GET'])
+def vault_get_app_stats():
+    """ Get all application stats in the user's vault.
+
+    .. :quickref: 02 Subscription; Get App Stats
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+
+    .. code-block:: json
+
+        {
+            "apps": [{
+                "user_did": <str>,
+                "app_did": <str>,
+                "database_name": <str>,
+                "file_use_storage": <int>,
+                "db_use_storage": <int>,
+            }]
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 403 Forbidden
+
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
+
+    """
+
+    return vault_subscription.get_app_stats()
+
+
 @blueprint.route('/api/v2/subscription/vault', methods=['PUT'])
 def vault_subscribe():
     """ Subscribe to a remote vault service on the specific hive node,

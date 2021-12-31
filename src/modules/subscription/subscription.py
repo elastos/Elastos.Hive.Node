@@ -109,7 +109,7 @@ class VaultSubscription(metaclass=Singleton):
         return self.__get_vault_info(doc)
 
     @hive_restful_response
-    def get_apps(self):
+    def get_app_stats(self):
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         apps = cli.get_all_user_apps(user_did)
         results = list(filter(lambda b: b is not None, map(lambda a: self.get_app_detail(a), apps)))

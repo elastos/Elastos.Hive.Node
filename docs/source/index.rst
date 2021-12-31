@@ -15,6 +15,7 @@ Summary
   :undoc-static:
   :endpoints: auth.did_sign_in, auth.did_auth,
     subscription.vault_subscribe, subscription.vault_unsubscribe, subscription.vault_get_info,
+    subscription.vault_get_app_stats,
     subscription.backup_subscribe, subscription.backup_unsubscribe, subscription.backup_get_info,
     subscription.vault_get_price_plan,
     database.create_collection, database.delete_collection, database.insert_or_count_document,
@@ -26,8 +27,7 @@ Summary
     backup.get_state, backup.backup_restore, backup.promotion,
     payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info,
     about.get_version, about.get_commit_id,
-    management.get_vaults, management.get_backups, management.get_users, management.get_payments,
-    management.delete_vaults, management.delete_backups, management.get_apps, management.delete_apps
+    provider.get_vaults, provider.get_backups, provider.get_filled_orders
 
 01 Auth
 =======
@@ -82,6 +82,13 @@ get vault info.
 .. autoflask:: src:make_port()
   :undoc-static:
   :endpoints: subscription.vault_get_info
+
+get app stats
+-------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: subscription.vault_get_app_stats
 
 backup subscribe
 ----------------
@@ -331,8 +338,8 @@ get commit id
   :undoc-static:
   :endpoints: about.get_commit_id
 
-09 Management
-=============
+09 Provider
+===========
 
 The management for the hive node owner or the vault owner.
 
@@ -341,56 +348,21 @@ get vaults
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: management.get_vaults
+  :endpoints: provider.get_vaults
 
 get backups
 -----------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: management.get_backups
-
-get users
----------
-
-.. autoflask:: src:make_port()
-  :undoc-static:
-  :endpoints: management.get_users
+  :endpoints: provider.get_backups
 
 get payments
 ------------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: management.get_payments
-
-delete vaults
--------------
-
-.. autoflask:: src:make_port()
-  :undoc-static:
-  :endpoints: management.delete_vaults
-
-delete backups
---------------
-
-.. autoflask:: src:make_port()
-  :undoc-static:
-  :endpoints: management.delete_backups
-
-get applications
-----------------
-
-.. autoflask:: src:make_port()
-  :undoc-static:
-  :endpoints: management.get_apps
-
-delete apps
------------
-
-.. autoflask:: src:make_port()
-  :undoc-static:
-  :endpoints: management.delete_apps
+  :endpoints: provider.get_filled_orders
 
 Appendix A: Collections
 =======================

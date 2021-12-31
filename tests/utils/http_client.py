@@ -46,11 +46,10 @@ class TestConfig(metaclass=Singleton):
 class RemoteResolver:
     def __init__(self, http_client, is_did2=False, is_owner=False):
         """ For HttpClient and only manage DIDs. """
+        # did: did:elastos:imedtHyjLS155Gedhv7vKP3FTWjpBUAUm4
         self.user_did = DIDApp("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap")
-        self.user_did2 = DIDApp("crossUser",
-                                "stage west lava group genre ten farm pony small family february drink")
-        self.owner_did = DIDApp("owner",
-                                "clever bless future fuel obvious black subject cake art pyramid member clump")
+        self.user_did2 = DIDApp("crossUser", "stage west lava group genre ten farm pony small family february drink")
+        self.owner_did = self.user_did
         self.app_did = DApp("testapp", test_common.app_id,
                             "chimney limit involve fine absent topic catch chalk goat era suit leisure")
         self.test_config = TestConfig()

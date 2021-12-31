@@ -7,7 +7,7 @@ from flask import Blueprint
 
 from src.modules.provider.provider import Provider
 
-blueprint = Blueprint('management', __name__)
+blueprint = Blueprint('provider', __name__)
 provider: Provider = None
 
 
@@ -18,11 +18,11 @@ def init_app(app):
     app.register_blueprint(blueprint)
 
 
-@blueprint.route('/api/v2/management/node/vaults', methods=['GET'])
+@blueprint.route('/api/v2/provider/vaults', methods=['GET'])
 def get_vaults():
     """ Get all vault information in this hive node.
 
-    .. :quickref: 09 Management; Get Vaults
+    .. :quickref: 09 Provider; Get Vaults
 
     **Request**:
 
@@ -71,11 +71,11 @@ def get_vaults():
     return provider.get_vaults()
 
 
-@blueprint.route('/api/v2/management/node/backups', methods=['GET'])
+@blueprint.route('/api/v2/provider/backups', methods=['GET'])
 def get_backups():
     """ Get all backup information in this hive node.
 
-    .. :quickref: 09 Management; Get Backups
+    .. :quickref: 09 Provider; Get Backups
 
     **Request**:
 
@@ -123,11 +123,11 @@ def get_backups():
     return provider.get_backups()
 
 
-@blueprint.route('/api/v2/management/node/filled_orders', methods=['GET'])
+@blueprint.route('/api/v2/provider/filled_orders', methods=['GET'])
 def get_filled_orders():
     """ Get all payment information in this hive node.
 
-    .. :quickref: 09 Management; Get Payments
+    .. :quickref: 09 Provider; Get Payments
 
     **Request**:
 

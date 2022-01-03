@@ -149,7 +149,7 @@ def vault_get_info():
     return vault_subscription.get_info()
 
 
-@blueprint.route('/api/v2/subscription/app_stats', methods=['GET'])
+@blueprint.route('/api/v2/subscription/vault/app_stats', methods=['GET'])
 def vault_get_app_stats():
     """ Get all application stats in the user's vault.
 

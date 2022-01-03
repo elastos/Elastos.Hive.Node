@@ -30,8 +30,8 @@ class SubscriptionTestCase(unittest.TestCase):
         response = self.cli.get('/subscription/vault')
         self.assertEqual(response.status_code, 200)
 
-    def test04_get_app_stats(self):
-        response = self.cli.get('/subscription/app_stats')
+    def test04_vault_get_app_stats(self):
+        response = self.cli.get('/subscription/vault/app_stats')
         self.assertEqual(response.status_code, 200)
 
     @unittest.skip

@@ -19,7 +19,6 @@ server_response = ServerResponse("CallV2")
 def __get_restful_response_wrapper(func, is_download=False, is_code=False):
     def wrapper(*args, **kwargs):
         try:
-            logging.getLogger('http response').info(f'enter {request.full_path}, {request.method}')
             return HiveException.get_success_response(func(*args, **kwargs), is_download=is_download, is_code=is_code)
         except HiveException as e:
             logging.getLogger('http response').error(f'HiveException: {str(e)}')

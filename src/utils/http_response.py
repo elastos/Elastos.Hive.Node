@@ -8,6 +8,7 @@ import traceback
 import logging
 
 from flask import request
+from sentry_sdk import capture_exception
 
 from hive.util.server_response import ServerResponse
 from src.utils.http_exception import HiveException, InternalServerErrorException
@@ -22,9 +23,11 @@ def __get_restful_response_wrapper(func, is_download=False, is_code=False):
             return HiveException.get_success_response(func(*args, **kwargs), is_download=is_download, is_code=is_code)
         except HiveException as e:
             logging.getLogger('http response').error(f'HiveException: {str(e)}')
+            capture_exception(error=Exception(f'HiveException: {str(e)}'))
             return e.get_error_response()
         except Exception as e:
             logging.getLogger('http response').error(f'UNEXPECTED: {traceback.format_exc()}')
+            capture_exception(error=Exception(f'UNEXPECTED: {traceback.format_exc()}'))
             return InternalServerErrorException(msg=traceback.format_exc()).get_error_response()
     return wrapper
 
@@ -64,8 +67,9 @@ def v2_wrapper(func):
             logging.getLogger('v2 wrapper').info(f'enter {request.full_path}, {request.method}')
             return func(*args, **kwargs), None
         except HiveException as e:
+            logging.getLogger('v2 wrapper').error(f'HiveException: {str(e)}')
             return None, server_response.response_err(e.code, e.msg)
         except Exception as e:
             logging.getLogger('v2 wrapper').error(f'UNEXPECTED: {traceback.format_exc()}')
-            return None, server_response.response_err(500, traceback.format_exc().get_error_response())
+            return None, server_response.response_err(500, traceback.format_exc())
     return wrapper

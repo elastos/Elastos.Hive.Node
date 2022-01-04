@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 
 import requests
 import json
@@ -12,8 +13,9 @@ from tests.utils_v1 import test_common
 
 class TestConfig(metaclass=Singleton):
     def __init__(self):
-        self.url_vault = 'http://localhost:5000'
-        self.url_backup = 'http://localhost:5000'
+        hive_port = os.environ.get('HIVE_PORT', 5000)
+        self.url_vault = f'http://localhost:{hive_port}'
+        self.url_backup = f'http://localhost:{hive_port}'
         # self.url_vault = 'https://hive-testnet1.trinity-tech.io'
         # self.url_backup = 'https://hive-testnet2.trinity-tech.io'
         self.node_did_cache = dict()

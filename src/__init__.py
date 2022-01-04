@@ -40,6 +40,14 @@ def before_request():
     if transfer_encoding == "chunked":
         request.environ["wsgi.input_terminated"] = True
 
+    # logging the request detail globally.
+    def get_user_info():
+        from src.utils_v1.auth import did_auth
+        user_did, app_did = did_auth()
+        return f'{user_did}, {app_did}'
+
+    logging.getLogger('before_request').info(f'enter {request.full_path}, {request.method}, {get_user_info()}')
+
 
 def init_log():
     print("init log")

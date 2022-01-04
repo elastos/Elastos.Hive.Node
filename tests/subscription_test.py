@@ -32,7 +32,7 @@ class SubscriptionTestCase(unittest.TestCase):
 
     def test04_vault_get_app_stats(self):
         response = self.cli.get('/subscription/vault/app_stats')
-        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.status_code in [200, 404])
 
     @unittest.skip
     def test05_vault_deactivate(self):

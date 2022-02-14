@@ -31,7 +31,7 @@ def get_credential_info(vc_str, props: list):
         return None, "The credential string is error, unable to rebuild to a credential object."
 
     if lib.Credential_IsValid(vc) != 1:
-        return None, get_error_message("Credential isValid")
+        return None, get_error_message(f"Credential isValid: {get_error_message()}")
 
     vc_json = json.loads(vc_str)
     if not "credentialSubject" in vc_json:
@@ -57,7 +57,7 @@ def get_credential_info(vc_str, props: list):
 
     expTime = lib.Credential_GetExpirationDate(vc)
     if expTime == 0:
-        return None, get_error_message("Credential getExpirationDate")
+        return None, get_error_message(f"Credential getExpirationDate: {get_error_message()}")
 
     exp = int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED
     if expTime > exp:
@@ -87,11 +87,13 @@ def get_did_string_from_did(did):
     return "did:" + method + ":" + sep_did
 
 
-def get_error_message(prompt):
-    err_message = ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
-    if not prompt is None:
-        err_message = prompt + " error: " + err_message
-    return err_message
+def get_error_message(prompt=None):
+    """ helper method to get error message from did.so """
+    error = lib.DIDError_GetLastErrorMessage()
+    if not error:
+        return str(prompt)
+    err_message = ffi.string(error).decode()
+    return err_message if not prompt else f'[{prompt}] {err_message}'
 
 
 def get_info_from_token(token):

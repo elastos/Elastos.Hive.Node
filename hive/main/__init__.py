@@ -55,5 +55,5 @@ def init_app(app, mode):
     else:
         scheduler.scheduler_init(app, paused=False)
 
-    # RefreshVaultStorageUsage().start()
+    RefreshVaultStorageUsage().start()
     logging.getLogger('v1_init').info('leave init_app')

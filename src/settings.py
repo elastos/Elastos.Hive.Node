@@ -27,16 +27,16 @@ class HiveSetting:
 
     @property
     def DID_RESOLVER(self):
-        return self.env_config('DID_RESOLVER', default="https://api-testnet.elastos.io/newid", cast=str)
+        return self.env_config('DID_RESOLVER', default="https://api.elastos.io/eid", cast=str)
 
     @property
     def ELA_RESOLVER(self):
-        return self.env_config('ELA_RESOLVER', default="https://api-testnet.elastos.io/ela", cast=str)
+        return self.env_config('ELA_RESOLVER', default="https://api.elastos.io/ela", cast=str)
 
     @property
     def DID_MNEMONIC(self):
         return self.env_config('DID_MNEMONIC',
-                               default="advance duty suspect finish space matter squeeze elephant twenty over stick shield",
+                               default="breeze cattle banner pole escape erode rose pupil calm hybrid stove post",
                                cast=str)
 
     @property
@@ -80,18 +80,22 @@ class HiveSetting:
 
     @property
     def BACKUP_FTP_PORT(self):
+        """ TODO: Config item never used. """
         return self.env_config('BACKUP_FTP_PORT', default=2121, cast=int)
 
     @property
     def BACKUP_FTP_MASQUERADE_ADDRESS(self):
+        """ TODO: Config item never used. """
         return self.env_config('BACKUP_FTP_MASQUERADE_ADDRESS', default="0.0.0.0", cast=str)
 
     @property
     def BACKUP_FTP_PASSIVE_PORTS_START(self):
+        """ TODO: Config item never used. """
         return self.env_config('BACKUP_FTP_PASSIVE_PORTS_START', default=8301, cast=int)
 
     @property
     def BACKUP_FTP_PASSIVE_PORTS_END(self):
+        """ TODO: Config item never used. """
         return self.env_config('BACKUP_FTP_PASSIVE_PORTS_END', default=8400, cast=int)
 
     @property
@@ -100,37 +104,37 @@ class HiveSetting:
 
     @property
     def MONGO_URI(self):
-        """ TODO: to be removed """
+        """ TODO: Config item never used. """
         return self.env_config('MONGO_URI', default="", cast=str)
 
     @property
     def MONGO_PASSWORD(self):
-        """ TODO: to be removed """
+        """ TODO: Config item never used. """
         return self.env_config('MONGO_PASSWORD', default="", cast=str)
 
     @property
     def MONGO_HOST(self):
-        return self.env_config('MONGO_HOST', default="localhost", cast=str)
+        return self.env_config('MONGO_HOST', default="hive-mongo", cast=str)
 
     @property
     def MONGO_PORT(self):
-        return self.env_config('MONGO_PORT', default=27020, cast=int)
+        return self.env_config('MONGO_PORT', default=27017, cast=int)
 
     def is_mongodb_atlas(self):
         return self.MONGO_TYPE == 'atlas'
 
     @property
     def RCLONE_CONFIG_FILE_DIR(self):
-        return self.env_config('RCLONE_CONFIG_FILE_DIR', default="./.rclone", cast=str)
+        return self.env_config('RCLONE_CONFIG_FILE_DIR', default="./.rclone_config", cast=str)
 
     @property
     def HIVE_PAYMENT_CONFIG(self):
-        name = self.env_config('HIVE_PAYMENT_CONFIG', default='./payment_config.json', cast=str)
+        name = self.env_config('HIVE_PAYMENT_CONFIG', default="./payment_config.json", cast=str)
         return os.path.join(BASE_DIR, name)
 
     @property
     def HIVE_PAYMENT_ADDRESS(self):
-        return self.env_config('HIVE_PAYMENT_ADDRESS', default='', cast=str)
+        return self.env_config('HIVE_PAYMENT_ADDRESS', default='EN9YK69ScA6WFgVQW3UZcmSRLSCStaU2pQ', cast=str)
 
     @property
     def HIVE_SENTRY_DSN(self):
@@ -146,11 +150,11 @@ class HiveSetting:
 
     @property
     def HIVE_VERSION(self):
-        return self.env_config('HIVE_VERSION', default="0.0.0", cast=str)
+        return self.env_config('HIVE_VERSION', default="2.4.1", cast=str)
 
     @property
     def HIVE_COMMIT_HASH(self):
-        return self.env_config('HIVE_COMMIT_HASH', default="", cast=str)
+        return self.env_config('HIVE_COMMIT_HASH', default="1dcc9178c12efefc786bc653bacec50a1f79161b", cast=str)
 
     @property
     def LANGUAGE(self):
@@ -158,18 +162,19 @@ class HiveSetting:
 
     @property
     def ENABLE_IPFS(self):
-        return self.env_config('ENABLE_IPFS', default='False', cast=bool)
+        return self.env_config('ENABLE_IPFS', default='True', cast=bool)
 
     @property
     def IPFS_NODE_URL(self):
-        return self.env_config('IPFS_NODE_URL', default='', cast=str)
+        return self.env_config('IPFS_NODE_URL', default='http://hive-ipfs:5001', cast=str)
 
     @property
     def IPFS_PROXY_URL(self):
-        return self.env_config('IPFS_PROXY_URL', default='', cast=str)
+        return self.env_config('IPFS_PROXY_URL', default='http://hive-ipfs:8080', cast=str)
 
     @property
     def PAYMENT_CHECK_EXPIRED(self):
+        """ TODO: Config item never used. """
         return self.env_config('PAYMENT_CHECK_EXPIRED', default='True', cast=bool)
 
     @property
@@ -178,7 +183,7 @@ class HiveSetting:
 
     @property
     def ENABLE_CORS(self):
-        return self.env_config('ENABLE_CORS', default='False', cast=bool)
+        return self.env_config('ENABLE_CORS', default='True', cast=bool)
 
     @property
     def OWNER_DID(self):

@@ -231,10 +231,10 @@ def vault_subscribe():
     .. code-block:: json
 
         {
-            “pricingPlan”: “<the using pricing plan>
-            “serviceDid”: <hive node service did>
-            “quota”: 50000000, # the max space of the storage for the vault service.
-            “used”: 0,
+            “pricing_plan”: “<the using pricing plan>
+            “service_did”: <hive node service did>
+            “storage_quota”: 50000000, # the max space of the storage for the vault service.
+            “storage_used”: 0,
             “created”: <the epoch time>
             “updated”: <the epoch time>
         }
@@ -366,10 +366,10 @@ def backup_subscribe():
     .. code-block:: json
 
         {
-            “pricingPlan”: “<the using pricing plan>
-            “serviceDid”: <hive node service did>
-            “quota”: 50000000, # the max space of the storage for the vault service.
-            “used”: 0,
+            “pricing_plan”: “<the using pricing plan>
+            “service_did”: <hive node service did>
+            “storage_quota”: 50000000, # the max space of the storage for the vault service.
+            “storage_used”: 0,
             “created”: <the epoch time>
             “updated”: <the epoch time>
         }

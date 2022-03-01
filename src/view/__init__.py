@@ -3,7 +3,7 @@ import logging
 
 from src.utils.db_client import cli
 from src.utils.scheduler import scheduler_init
-from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider
+from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider, hivehub
 
 
 def retry_ipfs_backup():
@@ -20,6 +20,7 @@ def retry_ipfs_backup():
 def init_app(app):
     logging.getLogger('v2_init').info('enter init_app')
     about.init_app(app)
+    hivehub.init_app(app)
     auth.init_app(app)
     subscription.init_app(app)
     database.init_app(app)

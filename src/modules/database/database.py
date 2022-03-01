@@ -37,7 +37,7 @@ class Database:
         user_did, app_did = check_auth_and_vault(vault_permission)
         col = cli.get_user_collection(user_did, app_did, collection_name)
         if not col:
-            raise CollectionNotFoundException(msg=f'The collection {collection_name} does not found.')
+            raise CollectionNotFoundException(msg=f'The collection {collection_name} can not be found.')
         return user_did, app_did, col
 
     @hive_restful_response

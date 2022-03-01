@@ -104,52 +104,52 @@ class NotFoundException(HiveException):
     ORDER_NOT_FOUND = 7
     RECEIPT_NOT_FOUND = 8
 
-    def __init__(self, internal_code=VAULT_NOT_FOUND, msg='The vault does not found or not activate.'):
+    def __init__(self, internal_code=VAULT_NOT_FOUND, msg='The vault can not be found or is not activate.'):
         super().__init__(404, internal_code, msg)
 
 
 class VaultNotFoundException(NotFoundException):
-    def __init__(self, msg='The vault does not found.'):
+    def __init__(self, msg='The vault can not be found.'):
         super().__init__(internal_code=NotFoundException.VAULT_NOT_FOUND, msg=msg)
 
 
 class BackupNotFoundException(NotFoundException):
-    def __init__(self, msg='The backup service does not found.'):
+    def __init__(self, msg='The backup service can not be found.'):
         super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND, msg=msg)
 
 
 class ApplicationNotFoundException(NotFoundException):
-    def __init__(self, msg='The application of the user does not found.'):
+    def __init__(self, msg='The application of the user can not be found.'):
         super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND, msg=msg)
 
 
 class ScriptNotFoundException(NotFoundException):
-    def __init__(self, msg='The script does not found.'):
+    def __init__(self, msg='The script can not be found.'):
         super().__init__(internal_code=NotFoundException.SCRIPT_NOT_FOUND, msg=msg)
 
 
 class CollectionNotFoundException(NotFoundException):
-    def __init__(self, msg='The collection does not found.'):
+    def __init__(self, msg='The collection can not be found.'):
         super().__init__(internal_code=NotFoundException.COLLECTION_NOT_FOUND, msg=msg)
 
 
 class PricePlanNotFoundException(NotFoundException):
-    def __init__(self, msg='The price plan does not found.'):
+    def __init__(self, msg='The price plan can not be found.'):
         super().__init__(internal_code=NotFoundException.PRICE_PLAN_NOT_FOUND, msg=msg)
 
 
 class FileNotFoundException(NotFoundException):
-    def __init__(self, msg='The file does not found.'):
+    def __init__(self, msg='The file can not be found.'):
         super().__init__(internal_code=NotFoundException.FILE_NOT_FOUND, msg=msg)
 
 
 class OrderNotFoundException(NotFoundException):
-    def __init__(self, msg='The order does not found.'):
+    def __init__(self, msg='The order can not be found.'):
         super().__init__(internal_code=NotFoundException.ORDER_NOT_FOUND, msg=msg)
 
 
 class ReceiptNotFoundException(NotFoundException):
-    def __init__(self, msg='The receipt does not found.'):
+    def __init__(self, msg='The receipt can not be found.'):
         super().__init__(internal_code=NotFoundException.RECEIPT_NOT_FOUND, msg=msg)
 
 

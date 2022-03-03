@@ -128,6 +128,36 @@ class IpfsScriptingTestCase(unittest.TestCase):
             }}, {'params': {'author': 'John'}})
         self.assertIsNotNone(body)
 
+    def test04_find_with_multiple_conditions(self):
+        name = 'ipfs_database_find_multiple_conditions'
+        col_filter = {'author': '$params.author'}
+        query_condition = {
+            'name': 'verify_user_permission',
+            'type': 'queryHasResults',
+            'body': {
+                'collection': self.collection_name,
+                'filter': col_filter
+            }
+        }
+        body = self.__set_and_call_script(name, {'condition': {
+                'name': 'multiple_conditions',
+                'type': 'and',
+                'body': [query_condition, {
+                        'name': 'multiple_conditions2',
+                        'type': 'and',
+                        'body': [query_condition, query_condition]
+                    }
+                ]
+            }, 'executable': {
+                'name': name,
+                'type': 'find',
+                'body': {
+                    'collection': self.collection_name,
+                    'filter': col_filter
+                }
+            }}, {'params': {'author': 'John'}})
+        self.assertIsNotNone(body)
+
     def test04_find_with_anonymous(self):
         name = 'ipfs_database_find2'
         col_filter = {'author': '$params.author'}

@@ -85,7 +85,7 @@ class Condition:
 
         if condition_type in ['and', 'or']:
             if not isinstance(json_data['body'], list)\
-                    or json_data['body'].length < 1:
+                    or not json_data['body']:
                 raise BadRequestException(msg=f"Condition body MUST be list "
                                               f"and at least contain one element for the type '{condition_type}'")
             for data in json_data['body']:

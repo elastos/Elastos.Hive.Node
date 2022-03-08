@@ -192,6 +192,33 @@ def delete_mongo_database(did, app_id):
     connection.drop_database(db_name)
 
 
+def count_file_metadata_size_by_col(col, user_did, app_did):
+    col_filter = {"user_did": user_did, "app_did": app_did}
+    total = 0.0
+    for file in col.find(col_filter):
+        total += file["size"]
+    return total
+
+
+def count_file_app_storage_size(user_did, app_did):
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+
+    col_file_name = 'ipfs_files'
+    db_name = gene_mongo_db_name(user_did, app_did)
+    if db_name not in connection.list_database_names():
+        return 0.0
+    db = connection[db_name]
+    if col_file_name not in db.list_collection_names():
+        return 0.0
+    col = db[col_file_name]
+
+    return count_file_metadata_size_by_col(col, user_did, app_did)
+
+
 def get_mongo_database_size(did, app_id):
     if hive_setting.MONGO_URI:
         uri = hive_setting.MONGO_URI

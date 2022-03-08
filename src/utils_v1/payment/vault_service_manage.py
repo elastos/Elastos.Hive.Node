@@ -197,23 +197,6 @@ def delete_db_storage(did):
         delete_mongo_database(did_info[USER_DID], did_info[APP_ID])
 
 
-def count_vault_storage_job():
-    connection = create_db_client()
-    db = connection[DID_INFO_DB_NAME]
-    col = db[VAULT_SERVICE_COL]
-    info_list = col.find()
-    for service in info_list:
-        file_size = count_file_system_storage_size(service[VAULT_SERVICE_DID])
-        db_size = count_db_storage_size(service[VAULT_SERVICE_DID])
-        now = datetime.utcnow().timestamp()
-        query_id = {"_id": service["_id"]}
-        value = {"$set": {VAULT_SERVICE_FILE_USE_STORAGE: file_size,
-                          VAULT_SERVICE_DB_USE_STORAGE: db_size,
-                          VAULT_SERVICE_MODIFY_TIME: now
-                          }}
-        col.update_one(query_id, value)
-
-
 def get_vault_used_storage(did):
     file_size = count_file_system_storage_size(did)
     db_size = count_db_storage_size(did)

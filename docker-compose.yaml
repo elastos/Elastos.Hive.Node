@@ -1,0 +1,36 @@
+version: "3.3"
+
+services:
+
+  mongodb:
+    container_name: hive-mongo
+    image: mongo:4.4.0
+    volumes:
+      - ~/hive-node/mongodb_data:/data/db
+    ports:
+      - "27018:27017"
+    restart: always
+
+  ipfs:
+    container_name: hive-ipfs
+    image: ipfs/go-ipfs:master-2021-09-10-ef0428a
+    volumes:
+      - ~/hive-node/ipfs/staging:/export
+      - ~/hive-node/ipfs/data:/data/ipfs
+    ports:
+      - "4002:4001"
+      - "5020:5001"
+    restart: always
+
+  hive-node:
+    depends_on:
+      - mongodb
+      - ipfs
+    container_name: hive-node
+    image: trinitytech/hivenode:latest
+    volumes:
+      - ~/hive-node/did_user_data:/did_user_data
+      - ./.env:/Elastos.NET.Hive.Node/.env
+    ports:
+      - "5000:5000"
+    restart: always

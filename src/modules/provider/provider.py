@@ -12,7 +12,7 @@ from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.modules.subscription.subscription import VaultSubscription
 from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID, COL_RECEIPTS, COL_RECEIPTS_ORDER_ID, \
     COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, \
-    COL_RECEIPTS_PAID_DID
+    COL_RECEIPTS_PAID_DID, DID
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth
 from src.utils.http_exception import ForbiddenException, VaultNotFoundException, BackupNotFoundException, \
@@ -84,7 +84,8 @@ class Provider:
         return {
             "order_id": receipt[COL_RECEIPTS_ORDER_ID],
             "receipt_id": receipt['_id'],
-            "user_did": receipt[USR_DID],
+            # info: compatible because of the key for user_did update from 'did' to 'user_did'.
+            "user_did": receipt[USR_DID] if USR_DID in receipt else receipt[DID],
             "subscription": order[COL_ORDERS_SUBSCRIPTION] if order else None,
             "pricing_name": order[COL_ORDERS_PRICING_NAME] if order else None,
             "ela_amount": order[COL_ORDERS_ELA_AMOUNT] if order else None,

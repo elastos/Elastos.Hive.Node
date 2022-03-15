@@ -18,6 +18,7 @@ class DatabaseTestCase(unittest.TestCase):
         init_test()
         self.cli = HttpClient(f'/api/v2/vault')
         self.collection_name = 'test_collection'
+        self.name_not_exist = 'name_not_exist_collection'
 
     @staticmethod
     def _subscribe():
@@ -170,12 +171,13 @@ class DatabaseTestCase(unittest.TestCase):
             }}, is_json=True)
         self.assertEqual(response.status_code, 204)
 
-    def test08_delete_collection(self):
-        self.__delete_collection()
+    def test08_delete_collection_not_found(self):
+        response = self.cli.delete(f'/db/{self.name_not_exist}')
+        self.assertEqual(response.status_code, 404)
 
-    def __delete_collection(self):
+    def test08_delete_collection(self):
         response = self.cli.delete(f'/db/{self.collection_name}')
-        self.assertEqual(response.status_code, 204)
+        self.assertTrue(response.status_code in [204, 404])
 
 
 if __name__ == '__main__':

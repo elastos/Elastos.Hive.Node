@@ -30,7 +30,7 @@ class Database:
     @hive_restful_response
     def delete_collection(self, collection_name):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
-        cli.delete_collection(user_did, app_did, collection_name, is_check_exist=False)
+        cli.delete_collection(user_did, app_did, collection_name, is_check_exist=True)
         update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
 
     def __get_collection(self, collection_name, vault_permission):

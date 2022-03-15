@@ -24,6 +24,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.src_file_cache = f'{BASE_DIR}/cache/test.txt'
         self.src_file_name2 = r'ipfs_children/ipfs_src_file2.txt'
         self.dst_file_name = 'ipfs_dst_file.txt'
+        self.name_not_exist = 'name_not_exist'
 
     @staticmethod
     def _subscribe():
@@ -110,8 +111,12 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.__delete_file(self.src_file_name2)
         self.__delete_file(self.dst_file_name)
 
+    def test08_delete_file_not_exist(self):
+        response = self.cli.delete(f'/files/{self.name_not_exist}')
+        self.assertEqual(response.status_code, 404)
+
     def test08_delete_file_invalid_parameter(self):
-        response = self.cli.delete(f'/files/')
+        response = self.cli.delete('/files/')
         self.assertEqual(response.status_code, 405)
 
     def __check_remote_file_exist(self, file_name):

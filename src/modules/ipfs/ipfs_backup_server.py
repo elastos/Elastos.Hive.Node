@@ -130,12 +130,14 @@ class IpfsBackupServer:
     def unsubscribe(self):
         user_did, _, doc = self._check_auth_backup(throw_exception=False)
         if not doc:
-            return
+            raise BackupNotFoundException()
 
         self.remove_backup_by_did(user_did, doc)
 
     def remove_backup_by_did(self, user_did, doc):
-        """ Remove all data belongs to the backup of the user. """
+        """ Remove all data belongs to the backup of the user.
+        TODO: consider the backup is in process when removing.
+        """
         logging.debug(f'start remove the backup of the user {user_did}, _id, {str(doc["_id"])}')
         if doc.get(BKSERVER_REQ_CID):
             request_metadata = self._get_verified_request_metadata(user_did, doc)

@@ -63,7 +63,7 @@ class IpfsFiles:
                       COL_IPFS_FILES_PATH: path}
         doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, throw_exception=False)
         if not doc:
-            return
+            raise FileNotFoundException(f'The file {path} does not exist.')
 
         cache_file = fm.ipfs_get_cache_root(user_did) / doc[COL_IPFS_FILES_IPFS_CID]
         if cache_file.exists():

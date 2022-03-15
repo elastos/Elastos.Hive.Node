@@ -24,7 +24,7 @@ from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault, check_auth
-from src.utils.http_exception import NotFoundException, BadRequestException, CollectionNotFoundException
+from src.utils.http_exception import BadRequestException, CollectionNotFoundException, ScriptNotFoundException
 from src.utils.http_response import hive_restful_response, hive_stream_response
 
 
@@ -592,13 +592,13 @@ class Scripting:
     def delete_script(self, script_name):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
 
-        col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION)
-        if not col:
-            raise NotFoundException(NotFoundException.SCRIPT_NOT_FOUND, 'The script collection does not exist.')
+        col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
 
         ret = col.delete_many({'name': script_name})
         if ret.deleted_count > 0:
             update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
+        else:
+            raise ScriptNotFoundException(f'The script {script_name} does not exist.')
 
     @hive_restful_response
     def run_script(self, script_name):

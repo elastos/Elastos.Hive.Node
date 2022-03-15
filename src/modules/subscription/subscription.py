@@ -75,8 +75,7 @@ class VaultSubscription(metaclass=Singleton):
     def remove_vault_by_did(self, user_did):
         document = self.get_checked_vault(user_did, throw_exception=False)
         if not document:
-            # INFO: do not raise here.
-            return
+            raise VaultNotFoundException()
         logging.debug(f'start remove the vault of the user {user_did}, _id, {str(document["_id"])}')
         delete_user_vault_data(user_did)
         apps = cli.get_all_user_apps(user_did)

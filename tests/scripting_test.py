@@ -86,7 +86,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 "collection": self.collection_name,
                 "document": {
                     "author": "$params.author",
-                    "content": "$params.content"
+                    "content": "$params.content",
+                    "words_count": "$params.words_count"
                 },
                 "options": {
                     "ordered": True,
@@ -99,7 +100,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.__call_script('ipfs_database_insert', {
             "params": {
                 "author": "John",
-                "content": "message"
+                "content": "message",
+                "words_count": 10000
             }
         })
 
@@ -110,13 +112,14 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     def test04_find_with_default_output_find(self):
         name = 'ipfs_database_find'
-        col_filter = {'author': '$params.author'}
+        condition_filter = {'author': '$params.author'}
+        col_filter = {'author': '$params.author', "words_count": {"$gt": "$params.start", "$lt": "$params.end"}}
         body = self.__set_and_call_script(name, {'condition': {
                 'name': 'verify_user_permission',
                 'type': 'queryHasResults',
                 'body': {
                     'collection': self.collection_name,
-                    'filter': col_filter
+                    'filter': condition_filter
                 }
             }, 'executable': {
                 'name': name,
@@ -125,7 +128,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
                     'collection': self.collection_name,
                     'filter': col_filter
                 }
-            }}, {'params': {'author': 'John'}})
+            }}, {'params': {'author': 'John', 'start': 5000, 'end': 15000}})
         self.assertIsNotNone(body)
 
     def test04_find_with_multiple_conditions(self):

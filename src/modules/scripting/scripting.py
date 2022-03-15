@@ -480,6 +480,8 @@ class FileHashExecutable(Executable):
 
 
 class Script:
+    DOLLAR_REPLACE = '%%'
+
     def __init__(self, script_name, run_data, user_did, app_did, scripting=None, is_ipfs=False):
         self.user_did = user_did
         self.app_did = app_did
@@ -518,7 +520,7 @@ class Script:
         script_data = self.context.get_script_data(self.name)
         if not script_data:
             raise BadRequestException(msg=f"Can't get the script with name '{self.name}'")
-        fix_dollar_keys(script_data['executable'], False)
+        Script.fixDollarKeysRecursively(script_data, is_save=False)
         self.executables = Executable.create(self, script_data['executable'])
         self.anonymous_user = script_data.get('allowAnonymousUser', False)
         self.anonymous_app = script_data.get('allowAnonymousApp', False)
@@ -536,6 +538,24 @@ class Script:
                 result[executable.name] = ret
 
         return result
+
+    @staticmethod
+    def fixDollarKeysRecursively(iterable, is_save=True):
+        """ Used for registering script content to skip $ restrictions in the field name of the document.
+        Recursively replace the key which start with 'src' to 'dst'.
+        """
+        src = '$' if is_save else Script.DOLLAR_REPLACE
+        dst = Script.DOLLAR_REPLACE if is_save else '$'
+        if type(iterable) is dict:
+            for key in list(iterable.keys()):
+                if key.startswith(src):
+                    new_key = dst + key[len(src):]
+                    iterable[new_key] = iterable.pop(key)
+                else:
+                    new_key = key
+                Script.fixDollarKeysRecursively(iterable[new_key], is_save=is_save)
+        elif type(iterable) is list:
+                Script.fixDollarKeysRecursively(iterable, is_save=is_save)
 
 
 class Scripting:
@@ -558,7 +578,7 @@ class Scripting:
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
         col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
         json_data['name'] = script_name
-        fix_dollar_keys(json_data['executable'])
+        Script.fixDollarKeysRecursively(json_data)
         ret = col.replace_one({"name": script_name}, convert_oid(json_data),
                               upsert=True, bypass_document_validation=False)
         return {

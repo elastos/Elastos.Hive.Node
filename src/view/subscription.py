@@ -291,6 +291,10 @@ def vault_unsubscribe():
 
         HTTP/1.1 401 Unauthorized
 
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
+
     """
     return vault_subscription.unsubscribe()
 
@@ -422,6 +426,10 @@ def backup_unsubscribe():
     .. sourcecode:: http
 
         HTTP/1.1 401 Unauthorized
+
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
 
     """
     return backup_server.unsubscribe()

@@ -83,12 +83,6 @@ def delete_collection(collection_name):
 
         HTTP/1.1 204 No Content
 
-    .. code-block:: json
-
-        {
-            “name”: “<collection_name>”
-        }
-
     **Response Error**:
 
     .. sourcecode:: http
@@ -102,6 +96,10 @@ def delete_collection(collection_name):
     .. sourcecode:: http
 
         HTTP/1.1 403 Forbidden
+
+    .. sourcecode:: http
+
+        HTTP/1.1 404 Not Found
 
     """
     return database.delete_collection(collection_name)
@@ -129,9 +127,9 @@ def insert_or_count_document(collection_name):
                  }
              ],
             "options": {
-                 "bypass_document_validation":false,
-                 "ordered":true
-             }
+                "bypass_document_validation": false,
+                "ordered": true
+            }
         }
 
 

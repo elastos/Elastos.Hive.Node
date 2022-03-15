@@ -28,11 +28,12 @@ class HiveException(Exception):
 
     @staticmethod
     def get_success_response(data, is_download=False, is_code=False):
-        code = HiveException.__get_success_http_code()
         if is_code:
             # Support user-defined http status code.
             assert type(data) is tuple and len(data) == 2
             data, code = data[0], data[1]
+        else:
+            code = HiveException.__get_success_http_code()
         json_data = data if is_download else (json.dumps(data, default=json_util.default) if data else '')
         return json_data, code
 

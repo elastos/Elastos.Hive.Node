@@ -21,6 +21,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.cli2 = HttpClient(f'/api/v2/vault', is_did2=True)
         self.file_name = 'ipfs-scripting/test.txt'
         self.file_content = 'File Content: 1234567890'
+        self.name_not_exist = 'name_not_exist'
         # Owner's did and application did.
         self.did = self.cli.get_current_did()
         self.app_did = test_common.app_id
@@ -349,6 +350,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
         response = self.cli2.get(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.file_content)
+
+    def test11_delete_script_not_exist(self):
+        response = self.cli.delete(f'/scripting/{self.name_not_exist}')
+        self.assertEqual(response.status_code, 404)
 
     def test11_delete_script(self):
         response = self.cli.delete('/scripting/ipfs_database_insert')

@@ -55,15 +55,18 @@ class IpfsFiles:
         :return:
         """
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        self.delete_file_with_path(user_did, app_did, path)
+        self.delete_file_with_path(user_did, app_did, path, check_exist=True)
 
-    def delete_file_with_path(self, user_did, app_did, path):
+    def delete_file_with_path(self, user_did, app_did, path, check_exist=False):
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
         doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, throw_exception=False)
         if not doc:
-            raise FileNotFoundException(f'The file {path} does not exist.')
+            if check_exist:
+                raise FileNotFoundException(f'The file {path} does not exist.')
+            else:
+                return
 
         cache_file = fm.ipfs_get_cache_root(user_did) / doc[COL_IPFS_FILES_IPFS_CID]
         if cache_file.exists():

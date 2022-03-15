@@ -57,7 +57,9 @@ def hive_stream_response(func):
 
 def v2_wrapper(func):
     """ Wrapper for v1 modules to call v2 module functions.
-    If need call files.upload(name), please call like this:
+    1. Use the class IpfsFiles in v2.
+
+    For calling files.upload(name), please call like this:
         result, resp_err = v2_wrapper(files.upload)(name)
         if resp_err:
             return resp_err

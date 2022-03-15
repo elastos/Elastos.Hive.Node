@@ -127,7 +127,7 @@ class IpfsFilesTestCase(unittest.TestCase):
 
     def __delete_file(self, file_name):
         response = self.cli.delete(f'/files/{file_name}')
-        self.assertEqual(response.status_code, 204)
+        self.assertTrue(response.status_code in [204, 404])
 
 
 if __name__ == '__main__':

@@ -555,7 +555,8 @@ class Script:
                     new_key = key
                 Script.fixDollarKeysRecursively(iterable[new_key], is_save=is_save)
         elif type(iterable) is list:
-                Script.fixDollarKeysRecursively(iterable, is_save=is_save)
+            for v in iterable:
+                Script.fixDollarKeysRecursively(v, is_save=is_save)
 
 
 class Scripting:

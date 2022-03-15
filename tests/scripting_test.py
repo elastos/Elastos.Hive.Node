@@ -108,7 +108,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     def test03_call_script_url_insert(self):
         response = self.cli2.get(f'/scripting/ipfs_database_insert/{self.did}@{self.app_did}'
-                                 '/%7B%22author%22%3A%22John2%22%2C%22content%22%3A%22message2%22%7D')
+                                 '/%7B%22author%22%3A%22John2%22%2C%22content%22%3A%22message2%22%2C%22'
+                                 'words_count%22%3A%2010000%7D')
         self.assertEqual(response.status_code, 200)
 
     def test04_find_with_default_output_find(self):

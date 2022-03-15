@@ -37,16 +37,20 @@ class DatabaseTestCase(unittest.TestCase):
         response = self.cli.post(f'/db/collection/{self.collection_name}', body={
             "document": [{
                     "author": "john doe1",
-                    "title": "Eve for Dummies1"
+                    "title": "Eve for Dummies1",
+                    "words_count": 10000
                 }, {
                     "author": "john doe1",
-                    "title": "Eve for Dummies1"
+                    "title": "Eve for Dummies1",
+                    "words_count": 1000
                 }, {
                     "author": "john doe2",
-                    "title": "Eve for Dummies2"
+                    "title": "Eve for Dummies2",
+                    "words_count": 10000
                 }, {
                     "author": "john doe2",
-                    "title": "Eve for Dummies2"
+                    "title": "Eve for Dummies2",
+                    "words_count": 1000
                 }
             ],
             "options": {
@@ -127,6 +131,7 @@ class DatabaseTestCase(unittest.TestCase):
             "collection": self.collection_name,
             "filter": {
                 "author": "john doe2",
+                "words_count": {"$gt": 5000, "$lt": 15000}
             },
             "options": {
                 "skip": 0,

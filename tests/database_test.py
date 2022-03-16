@@ -61,6 +61,46 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(len(response.json().get('inserted_ids')), 4)
 
+    def test02_insert_document_timestamp(self):
+        response = self.cli.post(f'/db/collection/{self.collection_name}', body={
+            "document": [{
+                    "author": "timestamp_default",
+                    "title": "Eve for Dummies1",
+                    "words_count": 10000
+                }
+            ],
+            "options": {
+                "bypass_document_validation": False,
+                "ordered": True
+            }})
+        self.assertEqual(response.status_code, 201)
+
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"timestamp_default"}&skip=0')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('items' in response.json())
+        self.assertTrue('created' in response.json()['items'][0])
+        self.assertTrue('modified' in response.json()['items'][0])
+
+        response = self.cli.post(f'/db/collection/{self.collection_name}', body={
+            "document": [{
+                    "author": "timestamp_false",
+                    "title": "Eve for Dummies1",
+                    "words_count": 10000
+                }
+            ],
+            "options": {
+                "bypass_document_validation": False,
+                "ordered": True,
+                "timestamp": False
+            }})
+        self.assertEqual(response.status_code, 201)
+
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"timestamp_false"}&skip=0')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('items' in response.json())
+        self.assertTrue('created' not in response.json()['items'][0])
+        self.assertTrue('modified' not in response.json()['items'][0])
+
     def test02_insert_document_invalid_parameter(self):
         response = self.cli.post(f'/db/collection/{self.collection_name}')
         self.assertEqual(response.status_code, 400)

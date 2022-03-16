@@ -9,7 +9,8 @@ from datetime import datetime
 from bson import json_util
 
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_DEL, VAULT_ACCESS_R
-from src.utils_v1.did_mongo_db_resource import get_mongo_database_size, convert_oid, options_filter
+from src.utils_v1.did_mongo_db_resource import get_mongo_database_size, convert_oid, options_filter, \
+    options_pop_insert_timestamp
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
@@ -43,11 +44,13 @@ class Database:
     @hive_restful_response
     def insert_document(self, collection_name, json_body):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
+        is_timestamp = options_pop_insert_timestamp(json_body)
         documents = []
-        for document in json_body["document"]:
-            document["created"] = datetime.utcnow()
-            document["modified"] = datetime.utcnow()
-            documents.append(convert_oid(document))
+        for doc in json_body["document"]:
+            if is_timestamp:
+                doc["created"] = datetime.utcnow()
+                doc["modified"] = datetime.utcnow()
+            documents.append(convert_oid(doc))
         ret = col.insert_many(documents, **options_filter(json_body, ("bypass_document_validation", "ordered")))
         update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
         return {
@@ -59,7 +62,7 @@ class Database:
     def update_document(self, collection_name, json_body, is_update_one):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
         update = json_body["update"]
-        if "$set" in update:
+        if "$set" in update and 'modified' in update['$set']:
             update["$set"]["modified"] = datetime.utcnow()
         if is_update_one:
             ret = col.update_one(convert_oid(json_body["filter"]), convert_oid(update, update=True),

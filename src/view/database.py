@@ -128,10 +128,11 @@ def insert_or_count_document(collection_name):
              ],
             "options": {
                 "bypass_document_validation": false,
-                "ordered": true
+                "ordered": true,
+                # Default true. If true, new fields [created, modified: int(timestamp)] will be added to each document.
+                "timestamp": true
             }
         }
-
 
     **Response OK**:
 
@@ -224,7 +225,9 @@ def insert_or_count_document(collection_name):
             return InvalidParameterException().get_error_response()
         return database.count_document(collection_name, json_body)
     if 'document' not in json_body or type(json_body.get('document')) != list:
-        return InvalidParameterException().get_error_response()
+        return InvalidParameterException('Invalid type of the field document.').get_error_response()
+    if 'options' in json_body and type(json_body.get('options')) != dict:
+        return InvalidParameterException('Invalid type of the field options.').get_error_response()
     return database.insert_document(collection_name, json_body)
 
 
@@ -248,6 +251,7 @@ def update_document(collection_name):
             "filter": {
                 "author": "john doe1",
             },
+            # This will update modified field if exists.
             "update": {"$set": {
                 "author": "john doe1_1",
                 "title": "Eve for Dummies1_1"
@@ -302,6 +306,8 @@ def update_document(collection_name):
         return InvalidParameterException(msg='Invalid parameter filter.').get_error_response()
     if 'update' not in json_body or type(json_body.get('update')) is not dict:
         return InvalidParameterException(msg='Invalid parameter update.').get_error_response()
+    if '$set' in json_body.get('update') and type(json_body.get('update').get('$set')) is not dict:
+        return InvalidParameterException(msg='Invalid parameter $set in update.').get_error_response()
     return database.update_document(collection_name, json_body, is_update_one)
 
 

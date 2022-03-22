@@ -272,8 +272,6 @@ class IpfsBackupClient:
         req = self.get_request(user_did)
         if not req or req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
             return
-        elif req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
-            return
         logging.info(f"[IpfsBackupClient] Found uncompleted request({req.get(USR_DID)}), retry.")
         if req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_BACKUP:
             BackupExecutor(user_did, self, req, start_delay=30).start()

@@ -16,18 +16,18 @@ from ..util.payment.vault_service_manage import count_vault_storage_job
 logging.getLogger().level = logging.INFO
 
 
-class RefreshVaultStorageUsage(threading.Thread):
+class RefreshVaultStorageUsageThread(threading.Thread):
     def __init__(self):
         super().__init__()
 
     def run(self):
         # Reset the storage size of all vaults when initialize.
         try:
-            logging.info(f'[RefreshVaultStorageUsage] Start init all vaults usage.')
+            logging.info(f'[RefreshVaultStorageUsageThread] Start init all vaults usage.')
             count_vault_storage_job()
-            logging.info(f'[RefreshVaultStorageUsage] Init vault usage successfully')
+            logging.info(f'[RefreshVaultStorageUsageThread] Init vault usage successfully')
         except Exception as e:
-            logging.error(f'[RefreshVaultStorageUsage] Init vault usage failed {str(e)}')
+            logging.error(f'[RefreshVaultStorageUsageThread] Init vault usage failed {str(e)}')
 
 
 def init_app(app, mode):
@@ -55,5 +55,5 @@ def init_app(app, mode):
     else:
         scheduler.scheduler_init(app, paused=False)
 
-    RefreshVaultStorageUsage().start()
+    RefreshVaultStorageUsageThread().start()
     logging.getLogger('v1_init').info('leave init_app')

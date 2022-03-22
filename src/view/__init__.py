@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import threading
 
 from src.utils.db_client import cli
 from src.utils.scheduler import scheduler_init
@@ -12,9 +13,23 @@ def retry_ipfs_backup():
     2. handle all backup request in the backup node.
     """
     user_dids = cli.get_all_user_dids()
+    logging.info(f'[retry_ipfs_backup] get {len(user_dids)} users')
     for user_did in user_dids:
         backup.backup_client.retry_backup_request(user_did)
         backup.backup_server.retry_backup_request(user_did)
+
+
+class RetryIpfsBackupThread(threading.Thread):
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        try:
+            logging.info(f'[RetryIpfsBackupThread] enter')
+            retry_ipfs_backup()
+            logging.info(f'[RetryIpfsBackupThread] leave')
+        except Exception as e:
+            logging.error(f'[RetryIpfsBackupThread] error {str(e)}')
 
 
 def init_app(app):
@@ -29,6 +44,6 @@ def init_app(app):
     backup.init_app(app)
     provider.init_app(app)
 
-    retry_ipfs_backup()
+    RetryIpfsBackupThread().start()
     scheduler_init(app)
     logging.getLogger('v2_init').info('leave init_app')

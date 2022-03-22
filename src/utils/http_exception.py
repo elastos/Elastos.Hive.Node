@@ -104,6 +104,7 @@ class NotFoundException(HiveException):
     FILE_NOT_FOUND = 6
     ORDER_NOT_FOUND = 7
     RECEIPT_NOT_FOUND = 8
+    APPLICATION_NOT_FOUND = 9
 
     def __init__(self, internal_code=VAULT_NOT_FOUND, msg='The vault can not be found or is not activate.'):
         super().__init__(404, internal_code, msg)
@@ -121,7 +122,7 @@ class BackupNotFoundException(NotFoundException):
 
 class ApplicationNotFoundException(NotFoundException):
     def __init__(self, msg='The application of the user can not be found.'):
-        super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND, msg=msg)
+        super().__init__(internal_code=NotFoundException.APPLICATION_NOT_FOUND, msg=msg)
 
 
 class ScriptNotFoundException(NotFoundException):

@@ -141,6 +141,32 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('matched_count'), 1)
 
+    def test03_update_insert_if_not_exists(self):
+        """
+        Only use $setOnInsert to insert the document if not exists. The inserted document:
+            {
+                "_id": ObjectId("6241471ab042663cc9f179e7"),
+                "author": "john doe1_2",
+                "title": "Eve for Dummies1_2"
+            }
+
+        first result: '{"acknowledged": true, "matched_count": 0, "modified_count": 0, "upserted_id": "624148bab042663cc9f17c02"}'
+        second result: '{"acknowledged": true, "matched_count": 1, "modified_count": 0, "upserted_id": null}'
+        """
+        response = self.cli.patch(f'/db/collection/{self.collection_name}', body={
+            "filter": {
+                "author": "john doe4",
+            },
+            "update": {"$setOnInsert": {
+                "title": "Eve for Dummies4"
+            }},
+            "options": {
+                "upsert": True,
+                "bypass_document_validation": True
+            }})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get('matched_count') in [0, 1])
+
     def test04_count_document(self):
         response = self.cli.post(f'/db/collection/{self.collection_name}?op=count', body={
             "filter": {

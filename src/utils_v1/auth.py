@@ -68,6 +68,37 @@ def get_credential_info(vc_str, props: list):
     return credentialSubject, None
 
 
+def get_verifiable_credential_info(vc_str):
+    """
+    Common version of the credential parsing logic.
+    @return all possible fields of the credential.
+    """
+    if not vc_str:
+        return None, "The credential is empty."
+    vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
+    if not vc:
+        return None, "The credential is not a valid JSON format."
+    if lib.Credential_IsValid(vc) != 1:
+        return None, get_error_message(f"The credential is invalid: {get_error_message()}")
+
+    vc_json = json.loads(vc_str)
+    if "credentialSubject" not in vc_json:
+        return None, "The credentialSubject doesn't exist in credential."
+    credential_subject = vc_json["credentialSubject"]
+    if "id" not in credential_subject:
+        return None, "The credentialSubject's id doesn't exist in credential."
+    if "issuer" not in vc_json:
+        return None, "The issuer doesn't exist in credential."
+
+    credential_subject["__issuer"] = vc_json["issuer"]
+    credential_subject["__expirationDate"] = lib.Credential_GetExpirationDate(vc)
+    if credential_subject["__expirationDate"] == 0:
+        return None, get_error_message(f"The expirationDate is invalid in credential: {get_error_message()}")
+    if int(datetime.now().timestamp()) > credential_subject["__expirationDate"]:
+        return None, get_error_message(f"The expirationDate is expired in credential.")
+    return credential_subject, None
+
+
 def get_current_node_did_string():
     return get_did_string_from_did(get_auth().did)
 

@@ -18,6 +18,7 @@ from src.utils.did_auth import check_auth
 from src.utils.http_exception import ForbiddenException, VaultNotFoundException, BackupNotFoundException, \
     ReceiptNotFoundException
 from src.utils.http_response import hive_restful_response
+from src.utils_v1.auth import get_verifiable_credential_info
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_BACKUP_SERVICE_USING, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_USE_STORAGE
@@ -25,11 +26,17 @@ from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SE
 
 class Provider:
     def __init__(self):
-        self.owner_did = hive_setting.OWNER_DID
+        self.owner_did = Provider.get_verified_owner_did()
         logging.info(f'Owner DID: {self.owner_did}')
-        assert self.owner_did, 'OWNER_DID must be setup.'
         self.subscription = VaultSubscription()
         self.backup_server = IpfsBackupServer()
+
+    @staticmethod
+    def get_verified_owner_did():
+        info, err_msg = get_verifiable_credential_info(hive_setting.OWNER_CREDENTIAL)
+        if err_msg:
+            raise RuntimeError(f'get_verified_owner_did: {err_msg}')
+        return info['__issuer']
 
     @hive_restful_response
     def get_vaults(self):

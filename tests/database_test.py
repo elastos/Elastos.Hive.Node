@@ -62,6 +62,7 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(len(response.json().get('inserted_ids')), 4)
 
     def test02_insert_document_timestamp(self):
+        # insert a new document with timestamp=True
         response = self.cli.post(f'/db/collection/{self.collection_name}', body={
             "document": [{
                     "author": "timestamp_default",
@@ -74,13 +75,14 @@ class DatabaseTestCase(unittest.TestCase):
                 "ordered": True
             }})
         self.assertEqual(response.status_code, 201)
-
+        # check if the inserted document contains two new fields: created, modified.
         response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"timestamp_default"}&skip=0')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('items' in response.json())
         self.assertTrue('created' in response.json()['items'][0])
         self.assertTrue('modified' in response.json()['items'][0])
 
+        # insert a new document with timestamp=False
         response = self.cli.post(f'/db/collection/{self.collection_name}', body={
             "document": [{
                     "author": "timestamp_false",
@@ -94,7 +96,7 @@ class DatabaseTestCase(unittest.TestCase):
                 "timestamp": False
             }})
         self.assertEqual(response.status_code, 201)
-
+        # check if the inserted document contains two new fields: created, modified.
         response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"timestamp_false"}&skip=0')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('items' in response.json())
@@ -146,8 +148,8 @@ class DatabaseTestCase(unittest.TestCase):
         Only use $setOnInsert to insert the document if not exists. The inserted document:
             {
                 "_id": ObjectId("6241471ab042663cc9f179e7"),
-                "author": "john doe1_2",
-                "title": "Eve for Dummies1_2"
+                "author": "john doe4",
+                "title": "Eve for Dummies4"
             }
 
         first result: '{"acknowledged": true, "matched_count": 0, "modified_count": 0, "upserted_id": "624148bab042663cc9f17c02"}'
@@ -162,10 +164,18 @@ class DatabaseTestCase(unittest.TestCase):
             }},
             "options": {
                 "upsert": True,
-                "bypass_document_validation": True
+                "bypass_document_validation": True,
+                "timestamp": True
             }})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json().get('matched_count') in [0, 1])
+
+        # check if the inserted document contains two new fields: created, modified.
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"john doe4"}&skip=0')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('items' in response.json())
+        self.assertTrue('created' in response.json()['items'][0])
+        self.assertTrue('modified' in response.json()['items'][0])
 
     def test04_count_document(self):
         response = self.cli.post(f'/db/collection/{self.collection_name}?op=count', body={

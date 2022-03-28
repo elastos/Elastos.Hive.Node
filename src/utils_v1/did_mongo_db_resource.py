@@ -49,10 +49,10 @@ def options_filter(content, args):
     return ops
 
 
-def options_pop_insert_timestamp(content):
-    if "options" not in content:
+def options_pop_timestamp(request_body):
+    if "options" not in request_body:
         return True
-    return content.get('options').pop('timestamp', True)
+    return request_body.get('options').pop('timestamp', True)
 
 
 def gene_sort(sort_para):

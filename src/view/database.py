@@ -258,7 +258,9 @@ def update_document(collection_name):
             }},
             "options": {
                 "upsert": true,
-                "bypass_document_validation": false
+                "bypass_document_validation": false,
+                # Default true. If true, the field modified (if exists) will be updated to any matched documents.
+                "timestamp": true
             }
         }
 

@@ -33,7 +33,7 @@ class Provider:
 
     @staticmethod
     def get_verified_owner_did():
-        info, err_msg = get_verifiable_credential_info(hive_setting.OWNER_CREDENTIAL)
+        info, err_msg = get_verifiable_credential_info(hive_setting.NODE_CREDENTIAL)
         if err_msg:
             raise RuntimeError(f'get_verified_owner_did: {err_msg}')
         return info['__issuer']

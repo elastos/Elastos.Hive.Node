@@ -1,6 +1,5 @@
 import threading
 
-from src.utils.sentry_error import init_sentry_hook
 from . import view, view_db, view_file, view_scripting, view_payment, interceptor, scheduler, view_internal, \
     view_backup, view_pubsub
 import logging
@@ -29,10 +28,8 @@ class RefreshVaultStorageUsageThread(threading.Thread):
 
 
 def init_app(app, mode):
+    hive_setting.init_config()
     logging.getLogger('v1_init').info('enter init_app')
-
-    if mode != HIVE_MODE_TEST and hive_setting.HIVE_SENTRY_DSN != "":
-        init_sentry_hook(hive_setting.HIVE_SENTRY_DSN)
 
     init_did_backend()
     interceptor.init_app(app)

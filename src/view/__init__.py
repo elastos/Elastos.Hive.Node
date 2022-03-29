@@ -2,6 +2,7 @@
 import logging
 import threading
 
+from src import hive_setting
 from src.utils.db_client import cli
 from src.utils.scheduler import scheduler_init
 from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider
@@ -40,9 +41,10 @@ def init_app(app):
     database.init_app(app)
     files.init_app(app)
     scripting.init_app(app)
-    payment.init_app(app)
     backup.init_app(app)
     provider.init_app(app)
+    if hive_setting.PAYMENT_ENABLED:
+        payment.init_app(app)
 
     RetryIpfsBackupThread().start()
     scheduler_init(app)

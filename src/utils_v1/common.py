@@ -31,7 +31,7 @@ def get_host(url):
 
 
 def get_temp_path():
-    path = Path(hive_setting.HIVE_DATA).resolve() / ".temp/"
+    path = Path(hive_setting.DATA_STORE_PATH).resolve() / ".temp/"
     if not path.exists():
         create_full_path_dir(path)
     return path

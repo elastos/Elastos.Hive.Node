@@ -302,7 +302,7 @@ class Executable:
                 "row_id": data.get('inserted_id', None),
                 "target_did": self.get_target_did(),
                 "target_app_did": self.get_target_app_did()
-            }, hive_setting.DID_STOREPASS, algorithm='HS256')
+            }, hive_setting.PASSWRD, algorithm='HS256')
         }
         if action_type == 'download' and self.is_ipfs and self.script.anonymous_app and self.script.anonymous_user:
             result['anonymous_url'] = anonymous_url
@@ -670,7 +670,7 @@ class Scripting:
 
     def parse_transaction_id(self, transaction_id):
         try:
-            trans = jwt.decode(transaction_id, hive_setting.DID_STOREPASS, algorithms=['HS256'])
+            trans = jwt.decode(transaction_id, hive_setting.PASSWRD, algorithms=['HS256'])
             return trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
         except Exception as e:
             raise BadRequestException(msg=f"Invalid transaction id '{transaction_id}'")

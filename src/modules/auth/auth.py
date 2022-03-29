@@ -25,7 +25,7 @@ from src.utils.singleton import Singleton
 
 class Auth(Entity, metaclass=Singleton):
     def __init__(self):
-        self.storepass = hive_setting.DID_STOREPASS
+        self.storepass = hive_setting.PASSWRD
         Entity.__init__(self, "hive.auth", mnemonic=hive_setting.DID_MNEMONIC, passphrase=hive_setting.DID_PASSPHRASE)
         self.http = HttpClient()
 
@@ -379,11 +379,10 @@ class Auth(Entity, metaclass=Singleton):
             lib.JWT_Destroy(jws)
             raise BadRequestException(msg=f'the order_id of the proof not match: {props_json.get("order_id")}')
 
-        if hive_setting.PAYMENT_CHECK_EXPIRED:
-            expired = lib.JWT_GetExpiration(jws)
-            now = int(datetime.now().timestamp())
-            if now > expired:
-                lib.JWT_Destroy(jws)
-                raise BadRequestException(msg=f'the proof is expired (valid for 7 days)')
+        expired = lib.JWT_GetExpiration(jws)
+        now = int(datetime.now().timestamp())
+        if now > expired:
+            lib.JWT_Destroy(jws)
+            raise BadRequestException(msg=f'the proof is expired (valid for 7 days)')
 
         lib.JWT_Destroy(jws)

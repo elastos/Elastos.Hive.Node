@@ -34,7 +34,7 @@ class FileManager:
     def __init__(self):
         self._http = None
         self.ipfs_url = hive_setting.IPFS_NODE_URL
-        self.ipfs_proxy_url = hive_setting.IPFS_PROXY_URL
+        self.ipfs_gateway_url = hive_setting.IPFS_GATEWAY_URL
 
     @property
     def http(self):
@@ -217,7 +217,7 @@ class FileManager:
                             size=size).make_response()
 
     def ipfs_download_file_to_path(self, cid, path: Path, is_proxy=False, sha256=None, size=None):
-        url = self.ipfs_proxy_url if is_proxy else self.ipfs_url
+        url = self.ipfs_gateway_url if is_proxy else self.ipfs_url
         response = self.http.post(f'{url}/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
         self.write_file_by_response(response, path)
         if size is not None:

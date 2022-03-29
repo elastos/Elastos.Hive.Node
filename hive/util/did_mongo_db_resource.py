@@ -171,7 +171,7 @@ def get_collection(did, app_id, collection):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
@@ -186,7 +186,7 @@ def delete_mongo_database(did, app_id):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db_name = gene_mongo_db_name(did, app_id)
     connection.drop_database(db_name)
@@ -205,7 +205,7 @@ def count_file_app_storage_size(user_did, app_did):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     col_file_name = 'ipfs_files'
     db_name = gene_mongo_db_name(user_did, app_did)
@@ -224,7 +224,7 @@ def get_mongo_database_size(did, app_id):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
@@ -249,8 +249,7 @@ def export_mongo_db(did, app_id):
         if not create_full_path_dir(save_path):
             return False
     db_name = gene_mongo_db_name(did, app_id)
-    line2 = 'mongodump -h %s --port %s  -d %s -o %s' % (
-    hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, db_name, save_path)
+    line2 = 'mongodump --uri "%s" -d %s -o %s' % (hive_setting.MONGODB_URI, db_name, save_path)
     subprocess.call(line2, shell=True)
     return True
 
@@ -259,7 +258,7 @@ def import_mongo_db(did):
     save_path = get_save_mongo_db_path(did)
     if not save_path.exists():
         return False
-    line2 = 'mongorestore -h %s --port %s --drop %s' % (hive_setting.MONGO_HOST, hive_setting.MONGO_PORT, save_path)
+    line2 = 'mongorestore --uri "%s" --drop %s' % (hive_setting.MONGODB_URI, save_path)
     subprocess.call(line2, shell=True)
     return True
 

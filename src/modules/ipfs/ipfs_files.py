@@ -317,7 +317,7 @@ class IpfsFiles:
         return metadata
 
     def get_ipfs_file_access_url(self, metadata):
-        return f'{hive_setting.IPFS_PROXY_URL}/ipfs/{metadata[COL_IPFS_FILES_IPFS_CID]}'
+        return f'{hive_setting.IPFS_GATEWAY_URL}/ipfs/{metadata[COL_IPFS_FILES_IPFS_CID]}'
 
     def increase_refcount_cid(self, cid, count=1):
         if not cid:

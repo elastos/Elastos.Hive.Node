@@ -16,7 +16,7 @@ def sub_setup_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
@@ -44,7 +44,7 @@ def sub_remove_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
@@ -63,7 +63,7 @@ def sub_get_message_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_ap
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
@@ -80,7 +80,7 @@ def sub_add_message(pub_did, pub_appid, channel_name, sub_did, sub_appid, messag
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
@@ -104,7 +104,7 @@ def sub_pop_messages(pub_did, pub_appid, channel_name, sub_did, sub_appid, limit
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]
@@ -133,7 +133,7 @@ def __remove_messages(message_ids):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[SUB_MESSAGE_COLLECTION]

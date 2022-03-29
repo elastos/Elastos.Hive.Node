@@ -72,7 +72,7 @@ class HivePaymentTestCase(unittest.TestCase):
             uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+            connection = MongoClient(hive_setting.MONGODB_URI)
 
         db = connection[DID_INFO_DB_NAME]
         order_col = db[VAULT_ORDER_COL]
@@ -114,7 +114,7 @@ class HivePaymentTestCase(unittest.TestCase):
             uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+            connection = MongoClient(hive_setting.MONGODB_URI)
 
         db = connection[DID_INFO_DB_NAME]
         order_col = db[VAULT_ORDER_COL]
@@ -168,7 +168,7 @@ class HivePaymentTestCase(unittest.TestCase):
             uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+            connection = MongoClient(hive_setting.MONGODB_URI)
 
         db = connection[DID_INFO_DB_NAME]
         col = db[VAULT_SERVICE_COL]

@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 import logging.config
+
+import sentry_sdk
 import yaml
 from flask_cors import CORS
 from flask import Flask, request
+from sentry_sdk.integrations.flask import FlaskIntegration
 from werkzeug.routing import BaseConverter
 import os
+
+import hive.settings
+import hive.main
 
 from src.settings import hive_setting
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from src.utils_v1.did.did_init import init_did_backend
 from src import view
-
-from hive import main
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')
@@ -60,22 +64,26 @@ def init_log():
 
 
 def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
+    # init v1 configure items
+    hive.settings.hive_setting.init_config(hive_config)
+
     hive_setting.init_config(hive_config)
     init_log()
-
     logging.getLogger("src_init").info("##############################")
     logging.getLogger("src_init").info("HIVE NODE IS STARTING")
     logging.getLogger("src_init").info("##############################")
-
     init_did_backend()
-    # init v1 APIs
-    main.init_app(app, mode)
-    view.init_app(app)
 
+    # init v1 APIs
+    hive.main.init_app(app, mode)
+
+    view.init_app(app)
+    logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
+    logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
+    if hive_setting.SENTRY_ENABLED and hive_setting.SENTRY_DSN != "":
+        sentry_sdk.init(dsn=hive_setting.SENTRY_DSN, integrations=[FlaskIntegration()], traces_sample_rate=1.0)
     if hive_setting.ENABLE_CORS:
         CORS(app, supports_credentials=True)
-    logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
-    logging.getLogger("src_init").info(f'BACKUP_IS_SYNC is {hive_setting.BACKUP_IS_SYNC}.')
     return app
 
 

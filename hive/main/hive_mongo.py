@@ -37,7 +37,7 @@ class HiveMongoDb:
             uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+            connection = MongoClient(hive_setting.MONGODB_URI)
 
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]
@@ -63,7 +63,7 @@ class HiveMongoDb:
             uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
-            connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+            connection = MongoClient(hive_setting.MONGODB_URI)
 
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]

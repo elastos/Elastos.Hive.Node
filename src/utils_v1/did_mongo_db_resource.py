@@ -16,9 +16,7 @@ from src.utils_v1.common import did_tail_part, create_full_path_dir
 
 def create_db_client():
     """ Create the instance of the MongoClient by the setting MONGO_TYPE. """
-    if hive_setting.is_mongodb_atlas():
-        return MongoClient(hive_setting.MONGO_HOST)
-    return MongoClient(hive_setting.MONGO_HOST, hive_setting.MONGO_PORT)
+    return MongoClient(hive_setting.MONGODB_URI)
 
 
 def convert_oid(query, update=False):
@@ -181,7 +179,7 @@ def gene_mongo_db_name(did, app_did):
 
 
 def get_user_database_prefix():
-    return 'hive_user_db_' if not hive_setting.is_mongodb_atlas() else 'hu_'
+    return 'hive_user_db_' if not hive_setting.ATLAS_ENABLED else 'hu_'
 
 
 def get_collection(did, app_did, collection):
@@ -236,12 +234,7 @@ def export_mongo_db(did, app_did):
 
 
 def export_mongo_db_to_full_path(db_name, full_path: Path):
-    if hive_setting.is_mongodb_atlas():
-        line2 = f"mongodump --uri={hive_setting.MONGO_HOST} -d {db_name}" \
-                f" --archive='{full_path.as_posix()}'"
-    else:
-        line2 = f"mongodump -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT} -d {db_name}" \
-                f" --archive='{full_path.as_posix()}'"
+    line2 = f'mongodump --uri="{hive_setting.MONGODB_URI}" -d {db_name} --archive="{full_path.as_posix()}"'
     ret_code = subprocess.call(line2, shell=True)
     return ret_code == 0
 
@@ -262,12 +255,7 @@ def import_mongo_db(did):
 
 
 def import_mongo_db_by_full_path(full_path: Path):
-    if hive_setting.is_mongodb_atlas():
-        line2 = f"mongorestore --uri={hive_setting.MONGO_HOST}" \
-                f" --drop --archive='{full_path.as_posix()}'"
-    else:
-        line2 = f"mongorestore -h {hive_setting.MONGO_HOST} --port {hive_setting.MONGO_PORT}" \
-                f" --drop --archive='{full_path.as_posix()}'"
+    line2 = f'mongorestore --uri="{hive_setting.MONGODB_URI}" --drop --archive="{full_path.as_posix()}"'
     ret_code = subprocess.call(line2, shell=True)
     return ret_code == 0
 

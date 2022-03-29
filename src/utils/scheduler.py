@@ -38,10 +38,6 @@ def task_upload_ipfs_files():
     """
     logging.info('[task_upload_ipfs_files] enter.')
 
-    if not hive_setting.ENABLE_IPFS:
-        logging.info('[task_upload_ipfs_files] IPFS not supported, skip.')
-        return
-
     for db_name in cli.get_all_user_database_names():
         upload_ipfs_files_by_db(db_name)
 
@@ -78,10 +74,6 @@ def task_adapt_local_file_to_ipfs():
     This do not handle the cid of the ipfs server.
     """
     logging.info('[task_adapt_local_file_to_ipfs] enter.')
-
-    if not hive_setting.ENABLE_IPFS:
-        logging.info('[task_adapt_local_file_to_ipfs] IPFS not supported, skip.')
-        return
 
     for user in cli.get_all_user_apps():
         try:

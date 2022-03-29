@@ -32,9 +32,7 @@ VAULT_SERVICE_STATE_FREEZE = "freeze"
 
 class DatabaseClient:
     def __init__(self):
-        self.is_mongo_atlas = hive_setting.is_mongodb_atlas()
-        self.host = hive_setting.MONGO_HOST
-        self.port = hive_setting.MONGO_PORT
+        self.mongodb_uri = hive_setting.MONGODB_URI
         self.connection = None
 
     def __get_connection(self):
@@ -286,12 +284,7 @@ class DatabaseClient:
         # restore the data of the database from every 'dump_file'.
         dump_files = [x for x in root_dir.iterdir() if x.suffix == BACKUP_FILE_SUFFIX]
         for dump_file in dump_files:
-            if self.is_mongo_atlas:
-                line2 = f"mongorestore --uri={self.host}" \
-                        f" --drop --archive='{dump_file.as_posix()}'"
-            else:
-                line2 = f"mongorestore -h {self.host} --port {self.port}" \
-                        f" --drop --archive='{dump_file.as_posix()}'"
+            line2 = f'mongorestore --uri="{self.mongodb_uri}" --drop --archive="{dump_file.as_posix()}"'
             logging.info(f'[db_client] restore database from file {line2}.')
             return_code = subprocess.call(line2, shell=True)
             if return_code != 0:

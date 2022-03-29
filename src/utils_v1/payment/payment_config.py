@@ -10,17 +10,17 @@ class PaymentConfig:
 
     @staticmethod
     def init_config():
-        config_file = Path(hive_setting.HIVE_PAYMENT_CONFIG)
+        config_file = Path(hive_setting.PAYMENT_PATH)
         if not config_file.exists():
             print("hive_setting.HIVE_PAYMENT_CONFIG dose not exist")
         else:
-            print("hive_setting.HIVE_PAYMENT_CONFIG:"+hive_setting.HIVE_PAYMENT_CONFIG)
-        with open(hive_setting.HIVE_PAYMENT_CONFIG, 'r')as fp:
+            print("hive_setting.HIVE_PAYMENT_CONFIG:" + hive_setting.PAYMENT_PATH)
+        with open(hive_setting.PAYMENT_PATH, 'r')as fp:
             json_data = json.load(fp)
             print(fp)
             PaymentConfig.config_info = json_data
             # print(json_data)
-            logging.getLogger("Hive Payment").info("Load payment config file:" + hive_setting.HIVE_PAYMENT_CONFIG)
+            logging.getLogger("Hive Payment").info("Load payment config file:" + hive_setting.PAYMENT_PATH)
 
     @staticmethod
     def get_all_package_info():

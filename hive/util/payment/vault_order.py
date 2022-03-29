@@ -32,7 +32,7 @@ def create_order_info(did, app_id, package_info, order_type=VAULT_ORDER_TYPE_VAU
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
@@ -56,7 +56,7 @@ def find_txid(txid):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
@@ -70,7 +70,7 @@ def find_canceled_order_by_txid(did, txid):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
@@ -88,7 +88,7 @@ def update_order_info(_id, info_dic):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
@@ -104,7 +104,7 @@ def get_order_info_by_id(_id):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
@@ -118,7 +118,7 @@ def get_order_info_list(did, app_id):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
@@ -133,7 +133,7 @@ def get_tx_info(tx, target_address):
         "params": [tx, True]
     }
     try:
-        r = requests.post(hive_setting.ELA_RESOLVER, json=param, headers={"Content-Type": "application/json"})
+        r = requests.post(hive_setting.ESC_RESOLVER_URL, json=param, headers={"Content-Type": "application/json"})
     except Exception as e:
         logger.error("get_tx_info exception, tx:" + tx + " address:" + target_address)
         return None, None
@@ -198,7 +198,7 @@ def check_pay_order_timeout_job():
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]
@@ -217,7 +217,7 @@ def check_wait_order_tx_job():
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
+        connection = MongoClient(hive_setting.MONGODB_URI)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_ORDER_COL]

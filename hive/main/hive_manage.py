@@ -15,13 +15,13 @@ class HiveManage:
         self.app = app
 
     def get_hive_version(self):
-        data = {"version": hive_setting.HIVE_VERSION}
-        print("version:" + hive_setting.HIVE_VERSION)
-        logger.debug("version:" + hive_setting.HIVE_VERSION)
+        data = {"version": hive_setting.VERSION}
+        print("version:" + hive_setting.VERSION)
+        logger.debug("version:" + hive_setting.VERSION)
         return self.response.response_ok(data)
 
     def get_hive_commit_hash(self):
-        data = {"commit_hash": hive_setting.HIVE_COMMIT_HASH}
-        print("commit_hash:" + hive_setting.HIVE_COMMIT_HASH)
-        logger.debug("commit_hash:" + hive_setting.HIVE_COMMIT_HASH)
+        data = {"commit_hash": hive_setting.LAST_COMMIT}
+        print("commit_hash:" + hive_setting.LAST_COMMIT)
+        logger.debug("commit_hash:" + hive_setting.LAST_COMMIT)
         return self.response.response_ok(data)

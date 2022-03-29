@@ -259,7 +259,7 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
             "row_id": row_id,
             "target_did": target_did,
             "target_app_did": target_app_did
-        }, hive_setting.DID_STOREPASS, algorithm='HS256')
+        }, hive_setting.PASSWRD, algorithm='HS256')
     }
 
     return data, None
@@ -305,7 +305,7 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
             "row_id": row_id,
             "target_did": target_did,
             "target_app_did": target_app_did
-        }, hive_setting.DID_STOREPASS, algorithm='HS256')
+        }, hive_setting.PASSWRD, algorithm='HS256')
     }
 
     return data, None

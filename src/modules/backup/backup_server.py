@@ -53,9 +53,6 @@ class BackupClient:
     def __init__(self, is_ipfs=False):
         self.http = HttpClient()
         self.backup_thread = None
-        self.mongo_host, self.mongo_port = None, None
-        if hive_setting:
-            self.mongo_host, self.mongo_port = hive_setting.MONGO_HOST, hive_setting.MONGO_PORT
         self.auth = Auth()
         self.is_ipfs = is_ipfs
 

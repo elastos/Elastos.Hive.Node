@@ -19,108 +19,99 @@ class HiveSetting:
             print("Setting Config file is:" + config_file.as_posix())
 
     @property
-    def DID_RESOLVER(self):
-        return self.env_config('DID_RESOLVER', default="https://api.elastos.io/eid", cast=str)
+    def EID_RESOLVER_URL(self):
+        return self.env_config('EID_RESOLVER_URL', default='https://api.elastos.io/eid', cast=str)
 
     @property
-    def ELA_RESOLVER(self):
-        return self.env_config('ELA_RESOLVER', default="https://api.elastos.io/ela", cast=str)
+    def ESC_RESOLVER_URL(self):
+        return self.env_config('ESC_RESOLVER_URL', default='https://api.elastos.io/ela', cast=str)
 
     @property
     def DID_MNEMONIC(self):
         return self.env_config('DID_MNEMONIC',
-                               default="breeze cattle banner pole escape erode rose pupil calm hybrid stove post",
+                               default='breeze cattle banner pole escape erode rose pupil calm hybrid stove post',
                                cast=str)
 
     @property
     def DID_PASSPHRASE(self):
-        return self.env_config('DID_PASSPHRASE', default="", cast=str)
+        return self.env_config('DID_PASSPHRASE', default='', cast=str)
 
     @property
-    def DID_STOREPASS(self):
-        return self.env_config('DID_STOREPASS', default="password", cast=str)
+    def PASSWRD(self):
+        return self.env_config('PASSWRD', default='password', cast=str)
 
     @property
-    def HIVE_DATA(self):
-        return self.env_config('HIVE_DATA', default="./data", cast=str)
+    def DATA_STORE_PATH(self):
+        return self.env_config('DATA_STORE_PATH', default='./data', cast=str)
 
     @property
     def VAULTS_BASE_DIR(self):
-        return self.HIVE_DATA + "/vaults"
+        return self.DATA_STORE_PATH + '/vaults'
 
     @property
     def BACKUP_VAULTS_BASE_DIR(self):
-        return self.HIVE_DATA + "/backup_vaults"
+        return self.DATA_STORE_PATH + '/backup_vaults'
 
     @property
     def DID_DATA_BASE_DIR(self):
-        return self.HIVE_DATA + "/did"
+        return self.DATA_STORE_PATH + '/did'
 
     @property
     def DID_DATA_LOCAL_DIDS(self):
-        return self.DID_DATA_BASE_DIR + "/localdids"
+        return self.DID_DATA_BASE_DIR + '/localdids'
 
     @property
     def DID_DATA_STORE_PATH(self):
-        return self.DID_DATA_BASE_DIR + "/store"
+        return self.DID_DATA_BASE_DIR + '/store'
 
     @property
     def DID_DATA_CACHE_PATH(self):
-        return self.DID_DATA_BASE_DIR + "/cache"
+        return self.DID_DATA_BASE_DIR + '/cache'
 
     @property
-    def BACKUP_FTP_PORT(self):
-        """ TODO: Config item never used. """
-        return self.env_config('BACKUP_FTP_PORT', default=2121, cast=int)
+    def PAYMENT_PATH(self):
+        return self.env_config('PAYMENT_PATH', default='./payment_config.json', cast=str)
+
+    @property
+    def PAYMENT_ADDRESS(self):
+        return self.env_config('PAYMENT_ADDRESS', default='EN9YK69ScA6WFgVQW3UZcmSRLSCStaU2pQ', cast=str)
+
+    @property
+    def MONGODB_URI(self):
+        return self.env_config('MONGODB_URI', default='mongodb://hive-mongo:27017', cast=str)
+
+    @property
+    def VERSION(self):
+        return self.env_config('VERSION', default='2.4.1', cast=str)
+
+    @property
+    def LAST_COMMIT(self):
+        return self.env_config('LAST_COMMIT', default='1dcc9178c12efefc786bc653bacec50a1f79161b', cast=str)
+
+    @property
+    def RCLONE_CONFIG_FILE_DIR(self):
+        """ TODO: Just keep this item in this file, not required in .env. """
+        return self.env_config('RCLONE_CONFIG_FILE_DIR', default='./.rclone_config', cast=str)
 
     @property
     def BACKUP_FTP_MASQUERADE_ADDRESS(self):
-        """ TODO: Config item never used. """
-        return self.env_config('BACKUP_FTP_MASQUERADE_ADDRESS', default="0.0.0.0", cast=str)
+        """ TODO: Just keep this item in this file, not required in .env. """
+        return self.env_config('BACKUP_FTP_MASQUERADE_ADDRESS', default='0.0.0.0', cast=str)
 
     @property
     def BACKUP_FTP_PASSIVE_PORTS_START(self):
-        """ TODO: Config item never used. """
+        """ TODO: Just keep this item in this file, not required in .env. """
         return self.env_config('BACKUP_FTP_PASSIVE_PORTS_START', default=8301, cast=int)
 
     @property
     def BACKUP_FTP_PASSIVE_PORTS_END(self):
-        """ TODO: Config item never used. """
+        """ TODO: Just keep this item in this file, not required in .env. """
         return self.env_config('BACKUP_FTP_PASSIVE_PORTS_END', default=8400, cast=int)
 
     @property
     def MONGO_URI(self):
-        """ TODO: Config item never used. """
-        return self.env_config('MONGO_URI', default="", cast=str)
-
-    @property
-    def MONGO_PASSWORD(self):
-        """ TODO: Config item never used. """
-        return self.env_config('MONGO_PASSWORD', default="", cast=str)
-
-    @property
-    def MONGO_HOST(self):
-        return self.env_config('MONGO_HOST', default="hive-mongo", cast=str)
-
-    @property
-    def MONGO_PORT(self):
-        return self.env_config('MONGO_PORT', default=27017, cast=int)
-
-    @property
-    def RCLONE_CONFIG_FILE_DIR(self):
-        return self.env_config('RCLONE_CONFIG_FILE_DIR', default="./.rclone_config", cast=str)
-
-    @property
-    def HIVE_PAYMENT_CONFIG(self):
-        return self.env_config('HIVE_PAYMENT_CONFIG', default="./payment_config.json", cast=str)
-
-    @property
-    def HIVE_PAYMENT_ADDRESS(self):
-        return self.env_config('HIVE_PAYMENT_ADDRESS', default='EN9YK69ScA6WFgVQW3UZcmSRLSCStaU2pQ', cast=str)
-
-    @property
-    def HIVE_SENTRY_DSN(self):
-        return self.env_config('HIVE_SENTRY_DSN', default="", cast=str)
+        """ TODO: Just keep this item in this file, not required in .env. """
+        return self.env_config('MONGO_URI', default='', cast=str)
 
     @property
     def AUTH_CHALLENGE_EXPIRED(self):
@@ -129,23 +120,6 @@ class HiveSetting:
     @property
     def ACCESS_TOKEN_EXPIRED(self):
         return 30 * 24 * 60 * 60
-
-    @property
-    def HIVE_VERSION(self):
-        return self.env_config('HIVE_VERSION', default="2.4.1", cast=str)
-
-    @property
-    def HIVE_COMMIT_HASH(self):
-        return self.env_config('HIVE_COMMIT_HASH', default="1dcc9178c12efefc786bc653bacec50a1f79161b", cast=str)
-
-    @property
-    def LANGUAGE(self):
-        return "english"
-
-    @property
-    def PAYMENT_CHECK_EXPIRED(self):
-        """ TODO: Config item never used. """
-        return self.env_config('PAYMENT_CHECK_EXPIRED', default='True', cast=bool)
 
 
 hive_setting = HiveSetting()

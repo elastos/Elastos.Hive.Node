@@ -38,7 +38,7 @@ class HiveAuth(Entity):
         self.app = app
         self.mnemonic = hive_setting.DID_MNEMONIC
         self.passphrase = hive_setting.DID_PASSPHRASE
-        self.storepass = hive_setting.DID_STOREPASS
+        self.storepass = hive_setting.PASSWRD
         Entity.__init__(self, "hive.auth")
 
     def sign_in(self):

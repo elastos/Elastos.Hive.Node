@@ -3,7 +3,6 @@
 """
 Testing file for the ipfs-backup module.
 """
-import time
 import unittest
 
 from tests import init_test
@@ -37,29 +36,6 @@ class IpfsBackupTestCase(unittest.TestCase):
         response = self.backup_cli.get('/subscription/backup')
         self.assertEqual(response.status_code, 200)
 
-    def check_result_success(self):
-        # waiting for the backup process to end
-        max_timestamp = time.time() + 60
-        while time.time() < max_timestamp:
-            r = self.cli.get('/vault/content')
-            self.assertEqual(r.status_code, 200)
-            self.assertTrue('result' in r.json())
-            if r.json()['result'] == 'process':
-                continue
-            elif r.json()['result'] == 'failed':
-                self.assertTrue(False, r.json()['message'])
-            elif r.json()['result'] == 'success':
-                break
-            else:
-                self.assertTrue(False, f'Unknown result {r.json()["result"]} for the backup process.')
-            time.sleep(5)
-
-    def test03_backup(self):
-        r = self.cli.post('/vault/content?to=hive_node',
-                          body={'credential': self.cli.get_backup_credential()})
-        self.assertEqual(r.status_code, 201)
-        self.check_result_success()
-
     def test03_backup_invalid_parameter(self):
         r = self.cli.post('/vault/content?to=hive_node')
         self.assertEqual(r.status_code, 400)
@@ -73,12 +49,6 @@ class IpfsBackupTestCase(unittest.TestCase):
     def test04_state(self):
         r = self.cli.get('/vault/content')
         self.assertEqual(r.status_code, 200)
-
-    def test05_restore(self):
-        r = self.cli.post('/vault/content?from=hive_node',
-                          body={'credential': self.cli.get_backup_credential()})
-        self.assertEqual(r.status_code, 201)
-        self.check_result_success()
 
     def test05_restore_invalid_parameter(self):
         r = self.cli.post('/vault/content?from=hive_node')

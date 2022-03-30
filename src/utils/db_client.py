@@ -14,7 +14,8 @@ from src.utils.consts import BACKUP_FILE_SUFFIX, get_unique_dict_item_from_list
 
 from src.utils_v1.did_info import get_all_did_info_by_did
 from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name, convert_oid, \
-    export_mongo_db, get_save_mongo_db_path, create_db_client, get_user_database_prefix
+    export_mongo_db, get_save_mongo_db_path, create_db_client, get_user_database_prefix, \
+    restore_mongodb_from_full_dir
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, DATETIME_FORMAT, \
     USER_DID, APP_ID, DID_INFO_REGISTER_COL, APP_INSTANCE_DID
 from src.utils.http_exception import BadRequestException, AlreadyExistsException, \
@@ -268,27 +269,12 @@ class DatabaseClient:
             export_mongo_db(did_info[USER_DID], did_info[APP_ID])
 
     def import_mongodb(self, user_did):
-        """ same as import_mongo_db """
         mongodb_root = get_save_mongo_db_path(user_did)
-        self.restore_database(mongodb_root)
+        restore_mongodb_from_full_dir(mongodb_root)
 
     def import_mongodb_in_backup_server(self, user_did):
         vault_dir = get_vault_backup_path(user_did)
-        self.restore_database(vault_dir)
-
-    def restore_database(self, root_dir: Path):
-        if not root_dir.exists():
-            logging.info('The backup root dir does not exist, skip restore.')
-            return
-
-        # restore the data of the database from every 'dump_file'.
-        dump_files = [x for x in root_dir.iterdir() if x.suffix == BACKUP_FILE_SUFFIX]
-        for dump_file in dump_files:
-            line2 = f'mongorestore --uri="{self.mongodb_uri}" --drop --archive="{dump_file.as_posix()}"'
-            logging.info(f'[db_client] restore database from file {line2}.')
-            return_code = subprocess.call(line2, shell=True)
-            if return_code != 0:
-                raise BadRequestException(msg=f'Failed to restore mongodb data from file {dump_file.as_posix()}.')
+        restore_mongodb_from_full_dir(vault_dir)
 
 
 cli = DatabaseClient()

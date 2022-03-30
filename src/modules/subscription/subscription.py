@@ -50,7 +50,7 @@ class VaultSubscription(metaclass=Singleton):
         cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, doc, create_on_absence=True, is_extra=False)
         # INFO: user database will create with first collection creation.
         if not fm.create_dir(get_vault_path(user_did)):
-            raise BadRequestException('Failed to create folder for the user.')
+            raise BadRequestException(msg='Failed to create folder for the user.')
         return doc
 
     def __get_vault_info(self, doc):

@@ -82,7 +82,7 @@ class HiveSetting:
 
     @property
     def SENTRY_ENABLED(self):
-        return self.env_config('SENTRY_ENABLED', default='False', cast=str)
+        return self.env_config('SENTRY_ENABLED', default='False', cast=bool)
 
     @property
     def SENTRY_DSN(self):

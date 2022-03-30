@@ -292,7 +292,7 @@ class Executable:
                                   'anonymous': self.script.anonymous_app and self.script.anonymous_user
                               }, create_on_absence=True)
         if not data.get('inserted_id', None):
-            raise BadRequestException('Cannot retrieve the transaction ID.')
+            raise BadRequestException(msg='Cannot retrieve the transaction ID.')
 
         update_used_storage_for_mongodb_data(self.get_target_did(),
                                          get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
@@ -475,7 +475,7 @@ class FileHashExecutable(Executable):
             return self.get_output_data({"SHA256": doc[COL_IPFS_FILES_SHA256]})
         data, err = query_hash(self.get_target_did(), self.get_target_app_did(), body['path'])
         if err:
-            raise BadRequestException('Failed to get file hash code with error message: ' + str(err))
+            raise BadRequestException(msg='Failed to get file hash code with error message: ' + str(err))
         return self.get_output_data(data)
 
 

@@ -39,12 +39,11 @@ from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
 from src.utils.http_client import HttpClient
-from src.utils.http_exception import InvalidParameterException, BadRequestException, \
-    InsufficientStorageException
+from src.utils.http_exception import BadRequestException, InsufficientStorageException
 from src.utils.http_response import hive_restful_response
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME
-from src.utils_v1.did_mongo_db_resource import export_mongo_db_to_full_path, import_mongo_db_by_full_path
+from src.utils_v1.did_mongo_db_resource import dump_mongodb_to_full_path, restore_mongodb_from_full_path
 
 
 class IpfsBackupClient:
@@ -201,12 +200,10 @@ class IpfsBackupClient:
                 'path': gene_temp_file_name(),
                 'name': name
             }
-            ## dump the database data to snapshot file.
-            succeeded = export_mongo_db_to_full_path(d['name'], d['path'])
-            if not succeeded:
-                raise BadRequestException(msg=f'Failed to dump {d["name"]} for {user_did}')
+            # dump the database data to snapshot file.
+            dump_mongodb_to_full_path(d['name'], d['path'])
 
-            ## upload this snapshot file onto IPFS node.
+            # upload this snapshot file onto IPFS node.
             d['cid'] = fm.ipfs_upload_file_from_path(d['path'])
             d['sha256'] = fm.get_file_content_sha256(d['path'])
             d['size'] = d['path'].stat().st_size
@@ -264,7 +261,7 @@ class IpfsBackupClient:
                 logging.error(f'[IpfsBackupClient] Failed to download dump file for database {d["name"]}.')
                 temp_file.unlink()
                 raise BadRequestException(msg=msg)
-            import_mongo_db_by_full_path(temp_file)
+            restore_mongodb_from_full_path(temp_file)
             temp_file.unlink()
             logging.info(f'[IpfsBackupClient] Success to restore the dump file for database {d["name"]}.')
 

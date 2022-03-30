@@ -7,14 +7,14 @@ from flask import Flask, request
 from werkzeug.routing import BaseConverter
 import os
 
-import hive.settings
-import hive.main
-
 from src.settings import hive_setting
 from src.utils.sentry_error import init_sentry_hook
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from src.utils_v1.did.did_init import init_did_backend
 from src import view
+
+import hive.settings
+import hive.main
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')

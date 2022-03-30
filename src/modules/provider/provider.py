@@ -5,6 +5,7 @@ The node management for the node owner.
 """
 import logging
 
+import base58
 from bson import ObjectId
 
 from src import hive_setting
@@ -33,7 +34,11 @@ class Provider:
 
     @staticmethod
     def get_verified_owner_did():
-        info, err_msg = get_verifiable_credential_info(hive_setting.NODE_CREDENTIAL)
+        try:
+            credential = base58.b58decode(hive_setting.NODE_CREDENTIAL).decode('utf8')
+        except:
+            raise RuntimeError(f'get_verified_owner_did: invalid value of NODE_CREDENTIAL')
+        info, err_msg = get_verifiable_credential_info(credential)
         if err_msg:
             raise RuntimeError(f'get_verified_owner_did: {err_msg}')
         return info['__issuer']

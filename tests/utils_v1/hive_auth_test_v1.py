@@ -66,6 +66,7 @@ class DApp(Entity):
 
 
 if __name__ == "__main__":
+    import base58
     init_did_backend()
     # owner did
     service_did = DIDApp('hivenode',
@@ -73,4 +74,4 @@ if __name__ == "__main__":
                          passphrase='secret')
     # user did
     credential = service_did.get_owner_credential('did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM')
-    print(f'credential: {credential}')
+    print(f'credential: {base58.b58encode(credential)}')

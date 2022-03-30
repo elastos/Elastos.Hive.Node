@@ -218,7 +218,7 @@ class DatabaseClient:
                     f.write(chunk)
             return os.path.getsize(file_path.as_posix())
         except Exception as e:
-            raise BadRequestException('Failed to save the file content to local.')
+            raise BadRequestException(msg='Failed to save the file content to local.')
 
     def create_collection(self, user_did, app_did, collection_name):
         try:

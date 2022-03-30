@@ -170,7 +170,7 @@ class Auth(Entity, metaclass=Singleton):
             raise BadRequestException(msg='The credential is invalid.')
         if "credentialSubject" not in vc_json or type(vc_json["credentialSubject"]) != dict\
                 or "issuer" not in vc_json:
-            raise BadRequestException('The credential subject is invalid or the issuer does not exist.')
+            raise BadRequestException(msg='The credential subject is invalid or the issuer does not exist.')
         credential_info = vc_json["credentialSubject"]
 
         required_props = ['id', ]
@@ -178,7 +178,7 @@ class Auth(Entity, metaclass=Singleton):
             required_props.extend(props)
         not_exist_props = list(filter(lambda p: p not in credential_info, required_props))
         if not_exist_props:
-            raise BadRequestException(f"The credentialSubject's prop ({not_exist_props}) does not exists.")
+            raise BadRequestException(msg=f"The credentialSubject's prop ({not_exist_props}) does not exists.")
 
         credential_info["expTime"] = self.__get_presentation_credential_expire_time(vcs_json)
         credential_info["userDid"] = vc_json["issuer"]
@@ -193,13 +193,13 @@ class Auth(Entity, metaclass=Singleton):
             raise BadRequestException(msg='The presentation credential is invalid.')
         exp_time = lib.Credential_GetExpirationDate(vc)
         if exp_time <= 0:
-            raise BadRequestException("The credential's expiration date does not exist.")
+            raise BadRequestException(msg="The credential's expiration date does not exist.")
         return min(int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED, exp_time)
 
     def __create_access_token(self, credential_info, subject):
         doc = lib.DIDStore_LoadDID(self.store, self.did)
         if not doc:
-            raise BadRequestException(f'Can not load node did in creating access token: {self.get_error_message()}')
+            raise BadRequestException(msg=f'Can not load node did in creating access token: {self.get_error_message()}')
 
         builder = lib.DIDDocument_GetJwtBuilder(doc)
         if not builder:
@@ -322,7 +322,7 @@ class Auth(Entity, metaclass=Singleton):
     def create_order_proof(self, user_did, doc_id, amount=0, is_receipt=False):
         doc = lib.DIDStore_LoadDID(self.store, self.did)
         if not doc:
-            raise BadRequestException('Can not load service instance document in creating order proof.')
+            raise BadRequestException(msg='Can not load service instance document in creating order proof.')
 
         builder = lib.DIDDocument_GetJwtBuilder(doc)
         if not builder:

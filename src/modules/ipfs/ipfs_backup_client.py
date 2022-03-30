@@ -204,7 +204,7 @@ class IpfsBackupClient:
             ## dump the database data to snapshot file.
             succeeded = export_mongo_db_to_full_path(d['name'], d['path'])
             if not succeeded:
-                raise BadRequestException(f'Failed to dump {d["name"]} for {user_did}')
+                raise BadRequestException(msg=f'Failed to dump {d["name"]} for {user_did}')
 
             ## upload this snapshot file onto IPFS node.
             d['cid'] = fm.ipfs_upload_file_from_path(d['path'])

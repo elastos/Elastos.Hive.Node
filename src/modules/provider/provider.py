@@ -19,7 +19,7 @@ from src.utils.did_auth import check_auth
 from src.utils.http_exception import ForbiddenException, VaultNotFoundException, BackupNotFoundException, \
     ReceiptNotFoundException
 from src.utils.http_response import hive_restful_response
-from src.utils_v1.auth import get_verifiable_credential_info
+from src.utils_v1.auth import get_verifiable_credential_info, get_auth
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_BACKUP_SERVICE_USING, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_USE_STORAGE
@@ -27,7 +27,7 @@ from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SE
 
 class Provider:
     def __init__(self):
-        self.owner_did = Provider.get_verified_owner_did()
+        self.owner_did, self.credential = Provider.get_verified_owner_did()
         logging.info(f'Owner DID: {self.owner_did}')
         self.subscription = VaultSubscription()
         self.backup_server = IpfsBackupServer()
@@ -41,11 +41,21 @@ class Provider:
         info, err_msg = get_verifiable_credential_info(credential)
         if err_msg:
             raise RuntimeError(f'get_verified_owner_did: {err_msg}')
-        return info['__issuer']
+        return info['__issuer'], credential
 
     @hive_restful_response
     def get_node_info(self):
-        pass
+        auth = get_auth()
+        return {
+            "service_did": auth.did_str,
+            "owner_did": self.owner_did,
+            "ownership_presentation": auth.get_ownership_presentation(self.credential),
+            "name": hive_setting.NODE_NAME,
+            "email": hive_setting.NODE_EMAIL,
+            "description": hive_setting.NODE_DESCRIPTION,
+            "version": hive_setting.VERSION,
+            "last_commit_id": hive_setting.LAST_COMMIT
+        }
 
     @hive_restful_response
     def get_vaults(self):

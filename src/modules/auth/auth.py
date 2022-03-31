@@ -385,3 +385,12 @@ class Auth(Entity, metaclass=Singleton):
             raise BadRequestException(msg=f'the proof is expired (valid for 7 days)')
 
         lib.JWT_Destroy(jws)
+
+    def get_ownership_presentation(self, credential: str):
+        vc = lib.Credential_FromJson(credential.encode(), ffi.NULL)
+        if not vc:
+            raise BadRequestException(msg='invalid owner credential.')
+        vp_json = self.create_presentation(vc, create_nonce(), self.did_str)
+        if vp_json is None:
+            raise BadRequestException(msg=f'backup_sign_in: failed to create presentation.')
+        return json.loads(vp_json)

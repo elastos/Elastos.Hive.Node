@@ -27,7 +27,7 @@ Summary
     backup.get_state, backup.backup_restore, backup.promotion,
     payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info,
     about.get_version, about.get_commit_id,
-    provider.get_vaults, provider.get_backups, provider.get_filled_orders
+    provider.get_node_info, provider.get_vaults, provider.get_backups, provider.get_filled_orders
 
 01 Auth
 =======
@@ -363,6 +363,13 @@ get payments
 .. autoflask:: src:make_port()
   :undoc-static:
   :endpoints: provider.get_filled_orders
+
+get node information
+--------------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: provider.get_node_info
 
 Appendix A: Collections
 =======================

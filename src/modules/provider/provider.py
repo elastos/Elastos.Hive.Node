@@ -44,6 +44,10 @@ class Provider:
         return info['__issuer']
 
     @hive_restful_response
+    def get_node_info(self):
+        pass
+
+    @hive_restful_response
     def get_vaults(self):
         self.check_auth_owner_id()
         vaults = cli.find_many_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {},

@@ -18,6 +18,52 @@ def init_app(app):
     app.register_blueprint(blueprint)
 
 
+@blueprint.route('/api/v2/node/info', methods=['GET'])
+def get_node_info():
+    """ Get the information of this hive node.
+
+    .. :quickref: 09 Provider; Get Node Information
+
+    **Request**:
+
+    .. sourcecode:: http
+
+        None
+
+    **Response OK**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+
+    .. code-block:: json
+
+        {
+            "service_did": <str>,
+            "owner_did": <str>,
+            "ownership_presentation": <str>,
+            "name": <str>,
+            "email": <str>,
+            "description": <str>,
+            "version": <str>,
+            "last_commit_id": <str>
+        }
+
+    **Response Error**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 400 Bad Request
+
+    .. sourcecode:: http
+
+        HTTP/1.1 401 Unauthorized
+
+    """
+
+    return provider.get_node_info()
+
+
 @blueprint.route('/api/v2/provider/vaults', methods=['GET'])
 def get_vaults():
     """ Get all vault information in this hive node.

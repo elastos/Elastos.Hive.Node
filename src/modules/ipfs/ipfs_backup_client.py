@@ -131,7 +131,7 @@ class IpfsBackupClient:
         challenge_response, backup_service_instance_did = \
             self.auth.backup_client_sign_in(target_host, credential, 'DIDBackupAuthResponse')
 
-        access_token =  self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
+        access_token = self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
         target_host, target_did = credential_info['targetHost'], credential_info['targetDID']
         req = self.get_request(user_did)
         if not req:

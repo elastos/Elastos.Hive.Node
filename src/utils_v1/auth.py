@@ -68,7 +68,7 @@ def get_credential_info(vc_str, props: list):
     return credentialSubject, None
 
 
-def get_verifiable_credential_info(vc_str):
+def get_verifiable_credential_info(vc_str: str):
     """
     Common version of the credential parsing logic.
     @return all possible fields of the credential.

@@ -26,8 +26,8 @@ Summary
     scripting.delete_script, scripting.upload_file, scripting.download_file,
     backup.get_state, backup.backup_restore, backup.promotion,
     payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info,
-    about.get_version, about.get_commit_id,
-    provider.get_node_info, provider.get_vaults, provider.get_backups, provider.get_filled_orders
+    about.get_version, about.get_commit_id, about.get_node_info,
+    provider.get_vaults, provider.get_backups, provider.get_filled_orders
 
 01 Auth
 =======
@@ -338,6 +338,13 @@ get commit id
   :undoc-static:
   :endpoints: about.get_commit_id
 
+get node information
+--------------------
+
+.. autoflask:: src:make_port()
+  :undoc-static:
+  :endpoints: about.get_node_info
+
 09 Provider
 ===========
 
@@ -363,13 +370,6 @@ get payments
 .. autoflask:: src:make_port()
   :undoc-static:
   :endpoints: provider.get_filled_orders
-
-get node information
---------------------
-
-.. autoflask:: src:make_port()
-  :undoc-static:
-  :endpoints: provider.get_node_info
 
 Appendix A: Collections
 =======================

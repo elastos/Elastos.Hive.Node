@@ -20,8 +20,6 @@ script:
   - pytest --disable-pytest-warnings -xs tests_v1/hive_mongo_test.py
   - pytest --disable-pytest-warnings -xs tests_v1/hive_file_test.py
   - pytest --disable-pytest-warnings -xs tests_v1/hive_scripting_test.py
-  - pytest --disable-pytest-warnings -xs tests_v1/hive_backup_test.py
-  - pytest --disable-pytest-warnings -xs tests_v1/hive_pubsub_test.py
 
   - ./wait_node.sh
   - pytest --disable-pytest-warnings -xs tests/about_test.py

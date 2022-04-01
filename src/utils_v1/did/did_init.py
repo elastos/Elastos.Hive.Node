@@ -114,7 +114,7 @@ def init_did(mnemonic, passphrase, storepass, name, need_resolve=True):
     if need_resolve:
         doc = resolve_did(store, did, identity)
     else:
-        doc = lib.RootIdentity_NewDIDByIndex(identity, 0, storepass, ffi.NULL)
+        doc = lib.RootIdentity_NewDIDByIndex(identity, 0, storepass, ffi.NULL, True)
     destroy_identity(identity)
 
     return store, did, doc

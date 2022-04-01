@@ -56,7 +56,7 @@ class HiveInternalTest(LiveServerTestCase):
         return v, r.status_code
 
     def create_app(self):
-        app = create_app(hive_config='.env.test.v1')
+        app = create_app(hive_config='.env.deprecated_v1')
         app.config['TESTING'] = True
         # Default port is 5000
         app.config['LIVESERVER_PORT'] = PORT

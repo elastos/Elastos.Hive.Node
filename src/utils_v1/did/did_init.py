@@ -66,7 +66,7 @@ def get_did(identity):
     return did
 
 def check_did(store, did):
-    if lib.DIDStore_ContainsDID(store, did) == 1 and lib.DIDSotre_ContainsPrivateKeys(store, did) == 1:
+    if lib.DIDStore_ContainsDID(store, did) == 1 and lib.DIDStore_ContainsPrivateKeys(store, did) == 1:
         doc = lib.DIDStore_LoadDID(store, did)
         if doc:
             return doc

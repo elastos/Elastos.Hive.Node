@@ -86,7 +86,7 @@ class Entity:
         issuerid = self.did
         issuerdoc = self.doc
         expires = lib.DIDDocument_GetExpires(issuerdoc)
-        credid = lib.DIDURL_NewByDid(owner, self.name.encode())
+        credid = lib.DIDURL_NewFromDid(owner, self.name.encode())
         vc = lib.Issuer_CreateCredentialByString(self.issuer, owner, credid, types, 1,
                                                  json.dumps(props).encode(), expires, self.storepass)
         lib.DIDURL_Destroy(credid)
@@ -96,7 +96,7 @@ class Entity:
         return vc
 
     def create_presentation(self, vc, nonce, realm):
-        vpid = lib.DIDURL_NewByDid(self.did, "jwtvp".encode())
+        vpid = lib.DIDURL_NewFromDid(self.did, "jwtvp".encode())
         type0 = ffi.new("char[]", "VerifiablePresentation".encode())
         types = ffi.new("char **", type0)
 

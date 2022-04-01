@@ -171,11 +171,13 @@ def vault_get_app_stats():
 
         {
             "apps": [{
+                "name": <str>,
+                "developer_did": <str>
+                "icon_url": <str>,
+                "redirect_url": <str>,
                 "user_did": <str>,
                 "app_did": <str>,
-                "database_name": <str>,
-                "file_use_storage": <int>,
-                "db_use_storage": <int>,
+                "used_storage_size": <int>
             }]
         }
 

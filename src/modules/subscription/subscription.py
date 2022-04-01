@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 
 from src.utils.consts import IS_UPGRADED
+from src.utils.resolver import DidResolver
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
     VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, APP_ID, VAULT_ACCESS_R, USER_DID
@@ -117,15 +118,20 @@ class VaultSubscription(metaclass=Singleton):
         return {"apps": results}
 
     def get_app_detail(self, app):
+        info = {}
+        try:
+            info = DidResolver.get_appdid_info(app[APP_ID])
+        except Exception as e:
+            logging.error(f'get the info of the app did {app[APP_ID]} failed: {str(e)}')
         name = cli.get_user_database_name(app[USER_DID], app[APP_ID])
-        if not cli.is_database_exists(name):
-            return None
         return {
+            "name": info.get('name', ''),
+            "developer_did": info.get('developer', ''),
+            "icon_url": info.get('icon_url', ''),
+            "redirect_url": info.get('redirect_url', ''),
             "user_did": app[USER_DID],
             "app_did": app[APP_ID],
-            "database_name": name,
-            "file_use_storage": fm.ipfs_get_app_file_usage(name),
-            "db_use_storage": cli.get_database_size(name),
+            "used_storage_size": int(fm.ipfs_get_app_file_usage(name) + cli.get_database_size(name))
         }
 
     @hive_restful_response

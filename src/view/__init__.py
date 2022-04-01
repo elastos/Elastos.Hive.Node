@@ -35,7 +35,6 @@ class RetryIpfsBackupThread(threading.Thread):
 
 def init_app(app):
     logging.getLogger('v2_init').info('enter init_app')
-    about.init_app(app)
     auth.init_app(app)
     subscription.init_app(app)
     database.init_app(app)
@@ -43,6 +42,7 @@ def init_app(app):
     scripting.init_app(app)
     backup.init_app(app)
     provider.init_app(app)
+    about.init_app(app)
     if hive_setting.PAYMENT_ENABLED:
         payment.init_app(app)
 

@@ -1,3 +1,4 @@
+import json
 import logging
 
 from src import init_did_backend

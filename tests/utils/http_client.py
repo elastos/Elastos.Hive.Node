@@ -7,8 +7,7 @@ import logging
 
 from src.utils_v1.did.eladid import ffi, lib
 from src.utils.singleton import Singleton
-from tests.utils_v1.hive_auth_test_v1 import DApp, DIDApp
-from tests.utils_v1 import test_common
+from tests.utils_v1.hive_auth_test_v1 import AppDID, UserDID
 
 
 class TestConfig(metaclass=Singleton):
@@ -49,11 +48,10 @@ class RemoteResolver:
     def __init__(self, http_client, is_did2=False, is_owner=False):
         """ For HttpClient and only manage DIDs. """
         # did: did:elastos:imedtHyjLS155Gedhv7vKP3FTWjpBUAUm4
-        self.user_did = DIDApp("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap")
-        self.user_did2 = DIDApp("crossUser", "stage west lava group genre ten farm pony small family february drink")
+        self.user_did = UserDID("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap")
+        self.user_did2 = UserDID("crossUser", "stage west lava group genre ten farm pony small family february drink")
         self.owner_did = self.user_did
-        self.app_did = DApp("testapp", test_common.app_id,
-                            "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+        self.app_did = AppDID("testapp", "chimney limit involve fine absent topic catch chalk goat era suit leisure")
         self.test_config = TestConfig()
         self.http_client = http_client
         self.is_did2 = is_did2
@@ -79,7 +77,7 @@ class RemoteResolver:
     def get_user_did_str(self):
         return self.user_did.get_did_string()
 
-    def __get_remote_token(self, did: DIDApp):
+    def __get_remote_token(self, did: UserDID):
         return self.auth(self.sign_in(), did)
 
     def get_node_did(self):
@@ -109,7 +107,7 @@ class RemoteResolver:
         assert response.status_code == 201
         return response.json()["challenge"]
 
-    def __get_auth_token_by_challenge(self, challenge, did: DIDApp):
+    def __get_auth_token_by_challenge(self, challenge, did: UserDID):
         jws = lib.DefaultJWSParser_Parse(challenge.encode())
         assert jws, f'Cannot get challenge: {ffi.string(lib.DIDError_GetLastErrorMessage()).decode()}'
         aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
@@ -123,7 +121,7 @@ class RemoteResolver:
         vp_json = self.app_did.create_presentation(vc, nonce, hive_did)
         return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
 
-    def auth(self, challenge, did: DIDApp):
+    def auth(self, challenge, did: UserDID):
         auth_token = self.__get_auth_token_by_challenge(challenge, did)
         response = self.http_client.post('/api/v2/did/auth', {"challenge_response": auth_token},
                                          need_token=False, is_skip_prefix=True)

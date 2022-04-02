@@ -27,7 +27,7 @@ class ElaResolver:
             return bytes([int(s[x:x + 2], 16) for x in range(0, len(s), 2)])
 
 
-class DidResolver:
+class DIDResolver:
     @staticmethod
     def get_appdid_info(did: str):
         logging.info(f'get_appdid_info: did, {did}')
@@ -36,14 +36,14 @@ class DidResolver:
 
         c_did = lib.DID_FromString(did.encode())
         if not c_did:
-            raise BadRequestException(msg=DidResolver.get_errmsg("get_application_did_info: can't create c_did"))
+            raise BadRequestException(msg=DIDResolver.get_errmsg("get_application_did_info: can't create c_did"))
 
         c_status = ffi.new("DIDStatus *")
         c_doc = lib.DID_Resolve(c_did, c_status, True)
         ffi.release(c_status)
         if not c_doc:
             lib.DID_Destroy(c_did)
-            raise BadRequestException(msg=DidResolver.get_errmsg("get_application_did_info: can't resolve c_doc"))
+            raise BadRequestException(msg=DIDResolver.get_errmsg("get_application_did_info: can't resolve c_doc"))
 
         def get_appinfo_props(vc_json: dict):
             props = {'name': '', 'icon_url': '', 'redirect_url': ''}
@@ -58,8 +58,8 @@ class DidResolver:
         def get_developer_props(vc_json: dict):
             return {'developer_did': vc_json.get('issuer', '')}
 
-        info = DidResolver.get_info_from_credential(c_did, c_doc, 'appinfo', get_appinfo_props)
-        info.update(DidResolver.get_info_from_credential(c_did, c_doc, 'developer', get_developer_props))
+        info = DIDResolver.get_info_from_credential(c_did, c_doc, 'appinfo', get_appinfo_props)
+        info.update(DIDResolver.get_info_from_credential(c_did, c_doc, 'developer', get_developer_props))
 
         lib.DIDDocument_Destroy(c_doc)
         lib.DID_Destroy(c_did)
@@ -69,24 +69,24 @@ class DidResolver:
     def get_info_from_credential(c_did, c_doc, fragment: str, props_callback):
         c_did_url = lib.DIDURL_NewFromDid(c_did, fragment.encode())
         if not c_did_url:
-            logging.error(DidResolver.get_errmsg(f"get_application_did_info: can't create #{fragment} url"))
+            logging.error(DIDResolver.get_errmsg(f"get_application_did_info: can't create #{fragment} url"))
             return {}
 
         c_vc = lib.DIDDocument_GetCredential(c_doc, c_did_url)
         if not c_vc:
             lib.DIDURL_Destroy(c_did_url)
-            logging.error(DidResolver.get_errmsg(f"get_application_did_info: can't get #{fragment} credential"))
+            logging.error(DIDResolver.get_errmsg(f"get_application_did_info: can't get #{fragment} credential"))
             return {}
 
         if lib.Credential_IsValid(c_vc) != 1:
             lib.DIDURL_Destroy(c_did_url)
-            logging.error(DidResolver.get_errmsg(f"get_application_did_info: invalid #{fragment} credential"))
+            logging.error(DIDResolver.get_errmsg(f"get_application_did_info: invalid #{fragment} credential"))
             return {}
 
         c_vc_str = lib.Credential_ToJson(c_vc, True)
         if not c_vc_str:
             lib.DIDURL_Destroy(c_did_url)
-            logging.error(DidResolver.get_errmsg(f"get_application_did_info: can't get #{fragment} credential json"))
+            logging.error(DIDResolver.get_errmsg(f"get_application_did_info: can't get #{fragment} credential json"))
             return {}
 
         return props_callback(json.loads(ffi.string(c_vc_str).decode()))
@@ -102,5 +102,5 @@ class DidResolver:
 
 if __name__ == '__main__':
     init_did_backend()
-    info = DidResolver.get_appdid_info('did:elastos:iqtWRVjz7gsYhyuQEb1hYNNmWQt1Z9geXg')
+    info = DIDResolver.get_appdid_info('did:elastos:iqtWRVjz7gsYhyuQEb1hYNNmWQt1Z9geXg')
     print(f'appdid info: {info}')

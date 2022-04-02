@@ -102,7 +102,7 @@ class RemoteResolver:
         return node_did
 
     def sign_in(self):
-        doc_c = lib.DIDStore_LoadDID(self.app_did.store, self.app_did.did)
+        doc_c = lib.DIDStore_LoadDID(self.app_did.did_store, self.app_did.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc_c, True)).decode()
         doc = json.loads(doc_str)
         response = self.http_client.post('/api/v2/did/signin', {"id": doc}, need_token=False, is_skip_prefix=True)

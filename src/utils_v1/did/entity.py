@@ -18,19 +18,46 @@ class Entity:
     storepass = "password"
     did_store = None
     did = None
-    did_str = None
     doc = None
+    did_str = None
 
-    def __init__(self, name, mnemonic=None, passphrase=None, need_resolve=True):
+    def __init__(self, name, mnemonic=None, passphrase=None, need_resolve=True,
+                 from_file=False):
         self.name = name
-        if mnemonic is not None:
-            self.mnemonic = mnemonic
-        if passphrase is not None:
-            self.passphrase = passphrase
-        self.init_did(need_resolve)
+        if from_file:
+            self.init_did_from_file()
+        else:
+            if mnemonic is not None:
+                self.mnemonic = mnemonic
+            if passphrase is not None:
+                self.passphrase = passphrase
+            self.init_did(need_resolve)
         self.did_str = self.get_did_string_from_did(self.did)
-        logging.info(f"    V2 Back-end DID string: {self.did_str}, need_resolver={need_resolve}, "
-                     f"name={self.name}, mnemonic={self.mnemonic}")
+
+    def init_did_from_file(self):
+        # TODO: release c_id
+        store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
+        self.did_store = lib.DIDStore_Open(store_dir.encode())
+        if not self.did_store:
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't create store"))
+
+        file_path = hive_setting.DATA_STORE_PATH + os.sep + 'tmp/ipUGBPuAgEx6Le99f4TyDfNZtXVT2NKXPR'
+        ret_value = lib.DIDStore_ImportDID(self.did_store, self.storepass.encode(),
+                                           file_path.encode(), '123456'.encode())
+        if ret_value != 0:
+            # TODO: check error: Invalid export data, the fingerprint mismatch.
+            logging.error(DIDResolver.get_errmsg("Entity.init_from_file: can't import did"))
+
+        c_id = lib.DIDStore_GetDefaultRootIdentity(self.did_store)
+        if not c_id:
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't import did"))
+        root_identity = lib.DIDStore_LoadRootIdentity(self.did_store, c_id)
+        if not root_identity:
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't load root identity"))
+        self.did = lib.RootIdentity_GetDIDByIndex(root_identity, 0)
+        if not self.did:
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't load did"))
+        self.doc = self.get_doc_from_did(self.did)
 
     def init_did(self, need_resolve):
         store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
@@ -97,6 +124,8 @@ class Entity:
             lib.DIDDocument_Destroy(self.doc)
         if self.did:
             lib.DID_Destroy(self.did)
+        if self.did_store:
+            lib.DIDStore_Destroy(self.did_store)
 
     def get_did_string_from_did(self, did):
         if not did:

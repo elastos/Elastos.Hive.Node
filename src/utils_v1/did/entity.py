@@ -1,39 +1,102 @@
 import logging
 import json
+import os
 from datetime import datetime
 import requests
 
 from src.utils_v1.did.eladid import ffi, lib
-from src.utils_v1.did.did_init import init_did
+from src.utils.http_exception import BadRequestException
+from src.utils.resolver import DidResolver
 from src.settings import hive_setting
 from src.utils_v1.error_code import SUCCESS
 
 
 class Entity:
+    name = "Entity"
+    mnemonic = None
     passphrase = "secret"
     storepass = "password"
-    store = None
-    doc = None
+    did_store = None
     did = None
-    mnemonic = None
     did_str = None
-    name = "Entity"
+    doc = None
 
     def __init__(self, name, mnemonic=None, passphrase=None, need_resolve=True):
         self.name = name
-        if not mnemonic is None:
+        if mnemonic is not None:
             self.mnemonic = mnemonic
-        if not passphrase is None:
+        if passphrase is not None:
             self.passphrase = passphrase
-        self.store, self.did, self.doc = init_did(self.mnemonic, self.passphrase, self.storepass, self.name,
-                                                  need_resolve=need_resolve)
-        self.storepass = self.storepass.encode()
+        self.init_did(need_resolve)
         self.did_str = self.get_did_string_from_did(self.did)
-        print(f"    V2 Back-end DID string: {self.did_str}, need_resolver={need_resolve}, "
-              f"name={self.name}, mnemonic={self.mnemonic}")
+        logging.info(f"    V2 Back-end DID string: {self.did_str}, need_resolver={need_resolve}, "
+                     f"name={self.name}, mnemonic={self.mnemonic}")
+
+    def init_did(self, need_resolve):
+        store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
+        self.did_store = lib.DIDStore_Open(store_dir.encode())
+        if not self.did_store:
+            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create store"))
+
+        root_identity = self.get_root_identity()
+        self.did, self.doc = self.init_did_by_root_identity(root_identity, need_resolve=need_resolve)
+        lib.RootIdentity_Destroy(root_identity)
+
+    def get_root_identity(self):
+        # TODO: release c_id
+        c_id = lib.RootIdentity_CreateId(self.mnemonic.encode(), self.passphrase.encode())
+        if not c_id:
+            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create root identity id string"))
+
+        if lib.DIDStore_ContainsRootIdentity(self.did_store, c_id) == 1:
+            root_identity = lib.DIDStore_LoadRootIdentity(self.did_store, c_id)
+            if not root_identity:
+                raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't load root identity"))
+            return root_identity
+
+        root_identity = lib.RootIdentity_Create(self.mnemonic.encode(),
+                                                self.passphrase.encode(),
+                                                True, self.did_store, self.storepass.encode())
+        if not root_identity:
+            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create root identity"))
+        return root_identity
+
+    def init_did_by_root_identity(self, root_identity, need_resolve=True):
+        # TODO: Should align with Hive JS.
+        c_did, c_doc = lib.RootIdentity_GetDIDByIndex(root_identity, 0), None
+        if c_did and lib.DIDStore_ContainsDID(self.did_store, c_did) == 1 \
+                and lib.DIDStore_ContainsPrivateKeys(self.did_store, c_did) == 1:
+            # direct get
+            return c_did, self.get_doc_from_did(c_did)
+
+        if need_resolve:
+            # resolve, then get
+            success = lib.RootIdentity_SynchronizeByIndex(root_identity, 0, ffi.NULL)
+            if not success:
+                raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create did doc"))
+            return c_did, self.get_doc_from_did(c_did)
+
+        # create, then get
+        c_doc = lib.RootIdentity_NewDIDByIndex(root_identity, 0, self.storepass.encode(), ffi.NULL, True)
+        if not c_doc:
+            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create did doc"))
+        c_did = lib.DIDDocument_GetSubject(c_doc)
+        if not c_did:
+            lib.DIDDocument_Destroy(c_doc)
+            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't get doc from created did"))
+        return c_did, c_doc
+
+    def get_doc_from_did(self, c_did):
+        c_doc = lib.DIDStore_LoadDID(self.did_store, c_did)
+        if not c_doc:
+            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't load did doc"))
+        return c_doc
 
     def __del__(self):
-        pass
+        if self.doc:
+            lib.DIDDocument_Destroy(self.doc)
+        if self.did:
+            lib.DID_Destroy(self.did)
 
     def get_did_string_from_did(self, did):
         if not did:
@@ -53,7 +116,7 @@ class Entity:
         return self.did_str
 
     def get_did_store(self):
-        return self.store
+        return self.did_store
 
     def get_did(self):
         return self.did
@@ -81,7 +144,7 @@ class Entity:
         expires = lib.DIDDocument_GetExpires(issuerdoc)
         credid = lib.DIDURL_NewFromDid(owner, self.name.encode())
         vc = lib.Issuer_CreateCredentialByString(self.issuer, owner, credid, types, 1,
-                                                 json.dumps(props).encode(), expires, self.storepass)
+                                                 json.dumps(props).encode(), expires, self.storepass.encode())
         lib.DIDURL_Destroy(credid)
         # vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
         # logging.debug(f"vcJson: {vcJson}")
@@ -94,7 +157,7 @@ class Entity:
         types = ffi.new("char **", type0)
 
         vp = lib.Presentation_Create(vpid, self.did, types, 1, nonce.encode(),
-                realm.encode(), ffi.NULL, self.store, self.storepass, 1, vc)
+                                     realm.encode(), ffi.NULL, self.did_store, self.storepass.encode(), 1, vc)
         if not vp:
             logging.error(self.get_error_message())
         lib.DIDURL_Destroy(vpid)
@@ -106,7 +169,7 @@ class Entity:
         return vp_json
 
     def create_vp_token(self, vp_json, subject, hive_did, expire):
-        doc = lib.DIDStore_LoadDID(self.store, self.did)
+        doc = lib.DIDStore_LoadDID(self.did_store, self.did)
         builder = lib.DIDDocument_GetJwtBuilder(doc)
         ticks = int(datetime.now().timestamp())
         iat = ticks
@@ -123,7 +186,7 @@ class Entity:
         lib.JWTBuilder_SetNotBefore(builder, nbf)
         lib.JWTBuilder_SetClaimWithJson(builder, "presentation".encode(), vp_json.encode())
 
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass.encode())
         token = ffi.string(lib.JWTBuilder_Compact(builder)).decode()
         lib.JWTBuilder_Destroy(builder)
         # print(token)
@@ -135,7 +198,7 @@ class Entity:
             return None, None,"The credential string is error, unable to rebuild to a credential object."
 
         #sign_in
-        doc = lib.DIDStore_LoadDID(self.store, self.did)
+        doc = lib.DIDStore_LoadDID(self.did_store, self.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
         doc = json.loads(doc_str)
 
@@ -219,5 +282,3 @@ class Entity:
             logging.error(err)
             return None, None, err
         return rt, r.status_code, err
-
-

@@ -4,6 +4,7 @@ from datetime import datetime
 from flask import request
 
 from src import hive_setting
+from src.utils.resolver import DIDResolver
 from src.utils_v1.constants import USER_DID, APP_ID, APP_INSTANCE_DID
 from src.utils_v1.did.eladid import ffi, lib
 from src.modules.auth.auth import Auth
@@ -31,7 +32,7 @@ def get_credential_info(vc_str, props: list):
         return None, "The credential string is error, unable to rebuild to a credential object."
 
     if lib.Credential_IsValid(vc) != 1:
-        return None, get_error_message(f"Credential isValid: {get_error_message()}")
+        return None, DIDResolver.get_errmsg(f"Credential isValid")
 
     vc_json = json.loads(vc_str)
     if not "credentialSubject" in vc_json:
@@ -57,7 +58,7 @@ def get_credential_info(vc_str, props: list):
 
     expTime = lib.Credential_GetExpirationDate(vc)
     if expTime == 0:
-        return None, get_error_message(f"Credential getExpirationDate: {get_error_message()}")
+        return None, DIDResolver.get_errmsg('Credential getExpirationDate')
 
     exp = int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED
     if expTime > exp:
@@ -79,7 +80,7 @@ def get_verifiable_credential_info(vc_str: str):
     if not vc:
         return None, "The credential is not a valid JSON format."
     if lib.Credential_IsValid(vc) != 1:
-        return None, get_error_message(f"The credential is invalid: {get_error_message()}")
+        return None, DIDResolver.get_errmsg('The credential is invalid')
 
     vc_json = json.loads(vc_str)
     if "credentialSubject" not in vc_json:
@@ -93,9 +94,9 @@ def get_verifiable_credential_info(vc_str: str):
     credential_subject["__issuer"] = vc_json["issuer"]
     credential_subject["__expirationDate"] = lib.Credential_GetExpirationDate(vc)
     if credential_subject["__expirationDate"] == 0:
-        return None, get_error_message(f"The expirationDate is invalid in credential: {get_error_message()}")
+        return None, DIDResolver.get_errmsg('The expirationDate is invalid in credential')
     if int(datetime.now().timestamp()) > credential_subject["__expirationDate"]:
-        return None, get_error_message(f"The expirationDate is expired in credential.")
+        return None, DIDResolver.get_errmsg('The expirationDate is expired in credential.')
     return credential_subject, None
 
 
@@ -118,15 +119,6 @@ def get_did_string_from_did(did):
     return "did:" + method + ":" + sep_did
 
 
-def get_error_message(prompt=None):
-    """ helper method to get error message from did.so """
-    error = lib.DIDError_GetLastErrorMessage()
-    if not error:
-        return str(prompt) + ': Unknown DID error.'
-    err_message = ffi.string(error).decode()
-    return err_message if not prompt else f'[{prompt}] {err_message}'
-
-
 def get_info_from_token(token):
     if token is None:
         return None, "Then token is none!"
@@ -140,12 +132,12 @@ def get_info_from_token(token):
 
     jws = lib.DefaultJWSParser_Parse(token.encode())
     if not jws:
-        return None, get_error_message("JWS parser error!")
+        return None, DIDResolver.get_errmsg("JWS parser error!")
 
     issuer = lib.JWT_GetIssuer(jws)
     if not issuer:
         lib.JWT_Destroy(jws)
-        return None, get_error_message("JWT getIssuer error!")
+        return None, DIDResolver.get_errmsg("JWT getIssuer error!")
 
     issuer = ffi.string(issuer).decode()
     if issuer != get_current_node_did_string():

@@ -8,7 +8,7 @@ import json
 
 from tests.utils.http_client import HttpClient
 from tests import init_test
-from tests.utils_v1 import test_common
+from tests.utils_v1.hive_auth_test_v1 import AppDID
 
 
 class IpfsScriptingTestCase(unittest.TestCase):
@@ -24,7 +24,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.name_not_exist = 'name_not_exist'
         # Owner's did and application did.
         self.did = self.cli.get_current_did()
-        self.app_did = test_common.app_id
+        self.app_did = AppDID.app_did
 
     @staticmethod
     def _subscribe():

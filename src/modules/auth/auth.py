@@ -11,6 +11,7 @@ from datetime import datetime
 from src.utils_v1.did.eladid import ffi, lib
 
 from src import hive_setting
+from src.utils.resolver import DIDResolver
 from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED
 from src.utils_v1.did.entity import Entity
 from src.utils_v1.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
@@ -71,7 +72,7 @@ class Auth(Entity, metaclass=Singleton):
         """
         builder = lib.DIDDocument_GetJwtBuilder(self.doc)  # service instance doc
         if not builder:
-            raise BadRequestException(msg=f'Can not get challenge builder: {self.get_error_message()}.')
+            raise BadRequestException(msg=DIDResolver.get_errmsg('Can not get challenge builder'))
         lib.JWTBuilder_SetHeader(builder, "type".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
         lib.JWTBuilder_SetSubject(builder, "DIDAuthChallenge".encode())
@@ -80,7 +81,7 @@ class Auth(Entity, metaclass=Singleton):
         lib.JWTBuilder_SetExpiration(builder, expire_time)
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass.encode())
         token = lib.JWTBuilder_Compact(builder)
-        msg = '' if token else self.get_error_message()
+        msg = '' if token else DIDResolver.get_errmsg()
         lib.JWTBuilder_Destroy(builder)
         if not token:
             raise BadRequestException(msg=f'Failed to create challenge token: {msg}')
@@ -118,17 +119,17 @@ class Auth(Entity, metaclass=Singleton):
     def __get_values_from_challenge_response(self, challenge_response):
         challenge_response_cstr = lib.DefaultJWSParser_Parse(challenge_response.encode())
         if not challenge_response_cstr:
-            raise BadRequestException(msg=f'Invalid challenge response: {self.get_error_message()}')
+            raise BadRequestException(msg=f'Invalid challenge response: {DIDResolver.get_errmsg()}')
 
         presentation_cstr = lib.JWT_GetClaimAsJson(challenge_response_cstr, "presentation".encode())
         lib.JWT_Destroy(challenge_response_cstr)
         if not presentation_cstr:
-            raise BadRequestException(msg=f'Can not get presentation cstr: {self.get_error_message()}')
+            raise BadRequestException(msg=f'Can not get presentation cstr: {DIDResolver.get_errmsg()}')
         presentation = lib.Presentation_FromJson(presentation_cstr)
         if not presentation or lib.Presentation_IsValid(presentation) != 1:
-            raise BadRequestException(msg=f'The presentation is invalid: {self.get_error_message()}')
+            raise BadRequestException(msg=f'The presentation is invalid: {DIDResolver.get_errmsg()}')
         if lib.Presentation_GetCredentialCount(presentation) < 1:
-            raise BadRequestException(msg=f'No presentation credential exists: {self.get_error_message()}')
+            raise BadRequestException(msg=f'No presentation credential exists: {DIDResolver.get_errmsg()}')
 
         self.__validate_presentation_realm(presentation)
         nonce, nonce_info = self.__get_presentation_nonce(presentation)
@@ -137,7 +138,7 @@ class Auth(Entity, metaclass=Singleton):
     def __get_presentation_nonce(self, presentation):
         nonce = lib.Presentation_GetNonce(presentation)
         if not nonce:
-            raise BadRequestException(msg=f'Failed to get presentation nonce: {self.get_error_message()}')
+            raise BadRequestException(msg=f'Failed to get presentation nonce: {DIDResolver.get_errmsg()}')
         nonce_str = ffi.string(nonce).decode()
         if not nonce_str:
             raise BadRequestException(msg='Invalid presentation nonce.')
@@ -149,7 +150,7 @@ class Auth(Entity, metaclass=Singleton):
     def __validate_presentation_realm(self, presentation):
         realm = lib.Presentation_GetRealm(presentation)
         if not realm:
-            raise BadRequestException(msg=f'Can not get presentation realm: {self.get_error_message()}')
+            raise BadRequestException(msg=f'Can not get presentation realm: {DIDResolver.get_errmsg()}')
         realm = ffi.string(realm).decode()
         if not realm or realm != self.get_did_string():
             raise BadRequestException(msg=f'Invalid presentation realm or not match.')
@@ -196,11 +197,11 @@ class Auth(Entity, metaclass=Singleton):
     def __create_access_token(self, credential_info, subject):
         doc = lib.DIDStore_LoadDID(self.did_store, self.did)
         if not doc:
-            raise BadRequestException(msg=f'Can not load node did in creating access token: {self.get_error_message()}')
+            raise BadRequestException(msg=f'Can not load node did in creating access token: {DIDResolver.get_errmsg()}')
 
         builder = lib.DIDDocument_GetJwtBuilder(doc)
         if not builder:
-            raise BadRequestException(msg=f'Can not get builder for creating access token: {self.get_error_message()}')
+            raise BadRequestException(msg=f'Can not get builder for creating access token: {DIDResolver.get_errmsg()}')
 
         lib.JWTBuilder_SetHeader(builder, "typ".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
@@ -210,13 +211,13 @@ class Auth(Entity, metaclass=Singleton):
 
         props = {k: credential_info[k] for k in credential_info if k not in ['id', 'expTime']}
         if not lib.JWTBuilder_SetClaim(builder, "props".encode(), json.dumps(props).encode()):
-            msg = self.get_error_message()
+            msg = DIDResolver.get_errmsg()
             lib.JWTBuilder_Destroy(builder)
             raise BadRequestException(msg=f'Can not set claim in creating access token: {msg}')
 
         lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass.encode())
         token = lib.JWTBuilder_Compact(builder)
-        msg = '' if token else self.get_error_message()
+        msg = '' if token else DIDResolver.get_errmsg()
         lib.JWTBuilder_Destroy(builder)
         if not token:
             raise BadRequestException(msg=f'Can not build token in creating access token: {msg}')
@@ -228,12 +229,6 @@ class Auth(Entity, metaclass=Singleton):
         credential_info = self.__get_auth_info_from_challenge_response(challenge_response, ["targetHost", "targetDID"])
         access_token = self.__create_access_token(credential_info, "BackupToken")
         return {'token': access_token}
-
-    def get_error_message(self, prompt=None):
-        """ helper method to get error message from did.so """
-        error_msg = lib.DIDError_GetLastErrorMessage()
-        msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
-        return msg if not prompt else f'[{prompt}] {msg}'
 
     def get_backup_credential_info(self, credential):
         """ for vault /backup """
@@ -261,7 +256,7 @@ class Auth(Entity, metaclass=Singleton):
         jws = lib.DefaultJWSParser_Parse(body["challenge"].encode())
         if not jws:
             raise InvalidParameterException(
-                msg=f'backup_sign_in: failed to parse challenge with error {self.get_error_message()}.')
+                msg=f'backup_sign_in: failed to parse challenge with error {DIDResolver.get_errmsg()}.')
 
         aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
         if aud != self.get_did_string():
@@ -302,7 +297,7 @@ class Auth(Entity, metaclass=Singleton):
         jws = lib.DefaultJWSParser_Parse(body["token"].encode())
         if not jws:
             raise InvalidParameterException(
-                msg=f'backup_auth: failed to parse token with error {self.get_error_message()}.')
+                msg=f'backup_auth: failed to parse token with error {DIDResolver.get_errmsg()}.')
 
         audience = ffi.string(lib.JWT_GetAudience(jws)).decode()
         if audience != self.get_did_string():
@@ -348,12 +343,12 @@ class Auth(Entity, metaclass=Singleton):
         # INFO：DefaultJWSParser_Parse will validate the sign information.
         jws = lib.DefaultJWSParser_Parse(proof.encode())
         if not jws:
-            raise BadRequestException(msg=self.get_error_message('parse the proof error'))
+            raise BadRequestException(msg=DIDResolver.get_errmsg('parse the proof error'))
 
         issuer = lib.JWT_GetIssuer(jws)
         if not issuer:
             lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=self.get_error_message('the issue of the proof error'))
+            raise BadRequestException(msg=DIDResolver.get_errmsg('the issue of the proof error'))
         if self.did_str != ffi.string(issuer).decode():
             lib.JWT_Destroy(jws)
             raise BadRequestException(msg=f'the issue of the proof not match: {ffi.string(issuer).decode()}')
@@ -361,7 +356,7 @@ class Auth(Entity, metaclass=Singleton):
         audience = lib.JWT_GetAudience(jws)
         if not audience:
             lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=self.get_error_message('the audience of the proof error'))
+            raise BadRequestException(msg=DIDResolver.get_errmsg('the audience of the proof error'))
         if user_did != ffi.string(audience).decode():
             lib.JWT_Destroy(jws)
             raise BadRequestException(msg=f'the audience of the proof not match: {ffi.string(audience).decode()}')
@@ -369,7 +364,7 @@ class Auth(Entity, metaclass=Singleton):
         props = lib.JWT_GetClaim(jws, "props".encode())
         if not props:
             lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=self.get_error_message('the claim of the proof error'))
+            raise BadRequestException(msg=DIDResolver.get_errmsg('the claim of the proof error'))
         props_json = json.loads(ffi.string(props).decode())
         if props_json.get('order_id') != order_id:
             lib.JWT_Destroy(jws)

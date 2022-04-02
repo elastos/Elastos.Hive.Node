@@ -29,10 +29,6 @@ def print_err(fun_name=None):
     msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
     logging.error(f"{err + msg}")
 
-def get_error_message():
-    error_msg = lib.DIDError_GetLastErrorMessage()
-    return ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
-
 
 def init_did_backend():
     logging.getLogger('did_init').info("Initializing the DID backend")

@@ -27,9 +27,6 @@ def print_err(fun_name=None):
         err += fun_name + ": "
     logging.error(f"{err + str(ffi.string(lib.DIDError_GetLastErrorMessage()), encoding='utf-8')}")
 
-def get_error_message():
-    return str(ffi.string(lib.DIDError_GetLastErrorMessage()), encoding='utf-8')
-
 
 def init_did_backend():
     logging.getLogger('did_init').info("Initializing the DID backend")

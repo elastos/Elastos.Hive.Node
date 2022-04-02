@@ -6,7 +6,7 @@ import requests
 
 from src.utils_v1.did.eladid import ffi, lib
 from src.utils.http_exception import BadRequestException
-from src.utils.resolver import DidResolver
+from src.utils.resolver import DIDResolver
 from src.settings import hive_setting
 from src.utils_v1.error_code import SUCCESS
 
@@ -36,7 +36,7 @@ class Entity:
         store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
         self.did_store = lib.DIDStore_Open(store_dir.encode())
         if not self.did_store:
-            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create store"))
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't create store"))
 
         root_identity = self.get_root_identity()
         self.did, self.doc = self.init_did_by_root_identity(root_identity, need_resolve=need_resolve)
@@ -46,19 +46,19 @@ class Entity:
         # TODO: release c_id
         c_id = lib.RootIdentity_CreateId(self.mnemonic.encode(), self.passphrase.encode())
         if not c_id:
-            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create root identity id string"))
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't create root identity id string"))
 
         if lib.DIDStore_ContainsRootIdentity(self.did_store, c_id) == 1:
             root_identity = lib.DIDStore_LoadRootIdentity(self.did_store, c_id)
             if not root_identity:
-                raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't load root identity"))
+                raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't load root identity"))
             return root_identity
 
         root_identity = lib.RootIdentity_Create(self.mnemonic.encode(),
                                                 self.passphrase.encode(),
                                                 True, self.did_store, self.storepass.encode())
         if not root_identity:
-            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create root identity"))
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't create root identity"))
         return root_identity
 
     def init_did_by_root_identity(self, root_identity, need_resolve=True):
@@ -73,23 +73,23 @@ class Entity:
             # resolve, then get
             success = lib.RootIdentity_SynchronizeByIndex(root_identity, 0, ffi.NULL)
             if not success:
-                raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create did doc"))
+                raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't create did doc"))
             return c_did, self.get_doc_from_did(c_did)
 
         # create, then get
         c_doc = lib.RootIdentity_NewDIDByIndex(root_identity, 0, self.storepass.encode(), ffi.NULL, True)
         if not c_doc:
-            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't create did doc"))
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't create did doc"))
         c_did = lib.DIDDocument_GetSubject(c_doc)
         if not c_did:
             lib.DIDDocument_Destroy(c_doc)
-            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't get doc from created did"))
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't get doc from created did"))
         return c_did, c_doc
 
     def get_doc_from_did(self, c_did):
         c_doc = lib.DIDStore_LoadDID(self.did_store, c_did)
         if not c_doc:
-            raise BadRequestException(msg=DidResolver.get_errmsg("Entity.init: can't load did doc"))
+            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't load did doc"))
         return c_doc
 
     def __del__(self):
@@ -130,27 +130,6 @@ class Entity:
     def get_store_password(self):
         return self.storepass
 
-    def get_error_message(self, prompt=None):
-        """ helper method to get error message from did.so """
-        err_message = ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
-        return err_message if not prompt else f'[{prompt}] {err_message}'
-
-    def issue_auth_vc(self, type, props, owner):
-        type0 = ffi.new("char[]", type.encode())
-        types = ffi.new("char **", type0)
-
-        issuerid = self.did
-        issuerdoc = self.doc
-        expires = lib.DIDDocument_GetExpires(issuerdoc)
-        credid = lib.DIDURL_NewFromDid(owner, self.name.encode())
-        vc = lib.Issuer_CreateCredentialByString(self.issuer, owner, credid, types, 1,
-                                                 json.dumps(props).encode(), expires, self.storepass.encode())
-        lib.DIDURL_Destroy(credid)
-        # vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
-        # logging.debug(f"vcJson: {vcJson}")
-        # print(vcJson)
-        return vc
-
     def create_presentation(self, vc, nonce, realm):
         vpid = lib.DIDURL_NewFromDid(self.did, "jwtvp".encode())
         type0 = ffi.new("char[]", "VerifiablePresentation".encode())
@@ -159,7 +138,7 @@ class Entity:
         vp = lib.Presentation_Create(vpid, self.did, types, 1, nonce.encode(),
                                      realm.encode(), ffi.NULL, self.did_store, self.storepass.encode(), 1, vc)
         if not vp:
-            logging.error(self.get_error_message())
+            logging.error(DIDResolver.get_errmsg())
         lib.DIDURL_Destroy(vpid)
 
         # print_err()

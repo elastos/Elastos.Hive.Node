@@ -34,94 +34,6 @@ def get_error_message():
     return ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
 
 
-def init_did_store(name):
-    if name is None:
-        return ffi.NULL
-
-    store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + name
-    store = lib.DIDStore_Open(store_dir.encode())
-    return store
-
-def init_rootidentity(store, mnemonic, storepass, passphrase):
-    if (not store) or (not storepass) or (mnemonic is None):
-        return
-
-    id = lib.RootIdentity_CreateId(mnemonic, passphrase)
-    assert(id is not None)
-
-    if lib.DIDStore_ContainsRootIdentity(store, id) == 1:
-        identity = lib.DIDStore_LoadRootIdentity(store, id)
-        if identity:
-            return identity
-
-    identity = lib.RootIdentity_Create(mnemonic, passphrase, True, store, storepass)
-    assert(identity is not None)
-    return identity
-
-def get_did(identity):
-    if (not identity):
-        return ffi.NULL
-
-    did = lib.RootIdentity_GetDIDByIndex(identity, 0)
-    if not did:
-        print_err("DIDStore_GetDIDByIndex")
-
-    return did
-
-def check_did(store, did):
-    if lib.DIDStore_ContainsDID(store, did) == 1 and lib.DIDStore_ContainsPrivateKeys(store, did) == 1:
-        doc = lib.DIDStore_LoadDID(store, did)
-        if doc:
-            return doc
-
-    return ffi.NULL
-
-def resolve_did(store, did, identity):
-    status = ffi.new("DIDStatus *")
-    doc = lib.DID_Resolve(did, status, True)
-    assert doc, get_error_message()
-
-    lib.DIDDocument_Destroy(doc)
-
-    ret = lib.RootIdentity_SynchronizeByIndex(identity, 0, ffi.NULL)
-    doc = lib.DIDStore_LoadDID(store, did)
-    assert doc, get_error_message()
-    return doc
-
-def destroy_identity(identity):
-    lib.RootIdentity_Destroy(identity)
-
-def init_did(mnemonic, passphrase, storepass, name, need_resolve=True):
-    assert(mnemonic is not None)
-    assert(passphrase is not None)
-    assert(storepass is not None)
-    assert(name is not None)
-
-    passphrase = passphrase.encode()
-    storepass = storepass.encode()
-    mnemonic = mnemonic.encode()
-    store = init_did_store(name)
-    assert store, get_error_message()
-
-    identity = init_rootidentity(store, mnemonic, storepass, passphrase)
-    assert identity, get_error_message()
-
-    did = get_did(identity)
-    assert did, get_error_message()
-
-    doc = check_did(store, did)
-    if doc:
-        destroy_identity(identity)
-        return store, did, doc
-
-    if need_resolve:
-        doc = resolve_did(store, did, identity)
-    else:
-        doc = lib.RootIdentity_NewDIDByIndex(identity, 0, storepass, ffi.NULL, True)
-    destroy_identity(identity)
-
-    return store, did, doc
-
 def init_did_backend():
     logging.getLogger('did_init').info("Initializing the DID backend")
     logging.getLogger('did_init').info("    DID Resolver: " + hive_setting.EID_RESOLVER_URL)
@@ -137,5 +49,3 @@ def init_did_backend():
     lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)
 
     return ret
-
-# init_did(hive_setting.DID_MNEMONIC, hive_setting.DID_PASSPHRASE, hive_setting.DID_STOREPASS)

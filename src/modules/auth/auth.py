@@ -78,7 +78,7 @@ class Auth(Entity, metaclass=Singleton):
         lib.JWTBuilder_SetAudience(builder, app_instance_did.encode())
         lib.JWTBuilder_SetClaim(builder, "nonce".encode(), nonce.encode())
         lib.JWTBuilder_SetExpiration(builder, expire_time)
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass.encode())
         token = lib.JWTBuilder_Compact(builder)
         msg = '' if token else self.get_error_message()
         lib.JWTBuilder_Destroy(builder)
@@ -194,7 +194,7 @@ class Auth(Entity, metaclass=Singleton):
         return min(int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED, exp_time)
 
     def __create_access_token(self, credential_info, subject):
-        doc = lib.DIDStore_LoadDID(self.store, self.did)
+        doc = lib.DIDStore_LoadDID(self.did_store, self.did)
         if not doc:
             raise BadRequestException(msg=f'Can not load node did in creating access token: {self.get_error_message()}')
 
@@ -214,7 +214,7 @@ class Auth(Entity, metaclass=Singleton):
             lib.JWTBuilder_Destroy(builder)
             raise BadRequestException(msg=f'Can not set claim in creating access token: {msg}')
 
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass.encode())
         token = lib.JWTBuilder_Compact(builder)
         msg = '' if token else self.get_error_message()
         lib.JWTBuilder_Destroy(builder)
@@ -252,7 +252,7 @@ class Auth(Entity, metaclass=Singleton):
         if not vc:
             raise InvalidParameterException(msg='backup_sign_in: invalid credential.')
 
-        doc_str = ffi.string(lib.DIDDocument_ToJson(lib.DIDStore_LoadDID(self.store, self.did), True)).decode()
+        doc_str = ffi.string(lib.DIDDocument_ToJson(lib.DIDStore_LoadDID(self.did_store, self.did), True)).decode()
         doc = json.loads(doc_str)
         body = self.http.post(host_url + URL_V2 + URL_SIGN_IN, None, {"id": doc})
         if 'challenge' not in body or not body["challenge"]:
@@ -317,7 +317,7 @@ class Auth(Entity, metaclass=Singleton):
         return body["token"]
 
     def create_order_proof(self, user_did, doc_id, amount=0, is_receipt=False):
-        doc = lib.DIDStore_LoadDID(self.store, self.did)
+        doc = lib.DIDStore_LoadDID(self.did_store, self.did)
         if not doc:
             raise BadRequestException(msg='Can not load service instance document in creating order proof.')
 
@@ -336,7 +336,7 @@ class Auth(Entity, metaclass=Singleton):
             props = {'receipt_id': doc_id, 'amount': amount}
         lib.JWTBuilder_SetClaim(builder, "props".encode(), json.dumps(props).encode())
 
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass.encode())
         proof = lib.JWTBuilder_Compact(builder)
         lib.JWTBuilder_Destroy(builder)
         if not proof:

@@ -40,6 +40,7 @@ class DidResolver:
 
         c_status = ffi.new("DIDStatus *")
         c_doc = lib.DID_Resolve(c_did, c_status, True)
+        ffi.release(c_status)
         if not c_doc:
             lib.DID_Destroy(c_did)
             raise BadRequestException(msg=DidResolver.get_errmsg("get_application_did_info: can't resolve c_doc"))

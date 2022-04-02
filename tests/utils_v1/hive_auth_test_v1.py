@@ -14,7 +14,7 @@ class DIDApp(Entity):
 
     def __init__(self, name, mnemonic=None, passphrase=None):
         Entity.__init__(self, name, mnemonic, passphrase)
-        self.issuer = lib.Issuer_Create(self.did, ffi.NULL, self.store)
+        self.issuer = lib.Issuer_Create(self.did, ffi.NULL, self.did_store)
 
     def __del__(self):
         lib.Issuer_Destroy(self.issuer)

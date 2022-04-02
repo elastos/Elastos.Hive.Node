@@ -1,15 +1,15 @@
 import logging
 
 from src import init_did_backend
+from src.utils.resolver import DIDResolver
 from src.utils_v1.did.entity import Entity
 from src.utils_v1.did.eladid import ffi, lib
-from tests.utils_v1 import test_common
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
 
 
-class DIDApp(Entity):
+class UserDID(Entity):
     issuer = None
 
     def __init__(self, name, mnemonic=None, passphrase=None):
@@ -22,7 +22,7 @@ class DIDApp(Entity):
 
     def issue_auth(self, app):
         props = {
-            'appDid': app.appId,
+            'appDid': app.app_did,
         }
         return self.issue_auth_vc("AppIdCredential", props, app.did)
 
@@ -39,23 +39,32 @@ class DIDApp(Entity):
         vc = self.issue_auth_vc("HiveNodeOwnerCredential", {}, lib.DID_FromString(owner_did.encode()))
         vc_str = lib.Credential_ToString(vc, True)
         if not vc_str:
-            print(f'get_owner_credential error: {self.get_error_message()}')
+            print(f'get_owner_credential error: {DIDResolver.get_errmsg()}')
             return ''
         return ffi.string(vc_str).decode()
 
-    def get_error_message(self, prompt=None):
-        """ helper method to get error message from did.so """
-        err_message = ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
-        return err_message if not prompt else f'[{prompt}] {err_message}'
+    def issue_auth_vc(self, type, props, owner):
+        type0 = ffi.new("char[]", type.encode())
+        types = ffi.new("char **", type0)
+
+        issuerid = self.did
+        issuerdoc = self.doc
+        expires = lib.DIDDocument_GetExpires(issuerdoc)
+        credid = lib.DIDURL_NewFromDid(owner, self.name.encode())
+        vc = lib.Issuer_CreateCredentialByString(self.issuer, owner, credid, types, 1,
+                                                 json.dumps(props).encode(), expires, self.storepass.encode())
+        lib.DIDURL_Destroy(credid)
+        # vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
+        # logging.debug(f"vcJson: {vcJson}")
+        # print(vcJson)
+        return vc
 
 
-class DApp(Entity):
+class AppDID(Entity):
     access_token = "123"
-    appId = test_common.app_id
+    app_did = "did:elastos:ienWaA6sfWETz6gVzX78SNytx8VUwDzxai"
 
-    def __init__(self, name, appId=None, mnemonic=None, passphrase=None):
-        if (appId is not None):
-            self.appId = appId
+    def __init__(self, name, mnemonic=None, passphrase=None):
         Entity.__init__(self, name, mnemonic, passphrase, need_resolve=False)
 
     def access_api_by_token(self):
@@ -69,9 +78,9 @@ if __name__ == "__main__":
     import base58
     init_did_backend()
     # owner did
-    service_did = DIDApp('hivenode',
-                         mnemonic='firm dash language credit twist puzzle crouch order slim now issue trap',
-                         passphrase='secret')
+    service_did = UserDID('hivenode',
+                          mnemonic='firm dash language credit twist puzzle crouch order slim now issue trap',
+                          passphrase='secret')
     # user did
     credential = service_did.get_owner_credential('did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM')
     print(f'credential: {base58.b58encode(credential)}')

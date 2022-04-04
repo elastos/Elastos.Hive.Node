@@ -2,6 +2,8 @@
 import logging
 import threading
 
+from flask_restful import Api
+
 from src import hive_setting
 from src.utils.db_client import cli
 from src.utils.scheduler import scheduler_init
@@ -33,7 +35,7 @@ class RetryIpfsBackupThread(threading.Thread):
             logging.error(f'[RetryIpfsBackupThread] error {str(e)}')
 
 
-def init_app(app):
+def init_app(app, api: Api):
     logging.getLogger('v2_init').info('enter init_app')
     auth.init_app(app)
     subscription.init_app(app)
@@ -42,7 +44,10 @@ def init_app(app):
     scripting.init_app(app)
     backup.init_app(app)
     provider.init_app(app)
-    about.init_app(app)
+    # about.init_app(app)
+    api.add_resource(about.Version, '/node/version', endpoint='about.version')
+    api.add_resource(about.CommitId, '/node/commit_id', endpoint='about.commit_id')
+    api.add_resource(about.NodeInfo, '/node/info', endpoint='about.info')
     if hive_setting.PAYMENT_ENABLED:
         payment.init_app(app)
 

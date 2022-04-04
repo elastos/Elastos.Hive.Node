@@ -26,7 +26,7 @@ Summary
     scripting.delete_script, scripting.upload_file, scripting.download_file,
     backup.get_state, backup.backup_restore, backup.promotion,
     payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info,
-    about.get_version, about.get_commit_id, about.get_node_info,
+    about.version, about.commit_id, about.info,
     provider.get_vaults, provider.get_backups, provider.get_filled_orders
 
 01 Auth
@@ -329,21 +329,21 @@ get version
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: about.get_version
+  :endpoints: about.version
 
 get commit id
 -------------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: about.get_commit_id
+  :endpoints: about.commit_id
 
 get node information
 --------------------
 
 .. autoflask:: src:make_port()
   :undoc-static:
-  :endpoints: about.get_node_info
+  :endpoints: about.info
 
 09 Provider
 ===========

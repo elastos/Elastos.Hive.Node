@@ -20,9 +20,9 @@ class HiveException(Exception):
         self.msg = msg
 
     def get_error_response(self):
-        return jsonify(self._get_error_dict()), self.code
+        return jsonify(self.get_error_dict()), self.code
 
-    def _get_error_dict(self):
+    def get_error_dict(self):
         error = {"message": self.msg}
         if not isinstance(self.internal_code, int):
             # INFO: catch this specific issue.
@@ -57,7 +57,7 @@ class HiveException(Exception):
         return codes[request.method]
 
     def __str__(self):
-        return json.dumps(self._get_error_dict())
+        return json.dumps(self.get_error_dict())
 
 
 # BadRequestException

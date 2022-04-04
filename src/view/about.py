@@ -3,127 +3,119 @@
 """
 About module to show some information of the node.
 """
-from flask import Blueprint, request
+from flask_restful import Resource
 
 from src.modules.about.about import About
 
-blueprint = Blueprint('about', __name__)
-about: About = None
+
+class Version(Resource):
+    def __init__(self):
+        self.about = About()
+
+    def get(self):
+        """ Get the version of hive node. No authentication is required.
+
+        .. :quickref: 08 About; Get the Version
+
+        **Request**:
+
+        .. sourcecode:: http
+
+            None
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+
+        .. code-block:: json
+
+            {
+                "major": 1,
+                "minor": 0,
+                "patch": 0
+            }
+
+        """
+        return self.about.get_version()
 
 
-def init_app(app):
-    """ This will be called by application initializer. """
-    global about
-    about = About()
-    app.register_blueprint(blueprint)
+class CommitId(Resource):
+    def __init__(self):
+        self.about = About()
+
+    def get(self):
+        """ Get the commit ID of hive node. No authentication is required.
+
+        .. :quickref: 08 About; Get the Commit ID
+
+        **Request**:
+
+        .. sourcecode:: http
+
+            None
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+
+        .. code-block:: json
+
+            {
+                "commit_id": "<commit_id>"
+            }
+
+        """
+        return self.about.get_commit_id()
 
 
-@blueprint.route('/api/v2/node/version', methods=['GET'])
-def get_version():
-    """ Get the version of hive node. No authentication is required.
+class NodeInfo(Resource):
+    def __init__(self):
+        self.about = About()
 
-    .. :quickref: 08 About; Get the Version
+    def get(self):
+        """ Get the information of this hive node.
 
-    **Request**:
+        .. :quickref: 08 About; Get Node Information
 
-    .. sourcecode:: http
+        **Request**:
 
-        None
+        .. sourcecode:: http
 
-    **Response OK**:
+            None
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        HTTP/1.1 200 OK
+        .. sourcecode:: http
 
-    .. code-block:: json
+            HTTP/1.1 200 OK
 
-        {
-            "major": 1,
-            "minor": 0,
-            "patch": 0
-        }
+        .. code-block:: json
 
-    """
-    return about.get_version()
+            {
+                "service_did": <str>,
+                "owner_did": <str>,
+                "ownership_presentation": <str>,
+                "name": <str>,
+                "email": <str>,
+                "description": <str>,
+                "version": <str>,
+                "last_commit_id": <str>
+            }
 
+        **Response Error**:
 
-@blueprint.route('/api/v2/node/commit_id', methods=['GET'])
-def get_commit_id():
-    """ Get the commit ID of hive node. No authentication is required.
+        .. sourcecode:: http
 
-    .. :quickref: 08 About; Get the Commit ID
+            HTTP/1.1 400 Bad Request
 
-    **Request**:
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 401 Unauthorized
 
-        None
+        """
 
-    **Response OK**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 200 OK
-
-    .. code-block:: json
-
-        {
-            "commit_id": "<commit_id>"
-        }
-
-    """
-    return about.get_commit_id()
-
-
-@blueprint.route('/api/node/echo', methods=['GET'])
-def echo():
-    """ only for test whether it can be connected with the hive node """
-    content = request.args.get('content')
-    return content if content else 'echo the parameter content'
-
-
-@blueprint.route('/api/v2/node/info', methods=['GET'])
-def get_node_info():
-    """ Get the information of this hive node.
-
-    .. :quickref: 08 About; Get Node Information
-
-    **Request**:
-
-    .. sourcecode:: http
-
-        None
-
-    **Response OK**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 200 OK
-
-    .. code-block:: json
-
-        {
-            "service_did": <str>,
-            "owner_did": <str>,
-            "ownership_presentation": <str>,
-            "name": <str>,
-            "email": <str>,
-            "description": <str>,
-            "version": <str>,
-            "last_commit_id": <str>
-        }
-
-    **Response Error**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 400 Bad Request
-
-    .. sourcecode:: http
-
-        HTTP/1.1 401 Unauthorized
-
-    """
-
-    return about.get_node_info()
+        return self.about.get_node_info()

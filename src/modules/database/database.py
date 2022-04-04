@@ -14,21 +14,18 @@ from src.utils_v1.did_mongo_db_resource import get_mongo_database_size, convert_
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
-from src.utils.http_exception import BadRequestException, CollectionNotFoundException, InvalidParameterException
-from src.utils.http_response import hive_restful_response
+from src.utils.http_exception import CollectionNotFoundException
 
 
 class Database:
     def __init__(self):
         pass
 
-    @hive_restful_response
     def create_collection(self, collection_name):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         cli.create_collection(user_did, app_did, collection_name)
         return {'name': collection_name}
 
-    @hive_restful_response
     def delete_collection(self, collection_name):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
         cli.delete_collection(user_did, app_did, collection_name, is_check_exist=True)
@@ -41,7 +38,6 @@ class Database:
             raise CollectionNotFoundException(msg=f'The collection {collection_name} can not be found.')
         return user_did, app_did, col
 
-    @hive_restful_response
     def insert_document(self, collection_name, json_body):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
         documents = []
@@ -58,7 +54,6 @@ class Database:
             "inserted_ids": [str(_id) for _id in ret.inserted_ids]
         }
 
-    @hive_restful_response
     def update_document(self, collection_name, json_body, is_update_one):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
         update = json_body["update"]
@@ -85,7 +80,6 @@ class Database:
             "upserted_id": str(ret.upserted_id) if ret.upserted_id else None
         }
 
-    @hive_restful_response
     def delete_document(self, collection_name, col_filter, is_delete_one):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
         if is_delete_one:
@@ -94,19 +88,16 @@ class Database:
             col.delete_many(convert_oid(col_filter))
         update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
 
-    @hive_restful_response
     def count_document(self, collection_name, json_body):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
         count = col.count_documents(convert_oid(json_body["filter"] if json_body and 'filter' in json_body else {}),
                                     **options_filter(json_body, ("skip", "limit", "maxTimeMS")))
         return {"count": count}
 
-    @hive_restful_response
     def find_document(self, collection_name, col_filter, skip, limit):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_R)
         return self.__do_find(col, col_filter, {'skip': skip, 'limit': limit})
 
-    @hive_restful_response
     def query_document(self, collection_name, json_body):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
         return self.__do_find(col, json_body.get('filter'),

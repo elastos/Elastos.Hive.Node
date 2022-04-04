@@ -28,7 +28,7 @@ class Auth(Entity, metaclass=Singleton):
         self.storepass = hive_setting.PASSWRD
         Entity.__init__(self, "hive.auth", from_file=True)
         self.http = HttpClient()
-        logging.info(f'Service DID: {self.get_did_string()}')
+        logging.info(f'Service DID V2: {self.get_did_string()}')
 
     def sign_in(self, doc):
         app_instance_did = self.__get_app_instance_did(doc)

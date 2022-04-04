@@ -98,12 +98,14 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     return app
 
 
-def make_port(is_first=False):
+def get_docs_app(first=False):
     """
-    For sphinx documentation tool.
+    For sphinx documentation tool to use the flask app to generate the document defined in APIs.
+
+    :param first: first call for initialize app.
     :return: the app of the flask
     """
-    if is_first:
+    if first:
         init_did_backend()
         view.init_app(app, api)
     return app

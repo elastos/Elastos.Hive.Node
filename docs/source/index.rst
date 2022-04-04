@@ -11,7 +11,7 @@ Here is the documents for the APIs of the hive node. The hive node supports the 
 Summary
 =======
 
-.. qrefflask:: src:make_port(is_first=True)
+.. qrefflask:: src:get_docs_app(first=True)
   :undoc-static:
   :endpoints: auth.did_sign_in, auth.did_auth,
     subscription.vault_subscribe, subscription.vault_unsubscribe, subscription.vault_get_info,
@@ -46,14 +46,14 @@ To use the token returned by auth API. Please add this key-value in the header.
 sign in
 -------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: auth.did_sign_in
 
 auth
 ----
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: auth.did_auth
 
@@ -65,56 +65,56 @@ subscription for the vault service and the backup service.
 vault subscribe
 ---------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: subscription.vault_subscribe
 
 vault unsubscribe
 -----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: subscription.vault_unsubscribe
 
 get vault info.
 ---------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: subscription.vault_get_info
 
 get app stats
 -------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: subscription.vault_get_app_stats
 
 backup subscribe
 ----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: subscription.backup_subscribe
 
 backup unsubscribe
 ------------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: subscription.backup_unsubscribe
 
 get backup info.
 ----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: subscription.backup_get_info
 
 get pricing plans
 -----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: subscription.vault_get_price_plan
 
@@ -126,49 +126,49 @@ based on mongodb.
 create collection
 -----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: database.create_collection
 
 delete collection
 -----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: database.delete_collection
 
 insert or count documents
 -------------------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: database.insert_or_count_document
 
 update documents
 ----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: database.update_document
 
 delete documents
 ----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: database.delete_document
 
 find documents
 --------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: database.find_document
 
 query documents
 ---------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: database.query_document
 
@@ -180,28 +180,28 @@ files storage and management.
 download/properties/hash/list
 -----------------------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: files.reading_operation
 
 copy/upload
 -----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: files.writing_operation
 
 move
 ----
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: files.move_file
 
 delete
 ------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: files.delete_file
 
@@ -213,42 +213,42 @@ The scripting module supports share the data of the vault service for other user
 register script
 ---------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: scripting.register_script
 
 call script
 -----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: scripting.call_script
 
 call script url
 ---------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: scripting.call_script_url
 
 unregister script
 -----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: scripting.delete_script
 
 upload file
 -----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: scripting.upload_file
 
 download file
 -------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: scripting.download_file
 
@@ -261,21 +261,21 @@ The credential is required for the vault service to access the backup service.
 get state
 ---------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: backup.get_state
 
 backup & restore
 ----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: backup.backup_restore
 
 promote
 ----------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: backup.promotion
 
@@ -287,35 +287,35 @@ The payment module is for upgrading the vault or the backup service.
 get version
 -----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: payment.get_version
 
 place order
 -----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: payment.place_order
 
 pay order
 ---------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: payment.pay_order
 
 get orders
 ----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: payment.get_orders
 
 get receipt
 -----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: payment.get_receipt_info
 
@@ -327,21 +327,21 @@ Show some information of the hive node. No authentication is required.
 get version
 -----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: about.version
 
 get commit id
 -------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: about.commit_id
 
 get node information
 --------------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: about.info
 
@@ -353,21 +353,21 @@ The management for the hive node owner or the vault owner.
 get vaults
 ----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: provider.get_vaults
 
 get backups
 -----------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: provider.get_backups
 
 get payments
 ------------
 
-.. autoflask:: src:make_port()
+.. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: provider.get_filled_orders
 

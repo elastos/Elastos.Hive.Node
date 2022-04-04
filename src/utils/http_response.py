@@ -8,10 +8,36 @@ import traceback
 import logging
 
 from flask import request
+from flask_restful import Api
 from sentry_sdk import capture_exception
 
 from hive.util.server_response import ServerResponse
 from src.utils.http_exception import HiveException, InternalServerErrorException
+
+
+class HiveApi(Api):
+    @staticmethod
+    def _get_resp_success_code():
+        codes = {
+            'GET': 200,
+            'PUT': 200,
+            'PATCH': 200,
+            'POST': 201,
+            'DELETE': 204,
+        }
+        assert request.method in codes
+        return codes[request.method]
+
+    def make_response(self, data, *args, **kwargs):
+        resp = super().make_response(data, *args, **kwargs)
+        resp.status_code = HiveApi._get_resp_success_code()
+        return resp
+
+    def handle_error(self, e):
+        """ Convert any exception (HiveException and Exception) to error response message. """
+        if not hasattr(e, 'get_error_response'):
+            e = InternalServerErrorException(msg=traceback.format_exc())
+        return e.get_error_response()
 
 
 server_response = ServerResponse("CallV2")

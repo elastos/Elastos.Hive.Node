@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 import logging.config
-import traceback
 
 import yaml
 from flask_cors import CORS
 from flask import Flask, request
-from flask_restful import Api
-from werkzeug.routing import BaseConverter
 import os
 
 from src.settings import hive_setting
 from src.utils.http_exception import HiveException, InternalServerErrorException
+from src.utils.http_request import RegexConverter
+from src.utils.http_response import HiveApi
 from src.utils.sentry_error import init_sentry_hook
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from src.utils_v1.did.did_init import init_did_backend
@@ -21,21 +20,6 @@ import hive.main
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')
-
-
-class RegexConverter(BaseConverter):
-    """ Support regex on url match """
-    def __init__(self, url_map, *items):
-        super().__init__(url_map)
-        self.regex = items[0]
-
-
-class HiveApi(Api):
-    def handle_error(self, e):
-        """ Convert any exception (HiveException and Exception) to error response message. """
-        if not hasattr(e, 'get_error_dict'):
-            e = InternalServerErrorException(msg=traceback.format_exc())
-        return e.get_error_dict()
 
 
 app = Flask('Hive Node V2')

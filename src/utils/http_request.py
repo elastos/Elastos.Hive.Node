@@ -6,6 +6,14 @@ Request utils.
 import json
 
 from flask import request
+from werkzeug.routing import BaseConverter
+
+
+class RegexConverter(BaseConverter):
+    """ Support regex on url match """
+    def __init__(self, url_map, *items):
+        super().__init__(url_map)
+        self.regex = items[0]
 
 
 class BaseParams:

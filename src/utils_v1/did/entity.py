@@ -125,7 +125,7 @@ class Entity:
         if self.did:
             lib.DID_Destroy(self.did)
         if self.did_store:
-            lib.DIDStore_Destroy(self.did_store)
+            lib.DIDStore_Close(self.did_store)
 
     def get_did_string_from_did(self, did):
         if not did:

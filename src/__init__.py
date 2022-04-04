@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 import logging.config
+import traceback
 
 import sentry_sdk
 import yaml
 from flask_cors import CORS
 from flask import Flask, request
+from flask_restful import Api
 from sentry_sdk.integrations.flask import FlaskIntegration
 from werkzeug.routing import BaseConverter
 import os
 
 from src.settings import hive_setting
+from src.utils.http_exception import HiveException, InternalServerErrorException
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from src.utils_v1.did.did_init import init_did_backend
 from src import view
@@ -28,8 +31,17 @@ class RegexConverter(BaseConverter):
         self.regex = items[0]
 
 
+class HiveApi(Api):
+    def handle_error(self, e):
+        """ Convert any exception (HiveException and Exception) to error response message. """
+        if not hasattr(e, 'get_error_dict'):
+            e = InternalServerErrorException(msg=traceback.format_exc())
+        return e.get_error_dict()
+
+
 app = Flask('Hive Node V2')
 app.url_map.converters['regex'] = RegexConverter
+api = HiveApi(app, prefix='/api/v2')
 
 
 @app.before_request
@@ -77,7 +89,7 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     # init v1 APIs
     hive.main.init_app(app, mode)
 
-    view.init_app(app)
+    view.init_app(app, api)
     logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
     logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
     if hive_setting.SENTRY_ENABLED and hive_setting.SENTRY_DSN != "":
@@ -93,5 +105,6 @@ def make_port(is_first=False):
     :return: the app of the flask
     """
     if is_first:
-        view.init_app(app)
+        init_did_backend()
+        view.init_app(app, api)
     return app

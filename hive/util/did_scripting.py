@@ -15,7 +15,7 @@ from hive.util.error_code import BAD_REQUEST, SUCCESS
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_SHA256
-from src.utils.http_response import v2_wrapper
+from hive.util.v2_adapter import v2_wrapper
 
 
 def massage_keys_with_dollar_signs(d):

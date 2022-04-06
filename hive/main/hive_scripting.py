@@ -29,7 +29,7 @@ from hive.util.payment.vault_service_manage import can_access_vault, update_vaul
     inc_vault_file_use_storage_byte
 from hive.util.server_response import ServerResponse
 from src.modules.ipfs.ipfs_files import IpfsFiles
-from src.utils.http_response import v2_wrapper
+from hive.util.v2_adapter import v2_wrapper
 
 
 class HiveScripting:

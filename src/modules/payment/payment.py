@@ -20,7 +20,6 @@ from src.utils.db_client import cli
 from src.utils.did_auth import check_auth, check_auth_and_vault
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, \
     ReceiptNotFoundException
-from src.utils.http_response import hive_restful_response
 from src.utils.resolver import ElaResolver
 from src.utils.singleton import Singleton
 from src.utils_v1.payment.payment_config import PaymentConfig
@@ -40,12 +39,10 @@ class Payment(metaclass=Singleton):
             self.vault_subscription = VaultSubscription()
         return self.vault_subscription
 
-    @hive_restful_response
     def get_version(self):
         _, _ = check_auth()
         return {'version': self._get_vault_subscription().get_price_plans_version()}
 
-    @hive_restful_response
     def place_order(self, json_body):
         user_did, app_did = check_auth_and_vault()
         subscription, plan = self._check_place_order_params(json_body)
@@ -100,7 +97,6 @@ class Payment(metaclass=Singleton):
             CREATE_TIME: int(order[CREATE_TIME]),
         }
 
-    @hive_restful_response
     def pay_order(self, order_id, json_body):
         user_did, app_did = check_auth()
         vault = self._get_vault_subscription().get_checked_vault(user_did)
@@ -212,7 +208,6 @@ class Payment(metaclass=Singleton):
                               {'$set': {COL_ORDERS_PROOF: receipt[COL_ORDERS_PROOF]}}, is_extra=True)
         return receipt
 
-    @hive_restful_response
     def get_orders(self, subscription, order_id):
         _, _ = check_auth()
         if subscription not in ('vault', 'backup'):
@@ -235,7 +230,6 @@ class Payment(metaclass=Singleton):
                                               COL_ORDERS_STATUS: o[COL_ORDERS_STATUS],
                                               CREATE_TIME: int(o[CREATE_TIME])}, orders))}
 
-    @hive_restful_response
     def get_receipt_info(self, order_id):
         user_did, app_did = check_auth()
         order = self._check_param_order_id(user_did, order_id)

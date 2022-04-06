@@ -618,7 +618,7 @@ class Scripting:
 
     def get_files(self):
         if not self.files:
-            from src.modules.files.files import Files
+            from src.modules.deprecated.files import Files
             self.files = Files()
         return self.files
 

@@ -20,7 +20,8 @@ class ServerResponse:
             try:
                 ret.update(data_dic)
             except Exception as e:
-                capture_exception(error=Exception(f'invalid response body: {str(data_dic)}, {str(e)}'))
+                # TODO：try to filter this to capture real ones.
+                capture_exception(error=Exception(f'V1 UNEXPECTED: {str(data_dic)}, {str(e)}'))
                 return self.response_err(400, f'invalid response body: {str(data_dic)}, {str(e)}')
         self.logger.debug(json.dumps(ret))
         return jsonify(ret)
@@ -29,5 +30,4 @@ class ServerResponse:
         ret = {STATUS: STATUS_ERR}
         ret.update({"_error": {"code": code, "message": msg}})
         self.logger.error(msg)
-        capture_exception(error=Exception(f'error response: {str(ret)}'))
         return jsonify(ret), code

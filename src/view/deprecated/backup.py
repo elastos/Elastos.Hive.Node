@@ -5,8 +5,8 @@ The view of backup module.
 """
 from flask import Blueprint, request
 
-from src.modules.backup.backup import Backup
-from src.modules.backup.backup_server import BackupServer
+from src.modules.deprecated.backup import Backup
+from src.modules.deprecated.backup import BackupServer
 from src.utils.http_request import params
 from src.utils.http_exception import NotImplementedException
 from src.utils.consts import URL_BACKUP_SERVICE, URL_BACKUP_FINISH, URL_BACKUP_FILES, URL_BACKUP_FILE, \

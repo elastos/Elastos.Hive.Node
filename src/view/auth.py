@@ -15,9 +15,9 @@ class SignIn(Resource):
         self.auth = auth.Auth()
 
     def post(self):
-        """ Sign in with the application DID and get the challenge string.
+        """ Sign in with the application instance DID to get the challenge string.
 
-        .. :quickref: 01 Authentication; Sign in with app DID
+        .. :quickref: 01 Authentication; Sign in with app instance DID
 
         **Request**:
 

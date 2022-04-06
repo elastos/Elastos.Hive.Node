@@ -12,7 +12,6 @@ from flask import request, make_response, jsonify
 from flask_restful import Api
 from sentry_sdk import capture_exception
 
-from hive.util.server_response import ServerResponse
 from src.utils.http_exception import HiveException, InternalServerErrorException
 
 
@@ -60,10 +59,10 @@ def response_stream(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
     return wrapper
 
 
-server_response = ServerResponse("CallV2")
+# TODO: remove the following methods.
 
 
-def __get_restful_response_wrapper(func, is_download=False, is_code=False):
+def _get_restful_response_wrapper(func, is_download=False, is_code=False):
     def wrapper(*args, **kwargs):
         try:
             return HiveException.get_success_response(func(*args, **kwargs), is_download=is_download, is_code=is_code)
@@ -89,36 +88,12 @@ def hive_restful_response(func):
             }
         }, error http code for http method
     """
-    return __get_restful_response_wrapper(func)
+    return _get_restful_response_wrapper(func)
 
 
 def hive_restful_code_response(func):
-    return __get_restful_response_wrapper(func, is_code=True)
+    return _get_restful_response_wrapper(func, is_code=True)
 
 
 def hive_stream_response(func):
-    return __get_restful_response_wrapper(func, is_download=True)
-
-
-def v2_wrapper(func):
-    """ Wrapper for v1 modules to call v2 module functions.
-    1. Use the class IpfsFiles in v2.
-
-    For calling files.upload(name), please call like this:
-        result, resp_err = v2_wrapper(files.upload)(name)
-        if resp_err:
-            return resp_err
-    """
-    def wrapper(*args, **kwargs):
-        try:
-            logging.getLogger('v2 wrapper').info(f'enter {request.full_path}, {request.method}')
-            return func(*args, **kwargs), None
-        except HiveException as e:
-            logging.getLogger('v2 wrapper').error(f'HiveException: {str(e)}')
-            return None, server_response.response_err(e.code, e.msg)
-        except Exception as e:
-            msg = f'UNEXPECTED: {traceback.format_exc()}'
-            logging.getLogger('v2 wrapper').error(msg)
-            capture_exception(error=Exception(f'V2 WRAPPER {msg}'))
-            return None, server_response.response_err(500, traceback.format_exc())
-    return wrapper
+    return _get_restful_response_wrapper(func, is_download=True)

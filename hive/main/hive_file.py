@@ -16,7 +16,7 @@ from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DE
 from hive.util.payment.vault_service_manage import can_access_vault, inc_vault_file_use_storage_byte
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, COL_IPFS_FILES_PATH, SIZE, COL_IPFS_FILES_SHA256
-from src.utils.http_response import v2_wrapper
+from hive.util.v2_adapter import v2_wrapper
 
 
 class HiveFile:

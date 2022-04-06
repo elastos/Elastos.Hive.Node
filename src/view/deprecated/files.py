@@ -5,7 +5,7 @@ The view of files module.
 """
 from flask import Blueprint, request
 
-from src.modules.files.files import Files
+from src.modules.deprecated.files import Files
 from src.utils.http_exception import BadRequestException
 
 blueprint = Blueprint('files-deprecated', __name__)

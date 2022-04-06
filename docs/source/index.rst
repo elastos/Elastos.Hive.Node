@@ -13,21 +13,18 @@ Summary
 
 .. qrefflask:: src:get_docs_app(first=True)
   :undoc-static:
-  :endpoints: auth.did_sign_in, auth.did_auth,
-    subscription.vault_subscribe, subscription.vault_unsubscribe, subscription.vault_get_info,
-    subscription.vault_get_app_stats,
-    subscription.backup_subscribe, subscription.backup_unsubscribe, subscription.backup_get_info,
-    subscription.vault_get_price_plan,
-    database.create_collection, database.delete_collection, database.insert_or_count_document,
-    database.update_document, database.delete_document, database.find_document, database.query_document,
-    files.reading_operation, files.writing_operation, files.move_file,
-    files.delete_file,
+  :endpoints: auth.sign_in, auth.auth,
+    subscription.vault_subscribe, subscription.vault_unsubscribe, subscription.vault_info, subscription.vault_app_states,
+    subscription.backup_subscribe, subscription.backup_unsubscribe, subscription.backup_info, subscription.vault_price_plan,
+    database.create_collection, database.delete_collection, database.insert_or_count,
+    database.update, database.delete, database.find, database.query,
+    files.reading_operation, files.writing_operation, files.move_file, files.delete_file,
     scripting.register_script, scripting.call_script, scripting.call_script_url,
     scripting.delete_script, scripting.upload_file, scripting.download_file,
-    backup.get_state, backup.backup_restore, backup.promotion,
-    payment.get_version, payment.place_order, payment.pay_order, payment.get_orders, payment.get_receipt_info,
+    backup.state, backup.backup_restore, backup.server_promotion,
+    payment.version, payment.place_order, payment.pay_order, payment.orders, payment.receipt_info,
     about.version, about.commit_id, about.info,
-    provider.get_vaults, provider.get_backups, provider.get_filled_orders
+    provider.vaults, provider.backups, provider.filled_orders
 
 01 Auth
 =======
@@ -48,14 +45,14 @@ sign in
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: auth.did_sign_in
+  :endpoints: auth.sign_in
 
 auth
 ----
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: auth.did_auth
+  :endpoints: auth.auth
 
 02 Subscription
 ===============
@@ -81,14 +78,14 @@ get vault info.
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: subscription.vault_get_info
+  :endpoints: subscription.vault_info
 
 get app stats
 -------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: subscription.vault_get_app_stats
+  :endpoints: subscription.vault_app_states
 
 backup subscribe
 ----------------
@@ -109,14 +106,14 @@ get backup info.
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: subscription.backup_get_info
+  :endpoints: subscription.backup_info
 
 get pricing plans
 -----------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: subscription.vault_get_price_plan
+  :endpoints: subscription.vault_price_plan
 
 03 Database
 ===========
@@ -142,35 +139,35 @@ insert or count documents
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: database.insert_or_count_document
+  :endpoints: database.insert_or_count
 
 update documents
 ----------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: database.update_document
+  :endpoints: database.update
 
 delete documents
 ----------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: database.delete_document
+  :endpoints: database.delete
 
 find documents
 --------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: database.find_document
+  :endpoints: database.find
 
 query documents
 ---------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: database.query_document
+  :endpoints: database.query
 
 04 Files
 ========
@@ -263,7 +260,7 @@ get state
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: backup.get_state
+  :endpoints: backup.state
 
 backup & restore
 ----------------
@@ -277,7 +274,7 @@ promote
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: backup.promotion
+  :endpoints: backup.server_promotion
 
 07 Payment
 ==========
@@ -289,7 +286,7 @@ get version
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: payment.get_version
+  :endpoints: payment.version
 
 place order
 -----------
@@ -310,14 +307,14 @@ get orders
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: payment.get_orders
+  :endpoints: payment.orders
 
 get receipt
 -----------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: payment.get_receipt_info
+  :endpoints: payment.receipt_info
 
 08 About
 ========
@@ -355,21 +352,21 @@ get vaults
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: provider.get_vaults
+  :endpoints: provider.vaults
 
 get backups
 -----------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: provider.get_backups
+  :endpoints: provider.backups
 
 get payments
 ------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: provider.get_filled_orders
+  :endpoints: provider.filled_orders
 
 Appendix A: Collections
 =======================

@@ -9,7 +9,7 @@ from src.settings import hive_setting
 from src.utils_v1.common import did_tail_part
 
 
-def st_get_vault_path(user_did):
+def _st_get_vault_path(user_did):
     """
     Get the root dir of the vault.
     :param user_did: The user DID.
@@ -29,4 +29,4 @@ def st_get_ipfs_cache_path(user_did):
     :param user_did: The user DID
     :return: Path: the path of the cache root.
     """
-    return st_get_vault_path(user_did) / 'ipfs_cache'
+    return _st_get_vault_path(user_did) / 'ipfs_cache'

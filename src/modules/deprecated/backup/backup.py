@@ -5,7 +5,7 @@ The entrance for backup module.
 """
 from src.utils_v1.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR
 from src.modules.auth.auth import Auth
-from src.modules.backup.backup_server import BackupClient
+from src.modules.deprecated.backup.backup_server import BackupClient
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.http_exception import NotImplementedException
 from src.utils.http_response import hive_restful_response

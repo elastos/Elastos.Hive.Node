@@ -3,10 +3,9 @@
 """
 The view of subscription module.
 """
-from flask import Blueprint, request
+from flask import Blueprint
 
-from src.modules.backup.backup_server import BackupServer
-from src.modules.subscription.subscription import VaultSubscription
+from src.modules.deprecated.backup import BackupServer
 
 blueprint = Blueprint('subscription-deprecated', __name__)
 backup_server: BackupServer = None

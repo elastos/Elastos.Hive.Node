@@ -67,7 +67,6 @@ def init_app(app: Flask, api: Api):
     api.add_resource(database.Query, '/vault/db/query', endpoint='database.query')
     # files service
     api.add_resource(files.ReadingOperation, '/vault/files/<regex("(|[0-9a-zA-Z_/.]*)"):path>', endpoint='files.reading_operation')
-    # api.add_resource(files.ReadingOperation, '/vault/files/<path:path>', '/vault/files/', endpoint='files.reading_operation')
     api.add_resource(files.WritingOperation, '/vault/files/<path:path>', endpoint='files.writing_operation')
     api.add_resource(files.MoveFile, '/vault/files/<path:path>', endpoint='files.move_file')
     api.add_resource(files.DeleteFile, '/vault/files/<path:path>', endpoint='files.delete_file')

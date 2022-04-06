@@ -23,12 +23,17 @@ class IpfsBackupTestCase(unittest.TestCase):
         HttpClient(f'/api/v2').put('/subscription/vault')
 
     @staticmethod
+    def _subscribe_backup():
+        HttpClient(f'/api/v2', is_backup_node=True).put('/subscription/backup')
+
+    @staticmethod
     def _unsubscribe_vault_on_backup_node():
         HttpClient(f'/api/v2', is_backup_node=True).delete('/subscription/vault')
 
     @classmethod
     def setUpClass(cls):
         cls._subscribe_vault()
+        cls._subscribe_backup()
 
     def check_result_success(self):
         # waiting for the backup process to end

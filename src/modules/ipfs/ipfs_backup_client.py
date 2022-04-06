@@ -25,22 +25,19 @@ The definition of the request metadata:
 """
 import logging
 
-from flask import request
-
 from src.modules.auth.auth import Auth
 from src.modules.ipfs.ipfs_backup_executor import BackupExecutor, RestoreExecutor
 from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_INPROGRESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
-    URL_VAULT_BACKUP_SERVICE_BACKUP, URL_VAULT_BACKUP_SERVICE_RESTORE, URL_VAULT_BACKUP_SERVICE_STATE, \
-    COL_IPFS_BACKUP_CLIENT, USR_DID
+    URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, URL_SERVER_INTERNAL_STATE, \
+    COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
 from src.utils.http_client import HttpClient
 from src.utils.http_exception import BadRequestException, InsufficientStorageException
-from src.utils.http_response import hive_restful_response
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME
 from src.utils_v1.did_mongo_db_resource import dump_mongodb_to_full_path, restore_mongodb_from_full_path
@@ -51,12 +48,10 @@ class IpfsBackupClient:
         self.auth = Auth()
         self.http = HttpClient()
 
-    @hive_restful_response
     def get_state(self):
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         return self.get_remote_backup_state(user_did);
 
-    @hive_restful_response
     def backup(self, credential, is_force):
         """
         The client application request to backup vault data to target backup node.
@@ -75,7 +70,6 @@ class IpfsBackupClient:
         req = self.save_request(user_did, credential, credential_info)
         BackupExecutor(user_did, self, req, is_force=is_force).start()
 
-    @hive_restful_response
     def restore(self, credential, is_force):
         """
         The client application request to store vault data from the backup node.
@@ -109,7 +103,7 @@ class IpfsBackupClient:
             # request to remote backup node to retrieve the current backup progress state if
             # its being backuped.
             if state == BACKUP_REQUEST_ACTION_BACKUP and result == BACKUP_REQUEST_STATE_SUCCESS:
-                body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_VAULT_BACKUP_SERVICE_STATE,
+                body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_V2 + URL_SERVER_INTERNAL_STATE,
                                      req.get(BACKUP_REQUEST_TARGET_TOKEN))
                 result, msg = body['result'], body['message']
         return {
@@ -230,7 +224,7 @@ class IpfsBackupClient:
                 'is_force': is_force}
 
         req = self.get_request(user_did)
-        self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_VAULT_BACKUP_SERVICE_BACKUP,
+        self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_BACKUP,
                        req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
 
     def get_vault_data_cid_from_backup_node(self, user_did):
@@ -241,7 +235,7 @@ class IpfsBackupClient:
           to the files and database data on IPFS network.
         """
         req = self.get_request(user_did)
-        data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_VAULT_BACKUP_SERVICE_RESTORE,
+        data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])
         vault_metadata = fm.ipfs_download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
 

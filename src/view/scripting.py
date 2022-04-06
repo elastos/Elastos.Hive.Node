@@ -5,401 +5,411 @@ The view of ipfs module for files and scripting.
 """
 import json
 
-from flask import Blueprint
+from flask_restful import Resource
 
 from src.modules.scripting.scripting import Scripting
-
-blueprint = Blueprint('scripting', __name__)
-scripting: Scripting = None
+from src.utils.http_response import response_stream
 
 
-def init_app(app):
-    """ This will be called by application initializer. """
-    global scripting
-    scripting = Scripting(is_ipfs=True)
-    app.register_blueprint(blueprint)
+class RegisterScript(Resource):
+    def __init__(self):
+        self.scripting = Scripting(is_ipfs=True)
 
+    def put(self, script_name):
+        """ Register a new script for the vault data owner by the script name.
 
-@blueprint.route('/api/v2/vault/scripting/<script_name>', methods=['PUT'])
-def register_script(script_name):
-    """ Register a new script for the vault data owner by the script name.
+        Script caller will run the script by name later.
+        The script is treated as the channel for other users to access the owner's data.
+        This will set up a condition and an executable.
+        The condition is checked and must matches before running the executable.
+        What the executable can do depends on the type of it.
+        For example, the type "find" can query the documents from a collection.
 
-    Script caller will run the script by name later.
-    The script is treated as the channel for other users to access the owner's data.
-    This will set up a condition and an executable.
-    The condition is checked and must matches before running the executable.
-    What the executable can do depends on the type of it.
-    For example, the type "find" can query the documents from a collection.
+        .. :quickref: 05 Scripting; Register
 
-    .. :quickref: 05 Scripting; Register
+        **Request**:
 
-    **Request**:
+        .. code-block:: json
 
-    .. code-block:: json
-
-        {
-            "condition": {
-                "type": "queryHasResult",
-                "name": "verify_user_permission",
-                "body": {
-                    "collection": "groups",
-                    "filter": {
-                        "_id": "$params.group_id",
-                        "friends": "$caller_did"
+            {
+                "condition": {
+                    "type": "queryHasResult",
+                    "name": "verify_user_permission",
+                    "body": {
+                        "collection": "groups",
+                        "filter": {
+                            "_id": "$params.group_id",
+                            "friends": "$caller_did"
+                        }
                     }
-                }
-            },
-            "executable": {
-                "type": "find",
-                "name": "find_messages",
-                "output": true,
-                "body": {
-                    "collection": "messages",
-                    "filter": {
-                        "group_id": "$params.group_id"
-                    },
-                    "options": {
-                        "projection": {
-                            "_id": false
+                },
+                "executable": {
+                    "type": "find",
+                    "name": "find_messages",
+                    "output": true,
+                    "body": {
+                        "collection": "messages",
+                        "filter": {
+                            "group_id": "$params.group_id"
                         },
-                        "limit": 100
+                        "options": {
+                            "projection": {
+                                "_id": false
+                            },
+                            "limit": 100
+                        }
                     }
+                },
+                "allowAnonymousUser": false,
+                "allowAnonymousApp": false
+            }
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+
+        .. code-block:: json
+
+            {
+                "find_messages": {
+                    "acknowledged":true,
+                    "matched_count":1,
+                    "modified_count":1,
+                    "upserted_id":null
                 }
-            },
-            "allowAnonymousUser": false,
-            "allowAnonymousApp": false
-        }
-
-    **Response OK**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 200 OK
-
-    .. code-block:: json
-
-        {
-            "find_messages": {
-                "acknowledged":true,
-                "matched_count":1,
-                "modified_count":1,
-                "upserted_id":null
             }
-        }
 
-    **Response Error**:
+        **Response Error**:
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 401 Unauthorized
+            HTTP/1.1 401 Unauthorized
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 400 Bad Request
+            HTTP/1.1 400 Bad Request
 
-    **Condition**
+        **Condition**
 
-    There are three types of conditions: 'and', 'or', 'queryHasResult'. The 'and' and the 'or' are for merging
-    other type conditions and can be recursive. 'queryHasResult' is for checking
-    whether the document can be found in the collection by a filter. Here is an example for three types:
+        There are three types of conditions: 'and', 'or', 'queryHasResult'. The 'and' and the 'or' are for merging
+        other type conditions and can be recursive. 'queryHasResult' is for checking
+        whether the document can be found in the collection by a filter. Here is an example for three types:
 
-    .. code-block:: json
+        .. code-block:: json
 
-        {
-           "condition":{
-              "type":"and",
-              "name":"verify_user_permission",
-              "body":[
-                 {
-                    "type":"or",
-                    "name":"verify_user_permission",
-                    "body":[
-                       {
-                          "type":"queryHasResult",
-                          "name":"user_in_group",
-                          "body":{
-                             "collection":"groups",
-                             "filter":{
-                                "_id":"$params.group_id",
-                                "friends":"$caller_did"
-                             }
-                          }
-                       },
-                       {
-                          "type":"queryHasResult",
-                          "name":"user_in_group",
-                          "body":{
-                             "collection":"groups",
-                             "filter":{
-                                "_id":"$params.group_id",
-                                "friends":"$caller_did"
-                             }
-                          }
-                       }
-                    ]
-                 },
-                 {
-                    "type":"queryHasResult",
-                    "name":"user_in_group",
-                    "body":{
-                       "collection":"groups",
-                       "filter":{
-                          "_id":"$params.group_id",
-                          "friends":"$caller_did"
-                       }
-                    }
-                 }
-              ]
-           }
-        }
-
-
-    **Executable**
-
-    There are nine types of executables. Here lists all types with the relating examples.
-    For the request params and the response, please check Run Script for how to use them.
-    No response will be provided if the output option sets to false.
-
-    Possible executable types are here:
-
-    - aggregated
-    - find
-    - insert
-    - update
-    - delete
-    - fileUpload
-    - fileDownload
-    - fileProperties
-    - fileHash
-
-    """
-    return scripting.set_script(script_name)
-
-
-@blueprint.route('/api/v2/vault/scripting/<script_name>', methods=['DELETE'])
-def delete_script(script_name):
-    """ Remove the script by the script name and the script can not be called anymore.
-
-    .. :quickref: 05 Scripting; Unregister
-
-    **Request**:
-
-    .. code-block:: json
-
-        None
-
-    **Response OK**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 204 No Content
-
-    **Response Error**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 401 Unauthorized
-
-    .. sourcecode:: http
-
-        HTTP/1.1 400 Bad Request
-
-    .. sourcecode:: http
-
-        HTTP/1.1 404 Not Found
-
-    """
-    return scripting.delete_script(script_name)
-
-
-@blueprint.route('/api/v2/vault/scripting/<script_name>', methods=['PATCH'])
-def call_script(script_name):
-    """ Run the script registered by the owner.
-
-    Before running the script, the caller needs to check if matches the script condition.
-    The parameter 'context' is also required for tell the scripting service
-    which did and app_did is the data belongs to.
-
-    The 'params' parameter is used to provide the value which the script requires if exists.
-
-    .. :quickref: 05 Scripting; Run Script
-
-    **Request**:
-
-    .. code-block:: json
-
-        {
-            "context": {
-                "target_did": "did:elastos:icXtpDnZRSDrjmD5NQt6TYSphFRqoo2q6n",
-                "target_app_did":"appId"
-            },
-            "params": {
-                "group_id": {"$oid": "5f8d9dfe2f4c8b7a6f8ec0f1"}
+            {
+               "condition":{
+                  "type":"and",
+                  "name":"verify_user_permission",
+                  "body":[
+                     {
+                        "type":"or",
+                        "name":"verify_user_permission",
+                        "body":[
+                           {
+                              "type":"queryHasResult",
+                              "name":"user_in_group",
+                              "body":{
+                                 "collection":"groups",
+                                 "filter":{
+                                    "_id":"$params.group_id",
+                                    "friends":"$caller_did"
+                                 }
+                              }
+                           },
+                           {
+                              "type":"queryHasResult",
+                              "name":"user_in_group",
+                              "body":{
+                                 "collection":"groups",
+                                 "filter":{
+                                    "_id":"$params.group_id",
+                                    "friends":"$caller_did"
+                                 }
+                              }
+                           }
+                        ]
+                     },
+                     {
+                        "type":"queryHasResult",
+                        "name":"user_in_group",
+                        "body":{
+                           "collection":"groups",
+                           "filter":{
+                              "_id":"$params.group_id",
+                              "friends":"$caller_did"
+                           }
+                        }
+                     }
+                  ]
+               }
             }
-        }
 
-    **Response OK**:
 
-    .. sourcecode:: http
+        **Executable**
 
-        HTTP/1.1 200 OK
+        There are nine types of executables. Here lists all types with the relating examples.
+        For the request params and the response, please check Run Script for how to use them.
+        No response will be provided if the output option sets to false.
 
-    .. code-block:: json
+        Possible executable types are here:
 
-        {
-           "get_groups":{
-              "items":[
-                 {
-                    "name":"Tuum Tech"
-                 }
-              ]
-           }
-        }
+        - aggregated
+        - find
+        - insert
+        - update
+        - delete
+        - fileUpload
+        - fileDownload
+        - fileProperties
+        - fileHash
 
-    **Response Error**:
+        """
+        return self.scripting.set_script(script_name)
 
-    .. sourcecode:: http
 
-        HTTP/1.1 401 Unauthorized
+class DeleteScript(Resource):
+    def __init__(self):
+        self.scripting = Scripting(is_ipfs=True)
 
-    .. sourcecode:: http
+    def delete(self, script_name):
+        """ Remove the script by the script name and the script can not be called anymore.
 
-        HTTP/1.1 400 Bad Request
+        .. :quickref: 05 Scripting; Unregister
 
-    .. sourcecode:: http
+        **Request**:
 
-        HTTP/1.1 404 Not Found
+        .. code-block:: json
 
-    """
-    return scripting.run_script(script_name)
+            None
 
+        **Response OK**:
 
-@blueprint.route('/api/v2/vault/scripting/<script_name>/<context_str>/<params>', methods=['GET'])
-def call_script_url(script_name, context_str, params):
-    """ Run the script registered by the owner by the URL parameters.
+        .. sourcecode:: http
 
-    This is the same as **Run Script**.
+            HTTP/1.1 204 No Content
 
-    .. :quickref: 05 Scripting; Run Script URL
+        **Response Error**:
 
-    **URL Parameters**:
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 401 Unauthorized
 
-        <context_str> # context for running the script.
-        <params> # params for running the script.
+        .. sourcecode:: http
 
-    **Response OK**:
+            HTTP/1.1 400 Bad Request
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 200 OK
+            HTTP/1.1 404 Not Found
 
-    .. code-block:: json
+        """
+        return self.scripting.delete_script(script_name)
 
-        {
-           "get_groups":{
-              "items":[
-                 {
-                    "name":"Tuum Tech"
-                 }
-              ]
-           }
-        }
 
-    **Response Error**:
+class CallScript(Resource):
+    def __init__(self):
+        self.scripting = Scripting(is_ipfs=True)
 
-    .. sourcecode:: http
+    def patch(self, script_name):
+        """ Run the script registered by the owner.
 
-        HTTP/1.1 401 Unauthorized
+        Before running the script, the caller needs to check if matches the script condition.
+        The parameter 'context' is also required for tell the scripting service
+        which did and app_did is the data belongs to.
 
-    .. sourcecode:: http
+        The 'params' parameter is used to provide the value which the script requires if exists.
 
-        HTTP/1.1 400 Bad Request
+        .. :quickref: 05 Scripting; Run Script
 
-    .. sourcecode:: http
+        **Request**:
 
-        HTTP/1.1 404 Not Found
+        .. code-block:: json
 
-    """
-    target_did, target_app_did = None, None
-    parts = context_str.split('@')
-    if len(parts) == 2 and parts[0] and parts[1]:
-        target_did, target_app_did = parts[0], parts[1]
-    return scripting.run_script_url(script_name, target_did, target_app_did, json.loads(params))
+            {
+                "context": {
+                    "target_did": "did:elastos:icXtpDnZRSDrjmD5NQt6TYSphFRqoo2q6n",
+                    "target_app_did":"appId"
+                },
+                "params": {
+                    "group_id": {"$oid": "5f8d9dfe2f4c8b7a6f8ec0f1"}
+                }
+            }
 
+        **Response OK**:
 
-@blueprint.route('/api/v2/vault/scripting/stream/<transaction_id>', methods=['PUT'])
-def upload_file(transaction_id):
-    """ Upload file by transaction id returned by the running script for the executable type 'fileUpload'.
+        .. sourcecode:: http
 
-    .. :quickref: 05 Scripting; Upload File
+            HTTP/1.1 200 OK
 
-    **Request**:
+        .. code-block:: json
 
-    .. sourcecode:: http
+            {
+               "get_groups":{
+                  "items":[
+                     {
+                        "name":"Tuum Tech"
+                     }
+                  ]
+               }
+            }
 
-        <The bytes content of the file>
+        **Response Error**:
 
-    **Response OK**:
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 401 Unauthorized
 
-        HTTP/1.1 200 OK
+        .. sourcecode:: http
 
-    **Response Error**:
+            HTTP/1.1 400 Bad Request
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 401 Unauthorized
+            HTTP/1.1 404 Not Found
 
-    .. sourcecode:: http
+        """
+        return self.scripting.run_script(script_name)
 
-        HTTP/1.1 400 Bad Request
 
-    .. sourcecode:: http
+class CallScriptUrl(Resource):
+    def __init__(self):
+        self.scripting = Scripting(is_ipfs=True)
 
-        HTTP/1.1 404 Not Found
+    def get(self, script_name, context_str, params):
+        """ Run the script registered by the owner by the URL parameters.
 
-    """
-    return scripting.upload_file(transaction_id)
+        This is the same as **Run Script**.
 
+        .. :quickref: 05 Scripting; Run Script URL
 
-@blueprint.route('/api/v2/vault/scripting/stream/<transaction_id>', methods=['GET'])
-def download_file(transaction_id):
-    """ Download file by transaction id which is returned by running script for the executable type 'fileDownload'.
+        **URL Parameters**:
 
-    .. :quickref: 05 Scripting; Download File
+        .. sourcecode:: http
 
-    **Request**:
+            <context_str> # context for running the script.
+            <params> # params for running the script.
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        None
+        .. sourcecode:: http
 
-    **Response OK**:
+            HTTP/1.1 200 OK
 
-    .. sourcecode:: http
+        .. code-block:: json
 
-        HTTP/1.1 200 OK
+            {
+               "get_groups":{
+                  "items":[
+                     {
+                        "name":"Tuum Tech"
+                     }
+                  ]
+               }
+            }
 
-    .. code-block:: json
+        **Response Error**:
 
-        <The bytes content of the file>
+        .. sourcecode:: http
 
-    **Response Error**:
+            HTTP/1.1 401 Unauthorized
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 401 Unauthorized
+            HTTP/1.1 400 Bad Request
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 400 Bad Request
+            HTTP/1.1 404 Not Found
 
-    .. sourcecode:: http
+        """
+        target_did, target_app_did = None, None
+        parts = context_str.split('@')
+        if len(parts) == 2 and parts[0] and parts[1]:
+            target_did, target_app_did = parts[0], parts[1]
+        return self.scripting.run_script_url(script_name, target_did, target_app_did, json.loads(params))
 
-        HTTP/1.1 404 Not Found
 
-    """
-    return scripting.download_file(transaction_id)
+class UploadFile(Resource):
+    def __init__(self):
+        self.scripting = Scripting(is_ipfs=True)
+
+    def put(self, transaction_id):
+        """ Upload file by transaction id returned by the running script for the executable type 'fileUpload'.
+
+        .. :quickref: 05 Scripting; Upload File
+
+        **Request**:
+
+        .. sourcecode:: http
+
+            <The bytes content of the file>
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 400 Bad Request
+
+        .. sourcecode:: http
+
+            HTTP/1.1 404 Not Found
+
+        """
+        return self.scripting.upload_file(transaction_id)
+
+
+class DownloadFile(Resource):
+    def __init__(self):
+        self.scripting = Scripting(is_ipfs=True)
+
+    @response_stream
+    def get(self, transaction_id):
+        """ Download file by transaction id which is returned by running script for the executable type 'fileDownload'.
+
+        .. :quickref: 05 Scripting; Download File
+
+        **Request**:
+
+        .. sourcecode:: http
+
+            None
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+
+        .. code-block:: json
+
+            <The bytes content of the file>
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 400 Bad Request
+
+        .. sourcecode:: http
+
+            HTTP/1.1 404 Not Found
+
+        """
+        return self.scripting.download_file(transaction_id)

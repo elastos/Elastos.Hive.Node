@@ -39,7 +39,6 @@ class SubscriptionTestCase(unittest.TestCase):
         response = self.cli.post('/subscription/vault?op=deactivation')
         self.assertEqual(response.status_code, 201)
 
-    @unittest.skip
     def test06_vault_unsubscribe(self):
         response = self.cli.delete('/subscription/vault')
         self.assertEqual(response.status_code, 204)
@@ -52,17 +51,14 @@ class SubscriptionTestCase(unittest.TestCase):
         self.assertTrue('backupPlans' in response.json())
         self.assertTrue('pricingPlans' in response.json())
 
-    @unittest.skip
     def test08_backup_subscribe(self):
         response = self.backup_cli.put('/subscription/backup')
         self.assertTrue(response.status_code in [200, 455])
 
-    @unittest.skip
     def test09_backup_get_info(self):
         response = self.backup_cli.get('/subscription/backup')
         self.assertEqual(response.status_code, 200)
 
-    @unittest.skip
     def test10_backup_unsubscribe(self):
         response = self.backup_cli.delete('/subscription/backup')
         self.assertEqual(response.status_code, 204)

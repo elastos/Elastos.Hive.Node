@@ -3,208 +3,217 @@
 """
 The view of ipfs-backup module for file saving and viewing.
 """
-from flask import Blueprint
+from flask_restful import Resource
 
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
-from src.utils.consts import URL_VAULT_BACKUP_SERVICE_BACKUP, URL_VAULT_BACKUP_SERVICE_STATE, \
-    URL_VAULT_BACKUP_SERVICE_RESTORE
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import params, rqargs
 
-blueprint = Blueprint('backup', __name__)
-backup_client: IpfsBackupClient = None
-backup_server: IpfsBackupServer = None
+
+class State(Resource):
+    def __init__(self):
+        self.backup_client = IpfsBackupClient()
+
+    def get(self):
+        """ Get the status of the backup processing.
+
+        .. :quickref: 06 Backup; Get the State
+
+        **Request**:
+
+        .. sourcecode:: http
+
+            None
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+
+        .. code-block:: json
+
+            {
+                "state": "stop", # stop, backup, restore
+                "result": "success" # success, failed, process
+                "message": "" # any message for the result.
+            }
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
+        """
+        return self.backup_client.get_state()
 
 
-def init_app(app):
-    """ This will be called by application initializer. """
-    global backup_client, backup_server
-    backup_client, backup_server = IpfsBackupClient(), IpfsBackupServer()
-    app.register_blueprint(blueprint)
+class BackupRestore(Resource):
+    def __init__(self):
+        self.backup_client = IpfsBackupClient()
+
+    def post(self):
+        """ Backup or restore the data of the vault service.
+        Backup the data to another hive node by the credential if contains URL parameter is **to=hive_node**.
+
+        .. :quickref: 06 Backup; Backup & Restore
+
+        **Request**:
+
+        .. code-block:: json
+
+            {
+               "credential":"<credential_string>"
+            }
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 201 Created
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 400 Bad Request
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
+        Restore the data from the other hive node if the URL parameter is **from=hive_node**.
+
+        **Request**:
+
+        .. code-block:: json
+
+            {
+               "credential":"<credential_string>"
+            }
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 201 Created
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 400 Bad Request
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
+        """
+        to, fr, is_force = rqargs.get_str('to')[0], rqargs.get_str('from')[0], rqargs.get_bool('is_force')[0]
+        credential, msg = params.get_str('credential')
+        if msg or not credential:
+            raise InvalidParameterException(msg='Invalid parameter.')
+        if to == 'hive_node':
+            return self.backup_client.backup(credential, is_force)
+        elif fr == 'hive_node':
+            return self.backup_client.restore(credential, is_force)
+        else:
+            raise InvalidParameterException(msg='Invalid parameter, to or fr need be set.')
 
 
-@blueprint.route('/api/v2/vault/content', methods=['GET'])
-def get_state():
-    """ Get the status of the backup processing.
-
-    .. :quickref: 06 Backup; Get the State
-
-    **Request**:
-
-    .. sourcecode:: http
-
-        None
-
-    **Response OK**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 200 OK
-
-    .. code-block:: json
-
-        {
-            "state": "stop", # stop, backup, restore
-            "result": "success" # success, failed, process
-            "message": "" # any message for the result.
-        }
-
-    **Response Error**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 401 Unauthorized
-
-    .. sourcecode:: http
-
-        HTTP/1.1 403 Forbidden
-
-    """
-    return backup_client.get_state()
-
-
-@blueprint.route('/api/v2/vault/content', methods=['POST'])
-def backup_restore():
-    """ Backup or restore the data of the vault service.
-    Backup the data to another hive node by the credential if contains URL parameter is **to=hive_node**.
-
-    .. :quickref: 06 Backup; Backup & Restore
-
-    **Request**:
-
-    .. code-block:: json
-
-        {
-           "credential":"<credential_string>"
-        }
-
-    **Response OK**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 201 Created
-
-    **Response Error**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 400 Bad Request
-
-    .. sourcecode:: http
-
-        HTTP/1.1 401 Unauthorized
-
-    .. sourcecode:: http
-
-        HTTP/1.1 403 Forbidden
-
-    Restore the data from the other hive node if the URL parameter is **from=hive_node**.
-
-    **Request**:
-
-    .. code-block:: json
-
-        {
-           "credential":"<credential_string>"
-        }
-
-    **Response OK**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 201 Created
-
-    **Response Error**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 400 Bad Request
-
-    .. sourcecode:: http
-
-        HTTP/1.1 401 Unauthorized
-
-    .. sourcecode:: http
-
-        HTTP/1.1 403 Forbidden
-
-    """
-    to, fr, is_force = rqargs.get_str('to')[0], rqargs.get_str('from')[0], rqargs.get_bool('is_force')[0]
-    credential, msg = params.get_str('credential')
-    if msg or not credential:
-        return InvalidParameterException(msg='Invalid parameter.').get_error_response()
-    if to == 'hive_node':
-        return backup_client.backup(credential, is_force)
-    elif fr == 'hive_node':
-        return backup_client.restore(credential, is_force)
-    else:
-        return InvalidParameterException(msg='Invalid parameter, to or fr need be set.').get_error_response()
-
-
+###############################################################################
 # ipfs-promotion on the backup server side
+###############################################################################
 
 
-@blueprint.route('/api/v2/backup/promotion', methods=['POST'])
-def promotion():
-    """ Promote a backup service to the vault service on backup node.
+class ServerPromotion(Resource):
+    def __init__(self):
+        self.backup_server = IpfsBackupServer()
 
-    .. :quickref: 06 Backup; Promote
+    def post(self):
+        """ Promote a backup service to the vault service on backup node.
 
-    **Request**:
+        .. :quickref: 06 Backup; Promote
 
-    .. sourcecode:: http
+        **Request**:
 
-        None
+        .. sourcecode:: http
 
-    **Response OK**:
+            None
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        HTTP/1.1 200 OK
+        .. sourcecode:: http
 
-    **Response Error**:
+            HTTP/1.1 200 OK
 
-    .. sourcecode:: http
+        **Response Error**:
 
-        HTTP/1.1 401 Unauthorized
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 401 Unauthorized
 
-        HTTP/1.1 403 Forbidden
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 403 Forbidden
 
-        HTTP/1.1 404 Not Found
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 404 Not Found
 
-        HTTP/1.1 455 Already Exists
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 455 Already Exists
 
-        HTTP/1.1 507 Insufficient Storage
+        .. sourcecode:: http
 
-    """
-    return backup_server.promotion()
+            HTTP/1.1 507 Insufficient Storage
+
+        """
+        return self.backup_server.promotion()
 
 
+###############################################################################
 # ipfs-backup internal APIs on the backup server side
+###############################################################################
 
 
-@blueprint.route(URL_VAULT_BACKUP_SERVICE_BACKUP, methods=['POST'])
-def internal_backup():
-    return backup_server.internal_backup(params.get_str('cid')[0],
-                                         params.get_str('sha256')[0],
-                                         params.get_int('size')[0],
-                                         params.get_bool('is_force')[0])
+class ServerInternalBackup(Resource):
+    def __init__(self):
+        self.backup_server = IpfsBackupServer()
+
+    def post(self):
+        return self.backup_server.internal_backup(params.get_str('cid')[0],
+                                                  params.get_str('sha256')[0],
+                                                  params.get_int('size')[0],
+                                                  params.get_bool('is_force')[0])
 
 
-@blueprint.route(URL_VAULT_BACKUP_SERVICE_STATE, methods=['GET'])
-def internal_backup_state():
-    return backup_server.internal_backup_state()
+class ServerInternalState(Resource):
+    def __init__(self):
+        self.backup_server = IpfsBackupServer()
+
+    def get(self):
+        return self.backup_server.internal_backup_state()
 
 
-@blueprint.route(URL_VAULT_BACKUP_SERVICE_RESTORE, methods=['GET'])
-def internal_restore():
-    return backup_server.internal_restore()
+class ServerInternalRestore(Resource):
+    def __init__(self):
+        self.backup_server = IpfsBackupServer()
+
+    def get(self):
+        return self.backup_server.internal_restore()

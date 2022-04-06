@@ -3,435 +3,455 @@
 """
 The view of subscription module.
 """
-from flask import Blueprint, request
+from flask import request
+from flask_restful import Resource
 
-from src.modules.backup.backup_server import BackupServer
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.modules.subscription.subscription import VaultSubscription
 
-blueprint = Blueprint('subscription', __name__)
-vault_subscription: VaultSubscription = None
-backup_server: IpfsBackupServer = None
 
+class VaultPricePlan(Resource):
+    def __init__(self):
+        self.vault_subscription = VaultSubscription()
 
-def init_app(app):
-    """ This will be called by application initializer. """
-    global vault_subscription, backup_server
-    vault_subscription, backup_server = VaultSubscription(), IpfsBackupServer()
-    app.register_blueprint(blueprint)
+    def get(self):
+        """ Get an available pricing plan list or the specific pricing plan for the vault and backup service.
 
+        The pricing plan list is the pricing plans that the hive node supported for the vault service.
+        The owner of the vault service can use the pricing plan name upgrade the vault service
+        to get much more storage space.
 
-@blueprint.route('/api/v2/subscription/pricing_plan', methods=['GET'])
-def vault_get_price_plan():
-    """ Get an available pricing plan list or the specific pricing plan for the vault and backup service.
+        .. :quickref: 02 Subscription; Get Vault Pricing Plans.
 
-    The pricing plan list is the pricing plans that the hive node supported for the vault service.
-    The owner of the vault service can use the pricing plan name upgrade the vault service
-    to get much more storage space.
+        **URL Parameters**:
 
-    .. :quickref: 02 Subscription; Get Vault Pricing Plans.
+        .. sourcecode:: http
 
-    **URL Parameters**:
+            subscription=all # possible value: all, vault or backup
+            name=rookie # the pricing plan name
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        subscription=all # possible value: all, vault or backup
-        name=rookie # the pricing plan name
+        .. sourcecode:: http
 
-    **Response OK**:
+            HTTP/1.1 200 OK
 
-    .. sourcecode:: http
+        .. code-block:: json
 
-        HTTP/1.1 200 OK
-
-    .. code-block:: json
-
-        {
-            "backupPlans": [{
-                    amount": 0,
+            {
+                "backupPlans": [{
+                        amount": 0,
+                            "currency": "ELA",
+                        "maxStorage": 500,
+                        "name": "Free",
+                        "serviceDays": -1
+                    }, {
+                        "amount": 1.5,
                         "currency": "ELA",
+                        "maxStorage": 2000,
+                        "name": "Rookie",
+                         "serviceDays": 30
+                    }, {
+                        "amount": 3,
+                         "currency": "ELA",
+                        "maxStorage": 5000,
+                        "name": "Advanced",
+                        "serviceDays": 30
+                    }],
+
+                "pricingPlans": [{
+                    "amount": 0,
+                    "currency": "ELA",
                     "maxStorage": 500,
                     "name": "Free",
                     "serviceDays": -1
                 }, {
-                    "amount": 1.5,
+                    "amount": 2.5,
                     "currency": "ELA",
                     "maxStorage": 2000,
                     "name": "Rookie",
-                     "serviceDays": 30
+                    "serviceDays": 30
                 }, {
-                    "amount": 3,
-                     "currency": "ELA",
+                     "amount": 5,
+                    "currency": "ELA",
                     "maxStorage": 5000,
                     "name": "Advanced",
                     "serviceDays": 30
                 }],
+                "version": "1.0"
+            }
 
-            "pricingPlans": [{
-                "amount": 0,
-                "currency": "ELA",
-                "maxStorage": 500,
-                "name": "Free",
-                "serviceDays": -1
-            }, {
-                "amount": 2.5,
-                "currency": "ELA",
-                "maxStorage": 2000,
-                "name": "Rookie",
-                "serviceDays": 30
-            }, {
-                 "amount": 5,
-                "currency": "ELA",
-                "maxStorage": 5000,
-                "name": "Advanced",
-                "serviceDays": 30
-            }],
-            "version": "1.0"
-        }
+        **Response Error**:
 
-    **Response Error**:
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 401 Unauthorized
 
-        HTTP/1.1 401 Unauthorized
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 404 Not Found
 
-        HTTP/1.1 404 Not Found
+        """
+        subscription, name = request.args.get("subscription"), request.args.get("name")
+        return self.vault_subscription.get_price_plans(subscription, name)
 
-    """
-    subscription, name = request.args.get("subscription"), request.args.get("name")
-    return vault_subscription.get_price_plans(subscription, name)
 
+class VaultInfo(Resource):
+    def __init__(self):
+        self.vault_subscription = VaultSubscription()
 
-@blueprint.route('/api/v2/subscription/vault', methods=['GET'])
-def vault_get_info():
-    """ Get the information of the owned vault service.
+    def get(self):
+        """ Get the information of the owned vault service.
 
-    The information contains something like storage usage, pricing plan, etc.
+        The information contains something like storage usage, pricing plan, etc.
 
-    .. :quickref: 02 Subscription; Get Vault Info.
+        .. :quickref: 02 Subscription; Get Vault Info.
 
-    **Request**:
+        **Request**:
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        None
+            None
 
-    **Response OK**:
+        **Response OK**:
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 200 OK
+            HTTP/1.1 200 OK
 
-    .. code-block:: json
+        .. code-block:: json
 
-        {
-             “service_did”: “did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"”,
-             “storage_quota: 500，
-             “storage_used”: 20,
-             “created”: 1602236316,   // epoch time.
-             “updated”: 1604914928,
-             “pricing_plan”: “rookie”
-        }
+            {
+                 “service_did”: “did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"”,
+                 “storage_quota: 500，
+                 “storage_used”: 20,
+                 “created”: 1602236316,   // epoch time.
+                 “updated”: 1604914928,
+                 “pricing_plan”: “rookie”
+            }
 
-    **Response Error**:
+        **Response Error**:
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 401 Unauthorized
+            HTTP/1.1 401 Unauthorized
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 404 Not Found
+            HTTP/1.1 404 Not Found
 
-    """
-    return vault_subscription.get_info()
+        """
+        return self.vault_subscription.get_info()
 
 
-@blueprint.route('/api/v2/subscription/vault/app_stats', methods=['GET'])
-def vault_get_app_stats():
-    """ Get all application stats in the user's vault.
+class VaultAppStates(Resource):
+    def __init__(self):
+        self.vault_subscription = VaultSubscription()
 
-    .. :quickref: 02 Subscription; Get App Stats
+    def get(self):
+        """ Get all application stats in the user's vault.
 
-    **Request**:
+        .. :quickref: 02 Subscription; Get App Stats
 
-    .. sourcecode:: http
+        **Request**:
 
-        None
+        .. sourcecode:: http
 
-    **Response OK**:
+            None
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        HTTP/1.1 200 OK
+        .. sourcecode:: http
 
-    .. code-block:: json
+            HTTP/1.1 200 OK
 
-        {
-            "apps": [{
-                "name": <str>,
-                "developer_did": <str>
-                "icon_url": <str>,
-                "redirect_url": <str>,
-                "user_did": <str>,
-                "app_did": <str>,
-                "used_storage_size": <int>
-            }]
-        }
+        .. code-block:: json
 
-    **Response Error**:
+            {
+                "apps": [{
+                    "name": <str>,
+                    "developer_did": <str>
+                    "icon_url": <str>,
+                    "redirect_url": <str>,
+                    "user_did": <str>,
+                    "app_did": <str>,
+                    "used_storage_size": <int>
+                }]
+            }
 
-    .. sourcecode:: http
+        **Response Error**:
 
-        HTTP/1.1 400 Bad Request
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 400 Bad Request
 
-        HTTP/1.1 401 Unauthorized
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 401 Unauthorized
 
-        HTTP/1.1 403 Forbidden
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 403 Forbidden
 
-        HTTP/1.1 404 Not Found
+        .. sourcecode:: http
 
-    """
+            HTTP/1.1 404 Not Found
 
-    return vault_subscription.get_app_stats()
+        """
 
+        return self.vault_subscription.get_app_stats()
 
-@blueprint.route('/api/v2/subscription/vault', methods=['PUT'])
-def vault_subscribe():
-    """ Subscribe to a remote vault service on the specific hive node,
-    where would create a new vault service if no such vault existed against the DID used.
 
-    A user can subscribe to only one vault service on the specific hive node with a given DID,
-    then should declare that service endpoint on the DID document that would be published on the DID chain
-    so that other users could be aware of the address and access the data on that vault with certain permission.
+class VaultSubscribe(Resource):
+    def __init__(self):
+        self.vault_subscription = VaultSubscription()
 
-    The free pricing plan is applied to a new subscribed vault.
-    The payment APIs will be used for upgrading the vault service.
+    def put(self):
+        """ Subscribe to a remote vault service on the specific hive node,
+        where would create a new vault service if no such vault existed against the DID used.
 
-    .. :quickref: 02 Subscription; Vault Subscribe
+        A user can subscribe to only one vault service on the specific hive node with a given DID,
+        then should declare that service endpoint on the DID document that would be published on the DID chain
+        so that other users could be aware of the address and access the data on that vault with certain permission.
 
-    **Request**:
+        The free pricing plan is applied to a new subscribed vault.
+        The payment APIs will be used for upgrading the vault service.
 
-    .. sourcecode:: http
+        .. :quickref: 02 Subscription; Vault Subscribe
 
-        None
+        **Request**:
 
-    **Response OK**:
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            None
 
-        HTTP/1.1 200 OK
+        **Response OK**:
 
-    .. code-block:: json
+        .. sourcecode:: http
 
-        {
-            “pricing_plan”: “<the using pricing plan>
-            “service_did”: <hive node service did>
-            “storage_quota”: 50000000, # the max space of the storage for the vault service.
-            “storage_used”: 0,
-            “created”: <the epoch time>
-            “updated”: <the epoch time>
-        }
+            HTTP/1.1 200 OK
 
-    **Response Error**:
+        .. code-block:: json
 
-    .. sourcecode:: http
+            {
+                “pricing_plan”: “<the using pricing plan>
+                “service_did”: <hive node service did>
+                “storage_quota”: 50000000, # the max space of the storage for the vault service.
+                “storage_used”: 0,
+                “created”: <the epoch time>
+                “updated”: <the epoch time>
+            }
 
-        HTTP/1.1 401 Unauthorized
+        **Response Error**:
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 455 Already Exists
+            HTTP/1.1 401 Unauthorized
 
-    """
-    return vault_subscription.subscribe()
+        .. sourcecode:: http
 
+            HTTP/1.1 455 Already Exists
 
-@blueprint.route('/api/v2/subscription/vault', methods=['POST'])
-def vault_activate_deactivate():
-    op = request.args.get('op')
-    if op == 'activation':
-        return vault_subscription.activate()
-    elif op == 'deactivation':
-        return vault_subscription.deactivate()
+        """
+        return self.vault_subscription.subscribe()
 
 
-@blueprint.route('/api/v2/subscription/vault', methods=['DELETE'])
-def vault_unsubscribe():
-    """ Unsubscribe from the remote vault service on a specific hive node.
-    Only the vault owner can unsubscribe from his owned vault service.
-    After unsubscription, the vault service would stop rendering service,
-    and users can not access data from the vault anymore.
+class VaultActivateDeactivate(Resource):
+    def __init__(self):
+        self.vault_subscription = VaultSubscription()
 
-    And the data on the vault would be unsafe and undefined or even deleted from the hive node.
+    def post(self):
+        op = request.args.get('op')
+        if op == 'activation':
+            return self.vault_subscription.activate()
+        elif op == 'deactivation':
+            return self.vault_subscription.deactivate()
 
-    .. :quickref: 02 Subscription; Vault Unsubscribe
 
-    **Request**:
+class VaultUnsubscribe(Resource):
+    def __init__(self):
+        self.vault_subscription = VaultSubscription()
 
-    .. sourcecode:: http
+    def delete(self):
+        """ Unsubscribe from the remote vault service on a specific hive node.
+        Only the vault owner can unsubscribe from his owned vault service.
+        After unsubscription, the vault service would stop rendering service,
+        and users can not access data from the vault anymore.
 
-        None
+        And the data on the vault would be unsafe and undefined or even deleted from the hive node.
 
-    **Response OK**:
+        .. :quickref: 02 Subscription; Vault Unsubscribe
 
-    .. sourcecode:: http
+        **Request**:
 
-        HTTP/1.1 204 No Content
+        .. sourcecode:: http
 
-    **Response Error**:
+            None
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        HTTP/1.1 401 Unauthorized
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 204 No Content
 
-        HTTP/1.1 404 Not Found
+        **Response Error**:
 
-    """
-    return vault_subscription.unsubscribe()
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 404 Not Found
+
+        """
+        return self.vault_subscription.unsubscribe()
 
 
 ###############################################################################
 # blow is for backup.
+###############################################################################
 
 
-@blueprint.route('/api/v2/subscription/backup', methods=['GET'])
-def backup_get_info():
-    """ Get the information of the owned backup service.
+class BackupInfo(Resource):
+    def __init__(self):
+        self.backup_server = IpfsBackupServer()
 
-    The information contains something like storage usage, pricing plan, etc.
+    def get(self):
+        """ Get the information of the owned backup service.
 
-    .. :quickref: 02 Subscription; Get Backup Info.
+        The information contains something like storage usage, pricing plan, etc.
 
-    **Request**:
+        .. :quickref: 02 Subscription; Get Backup Info.
 
-    .. sourcecode:: http
+        **Request**:
 
-        None
+        .. sourcecode:: http
 
-    **Response OK**:
+            None
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        HTTP/1.1 200 OK
+        .. sourcecode:: http
 
-    .. code-block:: json
+            HTTP/1.1 200 OK
 
-        {
-             “service_did”: “did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"”,
-             “storage_quota: 500，
-             “storage_used”: 20,
-             “created”: 1602236316,   // epoch time.
-             “updated”: 1604914928,
-             “pricing_plan”: “rookie”
-        }
+        .. code-block:: json
 
-    **Response Error**:
+            {
+                 “service_did”: “did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"”,
+                 “storage_quota: 500，
+                 “storage_used”: 20,
+                 “created”: 1602236316,   // epoch time.
+                 “updated”: 1604914928,
+                 “pricing_plan”: “rookie”
+            }
 
-    .. sourcecode:: http
+        **Response Error**:
 
-        HTTP/1.1 401 Unauthorized
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 401 Unauthorized
 
-        HTTP/1.1 404 Not Found
+        .. sourcecode:: http
 
-    """
-    return backup_server.get_info()
+            HTTP/1.1 404 Not Found
 
-
-@blueprint.route('/api/v2/subscription/backup', methods=['PUT'])
-def backup_subscribe():
-    """ Subscribe to a remote backup service on the specific hive node.
-    With the backup service, the data of the vault service can backup for data security.
-
-    .. :quickref: 02 Subscription; Backup Subscribe
-
-    **Request**:
-
-    .. sourcecode:: http
-
-        None
-
-    **Response OK**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 200 OK
-
-    .. code-block:: json
-
-        {
-            “pricing_plan”: “<the using pricing plan>
-            “service_did”: <hive node service did>
-            “storage_quota”: 50000000, # the max space of the storage for the vault service.
-            “storage_used”: 0,
-            “created”: <the epoch time>
-            “updated”: <the epoch time>
-        }
-
-    **Response Error**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 401 Unauthorized
-
-    .. sourcecode:: http
-
-        HTTP/1.1 455 Already Exists
-
-    """
-    return backup_server.subscribe()
+        """
+        return self.backup_server.get_info()
 
 
-@blueprint.route('/api/v2/subscription/backup', methods=['POST'])
-def backup_activate_deactivate():
-    op = None
-    if op == 'activation':
-        return backup_server.activate()
-    elif op == 'deactivation':
-        return backup_server.deactivate()
+class BackupSubscribe(Resource):
+    def __init__(self):
+        self.backup_server = IpfsBackupServer()
+
+    def put(self):
+        """ Subscribe to a remote backup service on the specific hive node.
+        With the backup service, the data of the vault service can backup for data security.
+
+        .. :quickref: 02 Subscription; Backup Subscribe
+
+        **Request**:
+
+        .. sourcecode:: http
+
+            None
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+
+        .. code-block:: json
+
+            {
+                “pricing_plan”: “<the using pricing plan>
+                “service_did”: <hive node service did>
+                “storage_quota”: 50000000, # the max space of the storage for the vault service.
+                “storage_used”: 0,
+                “created”: <the epoch time>
+                “updated”: <the epoch time>
+            }
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 455 Already Exists
+
+        """
+        return self.backup_server.subscribe()
 
 
-@blueprint.route('/api/v2/subscription/backup', methods=['DELETE'])
-def backup_unsubscribe():
-    """ Unsubscribe from the remote backup service on a specific hive node.
+class BackupActivateDeactivate(Resource):
+    def __init__(self):
+        self.backup_server = IpfsBackupServer()
 
-    The data on the backup node would be unsafe and undefined or even deleted from the hive node.
+    def post(self):
+        op = None
+        if op == 'activation':
+            return self.backup_server.activate()
+        elif op == 'deactivation':
+            return self.backup_server.deactivate()
 
-    .. :quickref: 02 Subscription; Backup Unsubscribe
 
-    **Request**:
+class BackupUnsubscribe(Resource):
+    def __init__(self):
+        self.backup_server = IpfsBackupServer()
 
-    .. sourcecode:: http
+    def delete(self):
+        """ Unsubscribe from the remote backup service on a specific hive node.
 
-        None
+        The data on the backup node would be unsafe and undefined or even deleted from the hive node.
 
-    **Response OK**:
+        .. :quickref: 02 Subscription; Backup Unsubscribe
 
-    .. sourcecode:: http
+        **Request**:
 
-        HTTP/1.1 204 No Content
+        .. sourcecode:: http
 
-    **Response Error**:
+            None
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        HTTP/1.1 401 Unauthorized
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 204 No Content
 
-        HTTP/1.1 404 Not Found
+        **Response Error**:
 
-    """
-    return backup_server.unsubscribe()
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 404 Not Found
+
+        """
+        return self.backup_server.unsubscribe()

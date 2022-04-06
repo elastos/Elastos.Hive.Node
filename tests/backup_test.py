@@ -71,7 +71,6 @@ class IpfsBackupTestCase(unittest.TestCase):
         response = self.backup_cli.get('/subscription/vault')
         self.assertEqual(response.status_code, 200)
 
-    @unittest.skip
     def test07_unsubscribe(self):
         response = self.backup_cli.delete('/subscription/backup')
         self.assertEqual(response.status_code, 204)

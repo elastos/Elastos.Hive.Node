@@ -13,7 +13,6 @@ from src.utils.did_auth import check_auth2
 from src.utils.file_manager import fm
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
     InsufficientStorageException, NotImplementedException
-from src.utils.http_response import hive_restful_response
 from src.utils_v1.auth import get_current_node_did_string
 from src.utils_v1.constants import DID_INFO_DB_NAME, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
@@ -26,7 +25,6 @@ class IpfsBackupServer:
         self.vault = VaultSubscription()
         self.client = IpfsBackupClient()
 
-    @hive_restful_response
     def promotion(self):
         """ This processing is just like restore the vault:
         1. check the vault MUST not exist.
@@ -49,7 +47,6 @@ class IpfsBackupServer:
         self.client.restore_database_by_dump_files(request_metadata)
         ExecutorBase.update_vault_usage_by_metadata(user_did, request_metadata)
 
-    @hive_restful_response
     def internal_backup(self, cid, sha256, size, is_force):
         user_did, app_did, doc = self._check_auth_backup()
         if not is_force and doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
@@ -66,7 +63,6 @@ class IpfsBackupServer:
         self.update_backup_request(user_did, update)
         BackupServerExecutor(user_did, self, self.find_backup_request(user_did, False)).start()
 
-    @hive_restful_response
     def internal_backup_state(self):
         user_did, app_did, doc = self._check_auth_backup()
         return {
@@ -75,7 +71,6 @@ class IpfsBackupServer:
             'message': doc.get(BKSERVER_REQ_STATE_MSG)
         }
 
-    @hive_restful_response
     def internal_restore(self):
         user_did, app_did, doc = self._check_auth_backup()
         if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
@@ -119,14 +114,12 @@ class IpfsBackupServer:
 
     # ipfs-subscription
 
-    @hive_restful_response
     def subscribe(self):
         user_did, app_did, doc = self._check_auth_backup(throw_exception=False)
         if doc:
             raise AlreadyExistsException('The backup service is already subscribed.')
         return self._get_vault_info(self._create_backup(user_did, PaymentConfig.get_free_backup_info()))
 
-    @hive_restful_response
     def unsubscribe(self):
         user_did, _, doc = self._check_auth_backup(throw_exception=False)
         if not doc:
@@ -148,16 +141,13 @@ class IpfsBackupServer:
                               {USR_DID: user_did},
                               is_check_exist=False)
 
-    @hive_restful_response
     def get_info(self):
         _, _, doc = self._check_auth_backup()
         return self._get_vault_info(doc)
 
-    @hive_restful_response
     def activate(self):
         raise NotImplementedException()
 
-    @hive_restful_response
     def deactivate(self):
         raise NotImplementedException()
 

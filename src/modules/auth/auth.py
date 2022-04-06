@@ -18,8 +18,7 @@ from src.utils_v1.did_info import create_nonce, get_did_info_by_app_instance_did
 from src.utils.http_client import HttpClient
 from src.utils.http_exception import InvalidParameterException, BadRequestException
 
-from src.utils.http_response import hive_restful_response
-from src.utils.consts import URL_DID_SIGN_IN, URL_DID_BACKUP_AUTH
+from src.utils.consts import URL_SIGN_IN, URL_BACKUP_AUTH, URL_V2
 from src.utils.singleton import Singleton
 
 
@@ -29,7 +28,6 @@ class Auth(Entity, metaclass=Singleton):
         Entity.__init__(self, "hive.auth", mnemonic=hive_setting.DID_MNEMONIC, passphrase=hive_setting.DID_PASSPHRASE)
         self.http = HttpClient()
 
-    @hive_restful_response
     def sign_in(self, doc):
         app_instance_did = self.__get_app_instance_did(doc)
         return {
@@ -88,7 +86,6 @@ class Auth(Entity, metaclass=Singleton):
             raise BadRequestException(msg=f'Failed to create challenge token: {msg}')
         return ffi.string(token).decode()
 
-    @hive_restful_response
     def auth(self, challenge_response):
         credential_info = self.__get_auth_info_from_challenge_response(challenge_response, ['appDid', ])
         access_token = self.__create_access_token(credential_info, "AccessToken")
@@ -226,7 +223,6 @@ class Auth(Entity, metaclass=Singleton):
 
         return ffi.string(token).decode()
 
-    @hive_restful_response
     def backup_auth(self, challenge_response):
         """ for the vault service node """
         credential_info = self.__get_auth_info_from_challenge_response(challenge_response, ["targetHost", "targetDID"])
@@ -257,7 +253,7 @@ class Auth(Entity, metaclass=Singleton):
 
         doc_str = ffi.string(lib.DIDDocument_ToJson(lib.DIDStore_LoadDID(self.store, self.did), True)).decode()
         doc = json.loads(doc_str)
-        body = self.http.post(host_url + URL_DID_SIGN_IN, None, {"id": doc})
+        body = self.http.post(host_url + URL_V2 + URL_SIGN_IN, None, {"id": doc})
         if 'challenge' not in body or not body["challenge"]:
             raise InvalidParameterException(msg='backup_sign_in: failed to sign in to backup node.')
 
@@ -298,7 +294,7 @@ class Auth(Entity, metaclass=Singleton):
         for vault /backup & /restore
         :return backup access token
         """
-        body = self.http.post(host_url + URL_DID_BACKUP_AUTH, None, {"challenge_response": challenge_response})
+        body = self.http.post(host_url + URL_V2 + URL_BACKUP_AUTH, None, {"challenge_response": challenge_response})
         if 'token' not in body or not body["token"]:
             raise InvalidParameterException(msg='backup_auth: failed to backup auth to backup node.')
 

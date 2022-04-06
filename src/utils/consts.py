@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 
+URL_V2 = '/api/v2'
+URL_SIGN_IN = '/did/signin'
+URL_AUTH = '/did/auth'
+URL_BACKUP_AUTH = '/did/backup_auth'
+URL_SERVER_INTERNAL_BACKUP = '/vault-backup-service/backup'
+URL_SERVER_INTERNAL_RESTORE = '/vault-backup-service/restore'
+URL_SERVER_INTERNAL_STATE = '/vault-backup-service/state'
+
 # TODO: deprecated
-URL_DID_SIGN_IN = '/api/v2/did/signin'
-URL_DID_AUTH = '/api/v2/did/auth'
-URL_DID_BACKUP_AUTH = '/api/v2/did/backup_auth'
 URL_BACKUP_SERVICE = '/api/v2/internal_backup/service'
 URL_BACKUP_FINISH = '/api/v2/internal_backup/finished_confirmation'
 URL_BACKUP_FILES = '/api/v2/internal_backup/files'
@@ -18,10 +23,6 @@ URL_IPFS_BACKUP_PIN_CIDS = '/api/v2/ipfs-backup-internal/pin_cids'
 URL_IPFS_BACKUP_GET_CIDS = '/api/v2/ipfs-backup-internal/get_cids'
 URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'
 URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
-
-URL_VAULT_BACKUP_SERVICE_BACKUP = '/api/v2/vault-backup-service/backup'
-URL_VAULT_BACKUP_SERVICE_RESTORE = '/api/v2/vault-backup-service/restore'
-URL_VAULT_BACKUP_SERVICE_STATE = '/api/v2/vault-backup-service/state'
 
 BACKUP_FILE_SUFFIX = '.backup'
 

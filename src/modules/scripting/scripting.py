@@ -3,11 +3,12 @@
 """
 The main handling file of scripting module.
 """
+import json
 import logging
 
 import jwt
 from flask import request
-from bson import ObjectId
+from bson import ObjectId, json_util
 
 from src import hive_setting
 from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
@@ -25,7 +26,6 @@ from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault, check_auth
 from src.utils.http_exception import BadRequestException, CollectionNotFoundException, ScriptNotFoundException
-from src.utils.http_response import hive_restful_response, hive_stream_response
 
 
 def validate_exists(json_data, parent_name, prop_list):
@@ -346,11 +346,9 @@ class FindExecutable(Executable):
     def execute(self):
         cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_R)
         options = populate_options_find_many(self.body) if 'options' in self.body else {}
-        return self.get_output_data({"items": cli.find_many(self.get_target_did(),
-                                                            self.get_target_app_did(),
-                                                            self.get_collection_name(),
-                                                            self.get_populated_filter(),
-                                                            options)})
+        items = cli.find_many(self.get_target_did(), self.get_target_app_did(),
+                              self.get_collection_name(), self.get_populated_filter(), options)
+        return self.get_output_data({"items": json.loads(json_util.dumps(items))})
 
 
 class InsertExecutable(Executable):
@@ -565,7 +563,6 @@ class Scripting:
         self.is_ipfs = is_ipfs
         self.ipfs_files = IpfsFiles()
 
-    @hive_restful_response
     def set_script(self, script_name):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
 
@@ -589,7 +586,6 @@ class Scripting:
             "upserted_id": str(ret.upserted_id) if ret.upserted_id else '',
         }
 
-    @hive_restful_response
     def delete_script(self, script_name):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
 
@@ -601,14 +597,12 @@ class Scripting:
         else:
             raise ScriptNotFoundException(f'The script {script_name} does not exist.')
 
-    @hive_restful_response
     def run_script(self, script_name):
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
         user_did, app_did = check_auth()
         return Script(script_name, json_data, user_did, app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
 
-    @hive_restful_response
     def run_script_url(self, script_name, target_did, target_app_did, params):
         json_data = {
             'params': params
@@ -628,7 +622,6 @@ class Scripting:
             self.files = Files()
         return self.files
 
-    @hive_restful_response
     def upload_file(self, transaction_id):
         return self.handle_transaction(transaction_id)
 
@@ -664,7 +657,6 @@ class Scripting:
         # return the content of the file
         return data
 
-    @hive_stream_response
     def download_file(self, transaction_id):
         return self.handle_transaction(transaction_id, is_download=True)
 

@@ -20,7 +20,6 @@ from src.utils.did_auth import check_auth, check_auth_and_vault
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
     PricePlanNotFoundException, BadRequestException, ApplicationNotFoundException
-from src.utils.http_response import hive_restful_response
 from src.utils.singleton import Singleton
 from src.utils_v1.auth import get_current_node_did_string
 
@@ -29,7 +28,6 @@ class VaultSubscription(metaclass=Singleton):
     def __init__(self):
         self.payment = Payment()
 
-    @hive_restful_response
     def subscribe(self):
         user_did, app_did = check_auth()
         self.get_checked_vault(user_did, is_not_exist_raise=False)
@@ -68,7 +66,6 @@ class VaultSubscription(metaclass=Singleton):
             'updated': cli.timestamp_to_epoch(doc[VAULT_SERVICE_MODIFY_TIME]),
         }
 
-    @hive_restful_response
     def unsubscribe(self):
         user_did, app_did = check_auth()
         self.remove_vault_by_did(user_did)
@@ -85,11 +82,9 @@ class VaultSubscription(metaclass=Singleton):
         self.payment.archive_orders(user_did)
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did}, is_check_exist=False)
 
-    @hive_restful_response
     def activate(self):
         raise NotImplementedException()
 
-    @hive_restful_response
     def deactivate(self):
         raise NotImplementedException()
 
@@ -102,13 +97,11 @@ class VaultSubscription(metaclass=Singleton):
                VAULT_SERVICE_STATE: status}
         cli.update_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter, {"$set": doc})
 
-    @hive_restful_response
     def get_info(self):
         user_did, app_did = check_auth()
         doc = self.get_checked_vault(user_did)
         return self.__get_vault_info(doc)
 
-    @hive_restful_response
     def get_app_stats(self):
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
         apps = cli.get_all_user_apps(user_did)
@@ -134,7 +127,6 @@ class VaultSubscription(metaclass=Singleton):
             "used_storage_size": int(fm.ipfs_get_app_file_usage(name) + cli.get_database_size(name))
         }
 
-    @hive_restful_response
     def get_price_plans(self, subscription, name):
         user_did, app_did = check_auth()
         all_plans = PaymentConfig.get_all_package_info()

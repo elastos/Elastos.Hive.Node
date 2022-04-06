@@ -3,177 +3,176 @@
 """
 The view of the hive-node and vault management.
 """
-from flask import Blueprint
+from flask_restful import Resource
 
 from src.modules.provider.provider import Provider
 
-blueprint = Blueprint('provider', __name__)
-provider: Provider = None
 
+class Vaults(Resource):
+    def __init__(self):
+        self.provider = Provider()
 
-def init_app(app):
-    """ This will be called by application initializer. """
-    global provider
-    provider = Provider()
-    app.register_blueprint(blueprint)
+    def get(self):
+        """ Get all vault information in this hive node.
 
+        .. :quickref: 09 Provider; Get Vaults
 
-@blueprint.route('/api/v2/provider/vaults', methods=['GET'])
-def get_vaults():
-    """ Get all vault information in this hive node.
+        **Request**:
 
-    .. :quickref: 09 Provider; Get Vaults
+        .. sourcecode:: http
 
-    **Request**:
+            None
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        None
+        .. sourcecode:: http
 
-    **Response OK**:
+            HTTP/1.1 200 OK
 
-    .. sourcecode:: http
+        .. code-block:: json
 
-        HTTP/1.1 200 OK
+            {
+                "vaults": [{
+                    "pricing_using": <pricing name|str>,
+                    "max_storage": <int>,
+                    "file_use_storage": <int>,
+                    "db_use_storage": <int>,
+                    "user_did": <str>,
+                }]
+            }
 
-    .. code-block:: json
+        **Response Error**:
 
-        {
-            "vaults": [{
-                "pricing_using": <pricing name|str>,
-                "max_storage": <int>,
-                "file_use_storage": <int>,
-                "db_use_storage": <int>,
-                "user_did": <str>,
-            }]
-        }
+        .. sourcecode:: http
 
-    **Response Error**:
+            HTTP/1.1 400 Bad Request
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 400 Bad Request
+            HTTP/1.1 401 Unauthorized
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 401 Unauthorized
+            HTTP/1.1 403 Forbidden
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 403 Forbidden
+            HTTP/1.1 404 Not Found
 
-    .. sourcecode:: http
+        """
 
-        HTTP/1.1 404 Not Found
+        return self.provider.get_vaults()
 
-    """
 
-    return provider.get_vaults()
+class Backups(Resource):
+    def __init__(self):
+        self.provider = Provider()
 
+    def get(self):
+        """ Get all backup information in this hive node.
 
-@blueprint.route('/api/v2/provider/backups', methods=['GET'])
-def get_backups():
-    """ Get all backup information in this hive node.
+        .. :quickref: 09 Provider; Get Backups
 
-    .. :quickref: 09 Provider; Get Backups
+        **Request**:
 
-    **Request**:
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            None
 
-        None
+        **Response OK**:
 
-    **Response OK**:
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 200 OK
 
-        HTTP/1.1 200 OK
+        .. code-block:: json
 
-    .. code-block:: json
+            {
+                "backups": [{
+                    "pricing_using": <pricing name|str>,
+                    "max_storage": <int>,
+                    "use_storage": <int>,
+                    "user_did": <user did|str>,
+                }]
+            }
 
-        {
-            "backups": [{
-                "pricing_using": <pricing name|str>,
-                "max_storage": <int>,
-                "use_storage": <int>,
-                "user_did": <user did|str>,
-            }]
-        }
+        **Response Error**:
 
-    **Response Error**:
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 400 Bad Request
 
-        HTTP/1.1 400 Bad Request
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 401 Unauthorized
 
-        HTTP/1.1 401 Unauthorized
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 403 Forbidden
 
-        HTTP/1.1 403 Forbidden
+        .. sourcecode:: http
 
-    .. sourcecode:: http
+            HTTP/1.1 404 Not Found
 
-        HTTP/1.1 404 Not Found
+        """
 
-    """
+        return self.provider.get_backups()
 
-    return provider.get_backups()
 
+class FilledOrders(Resource):
+    def __init__(self):
+        self.provider = Provider()
 
-@blueprint.route('/api/v2/provider/filled_orders', methods=['GET'])
-def get_filled_orders():
-    """ Get all payment information in this hive node.
+    def get(self):
+        """ Get all payment information in this hive node.
 
-    .. :quickref: 09 Provider; Get Payments
+        .. :quickref: 09 Provider; Get Payments
 
-    **Request**:
+        **Request**:
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        None
+            None
 
-    **Response OK**:
+        **Response OK**:
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 200 OK
+            HTTP/1.1 200 OK
 
-    .. code-block:: json
+        .. code-block:: json
 
-        {
-            "orders": [{
-                "order_id": <str>,
-                "receipt_id": <str>,
-                "user_did": <str>,
-                "subscription": <vault,backup|str>,
-                "pricing_name": <str>,
-                "ela_amount": <float>,
-                "ela_address": <str>,
-                "paid_did": <user did|str>,
-            }]
-        }
+            {
+                "orders": [{
+                    "order_id": <str>,
+                    "receipt_id": <str>,
+                    "user_did": <str>,
+                    "subscription": <vault,backup|str>,
+                    "pricing_name": <str>,
+                    "ela_amount": <float>,
+                    "ela_address": <str>,
+                    "paid_did": <user did|str>,
+                }]
+            }
 
-    **Response Error**:
+        **Response Error**:
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 400 Bad Request
+            HTTP/1.1 400 Bad Request
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 401 Unauthorized
+            HTTP/1.1 401 Unauthorized
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 403 Forbidden
+            HTTP/1.1 403 Forbidden
 
-    .. sourcecode:: http
+        .. sourcecode:: http
 
-        HTTP/1.1 404 Not Found
+            HTTP/1.1 404 Not Found
 
-    """
+        """
 
-    return provider.get_filled_orders()
+        return self.provider.get_filled_orders()

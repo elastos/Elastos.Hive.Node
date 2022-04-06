@@ -18,7 +18,6 @@ from src.utils.db_client import cli
 from src.utils.did_auth import check_auth
 from src.utils.http_exception import ForbiddenException, VaultNotFoundException, BackupNotFoundException, \
     ReceiptNotFoundException
-from src.utils.http_response import hive_restful_response
 from src.utils_v1.auth import get_verifiable_credential_info
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_BACKUP_SERVICE_USING, \
@@ -43,7 +42,6 @@ class Provider:
             raise RuntimeError(f'get_verified_owner_did: {err_msg}')
         return info['__issuer'], credential
 
-    @hive_restful_response
     def get_vaults(self):
         self.check_auth_owner_id()
         vaults = cli.find_many_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {},
@@ -60,7 +58,6 @@ class Provider:
             }, vaults))
         }
 
-    @hive_restful_response
     def get_backups(self):
         self.check_auth_owner_id()
         backups = cli.find_many_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {},
@@ -76,7 +73,6 @@ class Provider:
             }, backups))
         }
 
-    @hive_restful_response
     def get_filled_orders(self):
         self.check_auth_owner_id()
         receipts = cli.find_many_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {},

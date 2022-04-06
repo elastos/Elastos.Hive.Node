@@ -3,106 +3,104 @@
 """
 The view of authentication module.
 """
-from flask import Blueprint
-from src.modules.auth.auth import Auth
+from flask_restful import Resource
+
+from src.modules.auth import auth
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import params
 
-from src.utils.consts import URL_DID_SIGN_IN, URL_DID_AUTH, URL_DID_BACKUP_AUTH
 
-blueprint = Blueprint('auth', __name__)
-auth: Auth = None
+class SignIn(Resource):
+    def __init__(self):
+        self.auth = auth.Auth()
 
+    def post(self):
+        """ Sign in with the application DID and get the challenge string.
 
-def init_app(app):
-    """ This will be called by application initializer. """
-    global auth
-    auth = Auth()
-    app.register_blueprint(blueprint)
+        .. :quickref: 01 Authentication; Sign in with app DID
 
+        **Request**:
 
-@blueprint.route(URL_DID_SIGN_IN, methods=['POST'])
-def did_sign_in():
-    """ Sign in with the application DID and get the challenge string.
+        .. code-block:: json
 
-    .. :quickref: 01 Authentication; Sign in with app DID
+            {
+                "id": "<the user’s did_document>",
+            }
 
-    **Request**:
+        **Response OK**:
 
-    .. code-block:: json
+        .. sourcecode:: http
 
-        {
-            "id": "<the user’s did_document>",
-        }
+            HTTP/1.1 201 Created
 
-    **Response OK**:
+        .. code-block:: json
 
-    .. sourcecode:: http
+            {
+               “challenge”: “<the authentication challenge encoded in JWT>”
+            }
 
-        HTTP/1.1 201 Created
+        **Response Error**:
 
-    .. code-block:: json
+        .. sourcecode:: http
 
-        {
-           “challenge”: “<the authentication challenge encoded in JWT>”
-        }
+            HTTP/1.1 400 Bad Request
 
-    **Response Error**:
-
-    .. sourcecode:: http
-
-        HTTP/1.1 400 Bad Request
-
-    """
-    doc, msg = params.get_dict('id')
-    if msg or not doc:
-        return InvalidParameterException().get_error_response()
-    return auth.sign_in(doc)
+        """
+        doc, msg = params.get_dict('id')
+        if msg or not doc:
+            raise InvalidParameterException()
+        return self.auth.sign_in(doc)
 
 
-@blueprint.route(URL_DID_AUTH, methods=['POST'])
-def did_auth():
-    """ Auth to get the access token for the user DID and the application DID.
+class Auth(Resource):
+    def __init__(self):
+        self.auth = auth.Auth()
 
-    .. :quickref: 01 Authentication; Get the access token.
+    def post(self):
+        """ Auth to get the access token for the user DID and the application DID.
 
-    **Request**:
+        .. :quickref: 01 Authentication; Get the access token.
 
-    .. code-block:: json
+        **Request**:
 
-        {
-            "challenge_response": "<the response for the authentication challenge encoded in JWT>",
-        }
+        .. code-block:: json
 
-    **Response OK**:
+            {
+                "challenge_response": "<the response for the authentication challenge encoded in JWT>",
+            }
 
-    .. sourcecode:: http
+        **Response OK**:
 
-        HTTP/1.1 201 Created
+        .. sourcecode:: http
 
-    .. code-block:: json
+            HTTP/1.1 201 Created
 
-        {
-            “token”: “<the access token encoded in JWT>”
-        }
+        .. code-block:: json
 
-    **Response Error**:
+            {
+                “token”: “<the access token encoded in JWT>”
+            }
 
-    .. sourcecode:: http
+        **Response Error**:
 
-        HTTP/1.1 400 Bad Request
+        .. sourcecode:: http
 
-    """
-    challenge_response, msg = params.get_str('challenge_response')
-    if msg:
-        return InvalidParameterException(msg=msg).get_error_response()
-    return auth.auth(challenge_response)
+            HTTP/1.1 400 Bad Request
+
+        """
+        challenge_response, msg = params.get_str('challenge_response')
+        if msg:
+            raise InvalidParameterException(msg=msg)
+        return self.auth.auth(challenge_response)
 
 
-@blueprint.route(URL_DID_BACKUP_AUTH, methods=['POST'])
-def backup_auth():
-    """ Get the access token for the vault service node. """
-    challenge_response, msg = params.get_str('challenge_response')
-    if msg or not challenge_response:
-        return InvalidParameterException().get_error_response()
-    return auth.backup_auth(challenge_response)
+class BackupAuth(Resource):
+    def __init__(self):
+        self.auth = auth.Auth()
+
+    def post(self):
+        """ Get the access token for the vault service node. """
+        challenge_response, msg = params.get_str('challenge_response')
+        if msg or not challenge_response:
+            raise InvalidParameterException()
+        return self.auth.backup_auth(challenge_response)

@@ -16,8 +16,7 @@ from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_I
 from src.utils.db_client import cli
 from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
-from src.utils.http_exception import InvalidParameterException, FileNotFoundException, AlreadyExistsException
-from src.utils.http_response import hive_restful_response, hive_stream_response
+from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
 
 
 class IpfsFiles:
@@ -32,7 +31,6 @@ class IpfsFiles:
         """
         pass
 
-    @hive_restful_response
     def upload_file(self, path):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         self.upload_file_with_path(user_did, app_did, path)
@@ -40,12 +38,10 @@ class IpfsFiles:
             'name': path
         }
 
-    @hive_stream_response
     def download_file(self, path):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         return self.download_file_with_path(user_did, app_did, path)
 
-    @hive_restful_response
     def delete_file(self, path):
         """
         Delete a file from the vault.
@@ -75,17 +71,14 @@ class IpfsFiles:
         self.delete_file_metadata(user_did, app_did, path, doc[COL_IPFS_FILES_IPFS_CID])
         update_used_storage_for_files_data(user_did, 0 - doc[SIZE])
 
-    @hive_restful_response
     def move_file(self, src_path, dst_path):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         return self.move_copy_file(user_did, app_did, src_path, dst_path)
 
-    @hive_restful_response
     def copy_file(self, src_path, dst_path):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
         return self.move_copy_file(user_did, app_did, src_path, dst_path, is_copy=True)
 
-    @hive_restful_response
     def list_folder(self, path):
         """
         List the files under the specific directory.
@@ -110,7 +103,6 @@ class IpfsFiles:
             raise FileNotFoundException(f'The directory {path} does not exist.')
         return docs
 
-    @hive_restful_response
     def get_properties(self, path):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         metadata = self.get_file_metadata(user_did, app_did, path)
@@ -122,7 +114,6 @@ class IpfsFiles:
             'updated': metadata['modified'],
         }
 
-    @hive_restful_response
     def get_hash(self, path):
         user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
         metadata = self.get_file_metadata(user_did, app_did, path)

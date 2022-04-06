@@ -6,8 +6,9 @@ For new exception, please define here.
 """
 import traceback
 import logging
+import typing as t
 
-from flask import request
+from flask import request, make_response, jsonify
 from flask_restful import Api
 from sentry_sdk import capture_exception
 
@@ -29,15 +30,34 @@ class HiveApi(Api):
         return codes[request.method]
 
     def make_response(self, data, *args, **kwargs):
+        """ Custom response for success response.
+        :param data: the data returned by the API class method.
+        :return: response object
+        """
         resp = super().make_response(data, *args, **kwargs)
         resp.status_code = HiveApi._get_resp_success_code()
         return resp
 
     def handle_error(self, e):
         """ Convert any exception (HiveException and Exception) to error response message. """
-        if not hasattr(e, 'get_error_response'):
-            e = InternalServerErrorException(msg=traceback.format_exc())
-        return e.get_error_response()
+        ex = e
+        if not hasattr(e, 'get_error_dict') or not hasattr(e, 'code'):
+            if hasattr(e, 'code'):
+                ex = HiveException(e.code, -1, str(e))
+            else:
+                ex = InternalServerErrorException(msg=traceback.format_exc())
+        return jsonify(ex.get_error_dict()), ex.code
+
+
+def response_stream(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
+    def wrapper(*args, **kwargs):
+        ret_value = f(*args, **kwargs)
+        if not ret_value or type(ret_value) is dict:
+            return ret_value
+        response = make_response(ret_value)
+        response.headers['content-type'] = 'application/octet-stream'
+        return response
+    return wrapper
 
 
 server_response = ServerResponse("CallV2")

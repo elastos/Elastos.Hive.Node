@@ -25,7 +25,7 @@ from src.utils.singleton import Singleton
 
 class Auth(Entity, metaclass=Singleton):
     def __init__(self):
-        self.storepass = hive_setting.PASSWRD
+        self.storepass = hive_setting.PASSWORD
         Entity.__init__(self, "hive.auth", from_file=True)
         self.http = HttpClient()
         logging.info(f'Service DID V2: {self.get_did_string()}')

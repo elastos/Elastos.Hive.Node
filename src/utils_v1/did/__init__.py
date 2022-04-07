@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-# eladid.so = 2.1.5
+# eladid.so = 2.2.0

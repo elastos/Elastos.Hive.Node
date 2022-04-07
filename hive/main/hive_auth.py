@@ -31,7 +31,7 @@ class HiveAuth(Entity):
 
     def init_app(self, app):
         self.app = app
-        self.storepass = hive_setting.PASSWRD
+        self.storepass = hive_setting.PASSWORD
         Entity.__init__(self, 'hive.auth', from_file=True)
         logging.info(f'Service DID V1: {self.get_did_string()}')
 

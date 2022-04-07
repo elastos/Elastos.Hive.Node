@@ -435,7 +435,7 @@ class HiveScripting:
     def run_script_fileapi_setup(self, transaction_id, fileapi_type):
         # Request script content first
         try:
-            transaction_detail = jwt.decode(transaction_id, hive_setting.PASSWRD, algorithms=['HS256'])
+            transaction_detail = jwt.decode(transaction_id, hive_setting.PASSWORD, algorithms=['HS256'])
             row_id, target_did, target_app_did = transaction_detail.get('row_id', None), transaction_detail.get('target_did', None), \
                                                  transaction_detail.get('target_app_did', None)
         except Exception as e:

@@ -5,7 +5,8 @@ from datetime import datetime
 import requests
 
 from src.utils_v1.did.eladid import ffi, lib
-from src.utils.http_exception import BadRequestException
+
+from src.utils.http_exception import BadRequestException, HiveException
 from src.utils.resolver import DIDResolver
 from src.settings import hive_setting
 from src.utils_v1.error_code import SUCCESS
@@ -35,9 +36,12 @@ class Entity:
         self.did_str = self.get_did_string_from_did(self.did)
 
     def init_did_from_file(self):
-        # TODO: release c_id
         store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
         self.did_store = lib.DIDStore_Open(store_dir.encode())
+        self.load_did_to_store()
+        self.load_existed_did()
+
+    def load_did_to_store(self):
         if not self.did_store:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't create store"))
 
@@ -45,18 +49,19 @@ class Entity:
         ret_value = lib.DIDStore_ImportDID(self.did_store, self.storepass.encode(),
                                            file_path.encode(), '123456'.encode())
         if ret_value != 0:
-            # TODO: check error: Invalid export data, the fingerprint mismatch.
-            logging.error(DIDResolver.get_errmsg("Entity.init_from_file: can't import did"))
-
-        c_id = lib.DIDStore_GetDefaultRootIdentity(self.did_store)
-        if not c_id:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't import did"))
-        root_identity = lib.DIDStore_LoadRootIdentity(self.did_store, c_id)
-        if not root_identity:
-            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't load root identity"))
-        self.did = lib.RootIdentity_GetDIDByIndex(root_identity, 0)
-        if not self.did:
+
+    def load_existed_did(self):
+        @ffi.callback("int(DID *, void *)")
+        def did_callback(did, context):
+            if did:
+                self.did = did
+
+        # INFO: 1, has private keys
+        ret_value = lib.DIDStore_ListDIDs(self.did_store, 1, did_callback, ffi.NULL)
+        if ret_value != 0:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't load did"))
+
         self.doc = self.get_doc_from_did(self.did)
 
     def init_did(self, need_resolve):
@@ -70,7 +75,7 @@ class Entity:
         lib.RootIdentity_Destroy(root_identity)
 
     def get_root_identity(self):
-        # TODO: release c_id
+        # TODO: release c_id, because eladid.so has no relating release API.
         c_id = lib.RootIdentity_CreateId(self.mnemonic.encode(), self.passphrase.encode())
         if not c_id:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't create root identity id string"))
@@ -89,7 +94,6 @@ class Entity:
         return root_identity
 
     def init_did_by_root_identity(self, root_identity, need_resolve=True):
-        # TODO: Should align with Hive JS.
         c_did, c_doc = lib.RootIdentity_GetDIDByIndex(root_identity, 0), None
         if c_did and lib.DIDStore_ContainsDID(self.did_store, c_did) == 1 \
                 and lib.DIDStore_ContainsPrivateKeys(self.did_store, c_did) == 1:

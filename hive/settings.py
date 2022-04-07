@@ -37,8 +37,8 @@ class HiveSetting:
         return self.env_config('DID_PASSPHRASE', default='', cast=str)
 
     @property
-    def PASSWRD(self):
-        return self.env_config('PASSWRD', default='password', cast=str)
+    def PASSWORD(self):
+        return self.env_config('PASSWORD', default='password', cast=str)
 
     @property
     def DATA_STORE_PATH(self):

@@ -14,7 +14,7 @@ from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import delete_user_vault, delete_user_vault_data, get_vault_path
 from src import create_app
 from tests_v1.hive_auth_test import DIDApp, DApp
-from hive.util.did.eladid import ffi, lib
+from src.utils_v1.did.eladid import ffi, lib
 
 from tests_v1.test_common import upsert_collection, create_upload_file, prepare_vault_data, copy_to_backup_data
 

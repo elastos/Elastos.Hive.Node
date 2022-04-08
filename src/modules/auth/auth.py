@@ -25,8 +25,8 @@ from src.utils.singleton import Singleton
 
 class Auth(Entity, metaclass=Singleton):
     def __init__(self):
-        self.storepass = hive_setting.PASSWORD
-        Entity.__init__(self, "hive.auth", from_file=True)
+        Entity.__init__(self, "hive.auth", passphrase=hive_setting.PASSPHRASE, storepass=hive_setting.PASSWORD,
+                        from_file=True, file_content=hive_setting.SERVICE_DID)
         self.http = HttpClient()
         logging.info(f'Service DID V2: {self.get_did_string()}')
 
@@ -80,7 +80,7 @@ class Auth(Entity, metaclass=Singleton):
         lib.JWTBuilder_SetAudience(builder, app_instance_did.encode())
         lib.JWTBuilder_SetClaim(builder, "nonce".encode(), nonce.encode())
         lib.JWTBuilder_SetExpiration(builder, expire_time)
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass.encode())
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.get_store_password().encode())
         token = lib.JWTBuilder_Compact(builder)
         msg = '' if token else DIDResolver.get_errmsg()
         lib.JWTBuilder_Destroy(builder)
@@ -123,9 +123,11 @@ class Auth(Entity, metaclass=Singleton):
             raise BadRequestException(msg=f'Invalid challenge response: {DIDResolver.get_errmsg()}')
 
         presentation_cstr = lib.JWT_GetClaimAsJson(challenge_response_cstr, "presentation".encode())
-        lib.JWT_Destroy(challenge_response_cstr)
         if not presentation_cstr:
-            raise BadRequestException(msg=f'Can not get presentation cstr: {DIDResolver.get_errmsg()}')
+            msg = f'Can not get presentation cstr: {DIDResolver.get_errmsg()}'
+            lib.JWT_Destroy(challenge_response_cstr)
+            raise BadRequestException(msg=msg)
+        lib.JWT_Destroy(challenge_response_cstr)
         presentation = lib.Presentation_FromJson(presentation_cstr)
         if not presentation or lib.Presentation_IsValid(presentation) != 1:
             raise BadRequestException(msg=f'The presentation is invalid: {DIDResolver.get_errmsg()}')
@@ -196,11 +198,7 @@ class Auth(Entity, metaclass=Singleton):
         return min(int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED, exp_time)
 
     def __create_access_token(self, credential_info, subject):
-        doc = lib.DIDStore_LoadDID(self.did_store, self.did)
-        if not doc:
-            raise BadRequestException(msg=f'Can not load node did in creating access token: {DIDResolver.get_errmsg()}')
-
-        builder = lib.DIDDocument_GetJwtBuilder(doc)
+        builder = lib.DIDDocument_GetJwtBuilder(self.doc)
         if not builder:
             raise BadRequestException(msg=f'Can not get builder for creating access token: {DIDResolver.get_errmsg()}')
 
@@ -216,7 +214,7 @@ class Auth(Entity, metaclass=Singleton):
             lib.JWTBuilder_Destroy(builder)
             raise BadRequestException(msg=f'Can not set claim in creating access token: {msg}')
 
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass.encode())
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.get_store_password().encode())
         token = lib.JWTBuilder_Compact(builder)
         msg = '' if token else DIDResolver.get_errmsg()
         lib.JWTBuilder_Destroy(builder)
@@ -248,7 +246,7 @@ class Auth(Entity, metaclass=Singleton):
         if not vc:
             raise InvalidParameterException(msg='backup_sign_in: invalid credential.')
 
-        doc_str = ffi.string(lib.DIDDocument_ToJson(lib.DIDStore_LoadDID(self.did_store, self.did), True)).decode()
+        doc_str = ffi.string(lib.DIDDocument_ToJson(lib.DIDStore_LoadDID(self.get_did_store(), self.did), True)).decode()
         doc = json.loads(doc_str)
         body = self.http.post(host_url + URL_V2 + URL_SIGN_IN, None, {"id": doc})
         if 'challenge' not in body or not body["challenge"]:
@@ -277,9 +275,6 @@ class Auth(Entity, metaclass=Singleton):
                 msg=f'backup_sign_in: failed to get the issuer of the challenge.')
 
         vp_json = self.create_presentation(vc, nonce, issuer)
-        if vp_json is None:
-            raise InvalidParameterException(
-                msg=f'backup_sign_in: failed to create presentation.')
         challenge_response = self.create_vp_token(vp_json, subject, issuer, hive_setting.AUTH_CHALLENGE_EXPIRED)
         if challenge_response is None:
             raise InvalidParameterException(
@@ -313,7 +308,7 @@ class Auth(Entity, metaclass=Singleton):
         return body["token"]
 
     def create_order_proof(self, user_did, doc_id, amount=0, is_receipt=False):
-        doc = lib.DIDStore_LoadDID(self.did_store, self.did)
+        doc = lib.DIDStore_LoadDID(self.get_did_store(), self.did)
         if not doc:
             raise BadRequestException(msg='Can not load service instance document in creating order proof.')
 
@@ -332,7 +327,7 @@ class Auth(Entity, metaclass=Singleton):
             props = {'receipt_id': doc_id, 'amount': amount}
         lib.JWTBuilder_SetClaim(builder, "props".encode(), json.dumps(props).encode())
 
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass.encode())
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.get_store_password().encode())
         proof = lib.JWTBuilder_Compact(builder)
         lib.JWTBuilder_Destroy(builder)
         if not proof:
@@ -348,24 +343,27 @@ class Auth(Entity, metaclass=Singleton):
 
         issuer = lib.JWT_GetIssuer(jws)
         if not issuer:
+            msg = DIDResolver.get_errmsg('the issue of the proof error')
             lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=DIDResolver.get_errmsg('the issue of the proof error'))
+            raise BadRequestException(msg=msg)
         if self.did_str != ffi.string(issuer).decode():
             lib.JWT_Destroy(jws)
             raise BadRequestException(msg=f'the issue of the proof not match: {ffi.string(issuer).decode()}')
 
         audience = lib.JWT_GetAudience(jws)
         if not audience:
+            msg = DIDResolver.get_errmsg('the audience of the proof error')
             lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=DIDResolver.get_errmsg('the audience of the proof error'))
+            raise BadRequestException(msg=msg)
         if user_did != ffi.string(audience).decode():
             lib.JWT_Destroy(jws)
             raise BadRequestException(msg=f'the audience of the proof not match: {ffi.string(audience).decode()}')
 
         props = lib.JWT_GetClaim(jws, "props".encode())
         if not props:
+            msg = DIDResolver.get_errmsg('the claim of the proof error')
             lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=DIDResolver.get_errmsg('the claim of the proof error'))
+            raise BadRequestException(msg=msg)
         props_json = json.loads(ffi.string(props).decode())
         if props_json.get('order_id') != order_id:
             lib.JWT_Destroy(jws)
@@ -384,6 +382,8 @@ class Auth(Entity, metaclass=Singleton):
         if not vc:
             raise BadRequestException(msg='invalid owner credential.')
         vp_json = self.create_presentation(vc, create_nonce(), self.did_str)
-        if vp_json is None:
-            raise BadRequestException(msg=f'backup_sign_in: failed to create presentation.')
         return json.loads(vp_json)
+
+
+# INFO: create singleton object.
+_auth = Auth()

@@ -32,14 +32,12 @@ class HiveSetting:
         return self.env_config('ESC_RESOLVER_URL', default='https://api.elastos.io/ela', cast=str)
 
     @property
-    def DID_MNEMONIC(self):
-        return self.env_config('DID_MNEMONIC',
-                               default='breeze cattle banner pole escape erode rose pupil calm hybrid stove post',
-                               cast=str)
+    def SERVICE_DID(self):
+        return self.env_config('SERVICE_DID', default='', cast=str)
 
     @property
-    def DID_PASSPHRASE(self):
-        return self.env_config('DID_PASSPHRASE', default='', cast=str)
+    def PASSPHRASE(self):
+        return self.env_config('PASSPHRASE', default='', cast=str)
 
     @property
     def PASSWORD(self):

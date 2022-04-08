@@ -44,6 +44,8 @@ class HiveApi(Api):
             if hasattr(e, 'code'):
                 ex = HiveException(e.code, -1, str(e))
             else:
+                logging.getLogger('http response').error(f'V2 UNEXPECTED: {traceback.format_exc()}')
+                capture_exception(error=Exception(f'V2 UNEXPECTED: {traceback.format_exc()}'))
                 ex = InternalServerErrorException(msg=traceback.format_exc())
         return jsonify(ex.get_error_dict()), ex.code
 

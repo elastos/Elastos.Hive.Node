@@ -13,7 +13,7 @@ from hive.main.hive_backup import HiveBackup
 from hive.util.constants import INTER_BACKUP_FILE_URL, HIVE_MODE_TEST
 from hive.util.error_code import NOT_FOUND
 from tests_v1.hive_auth_test import DIDApp, DApp
-from hive.util.did.eladid import ffi, lib
+from src.utils_v1.did.eladid import ffi, lib
 
 from src import create_app
 
@@ -83,7 +83,7 @@ class Hive2NodeTest(unittest.TestCase):
 
     def did_auth(self, host, user_did, app_did):
         # sign_in
-        doc = lib.DIDStore_LoadDID(app_did.store, app_did.did)
+        doc = lib.DIDStore_LoadDID(app_did.get_did_store(), app_did.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
         logging.getLogger("test_auth_common").debug(f"\ndoc_str: {doc_str}")
         doc = json.loads(doc_str)

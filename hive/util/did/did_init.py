@@ -1,7 +1,7 @@
 import logging
 import os
 import pathlib
-from hive.util.did.eladid import ffi, lib
+from src.utils_v1.did.eladid import ffi, lib
 
 from hive.settings import hive_setting
 
@@ -123,7 +123,6 @@ def init_did(mnemonic, passphrase, storepass, name, need_resolve=True):
 def init_did_backend():
     print("Initializing the [Auth] module")
     print("    DID Resolver: " + hive_setting.EID_RESOLVER_URL)
-    print("    DID Mnemonic: " + hive_setting.DID_MNEMONIC)
 
     ret = lib.DIDBackend_InitializeDefault(ffi.NULL, hive_setting.EID_RESOLVER_URL.encode(), hive_setting.DID_DATA_CACHE_PATH.encode())
     if ret == -1:

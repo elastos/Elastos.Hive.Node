@@ -50,7 +50,7 @@ class IpfsBackupClient:
 
     def get_state(self):
         user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
-        return self.get_remote_backup_state(user_did);
+        return self.get_remote_backup_state(user_did)
 
     def backup(self, credential, is_force):
         """

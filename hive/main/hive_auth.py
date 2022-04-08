@@ -5,7 +5,7 @@ from flask import request
 from datetime import datetime
 import os
 
-from hive.util.did.eladid import ffi, lib
+from src.utils_v1.did.eladid import ffi, lib
 
 from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, \
     get_did_info_by_app_instance_did, update_did_info_by_app_instance_did, \
@@ -31,8 +31,8 @@ class HiveAuth(Entity):
 
     def init_app(self, app):
         self.app = app
-        self.storepass = hive_setting.PASSWORD
-        Entity.__init__(self, 'hive.auth', from_file=True)
+        Entity.__init__(self, 'hive.auth', passphrase=hive_setting.PASSPHRASE, storepass=hive_setting.PASSWORD,
+                        from_file=True, file_content=hive_setting.SERVICE_DID)
         logging.info(f'Service DID V1: {self.get_did_string()}')
 
     def sign_in(self):
@@ -81,7 +81,7 @@ class HiveAuth(Entity):
         lib.JWTBuilder_SetClaim(builder, "nonce".encode(), nonce.encode())
         lib.JWTBuilder_SetExpiration(builder, exp)
 
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.get_store_password().encode())
         token = lib.JWTBuilder_Compact(builder)
         if not token:
             return self.response.response_err(INTERNAL_SERVER_ERROR, "Compact builder to a token is fail.")
@@ -204,11 +204,7 @@ class HiveAuth(Entity):
         if not isinstance(auth_info, dict):
             return None, "auth info isn't dict type"
 
-        doc = lib.DIDStore_LoadDID(self.store, self.did)
-        if not doc:
-            return None, self.get_error_message("The doc load from did")
-
-        builder = lib.DIDDocument_GetJwtBuilder(doc)
+        builder = lib.DIDDocument_GetJwtBuilder(self.doc)
         if not builder:
             return None, "Can't get jwt builder."
 
@@ -229,7 +225,7 @@ class HiveAuth(Entity):
         if not ret:
             return None, self.get_error_message("JWTBuilder_SetClaim 'props' to a token")
 
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.storepass)
+        lib.JWTBuilder_Sign(builder, ffi.NULL, self.get_store_password().encode())
         token = lib.JWTBuilder_Compact(builder)
         if not token:
             return None, self.get_error_message("Compact builder to a token")

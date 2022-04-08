@@ -2,52 +2,68 @@ import logging
 import json
 import os
 from datetime import datetime
+
+import base58
 import requests
 
 from src.utils_v1.did.eladid import ffi, lib
 
+from src import init_did_backend
 from src.utils.http_exception import BadRequestException, HiveException
 from src.utils.resolver import DIDResolver
 from src.settings import hive_setting
+from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.error_code import SUCCESS
 
 
 class Entity:
-    name = "Entity"
-    mnemonic = None
-    passphrase = "secret"
-    storepass = "password"
-    did_store = None
-    did = None
-    doc = None
-    did_str = None
+    def __init__(self, name, mnemonic=None, passphrase=None, storepass=None, need_resolve=True, from_file=False, file_content=None):
+        """
+        :param file_content: base58
+        """
+        self.name = name if name else 'Entity'
+        self.passphrase = passphrase if passphrase else "secret"
+        self.storepass = storepass if storepass else "password"
+        self.did_store = None
+        self.did = None
+        self.doc = None
+        self.did_str = None
 
-    def __init__(self, name, mnemonic=None, passphrase=None, need_resolve=True,
-                 from_file=False):
-        self.name = name
         if from_file:
-            self.init_did_from_file()
+            assert file_content, 'Entity.__init__: file_content must provide.'
+            self.init_did_from_file(file_content)
         else:
-            if mnemonic is not None:
-                self.mnemonic = mnemonic
-            if passphrase is not None:
-                self.passphrase = passphrase
-            self.init_did(need_resolve)
-        self.did_str = self.get_did_string_from_did(self.did)
+            assert mnemonic, 'Entity.__init__: mnemonic must provide.'
+            self.init_did(mnemonic, need_resolve)
 
-    def init_did_from_file(self):
+        self.did_str = self.get_did_str_from_doc(self.doc)
+
+    def init_did_from_file(self, file_content):
         store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
         self.did_store = lib.DIDStore_Open(store_dir.encode())
-        self.load_did_to_store()
-        self.load_existed_did()
 
-    def load_did_to_store(self):
+        try:
+            self.load_existed_did()
+        except HiveException as e:
+            logging.info('Entity.init_from_file: try to load DID failed, need load first')
+            self.load_did_to_store(file_content)
+            self.load_existed_did()
+
+    def load_did_to_store(self, file_content):
         if not self.did_store:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't create store"))
 
-        file_path = hive_setting.DATA_STORE_PATH + os.sep + 'tmp/ipUGBPuAgEx6Le99f4TyDfNZtXVT2NKXPR'
-        ret_value = lib.DIDStore_ImportDID(self.did_store, self.storepass.encode(),
-                                           file_path.encode(), '123456'.encode())
+        try:
+            file_content_str = base58.b58decode(file_content).decode('utf8')
+        except Exception as e:
+            raise RuntimeError(f'get_verified_owner_did: invalid value of NODE_CREDENTIAL')
+
+        file_path = gene_temp_file_name()
+        with open(file_path, 'w') as f:
+            f.write(file_content_str)
+
+        ret_value = lib.DIDStore_ImportDID(self.did_store, self.storepass.encode(), file_path.as_posix().encode(), self.passphrase.encode())
+        file_path.unlink()
         if ret_value != 0:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't import did"))
 
@@ -62,31 +78,35 @@ class Entity:
         if ret_value != 0:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init_from_file: can't load did"))
 
+        if not self.did:
+            raise BadRequestException(msg="Entity.init_from_file: can't load did from callback")
+
         self.doc = self.get_doc_from_did(self.did)
 
-    def init_did(self, need_resolve):
+    def init_did(self, mnemonic, need_resolve):
         store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
         self.did_store = lib.DIDStore_Open(store_dir.encode())
         if not self.did_store:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't create store"))
 
-        root_identity = self.get_root_identity()
+        root_identity = self.get_root_identity(mnemonic)
         self.did, self.doc = self.init_did_by_root_identity(root_identity, need_resolve=need_resolve)
         lib.RootIdentity_Destroy(root_identity)
 
-    def get_root_identity(self):
-        # TODO: release c_id, because eladid.so has no relating release API.
-        c_id = lib.RootIdentity_CreateId(self.mnemonic.encode(), self.passphrase.encode())
+    def get_root_identity(self, mnemonic):
+        c_id = lib.RootIdentity_CreateId(mnemonic.encode(), self.passphrase.encode())
         if not c_id:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't create root identity id string"))
 
         if lib.DIDStore_ContainsRootIdentity(self.did_store, c_id) == 1:
             root_identity = lib.DIDStore_LoadRootIdentity(self.did_store, c_id)
+            lib.Mnemonic_Free(c_id)
             if not root_identity:
                 raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't load root identity"))
             return root_identity
+        lib.Mnemonic_Free(c_id)
 
-        root_identity = lib.RootIdentity_Create(self.mnemonic.encode(),
+        root_identity = lib.RootIdentity_Create(mnemonic.encode(),
                                                 self.passphrase.encode(),
                                                 True, self.did_store, self.storepass.encode())
         if not root_identity:
@@ -113,8 +133,9 @@ class Entity:
             raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't create did doc"))
         c_did = lib.DIDDocument_GetSubject(c_doc)
         if not c_did:
+            msg = DIDResolver.get_errmsg("Entity.init: can't get doc from created did")
             lib.DIDDocument_Destroy(c_doc)
-            raise BadRequestException(msg=DIDResolver.get_errmsg("Entity.init: can't get doc from created did"))
+            raise BadRequestException(msg=msg)
         return c_did, c_doc
 
     def get_doc_from_did(self, c_did):
@@ -124,12 +145,19 @@ class Entity:
         return c_doc
 
     def __del__(self):
-        if self.doc:
-            lib.DIDDocument_Destroy(self.doc)
-        if self.did:
-            lib.DID_Destroy(self.did)
+        # if self.doc:
+        #     lib.DIDDocument_Destroy(self.doc)
+        # if self.did:
+        #     lib.DID_Destroy(self.did)
         if self.did_store:
             lib.DIDStore_Close(self.did_store)
+
+    def get_did_str_from_doc(self, doc):
+        c_doc_json = lib.DIDDocument_ToJson(doc, True)
+        if not c_doc_json:
+            raise BadRequestException(msg=DIDResolver.get_errmsg("get_did_str_from_doc: can't get did str from doc"))
+
+        return json.loads(ffi.string(c_doc_json).decode()).get('id')
 
     def get_did_string_from_did(self, did):
         if not did:
@@ -163,22 +191,42 @@ class Entity:
     def get_store_password(self):
         return self.storepass
 
-    def create_presentation(self, vc, nonce, realm):
-        vpid = lib.DIDURL_NewFromDid(self.did, "jwtvp".encode())
-        type0 = ffi.new("char[]", "VerifiablePresentation".encode())
+    def issue_auth_vc(self, issuer, type, props, owner):
+        type0 = ffi.new("char[]", type.encode())
         types = ffi.new("char **", type0)
 
-        vp = lib.Presentation_Create(vpid, self.did, types, 1, nonce.encode(),
+        issuerid = self.did
+        issuerdoc = self.doc
+        expires = lib.DIDDocument_GetExpires(issuerdoc)
+        credid = lib.DIDURL_NewFromDid(owner, self.name.encode())
+        vc = lib.Issuer_CreateCredentialByString(issuer, owner, credid, types, 1,
+                                                 json.dumps(props).encode(), expires, self.storepass.encode())
+        lib.DIDURL_Destroy(credid)
+        # vcJson = ffi.string(lib.Credential_ToString(vc, True)).decode()
+        # logging.debug(f"vcJson: {vcJson}")
+        # print(vcJson)
+        return vc
+
+    def create_presentation(self, vc, nonce, realm):
+        type0 = ffi.new("char[]", "VerifiablePresentation".encode())
+        types = ffi.new("char **", type0)
+        did_url = lib.DIDURL_NewFromDid(self.did, "jwtvp".encode())
+        if not did_url:
+            raise BadRequestException(msg=DIDResolver.get_errmsg("create_presentation: can't new did url"))
+
+        vp = lib.Presentation_Create(did_url, self.did, types, 1, nonce.encode(),
                                      realm.encode(), ffi.NULL, self.did_store, self.storepass.encode(), 1, vc)
         if not vp:
-            logging.error(DIDResolver.get_errmsg())
-        lib.DIDURL_Destroy(vpid)
+            msg = DIDResolver.get_errmsg("create_presentation: can't create presentation")
+            lib.DIDURL_Destroy(did_url)
+            raise BadRequestException(msg=msg)
+        lib.DIDURL_Destroy(did_url)
 
-        # print_err()
-        vp_json = ffi.string(lib.Presentation_ToJson(vp, True)).decode()
-        # print(vp_json)
-        logging.debug(f"vp_json: {vp_json}")
-        return vp_json
+        c_vp_json = lib.Presentation_ToJson(vp, True)
+        if not c_vp_json:
+            raise BadRequestException(msg=DIDResolver.get_errmsg("create_presentation: can't convert to json"))
+
+        return ffi.string(c_vp_json).decode()
 
     def create_vp_token(self, vp_json, subject, hive_did, expire):
         doc = lib.DIDStore_LoadDID(self.did_store, self.did)
@@ -247,8 +295,6 @@ class Entity:
 
         #auth_token
         vp_json = self.create_presentation(vc, nonce, hive_did)
-        if vp_json is None:
-            return None, None, "create_presentation error."
         auth_token = self.create_vp_token(vp_json, subject, hive_did, hive_setting.AUTH_CHALLENGE_EXPIRED)
         if auth_token is None:
             return None, None, "create_vp_token error."
@@ -298,3 +344,6 @@ class Entity:
             logging.error(err)
             return None, None, err
         return rt, r.status_code, err
+
+    def get_error_message(self, prompt=None):
+        return DIDResolver.get_errmsg(prompt)

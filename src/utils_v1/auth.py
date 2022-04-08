@@ -105,18 +105,7 @@ def get_current_node_did_string():
 
 
 def get_did_string_from_did(did):
-    if not did:
-        return None
-
-    method = lib.DID_GetMethod(did)
-    if not method:
-        return None
-    method = ffi.string(method).decode()
-    sep_did = lib.DID_GetMethodSpecificId(did)
-    if not sep_did:
-        return None
-    sep_did = ffi.string(sep_did).decode()
-    return "did:" + method + ":" + sep_did
+    return get_auth().get_did_string()
 
 
 def get_info_from_token(token):
@@ -136,8 +125,9 @@ def get_info_from_token(token):
 
     issuer = lib.JWT_GetIssuer(jws)
     if not issuer:
+        msg = DIDResolver.get_errmsg("JWT getIssuer error!")
         lib.JWT_Destroy(jws)
-        return None, DIDResolver.get_errmsg("JWT getIssuer error!")
+        return None, msg
 
     issuer = ffi.string(issuer).decode()
     if issuer != get_current_node_did_string():

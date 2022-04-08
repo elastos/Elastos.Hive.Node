@@ -62,10 +62,10 @@ class AppDID(Entity):
 if __name__ == "__main__":
     import base58
     init_did_backend()
-    # owner did
-    service_did = UserDID('hivenode',
+    # user did issue a new credential to service did.
+    service_did = UserDID('hivenodeowner',
                           mnemonic='firm dash language credit twist puzzle crouch order slim now issue trap',
                           passphrase='secret')
-    # user did
-    credential = service_did.get_owner_credential('did:elastos:ijUnD4KeRpeBUFmcEDCbhxMTJRzUYCQCZM')
+    # service did
+    credential = service_did.get_owner_credential('did:elastos:ipUGBPuAgEx6Le99f4TyDfNZtXVT2NKXPR')
     print(f'credential: {base58.b58encode(credential)}')

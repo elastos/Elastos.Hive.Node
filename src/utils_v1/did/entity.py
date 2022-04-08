@@ -70,8 +70,11 @@ class Entity:
     def load_existed_did(self):
         @ffi.callback("int(DID *, void *)")
         def did_callback(did, context):
+            # INFO: contains a terminating signal by a did with None.
             if did:
-                self.did = did
+                did_str = ffi.new('char[64]')
+                did_str = lib.DID_ToString(did, did_str, 64)
+                self.did = lib.DID_FromString(did_str)
 
         # INFO: 1, has private keys
         ret_value = lib.DIDStore_ListDIDs(self.did_store, 1, did_callback, ffi.NULL)
@@ -149,8 +152,9 @@ class Entity:
         #     lib.DIDDocument_Destroy(self.doc)
         # if self.did:
         #     lib.DID_Destroy(self.did)
-        if self.did_store:
-            lib.DIDStore_Close(self.did_store)
+        # if self.did_store:
+        #     lib.DIDStore_Close(self.did_store)
+        pass
 
     def get_did_str_from_doc(self, doc):
         c_doc_json = lib.DIDDocument_ToJson(doc, True)

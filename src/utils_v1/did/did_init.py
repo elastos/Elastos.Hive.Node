@@ -31,7 +31,6 @@ def print_err(fun_name=None):
 def init_did_backend():
     logging.getLogger('did_init').info("Initializing the DID backend")
     logging.getLogger('did_init').info("    DID Resolver: " + hive_setting.EID_RESOLVER_URL)
-    logging.getLogger('did_init').info("    DID Mnemonic: " + hive_setting.DID_MNEMONIC)
 
     ret = lib.DIDBackend_InitializeDefault(ffi.NULL, hive_setting.EID_RESOLVER_URL.encode(), hive_setting.DID_DATA_CACHE_PATH.encode())
     if ret == -1:

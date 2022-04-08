@@ -42,8 +42,9 @@ class DIDResolver:
         c_doc = lib.DID_Resolve(c_did, c_status, True)
         ffi.release(c_status)
         if not c_doc:
+            msg = DIDResolver.get_errmsg("get_application_did_info: can't resolve c_doc")
             lib.DID_Destroy(c_did)
-            raise BadRequestException(msg=DIDResolver.get_errmsg("get_application_did_info: can't resolve c_doc"))
+            raise BadRequestException(msg=msg)
 
         def get_appinfo_props(vc_json: dict):
             props = {'name': '', 'icon_url': '', 'redirect_url': ''}
@@ -74,19 +75,22 @@ class DIDResolver:
 
         c_vc = lib.DIDDocument_GetCredential(c_doc, c_did_url)
         if not c_vc:
+            msg = DIDResolver.get_errmsg(f"get_application_did_info: can't get #{fragment} credential")
             lib.DIDURL_Destroy(c_did_url)
-            logging.error(DIDResolver.get_errmsg(f"get_application_did_info: can't get #{fragment} credential"))
+            logging.error(msg)
             return {}
 
         if lib.Credential_IsValid(c_vc) != 1:
+            msg = DIDResolver.get_errmsg(f"get_application_did_info: invalid #{fragment} credential")
             lib.DIDURL_Destroy(c_did_url)
-            logging.error(DIDResolver.get_errmsg(f"get_application_did_info: invalid #{fragment} credential"))
+            logging.error(msg)
             return {}
 
         c_vc_str = lib.Credential_ToJson(c_vc, True)
         if not c_vc_str:
+            msg = DIDResolver.get_errmsg(f"get_application_did_info: can't get #{fragment} credential json")
             lib.DIDURL_Destroy(c_did_url)
-            logging.error(DIDResolver.get_errmsg(f"get_application_did_info: can't get #{fragment} credential json"))
+            logging.error(msg)
             return {}
 
         return props_callback(json.loads(ffi.string(c_vc_str).decode()))

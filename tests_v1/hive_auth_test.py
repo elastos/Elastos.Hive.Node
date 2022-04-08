@@ -11,10 +11,10 @@ from datetime import datetime
 # sys.path.append(os.getcwd())
 # sys.path.append(os.getcwd() + "/hive/util/did")
 from hive.util.constants import HIVE_MODE_TEST
-from hive.util.did.entity import Entity
-from hive.util.did.eladid import ffi, lib
+from src.utils_v1.did.eladid import ffi, lib
 
 from src import create_app
+from src.utils_v1.did.entity import Entity
 from tests_v1 import test_common
 
 logger = logging.getLogger()
@@ -35,18 +35,19 @@ class DIDApp(Entity):
     issuer = None
 
     def __init__(self, name, mnemonic=None, passphrase=None):
-        Entity.__init__(self, name, mnemonic, passphrase)
-        self.issuer = lib.Issuer_Create(self.did, ffi.NULL, self.store)
+        Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase)
+        self.issuer = lib.Issuer_Create(self.did, ffi.NULL, self.get_did_store())
 
     def __del__(self):
-        lib.Issuer_Destroy(self.issuer)
+        if self.issuer:
+            lib.Issuer_Destroy(self.issuer)
         # Entity.__del__(self)
 
     def issue_auth(self, app):
         props = {
             'appDid': app.appId,
         }
-        return self.issue_auth_vc("AppIdCredential", props, app.did)
+        return self.issue_auth_vc(self.issuer, "AppIdCredential", props, app.did)
 
     def issue_backup_auth(self, hive1_did, host, hive2_did):
         props = {
@@ -55,7 +56,7 @@ class DIDApp(Entity):
             'targetDID': hive2_did,
         }
         did = lib.DID_FromString(hive1_did.encode())
-        return self.issue_auth_vc("BackupCredential", props, did)
+        return self.issue_auth_vc(self.issuer, "BackupCredential", props, did)
 
 # ---------------
 class DApp(Entity):
@@ -65,7 +66,7 @@ class DApp(Entity):
     def __init__(self, name, appId=None, mnemonic=None, passphrase=None):
         if (appId is not None):
             self.appId = appId
-        Entity.__init__(self, name, mnemonic, passphrase, need_resolve=False)
+        Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase, need_resolve=False)
 
     def access_api_by_token(self):
         return self.access_token
@@ -132,7 +133,7 @@ class HiveAuthTestCase(unittest.TestCase):
 
     def __test_auth_common(self, didapp, testapp):
         # sign_in
-        doc = lib.DIDStore_LoadDID(testapp.store, testapp.did)
+        doc = lib.DIDStore_LoadDID(testapp.get_did_store(), testapp.did)
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
         logging.getLogger("HiveAuthTestCase").debug(f"\ndoc_str: {doc_str}")
         doc = json.loads(doc_str)
@@ -148,8 +149,8 @@ class HiveAuthTestCase(unittest.TestCase):
         jwt = rt["challenge"]
         # print(jwt)
         jws = lib.DefaultJWSParser_Parse(jwt.encode())
-        # if not jws:
-        #     print(ffi.string(lib.DIDError_GetLastErrorMessage()).decode())
+        if not jws:
+            assert False, ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
         aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
         self.assertEqual(aud, testapp.get_did_string())
         nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()

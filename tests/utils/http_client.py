@@ -65,7 +65,7 @@ class RemoteResolver:
         #     token = self.__get_remote_token(user_did)
         #     self.test_config.save_token(self.http_client.base_url, user_did, token)
         token = self.__get_remote_token(user_did)
-        print(f'API token: {token}')
+        # print(f'API token: {token}')
         return token
 
     def get_current_user_did(self):

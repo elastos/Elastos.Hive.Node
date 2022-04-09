@@ -67,6 +67,7 @@ class HiveException(Exception):
 class BadRequestException(HiveException):
     INVALID_PARAMETER = 1
     BACKUP_IS_IN_PROCESSING = 2
+    ELADID_ERROR = 3
 
     def __init__(self, internal_code=INVALID_PARAMETER, msg='Invalid parameter'):
         super().__init__(400, internal_code, msg)
@@ -80,6 +81,11 @@ class InvalidParameterException(BadRequestException):
 class BackupIsInProcessingException(BadRequestException):
     def __init__(self, msg='Backup is in processing.'):
         super().__init__(super().BACKUP_IS_IN_PROCESSING, msg=msg)
+
+
+class ElaDIDException(BadRequestException):
+    def __init__(self, msg):
+        super().__init__(super().ELADID_ERROR, msg=msg)
 
 
 # UnauthorizedException

@@ -2,6 +2,7 @@
 import logging
 from datetime import datetime
 
+from src.modules.auth.auth import Auth
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.subscription.subscription import VaultSubscription
@@ -13,7 +14,6 @@ from src.utils.did_auth import check_auth2
 from src.utils.file_manager import fm
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
     InsufficientStorageException, NotImplementedException
-from src.utils_v1.auth import get_current_node_did_string
 from src.utils_v1.constants import DID_INFO_DB_NAME, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
     VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE
@@ -24,6 +24,7 @@ class IpfsBackupServer:
     def __init__(self):
         self.vault = VaultSubscription()
         self.client = IpfsBackupClient()
+        self.auth = Auth()
 
     def promotion(self):
         """ This processing is just like restore the vault:
@@ -171,7 +172,7 @@ class IpfsBackupServer:
     def _get_vault_info(self, doc):
         return {
             'pricing_plan': doc[VAULT_BACKUP_SERVICE_USING],
-            'service_did': get_current_node_did_string(),
+            'service_did': self.auth.get_did_string(),
             'storage_quota': int(doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]),
             'storage_used': int(doc.get(VAULT_BACKUP_SERVICE_USE_STORAGE, 0)),
             'created': doc.get('created'),

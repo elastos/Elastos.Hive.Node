@@ -3,26 +3,34 @@ import os
 from src.utils_v1.did.eladid import ffi, lib
 
 from src.settings import hive_setting
+from src.utils.http_exception import ElaDIDException
+from src.utils_v1.did.did_wrapper import ElaError, DID, DIDDocument
+
 
 @ffi.def_extern()
 def MyDIDLocalResovleHandle(did):
-    spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
-    doc = ffi.NULL
+    """
+    # type: DID* -> DIDDocument*
+    """
+    spec_str = DID(did).get_method_specific_id()
+    file_path = hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_str
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            try:
+                return DIDDocument.from_json(f.read()).doc
+            except Exception as ex:
+                logging.error(f'failed to read did file: {file_path}')
+                return ffi.NULL
 
-    file_path = hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_did_str
-    is_exist =os.path.exists(file_path)
-    if is_exist:
-        f = open(file_path, "r")
-        try:
-            doc_str = f.read()
-            doc = lib.DIDDocument_FromJson(doc_str.encode())
-        finally:
-            f.close()
 
-    return doc
+def init_did_backend() -> None:
+    resolver_url, cache_path, dids_path = hive_setting.EID_RESOLVER_URL, hive_setting.DID_DATA_CACHE_PATH, hive_setting.DID_DATA_LOCAL_DIDS
+    logging.getLogger('did_wrapper').info("Initializing the V2 DID backend")
+    logging.getLogger('did_wrapper').info("    DID Resolver: " + resolver_url)
 
-def print_err(fun_name=None):
-    err = "Error:: "
-    if fun_name:
-        err += fun_name + ": "
-    logging.error(f"{err + str(ffi.string(lib.DIDError_GetLastErrorMessage()), encoding='utf-8')}")
+    ret = lib.DIDBackend_InitializeDefault(ffi.NULL, resolver_url.encode(), cache_path.encode())
+    if ret != 0:
+        raise ElaDIDException(ElaError.get('init_did_backend: '))
+
+    os.makedirs(dids_path, exist_ok=True)
+    lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)

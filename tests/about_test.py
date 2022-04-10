@@ -6,7 +6,7 @@ Testing file for the about module.
 import json
 import unittest
 
-from src.utils_v1.did.eladid import ffi, lib
+from src.utils_v1.did.did_wrapper import Presentation
 from tests.utils.http_client import HttpClient
 from tests import init_test
 
@@ -40,8 +40,8 @@ class AboutTestCase(unittest.TestCase):
         if type(presentation) is not dict:
             self.assertTrue(False, 'the ownership presentation is invalid.')
         presentation_str = json.dumps(presentation)
-        vp = lib.Presentation_FromJson(presentation_str.encode())
-        self.assertEqual(lib.Presentation_IsValid(vp), 1)
+        vp = Presentation.from_json(presentation_str)
+        self.assertTrue(vp.is_valid())
 
 
 if __name__ == '__main__':

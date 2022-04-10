@@ -38,6 +38,49 @@ class ElaError:
         return ElaError.get(f'{cls_name}.{mtd_name}{ppt}')
 
 
+class JWT:
+    def __init__(self, jwt):
+        self.jwt = jwt
+
+    @staticmethod
+    def parse(jwt_str: str) -> 'JWT':
+        # INFO：DefaultJWSParser_Parse will validate the sign information.
+        jwt = lib.DefaultJWSParser_Parse(jwt_str.encode())
+        if not jwt:
+            raise ElaDIDException(ElaError.get('JWT.parse'))
+        return JWT(jwt)
+
+    def get_claim_as_json(self, claim_key):
+        claim_value = lib.JWT_GetClaimAsJson(self.jwt, claim_key.encode())
+        if not claim_value:
+            raise ElaDIDException(ElaError.get_from_method())
+        return ffi.string(ffi.gc(claim_value, lib.Mnemonic_Free)).decode()
+
+    def get_audience(self):
+        aud = lib.JWT_GetAudience(self.jwt)
+        if not aud:
+            raise ElaDIDException(ElaError.get_from_method())
+        return ffi.string(aud).decode()
+
+    def get_claim(self, k):
+        v = lib.JWT_GetClaim(self.jwt, k.encode())
+        if not v:
+            raise ElaDIDException(ElaError.get_from_method())
+        return ffi.string(v).decode()
+
+    def get_issuer(self):
+        issuer = lib.JWT_GetIssuer(self.jwt)
+        if not issuer:
+            raise ElaDIDException(ElaError.get_from_method())
+        return ffi.string(issuer).decode()
+
+    def get_expiration(self):
+        expire = lib.JWT_GetExpiration(self.jwt)
+        if expire <= 0:
+            raise ElaDIDException(ElaError.get_from_method())
+        return expire
+
+
 class JWTBuilder:
     def __init__(self, store, builder):
         self.store, self.builder = store, builder
@@ -78,7 +121,7 @@ class Credential:
 
     def get_expiration_date(self) -> int:
         expire_date = lib.Credential_GetExpirationDate(self.vc)
-        if expire_date == 0:
+        if expire_date <= 0:
             raise ElaDIDException(ElaError.get_from_method())
         return expire_date
 
@@ -112,15 +155,43 @@ class Issuer:
 
 
 class Presentation:
-    def __init__(self, store: 'DIDStore', vp):
-        self.store, self.vp = store, vp
+    def __init__(self, vp):
+        self.vp = vp
 
-    def to_json(self):
+    @staticmethod
+    def from_json(json_str) -> 'Presentation':
+        vp = lib.Presentation_FromJson(json_str)
+        if not vp:
+            raise ElaDIDException(ElaError.get('Presentation.from_json'))
+        return Presentation(ffi.gc(vp, lib.Presentation_Destroy))
+
+    def to_json(self) -> str:
         normalized = True
         vp_json = lib.Presentation_ToJson(self.vp, normalized)
         if not vp_json:
             raise ElaDIDException(ElaError.get_from_method())
         return ffi.string(ffi.gc(vp_json, lib.Mnemonic_Free)).decode()
+
+    def is_valid(self) -> bool:
+        return lib.Presentation_IsValid(self.vp) == 1
+
+    def get_credential_count(self):
+        count = lib.Presentation_GetCredentialCount(self.vp)
+        if count < 0:
+            raise ElaDIDException(ElaError.get_from_method())
+        return count
+
+    def get_realm(self):
+        realm = lib.Presentation_GetRealm(self.vp)
+        if not realm:
+            raise ElaDIDException(ElaError.get_from_method())
+        return ffi.string(realm).decode()
+
+    def get_nonce(self):
+        nonce = lib.Presentation_GetNonce(self.vp)
+        if not nonce:
+            raise ElaDIDException(ElaError.get_from_method())
+        return ffi.string(nonce).decode()
 
 
 class DID:
@@ -320,7 +391,7 @@ class DIDStore:
                                      self.store, self.storepass, 1, vc.vc)
         if not vp:
             raise ElaDIDException(ElaError.get_from_method())
-        return Presentation(self, ffi.gc(vp, lib.Presentation_Destroy))
+        return Presentation(ffi.gc(vp, lib.Presentation_Destroy))
 
     def get_jwt_builder(self, doc: DIDDocument) -> JWTBuilder:
         builder = lib.DIDDocument_GetJwtBuilder(doc.doc)

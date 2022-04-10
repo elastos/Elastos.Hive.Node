@@ -85,7 +85,7 @@ class RequestParams(BaseParams):
             return def_val, f'Invalid parameter {key}.'
         return val, None
 
-    def get_dict(self, key):
+    def get_dict(self, key) -> (dict, str):
         body, msg = self.get_root()
         if msg:
             return {}, msg

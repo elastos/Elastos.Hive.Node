@@ -141,7 +141,7 @@ class HiveAuthTestCase(unittest.TestCase):
 
         # auth
         vc = didapp.issue_auth(testapp)
-        vp_json = testapp.create_presentation(vc, nonce, hive_did)
+        vp_json = testapp.create_presentation_str(vc, nonce, hive_did)
         auth_token = testapp.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
         # print(auth_token)
         logging.getLogger("HiveAuthTestCase").debug(f"\nauth_token: {auth_token}")

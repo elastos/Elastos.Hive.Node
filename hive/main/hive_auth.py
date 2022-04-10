@@ -1,6 +1,7 @@
 import json
 import logging
 
+import requests
 from flask import request
 from datetime import datetime
 import os
@@ -10,11 +11,11 @@ from src.utils_v1.did.eladid import ffi, lib
 from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, \
     get_did_info_by_app_instance_did, update_did_info_by_app_instance_did, \
     update_token_of_did_info
-from hive.util.error_code import UNAUTHORIZED, INTERNAL_SERVER_ERROR, BAD_REQUEST
+from hive.util.error_code import UNAUTHORIZED, INTERNAL_SERVER_ERROR, BAD_REQUEST, SUCCESS
 from hive.util.server_response import ServerResponse
 from hive.settings import hive_setting
 from hive.util.constants import DID_INFO_NONCE_EXPIRED, APP_INSTANCE_DID
-
+from src.utils_v1.did.did_wrapper import Credential
 
 from src.utils_v1.did.entity import Entity
 
@@ -417,3 +418,92 @@ class HiveAuth(Entity):
             "backup_token": backup_token,
         }
         return self.response.response_ok(data)
+
+    def get_auth_token_by_sign_in(self, base_url, vc_str, subject) -> (str, str, str):
+        vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
+        if not vc:
+            return None, None,"The credential string is error, unable to rebuild to a credential object."
+
+        #sign_in
+        doc = lib.DIDStore_LoadDID(self.did_store, self.did)
+        doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
+        doc = json.loads(doc_str)
+
+        rt, status_code, err = self._auth_post(base_url + '/api/v1/did/sign_in', {"document": doc})
+
+        if err != None:
+            return None, None, "Post sign_in error: " + err
+
+        jwt = rt["challenge"]
+        if jwt is None:
+            return None, None, "Challenge is none."
+
+        # print(jwt)
+        jws = lib.DefaultJWSParser_Parse(jwt.encode())
+        if not jws:
+            return None, None, "Challenge DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
+
+        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
+        if aud != self.get_did_string():
+            lib.JWT_Destroy(jws)
+            return None, None, "Audience is error."
+
+        nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()
+        if nonce is None:
+            lib.JWT_Destroy(jws)
+            return None, None, "Nonce is none."
+
+        hive_did = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+        lib.JWT_Destroy(jws)
+        if hive_did is None:
+            return None, None, "Issuer is none."
+
+        #auth_token
+        vp_json = self.create_presentation_str(Credential(vc), nonce, hive_did)
+        auth_token = self.create_vp_token(vp_json, subject, hive_did, hive_setting.AUTH_CHALLENGE_EXPIRED)
+        if auth_token is None:
+            return None, None, "create_vp_token error."
+        return auth_token, hive_did, None
+
+    def get_backup_auth_from_node(self, base_url, auth_token, hive_did) -> (str, str):
+        rt, status_code, err = self._auth_post(base_url + '/api/v1/did/backup_auth', {"jwt": auth_token})
+        if err != None:
+            return None, "Post backup_auth error: " + err
+
+        token = rt["backup_token"]
+        if token is None:
+            return None,  "Token is none."
+
+        jws = lib.DefaultJWSParser_Parse(token.encode())
+        if not jws:
+            return None, "Backup token DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
+
+        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
+        if aud != self.get_did_string():
+            lib.JWT_Destroy(jws)
+            return None, "Audience is error."
+
+        issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+        lib.JWT_Destroy(jws)
+        if issuer is None:
+            return None, "Issuer is none."
+
+        if issuer != hive_did:
+            return None, "Issuer is error."
+
+        return token, None
+
+    def _auth_post(self, url, param) -> (str, int, str):
+        try:
+            err = None
+            r = requests.post(url, json=param, headers={"Content-Type": "application/json"})
+            rt = r.json()
+            if r.status_code != SUCCESS:
+                err = "[" + str(r.status_code) + "]"
+                if "_error" in rt and "message" in rt["_error"]:
+                    err += rt["_error"]["message"]
+        except Exception as e:
+            err = f"Exception in post to '{url}'': {e}"
+            logging.error(err)
+            return None, None, err
+        return rt, r.status_code, err

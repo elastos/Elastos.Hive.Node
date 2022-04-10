@@ -108,7 +108,7 @@ class Hive2NodeTest(unittest.TestCase):
 
         # auth
         vc = user_did.issue_auth(app_did)
-        vp_json = app_did.create_presentation(vc, nonce, hive_did)
+        vp_json = app_did.create_presentation_str(vc, nonce, hive_did)
         auth_token = app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
         # print(auth_token)
         logging.getLogger("test_auth_common").debug(f"\nauth_token: {auth_token}")

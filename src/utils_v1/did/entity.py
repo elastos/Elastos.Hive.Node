@@ -5,10 +5,9 @@ import base58
 
 from src.utils.consts import DID
 from src.utils.http_exception import BadRequestException, HiveException
-from src.utils.resolver import DIDResolver
 from src.settings import hive_setting
 from src.utils_v1.common import gene_temp_file_name
-from src.utils_v1.did.did_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder
+from src.utils_v1.did.did_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder, ElaError
 
 
 class Entity:
@@ -114,4 +113,5 @@ class Entity:
         return builder.create_token(subject, audience_did_str, expire, claim_key, claim_value)
 
     def get_error_message(self, prompt=None) -> str:
-        return DIDResolver.get_errmsg(prompt)
+        """ Compatible to v1 """
+        return ElaError.get(prompt)

@@ -3,14 +3,17 @@
 """
 Entrance of the subscription module.
 """
+import json
 import logging
 from datetime import datetime
+import typing as t
 
+from src.modules.auth.auth import Auth
 from src.utils.consts import IS_UPGRADED
-from src.utils.resolver import DIDResolver
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
     VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, APP_ID, VAULT_ACCESS_R, USER_DID
+from src.utils_v1.did.did_wrapper import DID, DIDDocument
 from src.utils_v1.did_file_info import get_vault_path
 from src.utils_v1.payment.payment_config import PaymentConfig
 from src.utils_v1.payment.vault_service_manage import delete_user_vault_data
@@ -21,12 +24,12 @@ from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
     PricePlanNotFoundException, BadRequestException, ApplicationNotFoundException
 from src.utils.singleton import Singleton
-from src.utils_v1.auth import get_current_node_did_string
 
 
 class VaultSubscription(metaclass=Singleton):
     def __init__(self):
         self.payment = Payment()
+        self.auth = Auth()
 
     def subscribe(self):
         user_did, app_did = check_auth()
@@ -59,7 +62,7 @@ class VaultSubscription(metaclass=Singleton):
         storage_used = int(doc[VAULT_SERVICE_FILE_USE_STORAGE] + doc[VAULT_SERVICE_DB_USE_STORAGE])
         return {
             'pricing_plan': doc[VAULT_SERVICE_PRICING_USING],
-            'service_did': get_current_node_did_string(),
+            'service_did': self.auth.get_did_string(),
             'storage_quota': storage_quota,
             'storage_used': storage_used,
             'created': cli.timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),
@@ -113,7 +116,7 @@ class VaultSubscription(metaclass=Singleton):
     def get_app_detail(self, app):
         info = {}
         try:
-            info = DIDResolver.get_appdid_info(app[APP_ID])
+            info = self._get_appdid_info_by_did(app[APP_ID])
         except Exception as e:
             logging.error(f'get the info of the app did {app[APP_ID]} failed: {str(e)}')
         name = cli.get_user_database_name(app[USER_DID], app[APP_ID])
@@ -204,3 +207,37 @@ class VaultSubscription(metaclass=Singleton):
     def get_vault_max_size(self, user_did):
         doc = self.get_checked_vault(user_did, throw_exception=True)
         return doc[VAULT_SERVICE_MAX_STORAGE]
+
+    def _get_info_from_credential(self, did: DID, doc: DIDDocument, fragment: str, props_callback: t.Callable[[dict], dict]) -> dict:
+        """ Get the information from the credential. """
+        vc = doc.get_credential(did, fragment)
+        if not vc.is_valid():
+            logging.error('The credential is not valid.')
+            return {}
+        return props_callback(json.loads(vc.to_json()))
+
+    def _get_appdid_info_by_did(self, did_str: str):
+        """ Get the information from the service did. """
+        logging.info(f'get_appdid_info: did, {did_str}')
+        if not did_str:
+            raise BadRequestException(msg='get_appdid_info: did must provide.')
+
+        did: DID = DID.from_string(did_str)
+        doc: DIDDocument = did.resolve()
+
+        def get_appinfo_props(vc_json: dict) -> dict:
+            props = {'name': '', 'icon_url': '', 'redirect_url': ''}
+            if 'credentialSubject' in vc_json:
+                cs = vc_json['credentialSubject']
+                props['name'] = cs.get('name', '')
+                props['icon_url'] = cs.get('iconUrl', '')
+                if 'endpoints' in vc_json:
+                    props['icon_url'] = cs['endpoints'].get('redirectUrl', '')
+            return props
+
+        def get_developer_props(vc_json: dict):
+            return {'developer_did': vc_json.get('issuer', '')}
+
+        info = self._get_info_from_credential(did, doc, 'appinfo', get_appinfo_props)
+        info.update(self._get_info_from_credential(did, doc, 'developer', get_developer_props))
+        return info

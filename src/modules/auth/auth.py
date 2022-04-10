@@ -9,7 +9,7 @@ from datetime import datetime
 
 from src import hive_setting
 from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED
-from src.utils_v1.did.did_wrapper import Credential, DIDDocument, DID, JWTBuilder, JWT, Presentation
+from src.utils_v1.did.did_wrapper import Credential, DIDDocument, DID, JWT, Presentation
 from src.utils_v1.did.entity import Entity
 from src.utils_v1.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
     update_did_info_by_app_instance_did, get_did_info_by_nonce, update_token_of_did_info
@@ -157,8 +157,7 @@ class Auth(Entity, metaclass=Singleton):
 
     def get_backup_credential_info(self, credential):
         """ for vault /backup """
-        from src.utils_v1.auth import get_credential_info
-        credential_info, err = get_credential_info(credential, ["targetHost", "targetDID"])
+        credential_info, err = self._get_credential_info(credential, ["targetHost", "targetDID"])
         if credential_info is None:
             raise InvalidParameterException(msg=f'Failed to get credential info: {err}')
         return credential_info
@@ -233,6 +232,43 @@ class Auth(Entity, metaclass=Singleton):
         vc = Credential.from_json(credential)
         vp_json = self.create_presentation_str(vc, create_nonce(), super().get_did_string())
         return json.loads(vp_json)
+
+    def _get_credential_info(self, vc_str, props: list):
+        """
+        :return: (dict, str)
+        """
+        vc: Credential = Credential.from_json(vc_str)
+        if not vc.is_valid():
+            return None, 'credential is invalid.'
+
+        vc_json = json.loads(vc_str)
+        if "credentialSubject" not in vc_json:
+            return None, "The credentialSubject isn't exist."
+        credential_subject = vc_json["credentialSubject"]
+
+        if "id" not in credential_subject:
+            return None, "The credentialSubject's id isn't exist."
+
+        if 'sourceDID' not in props:
+            props.append('sourceDID')
+
+        for prop in props:
+            if prop not in credential_subject:
+                return None, "The credentialSubject's '" + prop + "' isn't exist."
+
+        if credential_subject['sourceDID'] != super().get_did_string():
+            return None, f'The sourceDID({credential_subject["sourceDID"]}) is not the hive node did.'
+
+        if "issuer" not in vc_json:
+            return None, "The credential issuer isn't exist."
+        credential_subject["userDid"] = vc_json["issuer"]
+
+        expire, exp = vc.get_expiration_date(), int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED
+        if expire > exp:
+            expire = exp
+
+        credential_subject["expTime"] = expire
+        return credential_subject, None
 
 
 # INFO: create singleton object.

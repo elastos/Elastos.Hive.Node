@@ -4,8 +4,8 @@
 The entrance for backup module.
 """
 from src import hive_setting
+from src.modules.auth.auth import Auth
 from src.modules.provider.provider import Provider
-from src.utils_v1.auth import get_auth
 
 
 class About:
@@ -32,7 +32,7 @@ class About:
 
     def get_node_info(self):
         owner_did, credential = Provider.get_verified_owner_did()
-        auth = get_auth()
+        auth = Auth()
         return {
             "service_did": auth.did_str,
             "owner_did": owner_did,

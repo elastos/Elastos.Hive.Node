@@ -5,8 +5,8 @@ import requests
 import json
 import logging
 
-from src.utils_v1.did.eladid import ffi, lib
 from src.utils.singleton import Singleton
+from src.utils_v1.did.did_wrapper import JWT
 from tests.utils_v1.hive_auth_test_v1 import AppDID, UserDID
 
 
@@ -87,42 +87,28 @@ class RemoteResolver:
 
         # get from the result of sign_in()
         challenge = self.sign_in()
-        jws = lib.DefaultJWSParser_Parse(challenge.encode())
-        error_msg = lib.DIDError_GetLastErrorMessage()
-        msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
-        assert jws, f'Cannot get challenge for node did: {msg}'
-        node_did = self.__get_issuer_by_challenge2(jws)
-        lib.JWT_Destroy(jws)
-        return node_did
+        return self.__get_issuer_by_challenge2(JWT.parse(challenge))
 
-    def __get_issuer_by_challenge2(self, jws):
-        node_did = ffi.string(lib.JWT_GetIssuer(jws)).decode()
-        assert node_did, 'Invalid hive did'
+    def __get_issuer_by_challenge2(self, jwt: JWT):
+        node_did = str(jwt.get_issuer())
         self.test_config.save_node_did(self.http_client.base_url, node_did)
         return node_did
 
     def sign_in(self):
-        doc_c = lib.DIDStore_LoadDID(self.app_did.get_did_store(), self.app_did.get_did())
-        doc_str = ffi.string(lib.DIDDocument_ToJson(doc_c, True)).decode()
-        doc = json.loads(doc_str)
+        doc = json.loads(self.app_did.doc.to_json())
         response = self.http_client.post('/api/v2/did/signin', {"id": doc}, need_token=False, is_skip_prefix=True)
         assert response.status_code == 201
         return response.json()["challenge"]
 
     def __get_auth_token_by_challenge(self, challenge, did: UserDID):
-        jws = lib.DefaultJWSParser_Parse(challenge.encode())
-        error_msg = lib.DIDError_GetLastErrorMessage()
-        msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
-        assert jws, f'Cannot get challenge: {msg}'
-        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
-        assert aud == self.app_did.get_did_string()
-        nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()
-        hive_did = self.__get_issuer_by_challenge2(jws)
-        lib.JWT_Destroy(jws)
+        jwt = JWT.parse(challenge)
+        assert jwt.get_audience() == self.app_did.get_did_string()
+        nonce = jwt.get_claim('nonce')
+        hive_did = self.__get_issuer_by_challenge2(jwt)
 
         # auth
         vc = did.issue_auth(self.app_did)
-        vp_json = self.app_did.create_presentation_str(vc.vc, nonce, hive_did)
+        vp_json = self.app_did.create_presentation_str(vc, nonce, hive_did)
         return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
 
     def auth(self, challenge, did: UserDID):

@@ -2,7 +2,6 @@
 import json
 import logging
 
-from src import init_did_backend
 from src.utils.http_client import HttpClient
 from src.utils.http_exception import BadRequestException
 from src.utils_v1.did.eladid import ffi, lib
@@ -105,6 +104,7 @@ class DIDResolver:
 
 
 if __name__ == '__main__':
+    from src.utils_v1.did.did_wrapper import init_did_backend
     init_did_backend()
     info = DIDResolver.get_appdid_info('did:elastos:iqtWRVjz7gsYhyuQEb1hYNNmWQt1Z9geXg')
     print(f'appdid info: {info}')

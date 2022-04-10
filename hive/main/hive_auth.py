@@ -69,7 +69,7 @@ class HiveAuth(Entity):
             return self.response.response_err(INTERNAL_SERVER_ERROR, "save to db fail!")
 
         # response token
-        builder = lib.DIDDocument_GetJwtBuilder(self.doc)
+        builder = lib.DIDDocument_GetJwtBuilder(super().get_document())
         if not builder:
             return self.response.response_err(INTERNAL_SERVER_ERROR, "Can't get jwt builder.")
 
@@ -204,7 +204,7 @@ class HiveAuth(Entity):
         if not isinstance(auth_info, dict):
             return None, "auth info isn't dict type"
 
-        builder = lib.DIDDocument_GetJwtBuilder(self.doc)
+        builder = lib.DIDDocument_GetJwtBuilder(super().get_document())
         if not builder:
             return None, "Can't get jwt builder."
 

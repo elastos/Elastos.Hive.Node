@@ -67,7 +67,7 @@ def remove_test_vault(did):
 
 def test_auth_common(self, user_did, app_did):
     # sign_in
-    doc = lib.DIDStore_LoadDID(app_did.get_did_store(), app_did.did)
+    doc = lib.DIDStore_LoadDID(app_did.get_did_store(), app_did.get_did())
     doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
     logging.getLogger("test_auth_common").debug(f"\ndoc_str: {doc_str}")
     doc = json.loads(doc_str)

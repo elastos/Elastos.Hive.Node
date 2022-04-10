@@ -13,14 +13,14 @@ from src.modules.auth.auth import Auth
 # TODO: try to move the following methods to authorization module.
 
 
-auth = None
+_auth = None
 
 
 def get_auth():
-    global auth
-    if auth is None:
-        auth = Auth()
-    return auth
+    global _auth
+    if _auth is None:
+        _auth = Auth()
+    return _auth
 
 
 def get_credential_info(vc_str, props: list):

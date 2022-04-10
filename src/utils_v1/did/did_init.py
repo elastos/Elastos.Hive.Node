@@ -28,19 +28,3 @@ def print_err(fun_name=None):
     error_msg = lib.DIDError_GetLastErrorMessage()
     msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
     logging.error(f"{err + msg}")
-
-
-def init_did_backend():
-    logging.getLogger('did_init').info("Initializing the DID backend")
-    logging.getLogger('did_init').info("    DID Resolver: " + hive_setting.EID_RESOLVER_URL)
-
-    ret = lib.DIDBackend_InitializeDefault(ffi.NULL, hive_setting.EID_RESOLVER_URL.encode(), hive_setting.DID_DATA_CACHE_PATH.encode())
-    if ret == -1:
-        print_err("DIDBackend_InitializeDefault")
-
-    is_exist = os.path.exists(hive_setting.DID_DATA_LOCAL_DIDS)
-    if not is_exist:
-        os.makedirs(hive_setting.DID_DATA_LOCAL_DIDS)
-    lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)
-
-    return ret

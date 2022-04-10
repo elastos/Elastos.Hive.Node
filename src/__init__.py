@@ -12,7 +12,7 @@ from src.utils.http_request import RegexConverter
 from src.utils.http_response import HiveApi
 from src.utils.sentry_error import init_sentry_hook
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
-from src.utils_v1.did.did_init import init_did_backend
+from src.utils_v1.did.did_wrapper import init_did_backend
 from src import view
 
 import hive.settings

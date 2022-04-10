@@ -80,7 +80,7 @@ class RemoteResolver:
     def __get_remote_token(self, did: UserDID):
         return self.auth(self.sign_in(), did)
 
-    def get_node_did(self):
+    def get_node_did(self) -> str:
         node_did = self.test_config.get_node_did(self.http_client.base_url)
         if node_did:
             return node_did
@@ -102,7 +102,7 @@ class RemoteResolver:
         return node_did
 
     def sign_in(self):
-        doc_c = lib.DIDStore_LoadDID(self.app_did.get_did_store(), self.app_did.did)
+        doc_c = lib.DIDStore_LoadDID(self.app_did.get_did_store(), self.app_did.get_did())
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc_c, True)).decode()
         doc = json.loads(doc_str)
         response = self.http_client.post('/api/v2/did/signin', {"id": doc}, need_token=False, is_skip_prefix=True)
@@ -122,7 +122,7 @@ class RemoteResolver:
 
         # auth
         vc = did.issue_auth(self.app_did)
-        vp_json = self.app_did.create_presentation(vc, nonce, hive_did)
+        vp_json = self.app_did.create_presentation(vc.vc, nonce, hive_did)
         return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
 
     def auth(self, challenge, did: UserDID):
@@ -137,7 +137,7 @@ class RemoteResolver:
         vc = self.get_current_user_did().issue_backup_auth(self.get_node_did(),
                                                            self.test_config.backup_url,
                                                            backup_node_did)
-        return ffi.string(lib.Credential_ToString(vc, True)).decode()
+        return str(vc)
 
 
 def _log_http_request(func):

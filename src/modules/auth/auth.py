@@ -71,7 +71,7 @@ class Auth(Entity, metaclass=Singleton):
         """
         Create challenge for sign in response.
         """
-        builder = lib.DIDDocument_GetJwtBuilder(self.doc)  # service instance doc
+        builder = lib.DIDDocument_GetJwtBuilder(super().get_document())  # service instance doc
         if not builder:
             raise BadRequestException(msg=DIDResolver.get_errmsg('Can not get challenge builder'))
         lib.JWTBuilder_SetHeader(builder, "type".encode(), "JWT".encode())
@@ -198,7 +198,7 @@ class Auth(Entity, metaclass=Singleton):
         return min(int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED, exp_time)
 
     def __create_access_token(self, credential_info, subject):
-        builder = lib.DIDDocument_GetJwtBuilder(self.doc)
+        builder = lib.DIDDocument_GetJwtBuilder(super().get_document())
         if not builder:
             raise BadRequestException(msg=f'Can not get builder for creating access token: {DIDResolver.get_errmsg()}')
 
@@ -246,7 +246,7 @@ class Auth(Entity, metaclass=Singleton):
         if not vc:
             raise InvalidParameterException(msg='backup_sign_in: invalid credential.')
 
-        doc_str = ffi.string(lib.DIDDocument_ToJson(lib.DIDStore_LoadDID(self.get_did_store(), self.did), True)).decode()
+        doc_str = ffi.string(lib.DIDDocument_ToJson(lib.DIDStore_LoadDID(self.get_did_store(), super().get_did()), True)).decode()
         doc = json.loads(doc_str)
         body = self.http.post(host_url + URL_V2 + URL_SIGN_IN, None, {"id": doc})
         if 'challenge' not in body or not body["challenge"]:
@@ -308,7 +308,7 @@ class Auth(Entity, metaclass=Singleton):
         return body["token"]
 
     def create_order_proof(self, user_did, doc_id, amount=0, is_receipt=False):
-        doc = lib.DIDStore_LoadDID(self.get_did_store(), self.did)
+        doc = lib.DIDStore_LoadDID(self.get_did_store(), super().get_did())
         if not doc:
             raise BadRequestException(msg='Can not load service instance document in creating order proof.')
 
@@ -346,7 +346,7 @@ class Auth(Entity, metaclass=Singleton):
             msg = DIDResolver.get_errmsg('the issue of the proof error')
             lib.JWT_Destroy(jws)
             raise BadRequestException(msg=msg)
-        if self.did_str != ffi.string(issuer).decode():
+        if super().get_did_string() != ffi.string(issuer).decode():
             lib.JWT_Destroy(jws)
             raise BadRequestException(msg=f'the issue of the proof not match: {ffi.string(issuer).decode()}')
 
@@ -381,7 +381,7 @@ class Auth(Entity, metaclass=Singleton):
         vc = lib.Credential_FromJson(credential.encode(), ffi.NULL)
         if not vc:
             raise BadRequestException(msg='invalid owner credential.')
-        vp_json = self.create_presentation(vc, create_nonce(), self.did_str)
+        vp_json = self.create_presentation(vc, create_nonce(), super().get_did_string())
         return json.loads(vp_json)
 
 

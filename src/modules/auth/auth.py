@@ -5,15 +5,11 @@ Entrance of the subscription module.
 """
 import json
 import logging
-import os
 from datetime import datetime
 
-from src.utils_v1.did.eladid import ffi, lib
-
 from src import hive_setting
-from src.utils.resolver import DIDResolver
 from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED
-from src.utils_v1.did.did_wrapper import Credential
+from src.utils_v1.did.did_wrapper import Credential, DIDDocument, DID, JWTBuilder, JWT, Presentation
 from src.utils_v1.did.entity import Entity
 from src.utils_v1.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
     update_did_info_by_app_instance_did, get_did_info_by_nonce, update_token_of_did_info
@@ -31,67 +27,40 @@ class Auth(Entity, metaclass=Singleton):
         self.http = HttpClient()
         logging.info(f'Service DID V2: {self.get_did_string()}')
 
-    def sign_in(self, doc):
-        app_instance_did = self.__get_app_instance_did(doc)
+    def sign_in(self, doc: dict):
+        app_instance_did = self._get_app_instance_did(doc)
         return {
-            "challenge": self.__create_challenge(app_instance_did, *self.__save_nonce_to_db(app_instance_did))
+            "challenge": self._create_challenge(app_instance_did, *self._save_nonce_to_db(app_instance_did))
         }
 
-    def __get_app_instance_did(self, app_instance_doc):
-        doc_str = json.dumps(app_instance_doc)
-        app_instance_doc = lib.DIDDocument_FromJson(doc_str.encode())
-        if not app_instance_doc or lib.DIDDocument_IsValid(app_instance_doc) != 1:
+    def _get_app_instance_did(self, app_instance_doc: dict) -> DID:
+        doc = DIDDocument.from_json(json.dumps(app_instance_doc))
+        if not doc.is_valid():
             raise BadRequestException(msg='The did document is invalid in getting app instance did.')
+        return doc.get_subject()
 
-        app_instance_did = lib.DIDDocument_GetSubject(app_instance_doc)
-        if not app_instance_did:
-            raise BadRequestException(msg='Can not get did from document in getting app instance did.')
-
-        spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(app_instance_did)).decode()
-        try:
-            with open(hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_did_str, "w") as f:
-                f.write(doc_str)
-        except Exception as e:
-            logging.getLogger("HiveAuth").error(f"Exception in sign_in:{str(e)} in getting app instance did")
-
-        return "did:" + ffi.string(lib.DID_GetMethod(app_instance_did)).decode() + ":" + spec_did_str
-
-    def __save_nonce_to_db(self, app_instance_did):
+    def _save_nonce_to_db(self, app_instance_did):
         nonce, expire_time = create_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
+        did_str = str(app_instance_did)
         try:
-            if not get_did_info_by_app_instance_did(app_instance_did):
-                add_did_nonce_to_db(app_instance_did, nonce, expire_time)
+            if not get_did_info_by_app_instance_did(did_str):
+                add_did_nonce_to_db(did_str, nonce, expire_time)
             else:
-                update_did_info_by_app_instance_did(app_instance_did, nonce, expire_time)
+                update_did_info_by_app_instance_did(did_str, nonce, expire_time)
         except Exception as e:
             logging.getLogger("HiveAuth").error(f"Exception in __save_nonce_to_db: {e}")
             raise BadRequestException(msg='Failed to generate nonce.')
         return nonce, expire_time
 
-    def __create_challenge(self, app_instance_did, nonce, expire_time):
+    def _create_challenge(self, app_instance_did: DID, nonce: str, expire_time):
         """
         Create challenge for sign in response.
         """
-        builder = lib.DIDDocument_GetJwtBuilder(super().get_document())  # service instance doc
-        if not builder:
-            raise BadRequestException(msg=DIDResolver.get_errmsg('Can not get challenge builder'))
-        lib.JWTBuilder_SetHeader(builder, "type".encode(), "JWT".encode())
-        lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
-        lib.JWTBuilder_SetSubject(builder, "DIDAuthChallenge".encode())
-        lib.JWTBuilder_SetAudience(builder, app_instance_did.encode())
-        lib.JWTBuilder_SetClaim(builder, "nonce".encode(), nonce.encode())
-        lib.JWTBuilder_SetExpiration(builder, expire_time)
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.get_store_password().encode())
-        token = lib.JWTBuilder_Compact(builder)
-        msg = '' if token else DIDResolver.get_errmsg()
-        lib.JWTBuilder_Destroy(builder)
-        if not token:
-            raise BadRequestException(msg=f'Failed to create challenge token: {msg}')
-        return ffi.string(token).decode()
+        return super().create_jwt_token('DIDAuthChallenge', str(app_instance_did), expire_time, 'nonce', nonce)
 
     def auth(self, challenge_response):
-        credential_info = self.__get_auth_info_from_challenge_response(challenge_response, ['appDid', ])
-        access_token = self.__create_access_token(credential_info, "AccessToken")
+        credential_info = self._get_auth_info_from_challenge_response(challenge_response, ['appDid', ])
+        access_token = self._create_access_token(credential_info, "AccessToken")
 
         try:
             update_token_of_did_info(credential_info["userDid"],
@@ -108,58 +77,41 @@ class Auth(Entity, metaclass=Singleton):
             "token": access_token,
         }
 
-    def __get_auth_info_from_challenge_response(self, challenge_response, props=None):
-        presentation_json, nonce, nonce_info = self.__get_values_from_challenge_response(challenge_response)
+    def _get_auth_info_from_challenge_response(self, challenge_response, props=None):
+        presentation_json, nonce, nonce_info = self._get_values_from_challenge_response(challenge_response)
         if nonce_info[DID_INFO_NONCE_EXPIRED] < int(datetime.now().timestamp()):
             raise BadRequestException(msg='The nonce expired.')
-        credential_info = self.__get_presentation_credential_info(presentation_json, props)
+        credential_info = self._get_presentation_credential_info(presentation_json, props)
         if credential_info["id"] != nonce_info[APP_INSTANCE_DID]:
             raise BadRequestException(msg='The app instance did of the credential does not match.')
         credential_info["nonce"] = nonce
         return credential_info
 
-    def __get_values_from_challenge_response(self, challenge_response):
-        challenge_response_cstr = lib.DefaultJWSParser_Parse(challenge_response.encode())
-        if not challenge_response_cstr:
-            raise BadRequestException(msg=f'Invalid challenge response: {DIDResolver.get_errmsg()}')
+    def _get_values_from_challenge_response(self, challenge_response):
+        jwt: JWT = JWT.parse(challenge_response)
+        vp_json = jwt.get_claim_as_json('presentation')
+        vp: Presentation = Presentation.from_json(vp_json)
+        if not vp.is_valid():
+            raise BadRequestException(msg=f'The presentation is invalid')
+        if vp.get_credential_count() < 1:
+            raise BadRequestException(msg=f'No presentation credential exists')
+        self._validate_presentation_realm(vp)
+        nonce, nonce_info = self._get_presentation_nonce(vp)
+        return json.loads(vp_json), nonce, nonce_info
 
-        presentation_cstr = lib.JWT_GetClaimAsJson(challenge_response_cstr, "presentation".encode())
-        if not presentation_cstr:
-            msg = f'Can not get presentation cstr: {DIDResolver.get_errmsg()}'
-            lib.JWT_Destroy(challenge_response_cstr)
-            raise BadRequestException(msg=msg)
-        lib.JWT_Destroy(challenge_response_cstr)
-        presentation = lib.Presentation_FromJson(presentation_cstr)
-        if not presentation or lib.Presentation_IsValid(presentation) != 1:
-            raise BadRequestException(msg=f'The presentation is invalid: {DIDResolver.get_errmsg()}')
-        if lib.Presentation_GetCredentialCount(presentation) < 1:
-            raise BadRequestException(msg=f'No presentation credential exists: {DIDResolver.get_errmsg()}')
-
-        self.__validate_presentation_realm(presentation)
-        nonce, nonce_info = self.__get_presentation_nonce(presentation)
-        return json.loads(ffi.string(presentation_cstr).decode()), nonce, nonce_info
-
-    def __get_presentation_nonce(self, presentation):
-        nonce = lib.Presentation_GetNonce(presentation)
-        if not nonce:
-            raise BadRequestException(msg=f'Failed to get presentation nonce: {DIDResolver.get_errmsg()}')
-        nonce_str = ffi.string(nonce).decode()
-        if not nonce_str:
-            raise BadRequestException(msg='Invalid presentation nonce.')
-        nonce_info = get_did_info_by_nonce(nonce_str)
+    def _get_presentation_nonce(self, vp: Presentation):
+        nonce = vp.get_nonce()
+        nonce_info = get_did_info_by_nonce(nonce)
         if not nonce_info:
             raise BadRequestException(msg='Can not get presentation nonce information from database.')
-        return nonce_str, nonce_info
+        return nonce, nonce_info
 
-    def __validate_presentation_realm(self, presentation):
-        realm = lib.Presentation_GetRealm(presentation)
-        if not realm:
-            raise BadRequestException(msg=f'Can not get presentation realm: {DIDResolver.get_errmsg()}')
-        realm = ffi.string(realm).decode()
-        if not realm or realm != self.get_did_string():
+    def _validate_presentation_realm(self, vp: Presentation):
+        realm = vp.get_realm()
+        if realm != super().get_did_string():
             raise BadRequestException(msg=f'Invalid presentation realm or not match.')
 
-    def __get_presentation_credential_info(self, presentation_json, props=None):
+    def _get_presentation_credential_info(self, presentation_json, props=None):
         if "verifiableCredential" not in presentation_json:
             raise BadRequestException(msg='Verifiable credentials do not exist.')
 
@@ -182,52 +134,25 @@ class Auth(Entity, metaclass=Singleton):
         if not_exist_props:
             raise BadRequestException(msg=f"The credentialSubject's prop ({not_exist_props}) does not exists.")
 
-        credential_info["expTime"] = self.__get_presentation_credential_expire_time(vcs_json)
+        credential_info["expTime"] = self._get_presentation_credential_expire_time(vcs_json)
         credential_info["userDid"] = vc_json["issuer"]
         return credential_info
 
-    def __get_presentation_credential_expire_time(self, vcs_json):
-        vc_str = json.dumps(vcs_json[0])
-        if not vc_str:
-            raise BadRequestException(msg='The presentation credential does not exist.')
-        vc = lib.Credential_FromJson(vc_str.encode(), ffi.NULL)
-        if not vc or lib.Credential_IsValid(vc) != 1:
+    def _get_presentation_credential_expire_time(self, vcs_json):
+        vc = Credential.from_json(json.dumps(vcs_json[0]))
+        if not vc.is_valid():
             raise BadRequestException(msg='The presentation credential is invalid.')
-        exp_time = lib.Credential_GetExpirationDate(vc)
-        if exp_time <= 0:
-            raise BadRequestException(msg="The credential's expiration date does not exist.")
+        exp_time = vc.get_expiration_date()
         return min(int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED, exp_time)
 
-    def __create_access_token(self, credential_info, subject):
-        builder = lib.DIDDocument_GetJwtBuilder(super().get_document())
-        if not builder:
-            raise BadRequestException(msg=f'Can not get builder for creating access token: {DIDResolver.get_errmsg()}')
-
-        lib.JWTBuilder_SetHeader(builder, "typ".encode(), "JWT".encode())
-        lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
-        lib.JWTBuilder_SetSubject(builder, subject.encode())
-        lib.JWTBuilder_SetAudience(builder, credential_info["id"].encode())
-        lib.JWTBuilder_SetExpiration(builder, credential_info["expTime"])
-
+    def _create_access_token(self, credential_info, subject) -> str:
         props = {k: credential_info[k] for k in credential_info if k not in ['id', 'expTime']}
-        if not lib.JWTBuilder_SetClaim(builder, "props".encode(), json.dumps(props).encode()):
-            msg = DIDResolver.get_errmsg()
-            lib.JWTBuilder_Destroy(builder)
-            raise BadRequestException(msg=f'Can not set claim in creating access token: {msg}')
-
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.get_store_password().encode())
-        token = lib.JWTBuilder_Compact(builder)
-        msg = '' if token else DIDResolver.get_errmsg()
-        lib.JWTBuilder_Destroy(builder)
-        if not token:
-            raise BadRequestException(msg=f'Can not build token in creating access token: {msg}')
-
-        return ffi.string(token).decode()
+        return super().create_jwt_token(subject, credential_info["id"], credential_info["expTime"], 'props', props)
 
     def backup_auth(self, challenge_response):
         """ for the vault service node """
-        credential_info = self.__get_auth_info_from_challenge_response(challenge_response, ["targetHost", "targetDID"])
-        access_token = self.__create_access_token(credential_info, "BackupToken")
+        credential_info = self._get_auth_info_from_challenge_response(challenge_response, ["targetHost", "targetDID"])
+        access_token = self._create_access_token(credential_info, "BackupToken")
         return {'token': access_token}
 
     def get_backup_credential_info(self, credential):
@@ -238,48 +163,27 @@ class Auth(Entity, metaclass=Singleton):
             raise InvalidParameterException(msg=f'Failed to get credential info: {err}')
         return credential_info
 
-    def backup_client_sign_in(self, host_url, credential, subject):
+    def backup_client_sign_in(self, host_url, credential: str, subject: str):
         """
         for vault /backup & /restore
         :return challenge_response, backup_service_instance_did
         """
-        vc = lib.Credential_FromJson(credential.encode(), ffi.NULL)
-        if not vc:
-            raise InvalidParameterException(msg='backup_sign_in: invalid credential.')
-
-        doc_str = ffi.string(lib.DIDDocument_ToJson(lib.DIDStore_LoadDID(self.get_did_store(), super().get_did()), True)).decode()
-        doc = json.loads(doc_str)
+        vc = Credential.from_json(credential)
+        doc: dict = json.loads(super().doc.to_json())
         body = self.http.post(host_url + URL_V2 + URL_SIGN_IN, None, {"id": doc})
         if 'challenge' not in body or not body["challenge"]:
             raise InvalidParameterException(msg='backup_sign_in: failed to sign in to backup node.')
 
-        jws = lib.DefaultJWSParser_Parse(body["challenge"].encode())
-        if not jws:
-            raise InvalidParameterException(
-                msg=f'backup_sign_in: failed to parse challenge with error {DIDResolver.get_errmsg()}.')
-
-        aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
-        if aud != self.get_did_string():
-            lib.JWT_Destroy(jws)
+        jwt: JWT = JWT.parse(body["challenge"].encode())
+        audience = jwt.get_audience()
+        if audience != self.get_did_string():
             raise InvalidParameterException(msg=f'backup_sign_in: failed to get the audience of the challenge.')
 
-        nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()
-        if nonce is None:
-            lib.JWT_Destroy(jws)
-            raise InvalidParameterException(
-                msg=f'backup_sign_in: failed to get the nonce of the challenge.')
-
-        issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
-        lib.JWT_Destroy(jws)
-        if issuer is None:
-            raise InvalidParameterException(
-                msg=f'backup_sign_in: failed to get the issuer of the challenge.')
-
-        vp_json = self.create_presentation_str(Credential(vc), nonce, issuer)
+        nonce, issuer = jwt.get_claim('nonce'), jwt.get_issuer()
+        vp_json = self.create_presentation_str(vc, nonce, issuer)
         challenge_response = self.create_vp_token(vp_json, subject, issuer, hive_setting.AUTH_CHALLENGE_EXPIRED)
         if challenge_response is None:
-            raise InvalidParameterException(
-                msg=f'backup_sign_in: failed to create the challenge response.')
+            raise InvalidParameterException(msg=f'backup_sign_in: failed to create the challenge response.')
         return challenge_response, issuer
 
     def backup_client_auth(self, host_url, challenge_response, backup_service_instance_did):
@@ -291,98 +195,43 @@ class Auth(Entity, metaclass=Singleton):
         if 'token' not in body or not body["token"]:
             raise InvalidParameterException(msg='backup_auth: failed to backup auth to backup node.')
 
-        jws = lib.DefaultJWSParser_Parse(body["token"].encode())
-        if not jws:
-            raise InvalidParameterException(
-                msg=f'backup_auth: failed to parse token with error {DIDResolver.get_errmsg()}.')
-
-        audience = ffi.string(lib.JWT_GetAudience(jws)).decode()
+        jwt = JWT.parse(body["token"].encode())
+        audience = jwt.get_audience()
         if audience != self.get_did_string():
-            lib.JWT_Destroy(jws)
             raise InvalidParameterException(msg=f'backup_auth: failed to get the audience of the challenge.')
 
-        issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
-        lib.JWT_Destroy(jws)
+        issuer = jwt.get_issuer()
         if issuer != backup_service_instance_did:
             raise InvalidParameterException(msg=f'backup_auth: failed to get the issuer of the challenge.')
 
         return body["token"]
 
     def create_order_proof(self, user_did, doc_id, amount=0, is_receipt=False):
-        doc = lib.DIDStore_LoadDID(self.get_did_store(), super().get_did())
-        if not doc:
-            raise BadRequestException(msg='Can not load service instance document in creating order proof.')
-
-        builder = lib.DIDDocument_GetJwtBuilder(doc)
-        if not builder:
-            raise BadRequestException(msg='Can not get builder from doc in creating order proof.')
-
-        lib.JWTBuilder_SetHeader(builder, "typ".encode(), "JWT".encode())
-        lib.JWTBuilder_SetHeader(builder, "version".encode(), "1.0".encode())
-        lib.JWTBuilder_SetSubject(builder, 'ORDER_PROOF'.encode())
-        lib.JWTBuilder_SetAudience(builder, user_did.encode())
         exp = int(datetime.utcnow().timestamp()) + 7 * 24 * 3600 if not is_receipt else -1
-        lib.JWTBuilder_SetExpiration(builder, exp)
-        props = {'order_id': doc_id}
-        if is_receipt:
-            props = {'receipt_id': doc_id, 'amount': amount}
-        lib.JWTBuilder_SetClaim(builder, "props".encode(), json.dumps(props).encode())
-
-        lib.JWTBuilder_Sign(builder, ffi.NULL, self.get_store_password().encode())
-        proof = lib.JWTBuilder_Compact(builder)
-        lib.JWTBuilder_Destroy(builder)
-        if not proof:
-            raise BadRequestException(msg='Can not build token in creating order proof.')
-
-        return ffi.string(proof).decode()
+        props = {'receipt_id': doc_id, 'amount': amount} if is_receipt else {'order_id': doc_id}
+        return super().create_jwt_token('ORDER_PROOF', user_did, exp, 'props', json.dumps(props))
 
     def verify_order_proof(self, proof, user_did, order_id):
-        # INFO：DefaultJWSParser_Parse will validate the sign information.
-        jws = lib.DefaultJWSParser_Parse(proof.encode())
-        if not jws:
-            raise BadRequestException(msg=DIDResolver.get_errmsg('parse the proof error'))
+        jwt = JWT.parse(proof)
+        issuer = jwt.get_issuer()
+        if issuer != super().get_did_string():
+            raise BadRequestException(msg=f'the issue of the proof not match: {issuer}')
 
-        issuer = lib.JWT_GetIssuer(jws)
-        if not issuer:
-            msg = DIDResolver.get_errmsg('the issue of the proof error')
-            lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=msg)
-        if super().get_did_string() != ffi.string(issuer).decode():
-            lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=f'the issue of the proof not match: {ffi.string(issuer).decode()}')
+        audience = jwt.get_audience()
+        if audience != user_did:
+            raise BadRequestException(msg=f'the audience of the proof not match: {audience}')
 
-        audience = lib.JWT_GetAudience(jws)
-        if not audience:
-            msg = DIDResolver.get_errmsg('the audience of the proof error')
-            lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=msg)
-        if user_did != ffi.string(audience).decode():
-            lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=f'the audience of the proof not match: {ffi.string(audience).decode()}')
+        props = json.loads(jwt.get_claim('props'))
+        if props.get('order_id') != order_id:
+            raise BadRequestException(msg=f'the order_id of the proof not match: {props.get("order_id")}')
 
-        props = lib.JWT_GetClaim(jws, "props".encode())
-        if not props:
-            msg = DIDResolver.get_errmsg('the claim of the proof error')
-            lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=msg)
-        props_json = json.loads(ffi.string(props).decode())
-        if props_json.get('order_id') != order_id:
-            lib.JWT_Destroy(jws)
-            raise BadRequestException(msg=f'the order_id of the proof not match: {props_json.get("order_id")}')
-
-        expired = lib.JWT_GetExpiration(jws)
-        now = int(datetime.now().timestamp())
-        if now > expired:
-            lib.JWT_Destroy(jws)
+        expire, now = jwt.get_expiration(), int(datetime.now().timestamp())
+        if now > expire:
             raise BadRequestException(msg=f'the proof is expired (valid for 7 days)')
 
-        lib.JWT_Destroy(jws)
-
     def get_ownership_presentation(self, credential: str):
-        vc = lib.Credential_FromJson(credential.encode(), ffi.NULL)
-        if not vc:
-            raise BadRequestException(msg='invalid owner credential.')
-        vp_json = self.create_presentation_str(Credential(vc), create_nonce(), super().get_did_string())
+        vc = Credential.from_json(credential)
+        vp_json = self.create_presentation_str(vc, create_nonce(), super().get_did_string())
         return json.loads(vp_json)
 
 

@@ -3,7 +3,10 @@
 """
 The node management for the node owner.
 """
+import json
 import logging
+import typing as t
+from datetime import datetime
 
 import base58
 from bson import ObjectId
@@ -18,10 +21,10 @@ from src.utils.db_client import cli
 from src.utils.did_auth import check_auth
 from src.utils.http_exception import ForbiddenException, VaultNotFoundException, BackupNotFoundException, \
     ReceiptNotFoundException
-from src.utils_v1.auth import get_verifiable_credential_info
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_BACKUP_SERVICE_USING, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_USE_STORAGE
+from src.utils_v1.did.did_wrapper import Credential
 
 
 class Provider:
@@ -37,7 +40,7 @@ class Provider:
             credential = base58.b58decode(hive_setting.NODE_CREDENTIAL).decode('utf8')
         except:
             raise RuntimeError(f'get_verified_owner_did: invalid value of NODE_CREDENTIAL')
-        info, err_msg = get_verifiable_credential_info(credential)
+        info, err_msg = Provider._get_verifiable_credential_info(credential)
         if err_msg:
             raise RuntimeError(f'get_verified_owner_did: {err_msg}')
         return info['__issuer'], credential
@@ -100,3 +103,30 @@ class Provider:
             "ela_address": order[COL_ORDERS_ELA_ADDRESS] if order else None,
             "paid_did": receipt[COL_RECEIPTS_PAID_DID],
         }
+
+    @staticmethod
+    def _get_verifiable_credential_info(vc_str: str) -> (t.Optional[dict], str):
+        """
+        Common version of the credential parsing logic.
+        :return: all possible fields of the credential.
+        """
+        vc = Credential.from_json(vc_str)
+        if not vc.is_valid():
+            return None, 'The credential is invalid.'
+
+        vc_json = json.loads(vc_str)
+        if "credentialSubject" not in vc_json:
+            return None, "The credentialSubject doesn't exist in credential."
+        credential_subject = vc_json["credentialSubject"]
+        if "id" not in credential_subject:
+            return None, "The credentialSubject's id doesn't exist in credential."
+        if "issuer" not in vc_json:
+            return None, "The issuer doesn't exist in credential."
+
+        credential_subject["__issuer"] = vc_json["issuer"]
+        credential_subject["__expirationDate"] = vc.get_expiration_date()
+        if credential_subject["__expirationDate"] == 0:
+            return None, 'The expirationDate is invalid in credential'
+        if int(datetime.now().timestamp()) > credential_subject["__expirationDate"]:
+            return None, 'The expirationDate is expired in credential.'
+        return credential_subject, None

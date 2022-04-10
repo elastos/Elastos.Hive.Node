@@ -1,12 +1,9 @@
 import inspect
 import json
-import logging
-import os
 from datetime import datetime
 
 from src.utils_v1.did.eladid import ffi, lib
 
-from src import hive_setting
 from src.utils.http_exception import ElaDIDException
 
 """
@@ -398,16 +395,3 @@ class DIDStore:
         if not builder:
             raise ElaDIDException(ElaError.get_from_method())
         return JWTBuilder(self, ffi.gc(builder, lib.JWTBuilder_Destroy))
-
-
-def init_did_backend() -> None:
-    resolver_url, cache_path, dids_path = hive_setting.EID_RESOLVER_URL, hive_setting.DID_DATA_CACHE_PATH, hive_setting.DID_DATA_LOCAL_DIDS
-    logging.getLogger('did_wrapper').info("Initializing the V2 DID backend")
-    logging.getLogger('did_wrapper').info("    DID Resolver: " + resolver_url)
-
-    ret = lib.DIDBackend_InitializeDefault(ffi.NULL, resolver_url.encode(), cache_path.encode())
-    if ret != 0:
-        raise ElaDIDException(ElaError.get('init_did_backend: '))
-
-    os.makedirs(dids_path, exist_ok=True)
-    lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)

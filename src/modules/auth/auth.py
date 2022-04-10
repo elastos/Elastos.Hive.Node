@@ -13,6 +13,7 @@ from src.utils_v1.did.eladid import ffi, lib
 from src import hive_setting
 from src.utils.resolver import DIDResolver
 from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED
+from src.utils_v1.did.did_wrapper import Credential
 from src.utils_v1.did.entity import Entity
 from src.utils_v1.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
     update_did_info_by_app_instance_did, get_did_info_by_nonce, update_token_of_did_info
@@ -274,7 +275,7 @@ class Auth(Entity, metaclass=Singleton):
             raise InvalidParameterException(
                 msg=f'backup_sign_in: failed to get the issuer of the challenge.')
 
-        vp_json = self.create_presentation(vc, nonce, issuer)
+        vp_json = self.create_presentation_str(Credential(vc), nonce, issuer)
         challenge_response = self.create_vp_token(vp_json, subject, issuer, hive_setting.AUTH_CHALLENGE_EXPIRED)
         if challenge_response is None:
             raise InvalidParameterException(
@@ -381,7 +382,7 @@ class Auth(Entity, metaclass=Singleton):
         vc = lib.Credential_FromJson(credential.encode(), ffi.NULL)
         if not vc:
             raise BadRequestException(msg='invalid owner credential.')
-        vp_json = self.create_presentation(vc, create_nonce(), super().get_did_string())
+        vp_json = self.create_presentation_str(Credential(vc), create_nonce(), super().get_did_string())
         return json.loads(vp_json)
 
 

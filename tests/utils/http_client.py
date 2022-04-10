@@ -118,7 +118,7 @@ class RemoteResolver:
 
         # auth
         vc = did.issue_auth(self.app_did)
-        vp_json = self.app_did.create_presentation(vc.vc, nonce, hive_did)
+        vp_json = self.app_did.create_presentation_str(vc.vc, nonce, hive_did)
         return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
 
     def auth(self, challenge, did: UserDID):

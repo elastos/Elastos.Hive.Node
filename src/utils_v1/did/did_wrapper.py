@@ -2,6 +2,7 @@ import inspect
 import json
 import logging
 import os
+from datetime import datetime
 
 from src.utils_v1.did.eladid import ffi, lib
 
@@ -37,9 +38,27 @@ class ElaError:
         return ElaError.get(f'{cls_name}.{mtd_name}{ppt}')
 
 
-class JwtBuilder:
-    def __init__(self, builder):
-        self.builder = builder
+class JWTBuilder:
+    def __init__(self, store, builder):
+        self.store, self.builder = store, builder
+
+    def create_token(self, subject: str, audience_did_str: str, expire: int, claim_key: str, claim_value: any) -> str:
+        ticks, sign_key = int(datetime.now().timestamp()), ffi.NULL
+        lib.JWTBuilder_SetHeader(self.builder, "type".encode(), "JWT".encode())
+        lib.JWTBuilder_SetHeader(self.builder, "version".encode(), "1.0".encode())
+        lib.JWTBuilder_SetSubject(self.builder, subject.encode())
+        lib.JWTBuilder_SetAudience(self.builder, audience_did_str.encode())
+        lib.JWTBuilder_SetIssuedAt(self.builder, ticks)
+        lib.JWTBuilder_SetExpiration(self.builder, ticks + expire)
+        lib.JWTBuilder_SetNotBefore(self.builder, ticks)
+        lib.JWTBuilder_SetClaimWithJson(self.builder, claim_key.encode(), claim_value.encode())
+        ret_val = lib.JWTBuilder_Sign(self.builder, sign_key, self.store.storepass)
+        if ret_val != 0:
+            raise ElaDIDException(ElaError.get_from_method('sign'))
+        c_token = lib.JWTBuilder_Compact(self.builder)
+        if not c_token:
+            raise ElaDIDException(ElaError.get_from_method('compact'))
+        return ffi.string(ffi.gc(c_token, lib.Mnemonic_Free)).decode()
 
 
 class Credential:
@@ -90,6 +109,18 @@ class Issuer:
         if not vc:
             raise ElaDIDException(ElaError.get_from_method())
         return Credential(ffi.gc(vc, lib.Credential_Destroy))
+
+
+class Presentation:
+    def __init__(self, store: 'DIDStore', vp):
+        self.store, self.vp = store, vp
+
+    def to_json(self):
+        normalized = True
+        vp_json = lib.Presentation_ToJson(self.vp, normalized)
+        if not vp_json:
+            raise ElaDIDException(ElaError.get_from_method())
+        return ffi.string(ffi.gc(vp_json, lib.Mnemonic_Free)).decode()
 
 
 class DID:
@@ -169,12 +200,6 @@ class DIDDocument:
 
         return Credential(vc)
 
-    def get_jwt_builder(self) -> JwtBuilder:
-        builder = lib.DIDDocument_GetJwtBuilder(self.doc)
-        if not builder:
-            raise ElaDIDException(ElaError.get_from_method())
-        return JwtBuilder(ffi.gc(builder, lib.JWTBuilder_Destroy))
-
     def get_expires(self) -> int:
         expire = lib.DIDDocument_GetExpires(self.doc)
         if expire == 0:
@@ -219,7 +244,7 @@ class RootIdentity:
 class DIDStore:
     def __init__(self, dir_path: str, storepass: str):
         self.store = self._init(dir_path)
-        self.storepass = storepass.encode
+        self.storepass = storepass.encode()
 
     def _init(self, dir_path: str):
         store = lib.DIDStore_Open(dir_path.encode())
@@ -228,7 +253,7 @@ class DIDStore:
         return ffi.gc(store, lib.DIDStore_Close)
 
     def load_did(self, did: DID) -> DIDDocument:
-        doc = lib.DIDStore_LoadDID(did)
+        doc = lib.DIDStore_LoadDID(self.store, did.did)
         if not doc:
             raise ElaDIDException(ElaError.get_from_method())
         return DIDDocument(ffi.gc(doc, lib.DIDDocument_Destroy))
@@ -280,12 +305,28 @@ class DIDStore:
     def contains_private_key(self, did: DID) -> bool:
         return lib.DIDStore_ContainsPrivateKey(self.store, did.did) == 1
 
-    def create_issuer(self, did: DID):
-        # INFO: ffi.NULL: Issuer's key to sign credential.
-        issuer = lib.Issuer_Create(did.did, ffi.NULL, self.store)
+    def create_issuer(self, did: DID) -> Issuer:
+        sign_key = ffi.NULL
+        issuer = lib.Issuer_Create(did.did, sign_key, self.store)
         if not issuer:
             raise ElaDIDException(ElaError.get_from_method())
-        return Issuer(ffi.gc(issuer, lib.Issuer_Destroy))
+        return Issuer(self, ffi.gc(issuer, lib.Issuer_Destroy))
+
+    def create_presentation(self, did: DID, fragment: str, nonce: str, realm: str, vc: Credential) -> Presentation:
+        types = ffi.new("char **", ffi.new("char[]", "VerifiablePresentation".encode()))
+        did_url, sign_key = did.create_did_url(fragment), ffi.NULL
+        vp = lib.Presentation_Create(did_url, did, types, 1,
+                                     nonce.encode(), realm.encode(), sign_key,
+                                     self.store, self.storepass, 1, vc.vc)
+        if not vp:
+            raise ElaDIDException(ElaError.get_from_method())
+        return Presentation(self, ffi.gc(vp, lib.Presentation_Destroy))
+
+    def get_jwt_builder(self, doc: DIDDocument) -> JWTBuilder:
+        builder = lib.DIDDocument_GetJwtBuilder(doc.doc)
+        if not builder:
+            raise ElaDIDException(ElaError.get_from_method())
+        return JWTBuilder(self, ffi.gc(builder, lib.JWTBuilder_Destroy))
 
 
 def init_did_backend() -> None:

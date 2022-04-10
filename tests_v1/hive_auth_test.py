@@ -4,16 +4,12 @@ import unittest
 import logging
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
-from datetime import datetime
 
-# import os
-# import sys
-# sys.path.append(os.getcwd())
-# sys.path.append(os.getcwd() + "/hive/util/did")
 from hive.util.constants import HIVE_MODE_TEST
 from src.utils_v1.did.eladid import ffi, lib
 
 from src import create_app
+from src.utils_v1.did.did_wrapper import DID
 from src.utils_v1.did.entity import Entity
 from tests_v1 import test_common
 
@@ -32,31 +28,17 @@ def name_set(app, name):
 
 # ---------------
 class DIDApp(Entity):
-    issuer = None
-
     def __init__(self, name, mnemonic=None, passphrase=None):
         Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase)
-        self.issuer = lib.Issuer_Create(self.did, ffi.NULL, self.get_did_store())
-
-    def __del__(self):
-        if self.issuer:
-            lib.Issuer_Destroy(self.issuer)
-        # Entity.__del__(self)
 
     def issue_auth(self, app):
-        props = {
-            'appDid': app.appId,
-        }
-        return self.issue_auth_vc(self.issuer, "AppIdCredential", props, app.did)
+        props = {'appDid': app.appId}
+        return super().create_credential('AppIdCredential', props, owner_did=app.get_did()).vc
 
     def issue_backup_auth(self, hive1_did, host, hive2_did):
-        props = {
-            'sourceDID': hive1_did,
-            'targetHost': host,
-            'targetDID': hive2_did,
-        }
-        did = lib.DID_FromString(hive1_did.encode())
-        return self.issue_auth_vc(self.issuer, "BackupCredential", props, did)
+        props = {'sourceDID': hive1_did, 'targetHost': host, 'targetDID': hive2_did}
+        return super().create_credential('BackupCredential', props, owner_did=DID.from_string(hive1_did)).vc
+
 
 # ---------------
 class DApp(Entity):
@@ -133,7 +115,7 @@ class HiveAuthTestCase(unittest.TestCase):
 
     def __test_auth_common(self, didapp, testapp):
         # sign_in
-        doc = lib.DIDStore_LoadDID(testapp.get_did_store(), testapp.did)
+        doc = lib.DIDStore_LoadDID(testapp.get_did_store(), testapp.get_did())
         doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
         logging.getLogger("HiveAuthTestCase").debug(f"\ndoc_str: {doc_str}")
         doc = json.loads(doc_str)

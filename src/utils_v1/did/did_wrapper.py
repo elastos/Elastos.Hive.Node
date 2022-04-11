@@ -341,7 +341,10 @@ class DIDStore:
         if ret_val != 0:
             raise ElaDIDException(ElaError.get_from_method())
 
-    def list_dids(self) -> list[DID]:
+    def list_dids(self):
+        """
+        :return: list[DID]
+        """
         dids = []
 
         @ffi.callback("int(DID *, void *)")

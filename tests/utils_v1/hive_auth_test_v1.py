@@ -13,7 +13,7 @@ class UserDID(Entity):
 
     def issue_auth(self, app: 'AppDID') -> Credential:
         props = {'appDid': AppDID.app_did}
-        return super().create_credential('AppIdCredential', props, owner_did=app.get_did())
+        return super().create_credential('AppIdCredential', props, owner_did=app.did)
 
     def issue_backup_auth(self, host_did: str, backup_url, backup_did) -> Credential:
         props = {'sourceDID': host_did, 'targetHost': backup_url, 'targetDID': backup_did}

@@ -10,17 +10,18 @@ from src.utils_v1.did.did_wrapper import ElaError, DID, DIDDocument
 @ffi.def_extern()
 def MyDIDLocalResovleHandle(did):
     """
+    INFO: keep the function name.
     # type: DID* -> DIDDocument*
     """
-    spec_str = DID(did).get_method_specific_id()
+    spec_str, doc = DID(did).get_method_specific_id(), ffi.NULL
     file_path = hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_str
     if os.path.exists(file_path):
-        with open(file_path, 'r') as f:
-            try:
-                return DIDDocument.from_json(f.read()).doc
-            except Exception as ex:
-                logging.error(f'failed to read did file: {file_path}')
-                return ffi.NULL
+        try:
+            with open(file_path, 'r') as f:
+                doc = DIDDocument.from_json(f.read()).doc
+        except Exception as ex:
+            logging.error(f'failed to read did file: {file_path}, {str(ex)}')
+    return doc
 
 
 def init_did_backend() -> None:
@@ -34,3 +35,8 @@ def init_did_backend() -> None:
 
     os.makedirs(dids_path, exist_ok=True)
     lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)
+
+
+if __name__ == '__main__':
+    init_did_backend()
+    DID.from_string('did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP').resolve()

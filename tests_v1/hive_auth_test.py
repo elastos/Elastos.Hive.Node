@@ -9,7 +9,7 @@ from hive.util.constants import HIVE_MODE_TEST
 from src.utils_v1.did.eladid import ffi, lib
 
 from src import create_app
-from src.utils_v1.did.did_wrapper import DID
+from src.utils_v1.did.did_wrapper import DID, Credential
 from src.utils_v1.did.entity import Entity
 from tests_v1 import test_common
 
@@ -31,9 +31,9 @@ class DIDApp(Entity):
     def __init__(self, name, mnemonic=None, passphrase=None):
         Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase)
 
-    def issue_auth(self, app):
+    def issue_auth(self, app) -> Credential:
         props = {'appDid': app.appId}
-        return super().create_credential('AppIdCredential', props, owner_did=app.get_did()).vc
+        return super().create_credential('AppIdCredential', props, owner_did=DID(app.get_did()))
 
     def issue_backup_auth(self, hive1_did, host, hive2_did):
         props = {'sourceDID': hive1_did, 'targetHost': host, 'targetDID': hive2_did}
@@ -55,6 +55,7 @@ class DApp(Entity):
 
     def set_access_token(self, token):
         self.access_token = token
+
 
 # ------------------
 class HiveAuthTestCase(unittest.TestCase):

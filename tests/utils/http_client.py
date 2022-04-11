@@ -64,7 +64,7 @@ class RemoteResolver:
         # if not token:
         #     token = self.__get_remote_token(user_did)
         #     self.test_config.save_token(self.http_client.base_url, user_did, token)
-        token = self.__get_remote_token(user_did)
+        token = self._get_remote_token(user_did)
         # print(f'API token: {token}')
         return token
 
@@ -77,7 +77,7 @@ class RemoteResolver:
     def get_user_did_str(self):
         return self.user_did.get_did_string()
 
-    def __get_remote_token(self, did: UserDID):
+    def _get_remote_token(self, did: UserDID):
         return self.auth(self.sign_in(), did)
 
     def get_node_did(self) -> str:
@@ -87,9 +87,9 @@ class RemoteResolver:
 
         # get from the result of sign_in()
         challenge = self.sign_in()
-        return self.__get_issuer_by_challenge2(JWT.parse(challenge))
+        return self._get_issuer_by_challenge(JWT.parse(challenge))
 
-    def __get_issuer_by_challenge2(self, jwt: JWT):
+    def _get_issuer_by_challenge(self, jwt: JWT):
         node_did = str(jwt.get_issuer())
         self.test_config.save_node_did(self.http_client.base_url, node_did)
         return node_did
@@ -100,11 +100,11 @@ class RemoteResolver:
         assert response.status_code == 201
         return response.json()["challenge"]
 
-    def __get_auth_token_by_challenge(self, challenge, did: UserDID):
+    def _get_auth_token_by_challenge(self, challenge, did: UserDID):
         jwt = JWT.parse(challenge)
         assert jwt.get_audience() == self.app_did.get_did_string()
         nonce = jwt.get_claim('nonce')
-        hive_did = self.__get_issuer_by_challenge2(jwt)
+        hive_did = self._get_issuer_by_challenge(jwt)
 
         # auth
         vc = did.issue_auth(self.app_did)
@@ -112,8 +112,8 @@ class RemoteResolver:
         return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
 
     def auth(self, challenge, did: UserDID):
-        auth_token = self.__get_auth_token_by_challenge(challenge, did)
-        response = self.http_client.post('/api/v2/did/auth', {"challenge_response": auth_token},
+        challenge_response = self._get_auth_token_by_challenge(challenge, did)
+        response = self.http_client.post('/api/v2/did/auth', {"challenge_response": challenge_response},
                                          need_token=False, is_skip_prefix=True)
         assert response.status_code == 201
         return response.json()["token"]

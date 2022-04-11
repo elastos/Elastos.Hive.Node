@@ -183,6 +183,7 @@ class HiveScripting:
         if not capture_output:
             capture_output = executable.get('output', False)
 
+        data = None
         if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
             err_message = None
             for i, e in enumerate(executable_body):
@@ -213,6 +214,7 @@ class HiveScripting:
         else:
             if capture_output:
                 output[output_key] = data
+        # @fred: The error of executable will be taken as success.
         return output
 
     def __count_nested_condition(self, condition):
@@ -285,6 +287,9 @@ class HiveScripting:
         return self.response.response_ok(data)
 
     def __run_script(self, script_name, caller_did, caller_app_did, target_did, target_app_did, params):
+        """
+        :return: ok or error response
+        """
         r, msg = can_access_vault(target_did, VAULT_ACCESS_R)
         if r != SUCCESS:
             logging.debug(f"Error while executing script named '{script_name}': vault can not be accessed")
@@ -357,21 +362,21 @@ class HiveScripting:
         output = {}
         data = self.__executable_execution(caller_did, caller_app_did, target_did, target_app_did, executable, params,
                                            output=output, output_key=executable.get('name', "output0"))
-        return data
+        return self.response.response_ok(data)
 
     def run_script_url(self, target_did, target_app_did, script_name, params):
         # Get caller info
         caller_did, caller_app_did = did_auth()
 
-        data = self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
-
-        return self.response.response_ok(data)
+        return self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
 
     def run_script(self):
         # Request script content first
         content, err = get_script_content(self.response, "name")
         if err:
-            return err
+            msg = f'Failed to get the script content: {err}'
+            logging.debug(msg)
+            return self.response.response_err(BAD_REQUEST, msg)
 
         script_name = content.get('name')
         caller_did, caller_app_did = did_auth()
@@ -389,9 +394,7 @@ class HiveScripting:
             return self.response.response_err(BAD_REQUEST, "target_app_did not set")
 
         params = content.get('params', None)
-        data = self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
-
-        return self.response.response_ok(data)
+        return self.__run_script(script_name, caller_did, caller_app_did, target_did, target_app_did, params)
 
     def run_script_upload(self, transaction_id):
         row_id, target_did, target_app_did, file_name, err = self.run_script_fileapi_setup(transaction_id, "upload")

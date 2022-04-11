@@ -5,6 +5,7 @@ Entrance of the subscription module.
 """
 import json
 import logging
+import os
 from datetime import datetime
 
 from src import hive_setting
@@ -34,10 +35,22 @@ class Auth(Entity, metaclass=Singleton):
         }
 
     def _get_app_instance_did(self, app_instance_doc: dict) -> DID:
-        doc = DIDDocument.from_json(json.dumps(app_instance_doc))
+        doc_str = json.dumps(app_instance_doc)
+        doc = DIDDocument.from_json(doc_str)
         if not doc.is_valid():
             raise BadRequestException(msg='The did document is invalid in getting app instance did.')
-        return doc.get_subject()
+        did = doc.get_subject()
+
+        # INFO: save application instance did document to /localdids folder
+        spec_str = did.get_method_specific_id()
+        try:
+            with open(hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_str, "w") as f:
+                f.write(doc_str)
+                f.flush()
+        except Exception as e:
+            raise BadRequestException(msg='Failed to cache application instance DID document.')
+
+        return did
 
     def _save_nonce_to_db(self, app_instance_did):
         nonce, expire_time = create_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
@@ -56,7 +69,7 @@ class Auth(Entity, metaclass=Singleton):
         """
         Create challenge for sign in response.
         """
-        return super().create_jwt_token('DIDAuthChallenge', str(app_instance_did), expire_time, 'nonce', nonce)
+        return super().create_jwt_token('DIDAuthChallenge', str(app_instance_did), expire_time, 'nonce', nonce, claim_json=False)
 
     def auth(self, challenge_response):
         credential_info = self._get_auth_info_from_challenge_response(challenge_response, ['appDid', ])
@@ -147,7 +160,7 @@ class Auth(Entity, metaclass=Singleton):
 
     def _create_access_token(self, credential_info, subject) -> str:
         props = {k: credential_info[k] for k in credential_info if k not in ['id', 'expTime']}
-        return super().create_jwt_token(subject, credential_info["id"], credential_info["expTime"], 'props', props)
+        return super().create_jwt_token(subject, credential_info["id"], credential_info["expTime"], 'props', json.dumps(props), claim_json=False)
 
     def backup_auth(self, challenge_response):
         """ for the vault service node """
@@ -168,12 +181,12 @@ class Auth(Entity, metaclass=Singleton):
         :return challenge_response, backup_service_instance_did
         """
         vc = Credential.from_json(credential)
-        doc: dict = json.loads(super().doc.to_json())
+        doc: dict = json.loads(self.get_doc().to_json())
         body = self.http.post(host_url + URL_V2 + URL_SIGN_IN, None, {"id": doc})
         if 'challenge' not in body or not body["challenge"]:
             raise InvalidParameterException(msg='backup_sign_in: failed to sign in to backup node.')
 
-        jwt: JWT = JWT.parse(body["challenge"].encode())
+        jwt: JWT = JWT.parse(body["challenge"])
         audience = jwt.get_audience()
         if audience != self.get_did_string():
             raise InvalidParameterException(msg=f'backup_sign_in: failed to get the audience of the challenge.')
@@ -194,7 +207,7 @@ class Auth(Entity, metaclass=Singleton):
         if 'token' not in body or not body["token"]:
             raise InvalidParameterException(msg='backup_auth: failed to backup auth to backup node.')
 
-        jwt = JWT.parse(body["token"].encode())
+        jwt = JWT.parse(body["token"])
         audience = jwt.get_audience()
         if audience != self.get_did_string():
             raise InvalidParameterException(msg=f'backup_auth: failed to get the audience of the challenge.')
@@ -208,7 +221,7 @@ class Auth(Entity, metaclass=Singleton):
     def create_order_proof(self, user_did, doc_id, amount=0, is_receipt=False):
         exp = int(datetime.utcnow().timestamp()) + 7 * 24 * 3600 if not is_receipt else -1
         props = {'receipt_id': doc_id, 'amount': amount} if is_receipt else {'order_id': doc_id}
-        return super().create_jwt_token('ORDER_PROOF', user_did, exp, 'props', json.dumps(props))
+        return super().create_jwt_token('ORDER_PROOF', user_did, exp, 'props', json.dumps(props), claim_json=False)
 
     def verify_order_proof(self, proof, user_did, order_id):
         jwt = JWT.parse(proof)

@@ -11,12 +11,13 @@ from src.utils_v1.did.did_wrapper import DIDStore, DIDDocument, RootIdentity, Is
 
 
 class Entity:
-    def __init__(self, name='Entity', mnemonic=None, passphrase='secret', storepass='password', need_resolve=True, from_file=False, file_content=None):
+    def __init__(self, name, mnemonic=None, passphrase=None, storepass=None, need_resolve=True, from_file=False, file_content=None):
         """
         :param file_content: base58
         """
+        passphrase, storepass = passphrase if passphrase else 'secret', storepass if storepass else 'password'
         self.name = name
-        self.storepass = storepass  # TODO: Try to remove this with self.did_store
+        self.storepass = storepass  # Only for v1
         store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
         self.did_store: DIDStore = DIDStore(store_dir, storepass)
         self.did: DID
@@ -46,7 +47,8 @@ class Entity:
 
         file_path = gene_temp_file_name()
         with open(file_path, 'w') as f:
-            f.write(file_content_str)
+            ret_val = f.write(file_content_str)
+            f.flush()
 
         try:
             self.did_store.import_did(file_path.as_posix(), passphrase)
@@ -80,27 +82,18 @@ class Entity:
         doc = root_identity.new_did_0()
         return doc.get_subject(), doc
 
-    def get_did_string(self):
-        return self.did_str
-
-    def get_did_store(self):
-        return self.did_store.store
-
-    def get_did(self):
-        return self.did.did
-
-    def get_document(self):
-        return self.doc.doc
-
     def get_name(self):
         return self.name
 
-    def get_store_password(self):
-        return self.storepass
+    def get_doc(self) -> DIDDocument:
+        return self.doc
+
+    def get_did_string(self):
+        return self.did_str
 
     def create_credential(self, type_, props, owner_did: DID = None) -> Credential:
         did = owner_did if owner_did else self.did
-        return self.issuer.create_credential_by_string(did, self.name, type_, props)
+        return self.issuer.create_credential_by_string(did, self.name, type_, props, self.doc.get_expires())
 
     def create_presentation_str(self, vc: Credential, nonce: str, realm: str) -> str:
         return self.did_store.create_presentation(self.did, 'jwtvp', nonce, realm, vc).to_json()
@@ -108,10 +101,28 @@ class Entity:
     def create_vp_token(self, vp_json, subject, hive_did: str, expire) -> str:
         return self.create_jwt_token(subject, hive_did, expire, 'presentation', vp_json)
 
-    def create_jwt_token(self, subject: str, audience_did_str: str, expire: int, claim_key: str, claim_value: any) -> str:
+    def create_jwt_token(self, subject: str, audience_did_str: str, expire: int, claim_key: str, claim_value: any, claim_json: bool = True) -> str:
         builder: JWTBuilder = self.did_store.get_jwt_builder(self.doc)
-        return builder.create_token(subject, audience_did_str, expire, claim_key, claim_value)
+        return builder.create_token(subject, audience_did_str, expire, claim_key, claim_value, claim_json=claim_json)
+
+    # blow is only for v1
+
+    def get_did_store(self):
+        """ Only for v1 """
+        return self.did_store.store
+
+    def get_did(self):
+        """ Only for v1 """
+        return self.did.did
+
+    def get_document(self):
+        """ Only for v1 """
+        return self.doc.doc
+
+    def get_store_password(self):
+        """ Only for v1 """
+        return self.storepass
 
     def get_error_message(self, prompt=None) -> str:
-        """ Compatible to v1 """
+        """ Only for v1 """
         return ElaError.get(prompt)

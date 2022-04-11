@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import inspect
 import json
 from datetime import datetime
@@ -30,7 +31,7 @@ class ElaError:
         ppt = ': ' + prompt if prompt else ''
         frame = inspect.stack()[1]
         self = frame.frame.f_locals['self']
-        cls_name = self.__class__.name
+        cls_name = self.__class__.__name__
         mtd_name = frame[3]
         return ElaError.get(f'{cls_name}.{mtd_name}{ppt}')
 
@@ -47,7 +48,7 @@ class JWT:
             raise ElaDIDException(ElaError.get('JWT.parse'))
         return JWT(jwt)
 
-    def get_claim_as_json(self, claim_key):
+    def get_claim_as_json(self, claim_key) -> str:
         claim_value = lib.JWT_GetClaimAsJson(self.jwt, claim_key.encode())
         if not claim_value:
             raise ElaDIDException(ElaError.get_from_method())
@@ -82,7 +83,7 @@ class JWTBuilder:
     def __init__(self, store, builder):
         self.store, self.builder = store, builder
 
-    def create_token(self, subject: str, audience_did_str: str, expire: int, claim_key: str, claim_value: any) -> str:
+    def create_token(self, subject: str, audience_did_str: str, expire: int, claim_key: str, claim_value: any, claim_json: bool = True) -> str:
         ticks, sign_key = int(datetime.now().timestamp()), ffi.NULL
         lib.JWTBuilder_SetHeader(self.builder, "type".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(self.builder, "version".encode(), "1.0".encode())
@@ -91,7 +92,10 @@ class JWTBuilder:
         lib.JWTBuilder_SetIssuedAt(self.builder, ticks)
         lib.JWTBuilder_SetExpiration(self.builder, ticks + expire)
         lib.JWTBuilder_SetNotBefore(self.builder, ticks)
-        lib.JWTBuilder_SetClaimWithJson(self.builder, claim_key.encode(), claim_value.encode())
+        if claim_json:
+            lib.JWTBuilder_SetClaimWithJson(self.builder, claim_key.encode(), claim_value.encode())
+        else:
+            lib.JWTBuilder_SetClaim(self.builder, claim_key.encode(), claim_value.encode())
         ret_val = lib.JWTBuilder_Sign(self.builder, sign_key, self.store.storepass)
         if ret_val != 0:
             raise ElaDIDException(ElaError.get_from_method('sign'))
@@ -114,7 +118,10 @@ class Credential:
         return Credential(ffi.gc(vc, lib.Credential_Destroy))
 
     def is_valid(self) -> bool:
-        return lib.Credential_IsValid(self.vc) == 1
+        ret_val = lib.Credential_IsValid(self.vc)
+        if ret_val == -1:
+            raise ElaDIDException(ElaError.get_from_method())
+        return ret_val == 1
 
     def get_expiration_date(self) -> int:
         expire_date = lib.Credential_GetExpirationDate(self.vc)
@@ -140,12 +147,12 @@ class Issuer:
     def __init__(self, store: 'DIDStore', issuer):
         self.store, self.issuer = store, issuer
 
-    def create_credential_by_string(self, owner: 'DID', fragment: str, type_: str, props: dict):
+    def create_credential_by_string(self, owner: 'DID', fragment: str, type_: str, props: dict, expire: int):
+        # BUGBUG: can not simplify to one line.
+        type0 = ffi.new("char[]", type_.encode())
+        types = ffi.new("char **", type0)
         vc = lib.Issuer_CreateCredentialByString(self.issuer, owner.did, owner.create_did_url(fragment),
-                                                 ffi.new("char **", ffi.new("char[]", type_.encode())), 1,
-                                                 json.dumps(props).encode(),
-                                                 self.store.load_did(owner).get_expires(),
-                                                 self.store.storepass)
+                                                 types, 1, json.dumps(props).encode(), expire, self.store.storepass)
         if not vc:
             raise ElaDIDException(ElaError.get_from_method())
         return Credential(ffi.gc(vc, lib.Credential_Destroy))
@@ -156,8 +163,8 @@ class Presentation:
         self.vp = vp
 
     @staticmethod
-    def from_json(json_str) -> 'Presentation':
-        vp = lib.Presentation_FromJson(json_str)
+    def from_json(json_str: str) -> 'Presentation':
+        vp = lib.Presentation_FromJson(json_str.encode())
         if not vp:
             raise ElaDIDException(ElaError.get('Presentation.from_json'))
         return Presentation(ffi.gc(vp, lib.Presentation_Destroy))
@@ -241,10 +248,13 @@ class DIDDocument:
         doc = lib.DIDDocument_FromJson(doc_str.encode())
         if not doc:
             raise ElaDIDException(ElaError.get('DIDDocument.from_json'))
-        return DIDDocument(ffi.gc(doc, lib.DIDDocument_Destroy))
+        # BUGBUG: for test cases
+        # return DIDDocument(ffi.gc(doc, lib.DIDDocument_Destroy))
+        return DIDDocument(doc)
 
     def to_json(self) -> str:
-        doc_str = lib.DIDDocument_ToJson(self.doc)
+        normalized = True
+        doc_str = lib.DIDDocument_ToJson(self.doc, normalized)
         if not doc_str:
             raise ElaDIDException(ElaError.get_from_method())
         return ffi.string(ffi.gc(doc_str, lib.Mnemonic_Free)).decode()
@@ -381,9 +391,11 @@ class DIDStore:
         return Issuer(self, ffi.gc(issuer, lib.Issuer_Destroy))
 
     def create_presentation(self, did: DID, fragment: str, nonce: str, realm: str, vc: Credential) -> Presentation:
-        types = ffi.new("char **", ffi.new("char[]", "VerifiablePresentation".encode()))
+        # BUGBUG: can not combine to single line.
+        type0 = ffi.new("char[]", "VerifiablePresentation".encode())
+        types = ffi.new("char **", type0)
         did_url, sign_key = did.create_did_url(fragment), ffi.NULL
-        vp = lib.Presentation_Create(did_url, did, types, 1,
+        vp = lib.Presentation_Create(did_url, did.did, types, 1,
                                      nonce.encode(), realm.encode(), sign_key,
                                      self.store, self.storepass, 1, vc.vc)
         if not vp:

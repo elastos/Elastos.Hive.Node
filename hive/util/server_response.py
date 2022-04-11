@@ -17,13 +17,13 @@ class ServerResponse:
     def response_ok(self, data_dic=None):
         ret = {STATUS: STATUS_OK}
         if data_dic is not None:
-            try:
-                ret.update(data_dic)
-            except Exception as e:
-                # TODO：try to filter this to capture real ones.
-                capture_exception(error=Exception(f'V1 UNEXPECTED: {str(data_dic)}, {str(e)}'))
-                return self.response_err(400, f'invalid response body: {str(data_dic)}, {str(e)}')
-        self.logger.debug(json.dumps(ret))
+            if not isinstance(data_dic, dict):
+                msg = f'invalid response body: {str(data_dic)}'
+                capture_exception(error=Exception(f'V1 UNEXPECTED: {msg}'))
+                return self.response_err(400, msg)
+
+            ret.update(data_dic)
+
         return jsonify(ret)
 
     def response_err(self, code, msg):

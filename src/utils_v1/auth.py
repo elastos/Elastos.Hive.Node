@@ -91,7 +91,7 @@ def get_error_message(prompt=None):
     """ helper method to get error message from did.so """
     error = lib.DIDError_GetLastErrorMessage()
     if not error:
-        return str(prompt)
+        return str(prompt) + ': Unknown DID error.'
     err_message = ffi.string(error).decode()
     return err_message if not prompt else f'[{prompt}] {err_message}'
 

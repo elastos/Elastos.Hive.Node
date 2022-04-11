@@ -4,9 +4,11 @@
 Http exceptions definition.
 """
 import json
+import traceback
 
 from bson import json_util
 from flask import jsonify, request
+from sentry_sdk import capture_exception
 
 
 class HiveException(Exception):
@@ -22,7 +24,11 @@ class HiveException(Exception):
 
     def _get_error_dict(self):
         error = {"message": self.msg}
-        if self.internal_code > 0:
+        if not isinstance(self.internal_code, int):
+            # INFO: catch this specific issue.
+            capture_exception(error=Exception(f'V2 ERROR CODE UNEXPECTED: {str(type(self.internal_code))}, {str(self.internal_code)} {traceback.format_exc()}'))
+        self.internal_code = self.internal_code if isinstance(self.internal_code, int) else -2
+        if self.internal_code > -1:
             error['internal_code'] = self.internal_code
         return {"error": error}
 
@@ -46,7 +52,8 @@ class HiveException(Exception):
             'POST': 201,
             'DELETE': 204,
         }
-        assert request.method in codes
+        if request.method not in codes:
+            return 400
         return codes[request.method]
 
     def __str__(self):

@@ -15,8 +15,8 @@ def init_app(app):
 
 def handle_exception_500(e):
     response = ServerResponse("HiveNode")
-    logging.getLogger("Hive exception").exception(f"handle_exception_500: {traceback.format_exc()}")
-    return response.response_err(INTERNAL_SERVER_ERROR, f"Uncaught exception: {traceback.format_exc()}")
+    logging.getLogger("Hive exception").exception(f"handle_exception_500: {str(e)}, {traceback.format_exc()}")
+    return response.response_err(INTERNAL_SERVER_ERROR, f"Uncaught exception: {str(e)}, {traceback.format_exc()}")
 
 
 def pre_proc(response, access_vault=None):

@@ -90,7 +90,9 @@ class RemoteResolver:
         # get from the result of sign_in()
         challenge = self.sign_in()
         jws = lib.DefaultJWSParser_Parse(challenge.encode())
-        assert jws, f'Cannot get challenge for node did: {ffi.string(lib.DIDError_GetLastErrorMessage()).decode()}'
+        error_msg = lib.DIDError_GetLastErrorMessage()
+        msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
+        assert jws, f'Cannot get challenge for node did: {msg}'
         node_did = self.__get_issuer_by_challenge2(jws)
         lib.JWT_Destroy(jws)
         return node_did
@@ -111,7 +113,9 @@ class RemoteResolver:
 
     def __get_auth_token_by_challenge(self, challenge, did: DIDApp):
         jws = lib.DefaultJWSParser_Parse(challenge.encode())
-        assert jws, f'Cannot get challenge: {ffi.string(lib.DIDError_GetLastErrorMessage()).decode()}'
+        error_msg = lib.DIDError_GetLastErrorMessage()
+        msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
+        assert jws, f'Cannot get challenge: {msg}'
         aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
         assert aud == self.app_did.get_did_string()
         nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()

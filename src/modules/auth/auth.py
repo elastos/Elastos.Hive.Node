@@ -235,8 +235,9 @@ class Auth(Entity, metaclass=Singleton):
 
     def get_error_message(self, prompt=None):
         """ helper method to get error message from did.so """
-        err_message = ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
-        return err_message if not prompt else f'[{prompt}] {err_message}'
+        error_msg = lib.DIDError_GetLastErrorMessage()
+        msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
+        return msg if not prompt else f'[{prompt}] {msg}'
 
     def get_backup_credential_info(self, credential):
         """ for vault /backup """

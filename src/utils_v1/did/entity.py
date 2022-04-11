@@ -69,8 +69,9 @@ class Entity:
 
     def get_error_message(self, prompt=None):
         """ helper method to get error message from did.so """
-        err_message = ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
-        return err_message if not prompt else f'[{prompt}] {err_message}'
+        error_msg = lib.DIDError_GetLastErrorMessage()
+        msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
+        return msg if not prompt else f'[{prompt}] {msg}'
 
     def issue_auth_vc(self, type, props, owner):
         type0 = ffi.new("char[]", type.encode())
@@ -151,7 +152,9 @@ class Entity:
         # print(jwt)
         jws = lib.DefaultJWSParser_Parse(jwt.encode())
         if not jws:
-            return None, None, "Challenge DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
+            error_msg = lib.DIDError_GetLastErrorMessage()
+            msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
+            return None, None, "Challenge DefaultJWSParser_Parse error: " + msg
 
         aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
         if aud != self.get_did_string():
@@ -188,7 +191,9 @@ class Entity:
 
         jws = lib.DefaultJWSParser_Parse(token.encode())
         if not jws:
-            return None, "Backup token DefaultJWSParser_Parse error: " + ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
+            error_msg = lib.DIDError_GetLastErrorMessage()
+            msg = ffi.string(error_msg).decode() if error_msg else 'Unknown DID error.'
+            return None, "Backup token DefaultJWSParser_Parse error: " + msg
 
         aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
         if aud != self.get_did_string():

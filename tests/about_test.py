@@ -15,20 +15,30 @@ class AboutTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.cli = HttpClient(f'/api/v2/node')
+        self.cli = HttpClient(f'/api/v2')
 
     def test01_get_version(self):
-        response = self.cli.get(f'/version', need_token=False)
+        response = self.cli.get(f'/about/version', need_token=False)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('major' in response.json())
+
+    def test01_get_node_version(self):
+        response = self.cli.get(f'/node/version', need_token=False)
         self.assertEqual(response.status_code, 200)
         self.assertTrue('major' in response.json())
 
     def test02_get_commit_id(self):
-        response = self.cli.get(f'/commit_id', need_token=False)
+        response = self.cli.get(f'/about/commit_id', need_token=False)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('commit_id' in response.json())
+
+    def test02_get_node_commit_id(self):
+        response = self.cli.get(f'/node/commit_id', need_token=False)
         self.assertEqual(response.status_code, 200)
         self.assertTrue('commit_id' in response.json())
 
     def test03_get_node_info(self):
-        response = self.cli.get(f'/info')
+        response = self.cli.get(f'/node/info')
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json().get('service_did'))
         self.assertTrue(response.json().get('owner_did'))

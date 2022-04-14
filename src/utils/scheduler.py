@@ -85,8 +85,7 @@ def task_adapt_local_file_to_ipfs():
                 continue
             adapt_local_files_by_folder(user_did, app_did, name, files_root)
         except Exception as e:
-            logging.error(f'[task_adapt_local_file_to_ipfs] Failed to handle user:'
-                          f'{str(user)}, {traceback.format_exc()}, skip')
+            logging.error(f'[task_adapt_local_file_to_ipfs] Failed to handle user:{str(user)}, {traceback.format_exc()}, skip')
 
     logging.info('[task_adapt_local_file_to_ipfs] leave.')
 

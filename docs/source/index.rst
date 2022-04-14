@@ -13,7 +13,7 @@ Summary
 
 .. qrefflask:: src:get_docs_app(first=True)
   :undoc-static:
-  :endpoints: auth.sign_in, auth.auth,
+  :endpoints: v2_auth.sign_in, v2_auth.auth,
     subscription.vault_subscribe, subscription.vault_unsubscribe, subscription.vault_info, subscription.vault_app_states,
     subscription.backup_subscribe, subscription.backup_unsubscribe, subscription.backup_info, subscription.vault_price_plan,
     database.create_collection, database.delete_collection, database.insert_or_count,
@@ -23,7 +23,7 @@ Summary
     scripting.delete_script, scripting.upload_file, scripting.download_file,
     backup.state, backup.backup_restore, backup.server_promotion,
     payment.version, payment.place_order, payment.pay_order, payment.orders, payment.receipt_info,
-    about.version, about.commit_id, about.info,
+    node.version, node.commit_id, node.info,
     provider.vaults, provider.backups, provider.filled_orders
 
 01 Auth
@@ -45,14 +45,14 @@ sign in
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: auth.sign_in
+  :endpoints: v2_auth.sign_in
 
 auth
 ----
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: auth.auth
+  :endpoints: v2_auth.auth
 
 02 Subscription
 ===============
@@ -326,21 +326,21 @@ get version
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: about.version
+  :endpoints: node.version
 
 get commit id
 -------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: about.commit_id
+  :endpoints: node.commit_id
 
 get node information
 --------------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: about.info
+  :endpoints: node.info
 
 09 Provider
 ===========

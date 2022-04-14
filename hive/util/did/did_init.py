@@ -26,10 +26,15 @@ def print_err(fun_name=None):
     err = "Error:: "
     if fun_name:
         err += fun_name + ": "
-    logging.error(f"{err + str(ffi.string(lib.DIDError_GetLastErrorMessage()), encoding='utf-8')}")
+    error_msg = lib.DIDError_GetLastErrorMessage()
+    msg = str(ffi.string(error_msg), encoding='utf-8') if error_msg else 'Unknown DID error.'
+    logging.error(f"{err + msg}")
 
 def get_error_message():
-    return str(ffi.string(lib.DIDError_GetLastErrorMessage()), encoding='utf-8')
+    error_msg = lib.DIDError_GetLastErrorMessage()
+    if not error_msg:
+        return 'Unknown DID error.'
+    return str(ffi.string(error_msg), encoding='utf-8')
 
 
 def init_did_store(name):

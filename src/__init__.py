@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 import logging.config
 
-import sentry_sdk
 import yaml
 from flask_cors import CORS
 from flask import Flask, request
-from sentry_sdk.integrations.flask import FlaskIntegration
 import os
 
 from src.settings import hive_setting
 from src.utils.http_exception import HiveException, InternalServerErrorException
 from src.utils.http_request import RegexConverter
 from src.utils.http_response import HiveApi
+from src.utils.sentry_error import init_sentry_hook
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from src import view
 
@@ -77,7 +76,7 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
     logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
     if hive_setting.SENTRY_ENABLED and hive_setting.SENTRY_DSN != "":
-        sentry_sdk.init(dsn=hive_setting.SENTRY_DSN, integrations=[FlaskIntegration()], traces_sample_rate=1.0)
+        init_sentry_hook(hive_setting.SENTRY_DSN)
     if hive_setting.ENABLE_CORS:
         CORS(app, supports_credentials=True)
     return app

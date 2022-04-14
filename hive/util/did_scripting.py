@@ -44,11 +44,11 @@ def unmassage_keys_with_dollar_signs(d):
 def get_script_content(response, *args):
     content = request.get_json(force=True, silent=True)
     if content is None:
-        return None, response.response_err(BAD_REQUEST, "parameter is not application/json")
+        return None, 'parameter is not application/json'
     for arg in args:
         data = content.get(arg, None)
         if data is None:
-            return None, response.response_err(BAD_REQUEST, "parameter " + arg + " is null")
+            return f'parameter {arg} is null'
     return content, None
 
 

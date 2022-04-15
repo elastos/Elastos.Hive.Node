@@ -61,7 +61,6 @@ class HiveException(Exception):
 
 
 # BadRequestException
-# TODO: refine default and INVALID_PARAMETER for more specific ones.
 
 
 class BadRequestException(HiveException):
@@ -96,8 +95,7 @@ class UnauthorizedException(HiveException):
         super().__init__(401, super().NO_INTERNAL_CODE, msg)
 
 
-# ForbiddenException
-# TODO: remove for vault accessing because no need active before using vault.
+# ForbiddenException @deprecated
 
 
 class ForbiddenException(HiveException):

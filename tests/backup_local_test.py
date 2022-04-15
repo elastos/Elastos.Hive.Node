@@ -2,7 +2,7 @@
 
 """
 Testing file for the ipfs-backup module.
-TODO: also need to run on Travis.
+INFO: To run this on travis which needs support mongodb dump first.
 """
 import time
 import unittest

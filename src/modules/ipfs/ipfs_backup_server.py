@@ -126,12 +126,13 @@ class IpfsBackupServer:
         if not doc:
             raise BackupNotFoundException()
 
+        if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
+            raise BadRequestException(msg='the backup & restore is in process.')
+
         self.remove_backup_by_did(user_did, doc)
 
     def remove_backup_by_did(self, user_did, doc):
-        """ Remove all data belongs to the backup of the user.
-        TODO: consider the backup is in process when removing.
-        """
+        """ Remove all data belongs to the backup of the user. """
         logging.debug(f'start remove the backup of the user {user_did}, _id, {str(doc["_id"])}')
         if doc.get(BKSERVER_REQ_CID):
             request_metadata = self._get_verified_request_metadata(user_did, doc)

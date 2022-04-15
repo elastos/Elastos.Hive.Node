@@ -8,22 +8,6 @@ URL_SERVER_INTERNAL_BACKUP = '/vault-backup-service/backup'
 URL_SERVER_INTERNAL_RESTORE = '/vault-backup-service/restore'
 URL_SERVER_INTERNAL_STATE = '/vault-backup-service/state'
 
-# TODO: deprecated
-URL_BACKUP_SERVICE = '/api/v2/internal_backup/service'
-URL_BACKUP_FINISH = '/api/v2/internal_backup/finished_confirmation'
-URL_BACKUP_FILES = '/api/v2/internal_backup/files'
-URL_BACKUP_FILE = '/api/v2/internal_backup/file'
-URL_BACKUP_PATCH_HASH = '/api/v2/internal_backup/patch_hash'
-URL_BACKUP_PATCH_DELTA = '/api/v2/internal_backup/patch_delta'
-URL_BACKUP_PATCH_FILE = '/api/v2/internal_backup/patch_file'
-URL_RESTORE_FINISH = '/api/v2/internal_restore/finished_confirmation'
-
-# TODO: deprecated
-URL_IPFS_BACKUP_PIN_CIDS = '/api/v2/ipfs-backup-internal/pin_cids'
-URL_IPFS_BACKUP_GET_CIDS = '/api/v2/ipfs-backup-internal/get_cids'
-URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'
-URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
-
 BACKUP_FILE_SUFFIX = '.backup'
 
 DID = 'did'
@@ -97,6 +81,19 @@ BKSERVER_REQ_STATE_MSG = 'req_state_msg'
 BKSERVER_REQ_CID = 'req_cid'
 BKSERVER_REQ_SHA256 = 'req_sha256'
 BKSERVER_REQ_SIZE = 'req_size'
+
+# @deprecated
+URL_BACKUP_SERVICE = '/api/v2/internal_backup/service'
+URL_BACKUP_FINISH = '/api/v2/internal_backup/finished_confirmation'
+URL_BACKUP_FILES = '/api/v2/internal_backup/files'
+URL_BACKUP_FILE = '/api/v2/internal_backup/file'
+URL_BACKUP_PATCH_HASH = '/api/v2/internal_backup/patch_hash'
+URL_BACKUP_PATCH_DELTA = '/api/v2/internal_backup/patch_delta'
+URL_BACKUP_PATCH_FILE = '/api/v2/internal_backup/patch_file'
+URL_RESTORE_FINISH = '/api/v2/internal_restore/finished_confirmation'
+URL_IPFS_BACKUP_PIN_CIDS = '/api/v2/ipfs-backup-internal/pin_cids'
+URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'
+URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
 
 
 def get_unique_dict_item_from_list(dict_list: list):

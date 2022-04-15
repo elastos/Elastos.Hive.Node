@@ -1,14 +1,10 @@
-import hashlib
 import os
-from datetime import datetime
-
+import hashlib
 from pathlib import Path
 
-from src.utils_v1.common import did_tail_part, create_full_path_dir
-
 from src.settings import hive_setting
-from src.utils_v1.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, NOT_FOUND, SUCCESS, FORBIDDEN
-from src.utils_v1.flask_rangerequest import RangeRequest
+from src.utils_v1.common import did_tail_part, create_full_path_dir
+from src.utils_v1.error_code import INTERNAL_SERVER_ERROR, NOT_FOUND
 
 
 def get_vault_path(did):
@@ -57,31 +53,6 @@ def query_upload_get_filepath(did, app_did, file_name):
         return full_path_name, err
 
     return full_path_name, err
-
-
-def query_download(did, app_did, file_name):
-    if file_name is None:
-        return None, BAD_REQUEST
-    filename = filter_path_root(file_name)
-
-    path = get_save_files_path(did, app_did)
-    file_full_name = (path / filename).resolve()
-
-    if not file_full_name.exists():
-        return None, NOT_FOUND
-
-    if not file_full_name.is_file():
-        return None, FORBIDDEN
-
-    size = file_full_name.stat().st_size
-    with open(file_full_name, 'rb') as f:
-        etag = RangeRequest.make_etag(f)
-    last_modified = datetime.utcnow()
-
-    return RangeRequest(open(file_full_name, 'rb'),
-                        etag=etag,
-                        last_modified=last_modified,
-                        size=size).make_response(), SUCCESS
 
 
 def query_properties(did, app_did, name):

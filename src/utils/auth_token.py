@@ -8,7 +8,7 @@ from src import UnauthorizedException
 from src.utils.consts import URL_V2, URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_STATE, URL_SERVER_INTERNAL_RESTORE
 from src.utils_v1.constants import USER_DID, APP_ID, APP_INSTANCE_DID
 from src.modules.auth.auth import Auth
-from src.utils_v1.did.did_wrapper import JWT
+from src.utils.did.did_wrapper import JWT
 
 
 def __get_info_from_token(token):
@@ -34,7 +34,7 @@ def __get_info_from_token(token):
     return props_json, None
 
 
-def get_token_info():
+def _get_token_info():
     author = request.headers.get("Authorization")
     if author is None:
         return None, "Can't find the Authorization!"
@@ -78,7 +78,7 @@ class TokenParser:
         if not request.full_path.startswith('/api/v2') or self.__no_need_auth():
             return
 
-        info, err = get_token_info()
+        info, err = _get_token_info()
         if err:
             raise UnauthorizedException(msg=err)
 

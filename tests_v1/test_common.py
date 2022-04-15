@@ -1,11 +1,9 @@
 import json
 import logging
 import shutil
-from datetime import datetime
-from time import time
 from io import BytesIO
 
-from src.utils_v1.did.eladid import ffi, lib
+from src.utils.did.eladid import ffi, lib
 
 from hive.util.constants import DID_INFO_TOKEN
 from hive.util.did_info import get_did_info_by_did_appid

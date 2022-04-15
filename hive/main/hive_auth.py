@@ -6,8 +6,10 @@ from flask import request
 from datetime import datetime
 import os
 
-from src.utils_v1.did.eladid import ffi, lib
+from src.utils.did.eladid import ffi, lib
+from src.utils.did.did_wrapper import Credential
 
+from hive.util.did.v1_entity import V1Entity
 from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, \
     get_did_info_by_app_instance_did, update_did_info_by_app_instance_did, \
     update_token_of_did_info
@@ -15,15 +17,12 @@ from hive.util.error_code import UNAUTHORIZED, INTERNAL_SERVER_ERROR, BAD_REQUES
 from hive.util.server_response import ServerResponse
 from hive.settings import hive_setting
 from hive.util.constants import DID_INFO_NONCE_EXPIRED, APP_INSTANCE_DID
-from src.utils_v1.did.did_wrapper import Credential
-
-from src.utils_v1.did.entity import Entity
 
 ACCESS_AUTH_COL = "did_auth"
 ACCESS_TOKEN = "access_token"
 
 
-class HiveAuth(Entity):
+class HiveAuth(V1Entity):
     access_token = None
 
     def __init__(self):
@@ -32,8 +31,8 @@ class HiveAuth(Entity):
 
     def init_app(self, app):
         self.app = app
-        Entity.__init__(self, 'hive.auth', passphrase=hive_setting.PASSPHRASE, storepass=hive_setting.PASSWORD,
-                        from_file=True, file_content=hive_setting.SERVICE_DID)
+        V1Entity.__init__(self, 'hive.auth', passphrase=hive_setting.PASSPHRASE, storepass=hive_setting.PASSWORD,
+                          from_file=True, file_content=hive_setting.SERVICE_DID)
         logging.info(f'Service DID V1: {self.get_did_string()}')
 
     def sign_in(self):

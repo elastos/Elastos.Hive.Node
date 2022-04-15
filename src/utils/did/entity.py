@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 import os
 
@@ -7,7 +8,7 @@ from src.utils.consts import DID
 from src.utils.http_exception import BadRequestException, HiveException
 from src.settings import hive_setting
 from src.utils_v1.common import gene_temp_file_name
-from src.utils_v1.did.did_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder, ElaError
+from src.utils.did.did_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder
 
 
 class Entity:
@@ -17,7 +18,6 @@ class Entity:
         """
         passphrase, storepass = passphrase if passphrase else 'secret', storepass if storepass else 'password'
         self.name = name
-        self.storepass = storepass  # Only for v1
         store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
         self.did_store: DIDStore = DIDStore(store_dir, storepass)
         self.did: DID
@@ -104,25 +104,3 @@ class Entity:
     def create_jwt_token(self, subject: str, audience_did_str: str, expire: int, claim_key: str, claim_value: any, claim_json: bool = True) -> str:
         builder: JWTBuilder = self.did_store.get_jwt_builder(self.doc)
         return builder.create_token(subject, audience_did_str, expire, claim_key, claim_value, claim_json=claim_json)
-
-    # blow is only for v1
-
-    def get_did_store(self):
-        """ Only for v1 """
-        return self.did_store.store
-
-    def get_did(self):
-        """ Only for v1 """
-        return self.did.did
-
-    def get_document(self):
-        """ Only for v1 """
-        return self.doc.doc
-
-    def get_store_password(self):
-        """ Only for v1 """
-        return self.storepass
-
-    def get_error_message(self, prompt=None) -> str:
-        """ Only for v1 """
-        return ElaError.get(prompt)

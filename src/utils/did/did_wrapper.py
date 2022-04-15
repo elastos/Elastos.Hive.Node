@@ -3,7 +3,7 @@ import inspect
 import json
 from datetime import datetime
 
-from src.utils_v1.did.eladid import ffi, lib
+from src.utils.did.eladid import ffi, lib
 
 from src.utils.http_exception import ElaDIDException
 

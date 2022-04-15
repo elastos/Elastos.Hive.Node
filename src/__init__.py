@@ -14,13 +14,13 @@ from src.utils.http_exception import HiveException, InternalServerErrorException
 from src.utils.http_request import RegexConverter
 from src.utils.http_response import HiveApi
 from src.utils.sentry_error import init_sentry_hook
-from src.utils_v1.auth import TokenParser
+from src.utils.auth_token import TokenParser
+from src.utils.did.did_init import init_did_backend
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from src import view
 
 import hive.settings
 import hive.main
-from src.utils_v1.did.did_init import init_did_backend
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')

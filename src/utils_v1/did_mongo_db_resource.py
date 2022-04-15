@@ -9,10 +9,9 @@ from bson import ObjectId, json_util
 from pymongo import MongoClient
 
 from src.settings import hive_setting
-from src.utils.consts import BACKUP_FILE_SUFFIX
 from src.utils.http_exception import BadRequestException
 from src.utils_v1.constants import DATETIME_FORMAT
-from src.utils_v1.common import did_tail_part, create_full_path_dir
+from src.utils_v1.common import did_tail_part
 
 
 def create_db_client():
@@ -218,43 +217,12 @@ def get_save_mongo_db_path(did):
     return path.resolve()
 
 
-def export_mongo_db(did, app_did):
-    """ Export every database as tar file to folder HIVE_DATA/vaults/<did>/mongo_db
-    @deprecate: remove this because of the deprecated backup module.
-    """
-    save_path = get_save_mongo_db_path(did)
-    if not save_path.exists():
-        if not create_full_path_dir(save_path):
-            return False
-
-    # dump the data of the database 'db_name' to file 'dump_file'
-    db_name = gene_mongo_db_name(did, app_did)
-    from src.utils.db_client import cli
-    if not cli.is_database_exists(db_name):
-        return False
-
-    return dump_mongodb_to_full_path(db_name, (save_path / db_name).with_suffix(BACKUP_FILE_SUFFIX))
-
-
 def dump_mongodb_to_full_path(db_name, full_path: Path):
     try:
         line2 = f'mongodump --uri="{hive_setting.MONGODB_URI}" -d {db_name} --archive="{full_path.as_posix()}"'
         subprocess.check_output(line2, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise BadRequestException(msg=f'Failed to dump database {db_name}: {e.output}')
-
-
-def restore_mongodb_from_full_dir(full_dir: Path):
-    """
-    @deprecate: remove this because of the deprecated backup module.
-    """
-    if not full_dir.exists():
-        raise BadRequestException(msg=f'Failed to import mongo db by invalid full dir {full_dir.as_posix()}')
-
-    # restore the data of the database from every 'dump_file'.
-    dump_files = [x for x in full_dir.iterdir() if x.suffix == BACKUP_FILE_SUFFIX]
-    for dump_file in dump_files:
-        restore_mongodb_from_full_path(dump_file)
 
 
 def restore_mongodb_from_full_path(full_path: Path):

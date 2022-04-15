@@ -10,8 +10,8 @@ from datetime import datetime
 
 from src import hive_setting
 from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED
-from src.utils_v1.did.did_wrapper import Credential, DIDDocument, DID, JWT, Presentation
-from src.utils_v1.did.entity import Entity
+from src.utils.did.did_wrapper import Credential, DIDDocument, DID, JWT, Presentation
+from src.utils.did.entity import Entity
 from src.utils_v1.did_info import create_nonce, get_did_info_by_app_instance_did, add_did_nonce_to_db, \
     update_did_info_by_app_instance_did, get_did_info_by_nonce, update_token_of_did_info
 from src.utils.http_client import HttpClient

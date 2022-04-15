@@ -5,12 +5,13 @@ import logging
 from flask import appcontext_pushed, g
 from contextlib import contextmanager
 
-from hive.util.constants import HIVE_MODE_TEST
-from src.utils_v1.did.eladid import ffi, lib
-
+from src.utils.did.eladid import ffi, lib
+from src.utils.did.did_wrapper import DID, Credential
 from src import create_app
-from src.utils_v1.did.did_wrapper import DID, Credential
-from src.utils_v1.did.entity import Entity
+
+from hive.util.constants import HIVE_MODE_TEST
+from hive.util.did.v1_entity import V1Entity
+
 from tests_v1 import test_common
 
 logger = logging.getLogger()
@@ -27,9 +28,9 @@ def name_set(app, name):
 
 
 # ---------------
-class DIDApp(Entity):
+class DIDApp(V1Entity):
     def __init__(self, name, mnemonic=None, passphrase=None):
-        Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase)
+        V1Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase)
 
     def issue_auth(self, app) -> Credential:
         props = {'appDid': app.appId}
@@ -41,14 +42,14 @@ class DIDApp(Entity):
 
 
 # ---------------
-class DApp(Entity):
+class DApp(V1Entity):
     access_token = "123"
     appId = test_common.app_id
 
     def __init__(self, name, appId=None, mnemonic=None, passphrase=None):
         if (appId is not None):
             self.appId = appId
-        Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase, need_resolve=False)
+        V1Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase, need_resolve=False)
 
     def access_api_by_token(self):
         return self.access_token

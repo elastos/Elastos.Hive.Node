@@ -13,7 +13,7 @@ from hive.main.hive_backup import HiveBackup
 from hive.util.constants import INTER_BACKUP_FILE_URL, HIVE_MODE_TEST
 from hive.util.error_code import NOT_FOUND
 from tests_v1.hive_auth_test import DIDApp, DApp
-from src.utils_v1.did.eladid import ffi, lib
+from src.utils.did.eladid import ffi, lib
 
 from src import create_app
 

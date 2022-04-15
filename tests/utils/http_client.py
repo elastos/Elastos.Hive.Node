@@ -6,7 +6,7 @@ import json
 import logging
 
 from src.utils.singleton import Singleton
-from src.utils_v1.did.did_wrapper import JWT
+from src.utils.did.did_wrapper import JWT
 from tests.utils_v1.hive_auth_test_v1 import AppDID, UserDID
 
 

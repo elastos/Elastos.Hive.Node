@@ -7,13 +7,13 @@ import json
 from datetime import datetime
 
 from bson import json_util
+from flask import g
 
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_DEL, VAULT_ACCESS_R
 from src.utils_v1.did_mongo_db_resource import get_mongo_database_size, convert_oid, options_filter, \
     options_pop_timestamp
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.utils.db_client import cli
-from src.utils.did_auth import check_auth_and_vault
 from src.utils.http_exception import CollectionNotFoundException
 
 
@@ -22,21 +22,21 @@ class Database:
         pass
 
     def create_collection(self, collection_name):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        cli.create_collection(user_did, app_did, collection_name)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        cli.create_collection(g.usr_did, g.app_did, collection_name)
         return {'name': collection_name}
 
     def delete_collection(self, collection_name):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
-        cli.delete_collection(user_did, app_did, collection_name, is_check_exist=True)
-        update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_DEL)
+        cli.delete_collection(g.usr_did, g.app_did, collection_name, is_check_exist=True)
+        update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
 
     def __get_collection(self, collection_name, vault_permission):
-        user_did, app_did = check_auth_and_vault(vault_permission)
-        col = cli.get_user_collection(user_did, app_did, collection_name)
+        cli.check_vault_access(g.usr_did, vault_permission)
+        col = cli.get_user_collection(g.usr_did, g.app_did, collection_name)
         if not col:
             raise CollectionNotFoundException(msg=f'The collection {collection_name} can not be found.')
-        return user_did, app_did, col
+        return g.usr_did, g.app_did, col
 
     def insert_document(self, collection_name, json_body):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)

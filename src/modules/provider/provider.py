@@ -10,6 +10,7 @@ from datetime import datetime
 
 import base58
 from bson import ObjectId
+from flask import g
 
 from src import hive_setting
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
@@ -18,7 +19,6 @@ from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID, COL_RECEIPTS, COL_
     COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, \
     COL_RECEIPTS_PAID_DID, DID
 from src.utils.db_client import cli
-from src.utils.did_auth import check_auth
 from src.utils.http_exception import ForbiddenException, VaultNotFoundException, BackupNotFoundException, \
     ReceiptNotFoundException
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, \
@@ -85,8 +85,7 @@ class Provider:
         return {"payments": list(map(lambda r: self.get_filled_order(r), receipts))}
 
     def check_auth_owner_id(self):
-        user_did, _ = check_auth()
-        if user_did != self.owner_did:
+        if g.usr_did != self.owner_did:
             raise ForbiddenException(msg='No permission for accessing node information.')
 
     def get_filled_order(self, receipt):

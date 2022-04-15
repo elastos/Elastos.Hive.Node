@@ -7,7 +7,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-from flask import request
+from flask import request, g
 
 from src import hive_setting
 from src.utils_v1.common import get_file_checksum_list, gene_temp_file_name, \
@@ -27,7 +27,6 @@ from src.utils_v1.vault_backup_info import VAULT_BACKUP_STATE_STOP, VAULT_BACKUP
     VAULT_BACKUP_MSG_FAILED
 from src.modules.auth.auth import Auth
 from src.utils.db_client import cli
-from src.utils.did_auth import check_auth2
 from src.utils.http_client import HttpClient, HttpServer
 from src.utils.http_exception import BackupIsInProcessingException, InsufficientStorageException, \
     InvalidParameterException, BadRequestException, AlreadyExistsException, BackupNotFoundException, \
@@ -334,15 +333,14 @@ class BackupServer:
         self.auth = Auth()
 
     def _check_auth_backup(self, throw_exception=True, create_on_absence=False, is_check_size=False):
-        user_did, app_did = check_auth2()
-        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: user_did},
+        doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, {VAULT_BACKUP_SERVICE_DID: g.usr_did},
                                   create_on_absence=create_on_absence, throw_exception=False)
         if throw_exception and not doc:
             raise BackupNotFoundException()
         if throw_exception and is_check_size and doc \
                 and doc[VAULT_BACKUP_SERVICE_USE_STORAGE] > doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
             raise InsufficientStorageException(msg='No more available space for backup.')
-        return user_did, app_did, doc
+        return g.usr_did, g.app_did, doc
 
     def _subscribe_free(self):
         user_did, app_did, doc = self._check_auth_backup(throw_exception=False, create_on_absence=True)

@@ -3,7 +3,6 @@ from datetime import datetime
 
 from flask import request
 
-from src.utils.http_exception import ElaDIDException
 from src.utils_v1.constants import USER_DID, APP_ID, APP_INSTANCE_DID
 from src.modules.auth.auth import Auth
 from src.utils_v1.did.did_wrapper import JWT
@@ -26,11 +25,14 @@ def _get_info_from_token(token):
         return None, "Then token is expired!"
 
     props_json = json.loads(jwt.get_claim('props'))
+    if USER_DID not in props_json or APP_ID not in props_json:
+        return None, 'The token is invalid because of not containing user DID or app DID'
+
     props_json[APP_INSTANCE_DID] = jwt.get_audience()
     return props_json, None
 
 
-def _get_token_info():
+def get_token_info():
     author = request.headers.get("Authorization")
     if author is None:
         return None, "Can't find the Authorization!"
@@ -46,14 +48,12 @@ def _get_token_info():
     if not access_token:
         return None, "The token is empty!"
 
-    try:
-        return _get_info_from_token(access_token)
-    except ElaDIDException as ex:
-        return None, ex.msg
+    return _get_info_from_token(access_token)
 
 
 def did_auth():
-    info, err = _get_token_info()
+    """ @deprecated """
+    info, err = get_token_info()
     if info:
         if APP_ID in info:
             return info[USER_DID], info[APP_ID]
@@ -64,8 +64,8 @@ def did_auth():
 
 
 def did_auth2():
-    """ Only for src part. """
-    info, err = _get_token_info()
+    """ @deprecated Only for src part. """
+    info, err = get_token_info()
     did = info[USER_DID] if info else None
     app_did = info[APP_ID] if info and APP_ID in info else None
     return did, app_did, err

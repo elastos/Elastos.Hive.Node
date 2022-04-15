@@ -4,14 +4,12 @@
 Http client for backup or other modules.
 """
 import pickle
-from datetime import datetime
 from pathlib import Path
 
 import requests
 
-from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils.file_manager import fm
-from src.utils.http_exception import InvalidParameterException, FileNotFoundException
+from src.utils.http_exception import InvalidParameterException
 
 
 class HttpClient:
@@ -85,19 +83,3 @@ class HttpClient:
             self._check_status_code(r, 204)
         except Exception as e:
             self._raise_http_exception(url, 'DELETE', e)
-
-
-class HttpServer:
-    def __init__(self):
-        pass
-
-    def create_range_request(self, file_path: Path):
-        if not file_path.exists() or not file_path.is_file():
-            raise FileNotFoundException(msg='Failed to get file for creating range request object.')
-
-        with open(file_path.as_posix(), 'rb') as f:
-            etag = RangeRequest.make_etag(f)
-        return RangeRequest(open(file_path.as_posix(), 'rb'),
-                            etag=etag,
-                            last_modified=datetime.utcnow(),
-                            size=file_path.stat().st_size).make_response()

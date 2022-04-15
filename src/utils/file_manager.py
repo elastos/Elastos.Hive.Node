@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 This is for files management, include file, file content, file properties, and dir management.
 """
@@ -14,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from flask import request
+from flask_rangerequest import RangeRequest
 
 from src.settings import hive_setting
 from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE, COL_IPFS_FILES_SHA256, \
@@ -23,10 +23,8 @@ from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_di
 from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE
 from src.utils_v1.did_file_info import get_save_files_path, get_user_did_path, get_directory_size
-from src.utils_v1.flask_rangerequest import RangeRequest
 from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data, update_used_storage_for_mongodb_data
-from src.utils_v1.pyrsync import rsyncdelta, gene_blockchecksums, patchstream
 from src.utils.http_exception import BadRequestException, VaultNotFoundException
 
 
@@ -69,15 +67,6 @@ class FileManager:
             [(md5[0], Path(md5[1]).relative_to(root_path).as_posix())
                 for md5 in deal_dir(root_path.as_posix(), get_file_md5_info)]
 
-    def get_hashes_by_file(self, file_path: Path):
-        if not file_path.exists():
-            return ''
-        hashes = ''
-        with open(file_path.as_posix(), 'rb') as open_file:
-            for h in gene_blockchecksums(open_file, blocksize=CHUNK_SIZE):
-                hashes += h
-        return hashes
-
     def get_hashes_by_lines(self, lines):
         hashes = list()
         for line in lines:
@@ -86,19 +75,6 @@ class FileManager:
             parts = line.split(b',')
             hashes.append((int(parts[0].decode("utf-8")), parts[1].decode("utf-8")))
         return hashes
-
-    def get_rsync_data(self, src_path: Path, target_hashes):
-        with open(src_path.as_posix(), "rb") as f:
-            patch_data = rsyncdelta(f, target_hashes, blocksize=CHUNK_SIZE)
-        return pickle.dumps(patch_data)
-
-    def apply_rsync_data(self, file_path: Path, data):
-        def on_save_to_temp(temp_file):
-            with open(file_path.as_posix(), "br") as f:
-                with open(temp_file.as_posix(), "bw") as tmp_f:
-                    f.seek(0)
-                    patchstream(f, tmp_f, data)
-        self.__save_with_temp_file(file_path, on_save_to_temp)
 
     def write_file_by_response(self, response, file_path: Path, is_temp=False):
         if not self.create_parent_dir(file_path):

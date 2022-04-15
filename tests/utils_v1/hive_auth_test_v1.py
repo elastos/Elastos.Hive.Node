@@ -1,7 +1,7 @@
 import logging
 
-from src.utils_v1.did.did_wrapper import DID, Credential
-from src.utils_v1.did.entity import Entity
+from src.utils.did.did_wrapper import DID, Credential
+from src.utils.did.entity import Entity
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG

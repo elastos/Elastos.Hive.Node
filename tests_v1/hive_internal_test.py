@@ -1,26 +1,20 @@
 import json
 import logging
 import multiprocessing
-import shutil
-import sys
 
 import requests
 import unittest
 from flask_testing import LiveServerTestCase
 
-from hive.main.hive_backup import HiveBackup, VAULT_BACKUP_INFO_STATE, VAULT_BACKUP_MSG_SUCCESS, VAULT_BACKUP_INFO_MSG
 from hive.util.constants import HIVE_MODE_TEST
-from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
-from hive.util.payment.vault_service_manage import delete_user_vault, delete_user_vault_data, get_vault_path
 from src import create_app
 from tests_v1.hive_auth_test import DIDApp, DApp
-from src.utils_v1.did.eladid import ffi, lib
+from src.utils.did.eladid import ffi, lib
 
-from tests_v1.test_common import upsert_collection, create_upload_file, prepare_vault_data, copy_to_backup_data
+from tests_v1.test_common import prepare_vault_data, copy_to_backup_data
 
 unittest.TestSuite
 
-import hive
 # from hive import HIVE_MODE_TEST
 from tests_v1 import test_common
 

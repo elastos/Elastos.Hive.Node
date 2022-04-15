@@ -153,15 +153,15 @@ function start_direct () {
 }
 
 function test_only() {
-#    # Run tests_v1
-#    pytest --disable-pytest-warnings -xs tests_v1/hive_auth_test.py
-#    pytest --disable-pytest-warnings -xs tests_v1/hive_mongo_test.py
-#    pytest --disable-pytest-warnings -xs tests_v1/hive_file_test.py
-#    pytest --disable-pytest-warnings -xs tests_v1/hive_scripting_test.py
-#    # pytest --disable-pytest-warnings -xs tests_v1/hive_payment_test.py
-#    # pytest --disable-pytest-warnings -xs tests_v1/hive_backup_test.py
-#    # pytest --disable-pytest-warnings -xs tests_v1/hive_internal_test.py # INFO: skip this
-#    # pytest --disable-pytest-warnings -xs tests_v1/hive_pubsub_test.py
+    # Run tests_v1
+    pytest --disable-pytest-warnings -xs tests_v1/hive_auth_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_mongo_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_file_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_scripting_test.py
+    # pytest --disable-pytest-warnings -xs tests_v1/hive_payment_test.py
+    # pytest --disable-pytest-warnings -xs tests_v1/hive_backup_test.py
+    # pytest --disable-pytest-warnings -xs tests_v1/hive_internal_test.py # INFO: skip this
+    # pytest --disable-pytest-warnings -xs tests_v1/hive_pubsub_test.py
 
     # Run tests
     export HIVE_PORT=5000

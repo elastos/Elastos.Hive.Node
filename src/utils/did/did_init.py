@@ -1,10 +1,10 @@
 import logging
 import os
-from src.utils_v1.did.eladid import ffi, lib
+from src.utils.did.eladid import ffi, lib
 
 from src.settings import hive_setting
 from src.utils.http_exception import ElaDIDException
-from src.utils_v1.did.did_wrapper import ElaError, DID, DIDDocument
+from src.utils.did.did_wrapper import ElaError, DID, DIDDocument
 
 
 @ffi.def_extern()

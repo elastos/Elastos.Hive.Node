@@ -14,7 +14,7 @@ from src.utils.scheduler import scheduler_init
 from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider
 
 
-# TODO: remove. use this because of v1 test cases.
+# INFO: only for v1
 _init_url_mapping = False
 
 

@@ -419,7 +419,7 @@ class BackupServer:
         user_did, _, doc = self._check_auth_backup()
 
         backup_root = get_vault_backup_path(user_did)
-        # TODO: remove this check.
+        # INFO: remove this check.
         if not backup_root.exists():
             create_full_path_dir(backup_root)
 

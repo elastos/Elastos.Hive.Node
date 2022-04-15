@@ -61,7 +61,7 @@ def response_stream(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
     return wrapper
 
 
-# TODO: remove the following methods.
+# @deprecated: the following methods.
 
 
 def _get_restful_response_wrapper(func, is_download=False, is_code=False):

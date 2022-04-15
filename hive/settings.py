@@ -88,27 +88,27 @@ class HiveSetting:
 
     @property
     def RCLONE_CONFIG_FILE_DIR(self):
-        """ TODO: Just keep this item in this file, not required in .env. """
+        """ INFO: Just keep this item in this file, not required in .env. """
         return self.env_config('RCLONE_CONFIG_FILE_DIR', default='./.rclone_config', cast=str)
 
     @property
     def BACKUP_FTP_MASQUERADE_ADDRESS(self):
-        """ TODO: Just keep this item in this file, not required in .env. """
+        """ INFO: Just keep this item in this file, not required in .env. """
         return self.env_config('BACKUP_FTP_MASQUERADE_ADDRESS', default='0.0.0.0', cast=str)
 
     @property
     def BACKUP_FTP_PASSIVE_PORTS_START(self):
-        """ TODO: Just keep this item in this file, not required in .env. """
+        """ INFO: Just keep this item in this file, not required in .env. """
         return self.env_config('BACKUP_FTP_PASSIVE_PORTS_START', default=8301, cast=int)
 
     @property
     def BACKUP_FTP_PASSIVE_PORTS_END(self):
-        """ TODO: Just keep this item in this file, not required in .env. """
+        """ INFO: Just keep this item in this file, not required in .env. """
         return self.env_config('BACKUP_FTP_PASSIVE_PORTS_END', default=8400, cast=int)
 
     @property
     def MONGO_URI(self):
-        """ TODO: Just keep this item in this file, not required in .env. """
+        """ INFO: Just keep this item in this file, not required in .env. """
         return self.env_config('MONGO_URI', default='', cast=str)
 
     @property

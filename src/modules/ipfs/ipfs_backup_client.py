@@ -25,6 +25,8 @@ The definition of the request metadata:
 """
 import logging
 
+from flask import g
+
 from src.modules.auth.auth import Auth
 from src.modules.ipfs.ipfs_backup_executor import BackupExecutor, RestoreExecutor
 from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
@@ -34,7 +36,6 @@ from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, B
     URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, URL_SERVER_INTERNAL_STATE, \
     COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2
 from src.utils.db_client import cli
-from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
 from src.utils.http_client import HttpClient
 from src.utils.http_exception import BadRequestException, InsufficientStorageException
@@ -49,8 +50,8 @@ class IpfsBackupClient:
         self.http = HttpClient()
 
     def get_state(self):
-        user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
-        return self.get_remote_backup_state(user_did)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        return self.get_remote_backup_state(g.usr_did)
 
     def backup(self, credential, is_force):
         """
@@ -63,12 +64,12 @@ class IpfsBackupClient:
             --- remote backup hive node will synchronize valut data from IPFS network to
                 its local IPFS node via the root CID.
         """
-        user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
-            self.check_remote_backup_in_progress(user_did)
-        req = self.save_request(user_did, credential, credential_info)
-        BackupExecutor(user_did, self, req, is_force=is_force).start()
+            self.check_remote_backup_in_progress(g.usr_did)
+        req = self.save_request(g.usr_did, credential, credential_info)
+        BackupExecutor(g.usr_did, self, req, is_force=is_force).start()
 
     def restore(self, credential, is_force):
         """
@@ -80,12 +81,12 @@ class IpfsBackupClient:
             --- Synhorize the vault data from local IPFS node (but currently from Gatway node)
                 via root CID
         """
-        user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
-            self.check_remote_backup_in_progress(user_did)
-        self.save_request(user_did, credential, credential_info, is_restore=True)
-        RestoreExecutor(user_did, self).start()
+            self.check_remote_backup_in_progress(g.usr_did)
+        self.save_request(g.usr_did, credential, credential_info, is_restore=True)
+        RestoreExecutor(g.usr_did, self).start()
 
     def check_remote_backup_in_progress(self, user_did):
         result = self.get_remote_backup_state(user_did)

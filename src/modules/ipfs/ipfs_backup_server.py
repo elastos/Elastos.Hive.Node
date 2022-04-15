@@ -2,6 +2,8 @@
 import logging
 from datetime import datetime
 
+from flask import g
+
 from src.modules.auth.auth import Auth
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
@@ -10,7 +12,6 @@ from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_INPROGRESS
     BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
     BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER, USR_DID
 from src.utils.db_client import cli
-from src.utils.did_auth import check_auth2
 from src.utils.file_manager import fm
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
     InsufficientStorageException, NotImplementedException
@@ -34,22 +35,22 @@ class IpfsBackupServer:
         4. increase the reference count of the file cid.
         5. restore all user databases.
         """
-        user_did, app_did, doc = self._check_auth_backup()
-        self.vault.get_checked_vault(user_did, is_not_exist_raise=False)
-        vault = self.vault.create_vault(user_did, self.vault.get_price_plan('vault', 'Free'), is_upgraded=True)
-        request_metadata = self.get_server_request_metadata(user_did, doc, is_promotion=True,
+        doc = self.find_backup_request(g.usr_did, throw_exception=True)
+        self.vault.get_checked_vault(g.usr_did, is_not_exist_raise=False)
+        vault = self.vault.create_vault(g.usr_did, self.vault.get_price_plan('vault', 'Free'), is_upgraded=True)
+        request_metadata = self.get_server_request_metadata(g.usr_did, doc, is_promotion=True,
                                                             vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
-        if request_metadata['vault_size'] > fm.get_vault_max_size(user_did):
+        if request_metadata['vault_size'] > fm.get_vault_max_size(g.usr_did):
             raise InsufficientStorageException(msg="No enough space to restore vault data");
 
         ExecutorBase.pin_cids_to_local_ipfs(request_metadata,
                                             is_only_file=True,
                                             is_file_pin_to_ipfs=False)
         self.client.restore_database_by_dump_files(request_metadata)
-        ExecutorBase.update_vault_usage_by_metadata(user_did, request_metadata)
+        ExecutorBase.update_vault_usage_by_metadata(g.usr_did, request_metadata)
 
     def internal_backup(self, cid, sha256, size, is_force):
-        user_did, app_did, doc = self._check_auth_backup()
+        doc = self.find_backup_request(g.usr_did, throw_exception=True)
         if not is_force and doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
             raise BadRequestException(msg='Failed because backup is in processing.')
         fm.ipfs_pin_cid(cid)
@@ -61,11 +62,11 @@ class IpfsBackupServer:
             BKSERVER_REQ_SHA256: sha256,
             BKSERVER_REQ_SIZE: size
         }
-        self.update_backup_request(user_did, update)
-        BackupServerExecutor(user_did, self, self.find_backup_request(user_did, False)).start()
+        self.update_backup_request(g.usr_did, update)
+        BackupServerExecutor(g.usr_did, self, self.find_backup_request(g.usr_did, False)).start()
 
     def internal_backup_state(self):
-        user_did, app_did, doc = self._check_auth_backup()
+        doc = self.find_backup_request(g.usr_did, throw_exception=True)
         return {
             'state': doc.get(BKSERVER_REQ_ACTION),
             'result': doc.get(BKSERVER_REQ_STATE),
@@ -73,7 +74,7 @@ class IpfsBackupServer:
         }
 
     def internal_restore(self):
-        user_did, app_did, doc = self._check_auth_backup()
+        doc = self.find_backup_request(g.usr_did, throw_exception=True)
         if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
             raise BadRequestException(msg='Failed because backup is in processing..')
         elif doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_FAILED:
@@ -116,20 +117,16 @@ class IpfsBackupServer:
     # ipfs-subscription
 
     def subscribe(self):
-        user_did, app_did, doc = self._check_auth_backup(throw_exception=False)
+        doc = self.find_backup_request(g.usr_did, throw_exception=False)
         if doc:
             raise AlreadyExistsException('The backup service is already subscribed.')
-        return self._get_vault_info(self._create_backup(user_did, PaymentConfig.get_free_backup_info()))
+        return self._get_vault_info(self._create_backup(g.usr_did, PaymentConfig.get_free_backup_info()))
 
     def unsubscribe(self):
-        user_did, _, doc = self._check_auth_backup(throw_exception=False)
-        if not doc:
-            raise BackupNotFoundException()
-
+        doc = self.find_backup_request(g.usr_did, throw_exception=True)
         if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
             raise BadRequestException(msg='the backup & restore is in process.')
-
-        self.remove_backup_by_did(user_did, doc)
+        self.remove_backup_by_did(g.usr_did, doc)
 
     def remove_backup_by_did(self, user_did, doc):
         """ Remove all data belongs to the backup of the user. """
@@ -144,18 +141,13 @@ class IpfsBackupServer:
                               is_check_exist=False)
 
     def get_info(self):
-        _, _, doc = self._check_auth_backup()
-        return self._get_vault_info(doc)
+        return self._get_vault_info(self.find_backup_request(g.usr_did, throw_exception=True))
 
     def activate(self):
         raise NotImplementedException()
 
     def deactivate(self):
         raise NotImplementedException()
-
-    def _check_auth_backup(self, throw_exception=True):
-        user_did, app_did = check_auth2()
-        return user_did, app_did, self.find_backup_request(user_did, throw_exception=throw_exception)
 
     def _create_backup(self, user_did, price_plan):
         now = datetime.utcnow().timestamp()
@@ -188,6 +180,10 @@ class IpfsBackupServer:
         cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, col_filter, {'$set': update}, is_extra=True)
 
     def find_backup_request(self, user_did, throw_exception=True):
+        """ get the backup request information belonged to the user DID
+        :param user_did: user DID
+        :param throw_exception: throw BackupNotFoundException when True
+        """
         doc = cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, {USR_DID: user_did},
                                   create_on_absence=True, throw_exception=False)
         if throw_exception and not doc:

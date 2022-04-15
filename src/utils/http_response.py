@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 Defines all success and error http response code and body.
 For new exception, please define here.
@@ -8,14 +7,11 @@ import traceback
 import logging
 import typing as t
 
-from flask import request, make_response, jsonify, g
+from flask import request, make_response, jsonify
 from flask_restful import Api
 from sentry_sdk import capture_exception
 
-from src.utils.consts import URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_V2
-from src.utils.http_exception import HiveException, InternalServerErrorException, UnauthorizedException
-from src.utils_v1.auth import get_token_info
-from src.utils_v1.constants import USER_DID, APP_ID, APP_INSTANCE_DID
+from src.utils.http_exception import HiveException, InternalServerErrorException
 
 
 class HiveApi(Api):
@@ -51,31 +47,6 @@ class HiveApi(Api):
                 capture_exception(error=Exception(f'V2 UNEXPECTED: {traceback.format_exc()}'))
                 ex = InternalServerErrorException(msg=traceback.format_exc())
         return jsonify(ex.get_error_dict()), ex.code
-
-
-class TokenParser:
-    except_urls = ['/api/v2/about/version', '/api/v2/node/version', '/api/v2/about/commit_id', '/api/v2/node/commit_id',
-                   URL_V2 + URL_SIGN_IN, URL_V2 + URL_AUTH, URL_V2 + URL_BACKUP_AUTH]
-
-    def __init__(self):
-        """ Parse the token from the request header if exists and set the following items:
-        1. g.usr_did
-        2. g.app_did
-        3. g.app_ins_did
-
-        the implementation of all APIs can directly use this two global variables.
-        """
-        g.usr_did, g.app_did, g.app_ins_did = None, None, None
-
-    def parse(self):
-        if not request.full_path.startswith('/api/v2') \
-                or any(map(lambda url: request.full_path.startswith(url), self.except_urls)):
-            return
-
-        info, err = get_token_info()
-        if err:
-            raise UnauthorizedException(msg=err)
-        g.usr_did, g.app_did, g.app_ins_did = info[USER_DID], info[APP_ID], info[APP_INSTANCE_DID]
 
 
 def response_stream(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:

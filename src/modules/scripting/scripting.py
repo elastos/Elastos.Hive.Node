@@ -7,7 +7,7 @@ import json
 import logging
 
 import jwt
-from flask import request
+from flask import request, g
 from bson import ObjectId, json_util
 
 from src import hive_setting
@@ -24,7 +24,6 @@ from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mo
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
-from src.utils.did_auth import check_auth_and_vault, check_auth
 from src.utils.http_exception import BadRequestException, CollectionNotFoundException, ScriptNotFoundException
 
 
@@ -564,13 +563,13 @@ class Scripting:
         self.ipfs_files = IpfsFiles()
 
     def set_script(self, script_name):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
 
         json_data = request.get_json(force=True, silent=True)
         Script.validate_script_data(json_data)
 
-        result = self.__upsert_script_to_database(script_name, json_data, user_did, app_did)
-        update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
+        result = self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
+        update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
         return result
 
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
@@ -587,21 +586,20 @@ class Scripting:
         }
 
     def delete_script(self, script_name):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_DEL)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_DEL)
 
-        col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        col = cli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
 
         ret = col.delete_many({'name': script_name})
         if ret.deleted_count > 0:
-            update_used_storage_for_mongodb_data(user_did, get_mongo_database_size(user_did, app_did))
+            update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
         else:
             raise ScriptNotFoundException(f'The script {script_name} does not exist.')
 
     def run_script(self, script_name):
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
-        user_did, app_did = check_auth()
-        return Script(script_name, json_data, user_did, app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
+        return Script(script_name, json_data, g.usr_did, g.app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
 
     def run_script_url(self, script_name, target_did, target_app_did, params):
         json_data = {
@@ -613,8 +611,7 @@ class Scripting:
                 'target_app_did': target_app_did
             }
         Script.validate_run_data(json_data)
-        user_did, app_did = check_auth()
-        return Script(script_name, json_data, user_did, app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
+        return Script(script_name, json_data, g.usr_did, g.app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
 
     def get_files(self):
         if not self.files:
@@ -626,7 +623,7 @@ class Scripting:
         return self.handle_transaction(transaction_id)
 
     def handle_transaction(self, transaction_id, is_download=False):
-        check_auth_and_vault(VAULT_ACCESS_R if is_download else VAULT_ACCESS_WR)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R if is_download else VAULT_ACCESS_WR)
 
         # check by transaction id
         row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)

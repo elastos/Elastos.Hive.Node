@@ -7,9 +7,10 @@ import json
 from datetime import datetime
 
 from bson import ObjectId
+from flask import g
 
 from src import hive_setting
-from src.utils_v1.constants import DID_INFO_DB_NAME
+from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_ACCESS_R
 from src.modules.auth.auth import Auth
 from src.modules.scripting.scripting import validate_exists
 from src.utils.consts import COL_ORDERS, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, \
@@ -17,7 +18,6 @@ from src.utils.consts import COL_ORDERS, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRI
     COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, \
     COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_PAID, USR_DID
 from src.utils.db_client import cli
-from src.utils.did_auth import check_auth, check_auth_and_vault
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, \
     ReceiptNotFoundException
 from src.utils.resolver import ElaResolver
@@ -40,13 +40,12 @@ class Payment(metaclass=Singleton):
         return self.vault_subscription
 
     def get_version(self):
-        _, _ = check_auth()
         return {'version': self._get_vault_subscription().get_price_plans_version()}
 
     def place_order(self, json_body):
-        user_did, app_did = check_auth_and_vault()
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
         subscription, plan = self._check_place_order_params(json_body)
-        return self._get_order_vo(self._create_order(user_did, subscription, plan))
+        return self._get_order_vo(self._create_order(g.usr_did, subscription, plan))
 
     def _check_place_order_params(self, json_body):
         if not json_body:
@@ -98,14 +97,13 @@ class Payment(metaclass=Singleton):
         }
 
     def pay_order(self, order_id, json_body):
-        user_did, app_did = check_auth()
-        vault = self._get_vault_subscription().get_checked_vault(user_did)
+        vault = self._get_vault_subscription().get_checked_vault(g.usr_did)
 
-        order, transaction_id, paid_did = self._check_pay_order_params(user_did, order_id, json_body)
+        order, transaction_id, paid_did = self._check_pay_order_params(g.usr_did, order_id, json_body)
 
-        receipt = self._create_receipt(user_did, order, transaction_id, paid_did)
+        receipt = self._create_receipt(g.usr_did, order, transaction_id, paid_did)
         self._update_order_status(str(order['_id']), COL_ORDERS_STATUS_PAID)
-        self._get_vault_subscription().upgrade_vault_plan(user_did, vault, order[COL_ORDERS_PRICING_NAME])
+        self._get_vault_subscription().upgrade_vault_plan(g.usr_did, vault, order[COL_ORDERS_PRICING_NAME])
         return self._get_receipt_vo(order, receipt)
 
     def _update_order_status(self, order_id, status):
@@ -209,7 +207,6 @@ class Payment(metaclass=Singleton):
         return receipt
 
     def get_orders(self, subscription, order_id):
-        _, _ = check_auth()
         if subscription not in ('vault', 'backup'):
             raise InvalidParameterException(msg=f'Invalid subscription: {subscription}.')
 
@@ -231,8 +228,7 @@ class Payment(metaclass=Singleton):
                                               CREATE_TIME: int(o[CREATE_TIME])}, orders))}
 
     def get_receipt_info(self, order_id):
-        user_did, app_did = check_auth()
-        order = self._check_param_order_id(user_did, order_id)
+        order = self._check_param_order_id(g.usr_did, order_id)
         receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
                                       {COL_RECEIPTS_ORDER_ID: order_id}, throw_exception=False)
         if not receipt:

@@ -7,6 +7,8 @@ import logging
 import shutil
 from pathlib import Path
 
+from flask import g
+
 from src import hive_setting
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R, DID_INFO_DB_NAME
@@ -14,7 +16,6 @@ from src.utils_v1.payment.vault_service_manage import update_used_storage_for_fi
 from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
     COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_CID_REF, CID, COUNT, USR_DID
 from src.utils.db_client import cli
-from src.utils.did_auth import check_auth_and_vault
 from src.utils.file_manager import fm
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
 
@@ -32,15 +33,15 @@ class IpfsFiles:
         pass
 
     def upload_file(self, path):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        self.upload_file_with_path(user_did, app_did, path)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        self.upload_file_with_path(g.usr_did, g.app_did, path)
         return {
             'name': path
         }
 
     def download_file(self, path):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
-        return self.download_file_with_path(user_did, app_did, path)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        return self.download_file_with_path(g.usr_did, g.app_did, path)
 
     def delete_file(self, path):
         """
@@ -50,8 +51,8 @@ class IpfsFiles:
         :param path:
         :return:
         """
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        self.delete_file_with_path(user_did, app_did, path, check_exist=True)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        self.delete_file_with_path(g.usr_did, g.app_did, path, check_exist=True)
 
     def delete_file_with_path(self, user_did, app_did, path, check_exist=False):
         col_filter = {USR_DID: user_did,
@@ -72,12 +73,12 @@ class IpfsFiles:
         update_used_storage_for_files_data(user_did, 0 - doc[SIZE])
 
     def move_file(self, src_path, dst_path):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        return self.move_copy_file(user_did, app_did, src_path, dst_path)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path)
 
     def copy_file(self, src_path, dst_path):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        return self.move_copy_file(user_did, app_did, src_path, dst_path, is_copy=True)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path, is_copy=True)
 
     def list_folder(self, path):
         """
@@ -85,8 +86,8 @@ class IpfsFiles:
         :param path: Empty means root folder.
         :return: File list.
         """
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_WR)
-        docs = self.list_folder_with_path(user_did, app_did, path)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        docs = self.list_folder_with_path(g.usr_did, g.app_did, path)
         return {
             'value': list(map(lambda d: self._get_list_file_info_by_doc(d), docs))
         }
@@ -104,8 +105,8 @@ class IpfsFiles:
         return docs
 
     def get_properties(self, path):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
-        metadata = self.get_file_metadata(user_did, app_did, path)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        metadata = self.get_file_metadata(g.usr_did, g.app_did, path)
         return {
             'name': metadata[COL_IPFS_FILES_PATH],
             'is_file': metadata[COL_IPFS_FILES_IS_FILE],
@@ -115,8 +116,8 @@ class IpfsFiles:
         }
 
     def get_hash(self, path):
-        user_did, app_did = check_auth_and_vault(VAULT_ACCESS_R)
-        metadata = self.get_file_metadata(user_did, app_did, path)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        metadata = self.get_file_metadata(g.usr_did, g.app_did, path)
         return {
             'name': metadata[COL_IPFS_FILES_PATH],
             'algorithm': 'SHA256',

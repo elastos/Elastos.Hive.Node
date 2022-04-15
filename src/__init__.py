@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 import logging.config
+import traceback
 
 import yaml
 from flask_cors import CORS
 from flask import Flask, request, g
 import os
 
+from sentry_sdk import capture_exception
+
 from src.settings import hive_setting
 from src.utils.http_exception import HiveException, InternalServerErrorException, UnauthorizedException
 from src.utils.http_request import RegexConverter
-from src.utils.http_response import HiveApi, TokenParser
+from src.utils.http_response import HiveApi
 from src.utils.sentry_error import init_sentry_hook
+from src.utils_v1.auth import TokenParser
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from src import view
 
@@ -46,9 +50,11 @@ def before_request():
     except UnauthorizedException as e:
         return e.get_error_response()
     except HiveException as e:
-        return UnauthorizedException(msg=e.msg)
+        return UnauthorizedException(msg=e.msg).get_error_response()
     except Exception as e:
-        return UnauthorizedException(msg=f'Invalid token:: {str(e)}')
+        logging.getLogger('before_request').error(f'V2 UNEXPECTED: {traceback.format_exc()}')
+        capture_exception(error=Exception(f'V2 TOKEN UNEXPECTED: {traceback.format_exc()}'))
+        return UnauthorizedException(msg=f'Invalid token:: {str(e)}').get_error_response()
 
 
 def init_log():

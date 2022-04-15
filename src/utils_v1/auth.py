@@ -1,14 +1,17 @@
+# -*- coding: utf-8 -*-
 import json
 from datetime import datetime
 
-from flask import request
+from flask import request, g
 
+from src import UnauthorizedException
+from src.utils.consts import URL_V2, URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_STATE, URL_SERVER_INTERNAL_RESTORE
 from src.utils_v1.constants import USER_DID, APP_ID, APP_INSTANCE_DID
 from src.modules.auth.auth import Auth
 from src.utils_v1.did.did_wrapper import JWT
 
 
-def _get_info_from_token(token):
+def __get_info_from_token(token):
     token_splits = token.split(".")
     if token_splits is None:
         return None, "Then token is invalid because of not containing dot!"
@@ -25,9 +28,8 @@ def _get_info_from_token(token):
         return None, "Then token is expired!"
 
     props_json = json.loads(jwt.get_claim('props'))
-    if USER_DID not in props_json or APP_ID not in props_json:
-        return None, 'The token is invalid because of not containing user DID or app DID'
-
+    if USER_DID not in props_json:
+        return None, 'The token must contains user DID'
     props_json[APP_INSTANCE_DID] = jwt.get_audience()
     return props_json, None
 
@@ -48,24 +50,42 @@ def get_token_info():
     if not access_token:
         return None, "The token is empty!"
 
-    return _get_info_from_token(access_token)
+    return __get_info_from_token(access_token)
 
 
-def did_auth():
-    """ @deprecated """
-    info, err = get_token_info()
-    if info:
-        if APP_ID in info:
-            return info[USER_DID], info[APP_ID]
-        else:
-            return info[USER_DID], None
-    else:
-        return None, None
+class TokenParser:
+    except_urls = ['/api/v2/about/version', '/api/v2/node/version', '/api/v2/about/commit_id', '/api/v2/node/commit_id',
+                   URL_V2 + URL_SIGN_IN, URL_V2 + URL_AUTH, URL_V2 + URL_BACKUP_AUTH]
+    internal_urls = [URL_V2 + URL_SERVER_INTERNAL_BACKUP, URL_V2 + URL_SERVER_INTERNAL_STATE, URL_V2 + URL_SERVER_INTERNAL_RESTORE]
 
+    def __init__(self):
+        """ Parse the token from the request header if exists and set the following items:
+        1. g.usr_did
+        2. g.app_did
+        3. g.app_ins_did
 
-def did_auth2():
-    """ @deprecated Only for src part. """
-    info, err = get_token_info()
-    did = info[USER_DID] if info else None
-    app_did = info[APP_ID] if info and APP_ID in info else None
-    return did, app_did, err
+        the implementation of all APIs can directly use this two global variables.
+        """
+        g.usr_did, g.app_did, g.app_ins_did = None, None, None
+
+    def __no_need_auth(self):
+        return any(map(lambda url: request.full_path.startswith(url), self.except_urls))
+
+    def __internal_request(self):
+        return any(map(lambda url: request.full_path.startswith(url), self.internal_urls))
+
+    def parse(self):
+        if not request.full_path.startswith('/api/v2') or self.__no_need_auth():
+            return
+
+        info, err = get_token_info()
+        if err:
+            raise UnauthorizedException(msg=err)
+
+        g.usr_did, g.app_ins_did = info[USER_DID], info[APP_INSTANCE_DID]
+        if self.__internal_request():
+            return
+
+        if APP_ID not in info:
+            return None, 'The token must contains application DID'
+        g.app_did = info[APP_ID]

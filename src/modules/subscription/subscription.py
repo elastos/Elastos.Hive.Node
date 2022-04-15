@@ -8,6 +8,8 @@ import logging
 from datetime import datetime
 import typing as t
 
+from flask import g
+
 from src.modules.auth.auth import Auth
 from src.utils.consts import IS_UPGRADED
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
@@ -19,7 +21,6 @@ from src.utils_v1.payment.payment_config import PaymentConfig
 from src.utils_v1.payment.vault_service_manage import delete_user_vault_data
 from src.modules.payment.payment import Payment
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
-from src.utils.did_auth import check_auth, check_auth_and_vault
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
     PricePlanNotFoundException, BadRequestException, ApplicationNotFoundException
@@ -32,9 +33,8 @@ class VaultSubscription(metaclass=Singleton):
         self.auth = Auth()
 
     def subscribe(self):
-        user_did, app_did = check_auth()
-        self.get_checked_vault(user_did, is_not_exist_raise=False)
-        return self.__get_vault_info(self.create_vault(user_did, self.get_price_plan('vault', 'Free')))
+        self.get_checked_vault(g.usr_did, is_not_exist_raise=False)
+        return self.__get_vault_info(self.create_vault(g.usr_did, self.get_price_plan('vault', 'Free')))
 
     def create_vault(self, user_did, price_plan, is_upgraded=False):
         now = datetime.utcnow().timestamp()  # seconds in UTC
@@ -70,20 +70,14 @@ class VaultSubscription(metaclass=Singleton):
         }
 
     def unsubscribe(self):
-        user_did, app_did = check_auth()
-        self.remove_vault_by_did(user_did)
-
-    def remove_vault_by_did(self, user_did):
-        document = self.get_checked_vault(user_did, throw_exception=False)
-        if not document:
-            raise VaultNotFoundException()
-        logging.debug(f'start remove the vault of the user {user_did}, _id, {str(document["_id"])}')
-        delete_user_vault_data(user_did)
-        apps = cli.get_all_user_apps(user_did)
+        doc = self.get_checked_vault(g.usr_did)
+        logging.debug(f'start remove the vault of the user {g.usr_did}, _id, {str(doc["_id"])}')
+        delete_user_vault_data(g.usr_did)
+        apps = cli.get_all_user_apps(g.usr_did)
         for app in apps:
-            cli.remove_database(user_did, app[APP_ID])
-        self.payment.archive_orders(user_did)
-        cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did}, is_check_exist=False)
+            cli.remove_database(g.usr_did, app[APP_ID])
+        self.payment.archive_orders(g.usr_did)
+        cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: g.usr_did}, is_check_exist=False)
 
     def activate(self):
         raise NotImplementedException()
@@ -91,23 +85,14 @@ class VaultSubscription(metaclass=Singleton):
     def deactivate(self):
         raise NotImplementedException()
 
-    def __update_vault_state(self, status):
-        user_did, app_did = check_auth()
-        self.get_checked_vault(user_did)
-        col_filter = {VAULT_SERVICE_DID: user_did}
-        doc = {VAULT_SERVICE_DID: user_did,
-               VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp(),
-               VAULT_SERVICE_STATE: status}
-        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter, {"$set": doc})
-
     def get_info(self):
-        user_did, app_did = check_auth()
-        doc = self.get_checked_vault(user_did)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        doc = self.get_checked_vault(g.usr_did)
         return self.__get_vault_info(doc)
 
     def get_app_stats(self):
-        user_did, _ = check_auth_and_vault(VAULT_ACCESS_R)
-        apps = cli.get_all_user_apps(user_did)
+        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        apps = cli.get_all_user_apps(g.usr_did)
         results = list(filter(lambda b: b is not None, map(lambda a: self.get_app_detail(a), apps)))
         if not results:
             raise ApplicationNotFoundException()
@@ -131,7 +116,6 @@ class VaultSubscription(metaclass=Singleton):
         }
 
     def get_price_plans(self, subscription, name):
-        user_did, app_did = check_auth()
         all_plans = PaymentConfig.get_all_package_info()
         result = {'version': all_plans.get('version', '1.0')}
         if subscription == 'all':
@@ -167,6 +151,11 @@ class VaultSubscription(metaclass=Singleton):
         return PaymentConfig.get_all_package_info().get('version', '1.0')
 
     def get_checked_vault(self, user_did, throw_exception=True, is_not_exist_raise=True):
+        """ get the information of the vault which need check first.
+        :param user_did: user DID
+        :param throw_exception: throw VaultNotFoundException if is_not_exist_raise is True else throw AlreadyExistsException
+        :return: the information of the vault.
+        """
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: user_did},
                                   create_on_absence=True, throw_exception=False)
         if throw_exception and is_not_exist_raise and not doc:

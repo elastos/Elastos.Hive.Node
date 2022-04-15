@@ -220,7 +220,7 @@ def get_save_mongo_db_path(did):
 
 def export_mongo_db(did, app_did):
     """ Export every database as tar file to folder HIVE_DATA/vaults/<did>/mongo_db
-    TODO: remove this because of the deprecated backup module.
+    @deprecate: remove this because of the deprecated backup module.
     """
     save_path = get_save_mongo_db_path(did)
     if not save_path.exists():
@@ -246,7 +246,7 @@ def dump_mongodb_to_full_path(db_name, full_path: Path):
 
 def restore_mongodb_from_full_dir(full_dir: Path):
     """
-    TODO: remove this because of the deprecated backup module.
+    @deprecate: remove this because of the deprecated backup module.
     """
     if not full_dir.exists():
         raise BadRequestException(msg=f'Failed to import mongo db by invalid full dir {full_dir.as_posix()}')

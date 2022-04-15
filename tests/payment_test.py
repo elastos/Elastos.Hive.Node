@@ -15,7 +15,6 @@ class PaymentTestCase(unittest.TestCase):
         super().__init__(method_name)
         init_test()
         self.cli = HttpClient(f'/api/v2/payment')
-        # TODO: update order_id when do separately testing
         self.order_id = '60ee8c056fdd17b16bb5b4c2'
         self.transaction_id = '280a24034bfb241c31b5a73c792c9d05df2b1f79bb98733c5358aeb909c27010'
 

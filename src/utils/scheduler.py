@@ -10,7 +10,6 @@ import time
 import pymongo
 from flask_apscheduler import APScheduler
 
-from src import hive_setting
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_PATH, DID, APP_DID
 from src.utils.db_client import cli
@@ -29,12 +28,12 @@ def scheduler_init(app):
         scheduler.start()
 
 
-# TODO: remove this later.
+# @deprecated
 # @scheduler.task('interval', id='task_upload_ipfs_files', minutes=10)
 def task_upload_ipfs_files():
     """ Task for syncing file content to ipfs server and updating cid on metadata.
     This task only updates the IPFS CID of the file.
-    TODO: Try to move this to ipfs-files module for real-time CID getting.
+    INFO: Try to move this to ipfs-files module for real-time CID getting.
     """
     logging.info('[task_upload_ipfs_files] enter.')
 
@@ -67,7 +66,7 @@ def upload_ipfs_files_by_db(db_name):
             logging.error(f'[task_upload_ipfs_files] failed upload file to ipfs with exception: {str(e)}')
 
 
-# TODO: update this process later, this will be implemented as other design.
+# @deprecated
 # @scheduler.task('interval', id='task_adapt_local_file_to_ipfs', minutes=10)
 def task_adapt_local_file_to_ipfs():
     """ Task for keeping sync with ipfs metadata.

@@ -1,8 +1,3 @@
-"""
-Comes from hive folder.
-TODO: need refine this file later after v1 APIs have been removed.
-"""
-
 from pathlib import Path
 from decouple import config, Config, RepositoryEnv
 import logging

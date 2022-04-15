@@ -246,7 +246,6 @@ def count_file_all_storage_size(user_did):
 
 
 def count_vault_storage_job():
-    """ TODO: consider move this to v2 when removing v1. """
     if hive_setting.MONGO_URI:
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)

@@ -59,7 +59,6 @@ class RemoteResolver:
 
     def get_token(self):
         user_did = self.get_current_user_did()
-        # TODO:
         # token = self.test_config.get_token(self.http_client.base_url, user_did)
         # if not token:
         #     token = self.__get_remote_token(user_did)

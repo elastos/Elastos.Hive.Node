@@ -3,13 +3,13 @@ import logging.config
 
 import yaml
 from flask_cors import CORS
-from flask import Flask, request
+from flask import Flask, request, g
 import os
 
 from src.settings import hive_setting
-from src.utils.http_exception import HiveException, InternalServerErrorException
+from src.utils.http_exception import HiveException, InternalServerErrorException, UnauthorizedException
 from src.utils.http_request import RegexConverter
-from src.utils.http_response import HiveApi
+from src.utils.http_response import HiveApi, TokenParser
 from src.utils.sentry_error import init_sentry_hook
 from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
 from src import view
@@ -39,13 +39,16 @@ def before_request():
     if transfer_encoding == "chunked":
         request.environ["wsgi.input_terminated"] = True
 
-    # logging the request detail globally.
-    def get_user_info():
-        from src.utils_v1.auth import did_auth
-        user_did, app_did = did_auth()
-        return f'{user_did}, {app_did}'
-
-    logging.getLogger('before_request').info(f'enter {request.full_path}, {request.method}, {get_user_info()}')
+    try:
+        TokenParser().parse()
+        logging.getLogger('before_request').info(f'enter {request.full_path}, {request.method}, '
+                                                 f'user_did={g.usr_did}, app_did={g.app_did}, app_ins_did={g.app_ins_did}')
+    except UnauthorizedException as e:
+        return e.get_error_response()
+    except HiveException as e:
+        return UnauthorizedException(msg=e.msg)
+    except Exception as e:
+        return UnauthorizedException(msg=f'Invalid token:: {str(e)}')
 
 
 def init_log():

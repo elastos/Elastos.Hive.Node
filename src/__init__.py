@@ -45,7 +45,7 @@ def before_request():
 
     try:
         TokenParser().parse()
-        logging.getLogger('before_request').info(f'enter {request.full_path}, {request.method}, '
+        logging.getLogger('BEFORE REQUEST').info(f'enter {request.full_path}, {request.method}, '
                                                  f'user_did={g.usr_did}, app_did={g.app_did}, app_ins_did={g.app_ins_did}')
     except UnauthorizedException as e:
         return e.get_error_response()
@@ -55,6 +55,14 @@ def before_request():
         logging.getLogger('before_request').error(f'V2 UNEXPECTED: {traceback.format_exc()}')
         capture_exception(error=Exception(f'V2 TOKEN UNEXPECTED: {traceback.format_exc()}'))
         return UnauthorizedException(msg=f'Invalid token:: {str(e)}').get_error_response()
+
+
+@app.after_request
+def after_request(response):
+    data_str = str(response.json)
+    data_str = data_str[:500] if data_str else ''
+    logging.getLogger('AFTER REQUEST').info(f'leave {request.full_path}, {request.method}, status={response.status_code}, data={data_str}')
+    return response
 
 
 def init_log():

@@ -44,13 +44,13 @@ def expire_vault_job():
 
 @scheduler.task(trigger='interval', id='check_order_timeout_job', minutes=1)
 def check_order_timeout_job():
-    logging.getLogger("Hive scheduler").debug(f"check_order_timeout_job start: {str(datetime.utcnow())}")
+    # logging.getLogger("Hive scheduler").debug(f"check_order_timeout_job start: {str(datetime.utcnow())}")
     check_pay_order_timeout_job()
-    logging.getLogger("Hive scheduler").debug(f"check_order_timeout_job end: {str(datetime.utcnow())}")
+    # logging.getLogger("Hive scheduler").debug(f"check_order_timeout_job end: {str(datetime.utcnow())}")
 
 
 @scheduler.task(trigger='interval', id='wait_orders_tx_job', minutes=1)
 def wait_orders_tx_job():
-    logging.getLogger("Hive scheduler").debug(f"wait_orders_tx_job start: {str(datetime.utcnow())}")
+    # logging.getLogger("Hive scheduler").debug(f"wait_orders_tx_job start: {str(datetime.utcnow())}")
     check_wait_order_tx_job()
-    logging.getLogger("Hive scheduler").debug(f"wait_orders_tx_job end: {str(datetime.utcnow())}")
+    # logging.getLogger("Hive scheduler").debug(f"wait_orders_tx_job end: {str(datetime.utcnow())}")

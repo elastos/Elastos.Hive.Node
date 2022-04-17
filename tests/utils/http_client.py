@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from pathlib import Path
 
 import requests
 import json
@@ -10,15 +11,56 @@ from src.utils.did.did_wrapper import JWT
 from tests.utils_v1.hive_auth_test_v1 import AppDID, UserDID
 
 
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+
+
+class TokenCache:
+    @staticmethod
+    def get_token_cache_file_path():
+        return os.path.join(BASE_DIR, '../../data/access_token')
+
+    @staticmethod
+    def get_node_did_file_path():
+        return os.path.join(BASE_DIR, '../../data/node_did')
+
+    @staticmethod
+    def save_token(token):
+        with open(TokenCache.get_token_cache_file_path(), 'w') as f:
+            f.write(token)
+            f.flush()
+
+    @staticmethod
+    def get_token():
+        token_file = TokenCache.get_token_cache_file_path()
+        if not Path(token_file).exists():
+            return ''
+        with open(token_file, 'r') as f:
+            return f.read()
+
+    @staticmethod
+    def clear_token():
+        Path(TokenCache.get_token_cache_file_path()).unlink()
+
+    @staticmethod
+    def save_node_did(node_did):
+        with open(TokenCache.get_node_did_file_path(), 'w') as f:
+            f.write(node_did)
+            f.flush()
+
+    @staticmethod
+    def get_node_did():
+        file_path = TokenCache.get_node_did_file_path()
+        if not Path(file_path).exists():
+            return ''
+        with open(file_path, 'r') as f:
+            return f.read()
+
+
 class TestConfig(metaclass=Singleton):
     def __init__(self):
         hive_port = os.environ.get('HIVE_PORT', 5000)
         self.url_vault = f'http://localhost:{hive_port}'
-        self.url_backup = f'http://localhost:{hive_port}'
-        # self.url_vault = 'https://hive-testnet1.trinity-tech.io'
-        # self.url_backup = 'https://hive-testnet2.trinity-tech.io'
-        self.node_did_cache = dict()
-        self.token_cache = dict()
+        self.url_backup = self.url_vault
 
     @property
     def host_url(self):
@@ -27,21 +69,6 @@ class TestConfig(metaclass=Singleton):
     @property
     def backup_url(self):
         return self.url_backup
-
-    def save_token(self, base_url, user_did, token):
-        self.token_cache[self._get_key_for_token_cache(base_url, user_did)] = token
-
-    def get_token(self, base_url, user_did):
-        return self.token_cache.get(self._get_key_for_token_cache(base_url, user_did))
-
-    def _get_key_for_token_cache(self, base_url, user_did):
-        return f'{user_did}@{base_url}'
-
-    def save_node_did(self, base_url, node_did):
-        self.node_did_cache[base_url] = node_did
-
-    def get_node_did(self, base_url):
-        return self.node_did_cache.get(base_url)
 
 
 class RemoteResolver:
@@ -59,12 +86,10 @@ class RemoteResolver:
 
     def get_token(self):
         user_did = self.get_current_user_did()
-        # token = self.test_config.get_token(self.http_client.base_url, user_did)
-        # if not token:
-        #     token = self.__get_remote_token(user_did)
-        #     self.test_config.save_token(self.http_client.base_url, user_did, token)
-        token = self._get_remote_token(user_did)
-        # print(f'API token: {token}')
+        token = TokenCache.get_token()
+        if not token:
+            token = self._get_remote_token(user_did)
+            TokenCache.save_token(token)
         return token
 
     def get_current_user_did(self):
@@ -80,17 +105,16 @@ class RemoteResolver:
         return self.auth(self.sign_in(), did)
 
     def get_node_did(self) -> str:
-        node_did = self.test_config.get_node_did(self.http_client.base_url)
+        node_did = TokenCache.get_node_did()
         if node_did:
             return node_did
 
-        # get from the result of sign_in()
         challenge = self.sign_in()
         return self._get_issuer_by_challenge(JWT.parse(challenge))
 
     def _get_issuer_by_challenge(self, jwt: JWT):
         node_did = str(jwt.get_issuer())
-        self.test_config.save_node_did(self.http_client.base_url, node_did)
+        TokenCache.save_node_did(node_did)
         return node_did
 
     def sign_in(self):

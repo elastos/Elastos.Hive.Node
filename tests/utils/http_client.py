@@ -15,6 +15,8 @@ BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 
 class TokenCache:
+    enabled = False
+
     @staticmethod
     def get_token_cache_file_path():
         return os.path.join(BASE_DIR, '../../data/access_token')
@@ -25,12 +27,16 @@ class TokenCache:
 
     @staticmethod
     def save_token(token):
+        if not TokenCache.enabled:
+            return
         with open(TokenCache.get_token_cache_file_path(), 'w') as f:
             f.write(token)
             f.flush()
 
     @staticmethod
     def get_token():
+        if not TokenCache.enabled:
+            return ''
         token_file = TokenCache.get_token_cache_file_path()
         if not Path(token_file).exists():
             return ''
@@ -39,16 +45,22 @@ class TokenCache:
 
     @staticmethod
     def clear_token():
+        if not TokenCache.enabled:
+            return
         Path(TokenCache.get_token_cache_file_path()).unlink()
 
     @staticmethod
     def save_node_did(node_did):
+        if not TokenCache.enabled:
+            return
         with open(TokenCache.get_node_did_file_path(), 'w') as f:
             f.write(node_did)
             f.flush()
 
     @staticmethod
     def get_node_did():
+        if not TokenCache.enabled:
+            return ''
         file_path = TokenCache.get_node_did_file_path()
         if not Path(file_path).exists():
             return ''

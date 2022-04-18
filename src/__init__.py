@@ -52,9 +52,10 @@ def before_request():
     except HiveException as e:
         return UnauthorizedException(msg=e.msg).get_error_response()
     except Exception as e:
-        logging.getLogger('before_request').error(f'V2 UNEXPECTED: {traceback.format_exc()}')
-        capture_exception(error=Exception(f'V2 TOKEN UNEXPECTED: {traceback.format_exc()}'))
-        return UnauthorizedException(msg=f'Invalid token:: {str(e)}').get_error_response()
+        msg = f'Invalid v2 token: {str(e)}, {traceback.format_exc()}'
+        logging.getLogger('before_request').error(msg)
+        capture_exception(error=Exception(f'V2T UNEXPECTED: {msg}'))
+        return UnauthorizedException(msg=msg).get_error_response()
 
 
 @app.after_request

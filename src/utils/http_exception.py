@@ -4,6 +4,7 @@
 Http exceptions definition.
 """
 import json
+import logging
 import traceback
 
 from bson import json_util
@@ -26,7 +27,9 @@ class HiveException(Exception):
         error = {"message": self.msg}
         if not isinstance(self.internal_code, int):
             # INFO: catch this specific issue.
-            capture_exception(error=Exception(f'V2 ERROR CODE UNEXPECTED: {str(type(self.internal_code))}, {str(self.internal_code)} {traceback.format_exc()}'))
+            msg = f'Invalid v2 internal code: {str(type(self.internal_code))}, {str(self.internal_code)} {traceback.format_exc()}'
+            logging.getLogger('get_error_dict').error(msg)
+            capture_exception(error=Exception(f'V2EC UNEXPECTED: {msg}'))
         self.internal_code = self.internal_code if isinstance(self.internal_code, int) else -2
         if self.internal_code > -1:
             error['internal_code'] = self.internal_code

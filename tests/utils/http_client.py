@@ -15,7 +15,7 @@ BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 
 class TokenCache:
-    enabled = False
+    enabled = True
 
     @staticmethod
     def get_token_cache_file_path():

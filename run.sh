@@ -165,7 +165,7 @@ function test_only() {
 
     # Run tests
     rm -f data/access_token
-    export HIVE_PORT=5000
+    export HIVE_PORT=5008
     pytest --disable-pytest-warnings -xs tests/about_test.py
     pytest --disable-pytest-warnings -xs tests/auth_test.py
     pytest --disable-pytest-warnings -xs tests/subscription_test.py
@@ -204,6 +204,9 @@ function stop() {
 }
 
 case "$1" in
+    setup)
+        setup_venv
+        ;;
     direct)
         start_direct
         ;;
@@ -214,6 +217,7 @@ case "$1" in
         test
         ;;
     test_only)
+        # INFO: run hive node and enter .venv first before run this command.
         test_only
         ;;
     stop)

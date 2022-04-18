@@ -31,8 +31,8 @@ def v2_wrapper(func):
             logging.getLogger('v2 wrapper').error(f'HiveException: {str(e)}')
             return None, _server_response.response_err(e.code, e.msg)
         except Exception as e:
-            msg = f'UNEXPECTED: {traceback.format_exc()}'
+            msg = f'V2 wrapper error: {str(e)}, {traceback.format_exc()}'
             logging.getLogger('v2 wrapper').error(msg)
-            capture_exception(error=Exception(f'V2 WRAPPER {msg}'))
-            return None, _server_response.response_err(500, traceback.format_exc())
+            capture_exception(error=Exception(f'V2W UNEXPECTED: {msg}'))
+            return None, _server_response.response_err(500, msg)
     return wrapper

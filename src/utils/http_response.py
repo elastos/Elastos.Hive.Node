@@ -43,9 +43,10 @@ class HiveApi(Api):
             if hasattr(e, 'code'):
                 ex = HiveException(e.code, -1, str(e))
             else:
-                logging.getLogger('http response').error(f'V2 UNEXPECTED: {traceback.format_exc()}')
-                capture_exception(error=Exception(f'V2 UNEXPECTED: {traceback.format_exc()}'))
-                ex = InternalServerErrorException(msg=traceback.format_exc())
+                msg = f'V2 internal error: {str(e)}, {traceback.format_exc()}'
+                logging.getLogger('http response').error(msg)
+                capture_exception(error=Exception(f'V2 UNEXPECTED: {msg}'))
+                ex = InternalServerErrorException(msg=msg)
         return jsonify(ex.get_error_dict()), ex.code
 
 
@@ -59,43 +60,3 @@ def response_stream(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         response.headers['content-type'] = 'application/octet-stream'
         return response
     return wrapper
-
-
-# @deprecated: the following methods.
-
-
-def _get_restful_response_wrapper(func, is_download=False, is_code=False):
-    def wrapper(*args, **kwargs):
-        try:
-            return HiveException.get_success_response(func(*args, **kwargs), is_download=is_download, is_code=is_code)
-        except HiveException as e:
-            logging.getLogger('http response').error(f'HiveException: {str(e)}')
-            return e.get_error_response()
-        except Exception as e:
-            logging.getLogger('http response').error(f'UNEXPECTED: {traceback.format_exc()}')
-            capture_exception(error=Exception(f'V2 UNEXPECTED: {traceback.format_exc()}'))
-            return InternalServerErrorException(msg=traceback.format_exc()).get_error_response()
-    return wrapper
-
-
-def hive_restful_response(func):
-    """
-    Make sure the http response follows as version 2.
-    This decorator is ONLY for class method.
-        SUCCESS: json data, success http code for http method
-        ERROR: {
-            "error": {
-                "message": "this is error message",
-                "code": -1 # this is sub-error code.
-            }
-        }, error http code for http method
-    """
-    return _get_restful_response_wrapper(func)
-
-
-def hive_restful_code_response(func):
-    return _get_restful_response_wrapper(func, is_code=True)
-
-
-def hive_stream_response(func):
-    return _get_restful_response_wrapper(func, is_download=True)

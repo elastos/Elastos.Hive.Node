@@ -18,7 +18,8 @@ class ServerResponse:
         ret = {STATUS: STATUS_OK}
         if data_dic is not None:
             if not isinstance(data_dic, dict):
-                msg = f'invalid response body: {str(data_dic)}'
+                msg = f'Invalid v1 response body: {str(data_dic)}'
+                logging.getLogger('response ok').error(msg)
                 capture_exception(error=Exception(f'V1 UNEXPECTED: {msg}'))
                 return self.response_err(400, msg)
 

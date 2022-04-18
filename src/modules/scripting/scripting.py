@@ -630,7 +630,7 @@ class Scripting:
         col_filter = {"_id": ObjectId(row_id)}
         trans = cli.find_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
         if not trans:
-            raise BadRequestException("Cannot find the transaction by id.")
+            raise BadRequestException(msg="Cannot find the transaction by id.")
 
         # executing uploading or downloading
         data = None

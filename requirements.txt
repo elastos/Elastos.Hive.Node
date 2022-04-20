@@ -3,10 +3,11 @@ google-auth
 google-auth-oauthlib
 google-auth-httplib2
 pymongo==3.11.0
-Flask==1.1.2
-Flask-Script==2.0.6
+Flask==2.1.1
+Flask-Script==2.0.5
 Flask-APScheduler==1.11.0
 Flask-RESTful==0.3.9
+Flask-RangeRequest==0.0.2
 cffi==1.14.1
 base58==2.0.1
 python-decouple==3.3
@@ -20,3 +21,4 @@ pysendfile==2.0.1
 PyJWT==2.0.0
 Flask-Testing===0.8.1
 flask-cors==3.0.10
+flask-unittest=0.1.2

@@ -80,7 +80,7 @@ class TokenParser:
 
         info, err = _get_token_info()
         if err:
-            raise UnauthorizedException(msg=err)
+            raise UnauthorizedException(msg=f'Parse token error: {err}')
 
         g.usr_did, g.app_ins_did = info[USER_DID], info[APP_INSTANCE_DID]
         if self.__internal_request():

@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from flask import request
-from src.utils_v1.flask_rangerequest import RangeRequest
+from flask_rangerequest import RangeRequest
 
 from src.settings import hive_setting
 from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE, COL_IPFS_FILES_SHA256, \

@@ -18,7 +18,7 @@ from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTI
     SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL
 from src.utils_v1.did_file_info import query_upload_get_filepath, query_hash
 from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size, \
-    populate_options_find_many, populate_options_insert_one, populate_options_update_one
+    populate_find_options_from_body, populate_options_insert_one, populate_options_update_one
 from src.utils_v1.did_scripting import populate_with_params_values, populate_file_body
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.modules.ipfs.ipfs_files import IpfsFiles
@@ -344,9 +344,8 @@ class FindExecutable(Executable):
 
     def execute(self):
         cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_R)
-        options = populate_options_find_many(self.body) if 'options' in self.body else {}
         items = cli.find_many(self.get_target_did(), self.get_target_app_did(),
-                              self.get_collection_name(), self.get_populated_filter(), options)
+                              self.get_collection_name(), self.get_populated_filter(), populate_find_options_from_body(self.body))
         return self.get_output_data({"items": json.loads(json_util.dumps(items))})
 
 

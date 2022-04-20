@@ -11,7 +11,7 @@ from flask import g
 
 from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_DEL, VAULT_ACCESS_R
 from src.utils_v1.did_mongo_db_resource import get_mongo_database_size, convert_oid, options_filter, \
-    options_pop_timestamp
+    options_pop_timestamp, populate_find_options_from_body
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.utils.db_client import cli
 from src.utils.http_exception import CollectionNotFoundException
@@ -100,15 +100,7 @@ class Database:
 
     def query_document(self, collection_name, json_body):
         user_did, app_did, col = self.__get_collection(collection_name, VAULT_ACCESS_WR)
-        return self.__do_find(col, json_body.get('filter'),
-                              options_filter(json_body, ("projection",
-                                                         "skip",
-                                                         "limit",
-                                                         "sort",
-                                                         "allow_partial_results",
-                                                         "return_key",
-                                                         "show_record_id",
-                                                         "batch_size")))
+        return self.__do_find(col, json_body.get('filter'), populate_find_options_from_body(json_body))
 
     def __do_find(self, col, col_filter, options):
         ret = col.find(convert_oid(col_filter if col_filter else {}), **options)

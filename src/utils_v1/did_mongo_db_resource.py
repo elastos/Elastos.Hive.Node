@@ -36,11 +36,11 @@ def convert_oid(query, update=False):
     return new_query
 
 
-def options_filter(content, args):
+def options_filter(body, args):
     ops = dict()
-    if "options" not in content:
+    if not body or "options" not in body:
         return ops
-    options = content["options"]
+    options = body["options"]
     for arg in args:
         if arg in options:
             ops[arg] = options[arg]
@@ -53,15 +53,13 @@ def options_pop_timestamp(request_body):
     return request_body.get('options').pop('timestamp', True)
 
 
-def gene_sort(sort_para):
+def gene_sort(sorts_src):
     sorts = list()
-    if isinstance(sort_para, list):
-        for sort in sort_para:
-            for field in sort.keys():
-                sorts.append((field, sort[field]))
-    elif isinstance(sort_para, dict):
-        for field in sort_para.keys():
-            sorts.append((field, sort_para[field]))
+    if isinstance(sorts_src, list):
+        # same as mongodb
+        sorts.extend(sorts_src)
+    elif isinstance(sorts_src, dict):
+        sorts.extend(sorts_src.items())
     return sorts
 
 
@@ -130,18 +128,17 @@ def query_count_documents(col, content, options):
         return None, f"Exception: method: 'query_count_documents', Err: {str(e)}"
 
 
-def populate_options_find_many(content):
-    options = options_filter(content, ("projection",
-                                       "skip",
-                                       "limit",
-                                       "sort",
-                                       "allow_partial_results",
-                                       "return_key",
-                                       "show_record_id",
-                                       "batch_size"))
+def populate_find_options_from_body(body):
+    options = options_filter(body, ("projection",
+                                    "skip",
+                                    "limit",
+                                    "sort",
+                                    "allow_partial_results",
+                                    "return_key",
+                                    "show_record_id",
+                                    "batch_size"))
     if "sort" in options:
-        sorts = gene_sort(options["sort"])
-        options["sort"] = sorts
+        options["sort"] = gene_sort(options["sort"])
     return options
 
 

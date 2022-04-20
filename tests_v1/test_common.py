@@ -131,7 +131,7 @@ def test_auth_common(self, user_did, app_did):
     return token, hive_did
 
 
-def create_upload_file(self, file_name, data):
+def create_upload_file(self, client, file_name, data):
     temp = BytesIO()
     temp.write(data.encode(encoding="utf-8"))
     temp.seek(0)
@@ -139,15 +139,13 @@ def create_upload_file(self, file_name, data):
 
     upload_file_url = "/api/v1/files/upload/" + file_name
     r2, s = self.parse_response(
-        self.test_client.post(upload_file_url,
-                              data=temp,
-                              headers=self.upload_auth)
+        client.post(upload_file_url, data=temp, headers=self.upload_auth)
     )
     self.assert200(s)
     self.assertEqual(r2["_status"], "OK")
 
     r3, s = self.parse_response(
-        self.test_client.get('/api/v1/files/properties?path=' + file_name, headers=self.auth)
+        client.get('/api/v1/files/properties?path=' + file_name, headers=self.auth)
     )
 
     self.assert200(s)

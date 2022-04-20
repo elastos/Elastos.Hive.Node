@@ -470,7 +470,7 @@ class Query(Resource):
                     "projection": {
                         "_id": false
                     },
-                    "sort": [["_id", -1]], # pymongo.DESCENDING
+                    "sort": [["_id", -1]], # -1: pymongo.DESCENDING, 1: pymongo.ASCENDING
                     "allow_partial_results": false,
                     "return_key": false,
                     "show_record_id": false,

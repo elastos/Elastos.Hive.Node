@@ -208,15 +208,15 @@ class DatabaseTestCase(unittest.TestCase):
             "collection": self.collection_name,
             "filter": {
                 "author": "john doe2",
-                "words_count": {"$gt": 5000, "$lt": 15000}
+                "words_count": {"$gt": 0, "$lt": 500000}
             },
             "options": {
                 "skip": 0,
                 "limit": 3,
                 "projection": {
-                    "_id": False
+                    "modified": False
                 },
-                'sort': [('_id', pymongo.DESCENDING)],
+                'sort': [('_id', pymongo.ASCENDING)],  # sort with mongodb style.
                 "allow_partial_results": False,
                 "return_key": False,
                 "show_record_id": False,
@@ -224,6 +224,31 @@ class DatabaseTestCase(unittest.TestCase):
             }})
         self.assertEqual(response.status_code, 201)
         self.assertTrue('items' in response.json())
+        ids = list(map(lambda i: str(i['_id']), response.json()['items']))
+        self.assertTrue(all(ids[i] <= ids[i+1] for i in range(len(ids) - 1)))
+
+        response = self.cli.post(f'/db/query', body={
+            "collection": self.collection_name,
+            "filter": {
+                "author": "john doe2",
+                "words_count": {"$gt": 0, "$lt": 500000}
+            },
+            "options": {
+                "skip": 0,
+                "limit": 3,
+                "projection": {
+                    "modified": False
+                },
+                'sort': {'_id': pymongo.DESCENDING},  # sort with hive node style.
+                "allow_partial_results": False,
+                "return_key": False,
+                "show_record_id": False,
+                "batch_size": 0
+            }})
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue('items' in response.json())
+        ids = list(map(lambda i: str(i['_id']), response.json()['items']))
+        self.assertTrue(all(ids[i] >= ids[i + 1] for i in range(len(ids) - 1)))
 
     def test06_query_document_invalid_parameter(self):
         response = self.cli.post(f'/db/query')

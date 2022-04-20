@@ -165,7 +165,7 @@ function test_only() {
 
     # Run tests
     rm -f data/access_token
-    export HIVE_PORT=5008
+    export HIVE_PORT=5000
     pytest --disable-pytest-warnings -xs tests/about_test.py
     pytest --disable-pytest-warnings -xs tests/auth_test.py
     pytest --disable-pytest-warnings -xs tests/subscription_test.py

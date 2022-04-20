@@ -34,11 +34,11 @@ from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, B
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
     URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, URL_SERVER_INTERNAL_STATE, \
-    COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2
+    COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2, BACKUP_REQUEST_STATE_FAILED
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
 from src.utils.http_client import HttpClient
-from src.utils.http_exception import BadRequestException, InsufficientStorageException
+from src.utils.http_exception import BadRequestException, InsufficientStorageException, HiveException
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME
 from src.utils_v1.did_mongo_db_resource import dump_mongodb_to_full_path, restore_mongodb_from_full_path
@@ -51,7 +51,7 @@ class IpfsBackupClient:
 
     def get_state(self):
         cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
-        return self.get_remote_backup_state(g.usr_did)
+        return self.__get_remote_backup_state(g.usr_did)
 
     def backup(self, credential, is_force):
         """
@@ -67,8 +67,8 @@ class IpfsBackupClient:
         cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
-            self.check_remote_backup_in_progress(g.usr_did)
-        req = self.save_request(g.usr_did, credential, credential_info)
+            self.__check_remote_backup_in_progress(g.usr_did)
+        req = self.__save_request(g.usr_did, credential, credential_info)
         BackupExecutor(g.usr_did, self, req, is_force=is_force).start()
 
     def restore(self, credential, is_force):
@@ -84,16 +84,16 @@ class IpfsBackupClient:
         cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
-            self.check_remote_backup_in_progress(g.usr_did)
-        self.save_request(g.usr_did, credential, credential_info, is_restore=True)
+            self.__check_remote_backup_in_progress(g.usr_did)
+        self.__save_request(g.usr_did, credential, credential_info, is_restore=True)
         RestoreExecutor(g.usr_did, self).start()
 
-    def check_remote_backup_in_progress(self, user_did):
-        result = self.get_remote_backup_state(user_did)
+    def __check_remote_backup_in_progress(self, user_did):
+        result = self.__get_remote_backup_state(user_did)
         if result['result'] == BACKUP_REQUEST_STATE_INPROGRESS:
             raise BadRequestException(msg=f'The remote backup is being in progress. Please await the process finished')
 
-    def get_remote_backup_state(self, user_did):
+    def __get_remote_backup_state(self, user_did):
         state, result, msg = BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, ''
         req = self.get_request(user_did)
         if req:
@@ -102,11 +102,18 @@ class IpfsBackupClient:
             msg = req.get(BACKUP_REQUEST_STATE_MSG)
 
             # request to remote backup node to retrieve the current backup progress state if
-            # its being backuped.
-            if state == BACKUP_REQUEST_ACTION_BACKUP and result == BACKUP_REQUEST_STATE_SUCCESS:
-                body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_V2 + URL_SERVER_INTERNAL_STATE,
-                                     req.get(BACKUP_REQUEST_TARGET_TOKEN))
-                result, msg = body['result'], body['message']
+            # it's already been backup or restored.
+            if state in [BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE] and result == BACKUP_REQUEST_STATE_SUCCESS:
+                try:
+                    body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_V2 + URL_SERVER_INTERNAL_STATE,
+                                         req.get(BACKUP_REQUEST_TARGET_TOKEN))
+                    result, msg = body['result'], body['message']
+                except HiveException as e:
+                    result, msg = BACKUP_REQUEST_STATE_FAILED, e.msg
+                    self.update_request_state(user_did, BACKUP_REQUEST_STATE_FAILED, msg=msg)
+                except Exception as e:
+                    result, msg = BACKUP_REQUEST_STATE_FAILED, f'unexpected error: {str(e)}'
+                    self.update_request_state(user_did, BACKUP_REQUEST_STATE_FAILED, msg=msg)
         return {
             'state': state if state else BACKUP_REQUEST_STATE_STOP,
             'result': result if result else BACKUP_REQUEST_STATE_SUCCESS,
@@ -120,13 +127,10 @@ class IpfsBackupClient:
                                    create_on_absence=True,
                                    throw_exception=False)
 
-    def save_request(self, user_did, credential, credential_info, is_restore=False):
+    def __save_request(self, user_did, credential, credential_info, is_restore=False):
         # verify the credential
         target_host = credential_info['targetHost']
-        challenge_response, backup_service_instance_did = \
-            self.auth.backup_client_sign_in(target_host, credential, 'DIDBackupAuthResponse')
-
-        access_token = self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
+        access_token = self.__get_access_token_from_backup_server(target_host, credential)
         target_host, target_did = credential_info['targetHost'], credential_info['targetDID']
         req = self.get_request(user_did)
         if not req:
@@ -134,6 +138,14 @@ class IpfsBackupClient:
         else:
             self.update_request(user_did, target_host, target_did, access_token, req, is_restore=is_restore)
         return self.get_request(user_did)
+
+    def __get_access_token_from_backup_server(self, target_host, credential):
+        try:
+            challenge_response, backup_service_instance_did = \
+                self.auth.backup_client_sign_in(target_host, credential, 'DIDBackupAuthResponse')
+            return self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
+        except Exception as e:
+            raise BadRequestException(msg=f'Failed to get the token from the backup server: {str(e)}')
 
     def insert_request(self, user_did, target_host, target_did, access_token, is_restore=False):
         new_doc = {

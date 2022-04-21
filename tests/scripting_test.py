@@ -5,6 +5,9 @@ Testing file for the ipfs-scripting module.
 """
 import unittest
 import json
+import urllib.parse
+
+import pymongo
 
 from tests.utils.http_client import HttpClient
 from tests import init_test
@@ -107,12 +110,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
         })
 
     def test03_call_script_url_insert(self):
-        response = self.cli2.get(f'/scripting/ipfs_database_insert/{self.did}@{self.app_did}'
-                                 '/%7B%22author%22%3A%22John2%22%2C%22content%22%3A%22message2%22%2C%22'
-                                 'words_count%22%3A%2010000%7D')
+        url_params = f'/{self.did}@{self.app_did}/' + urllib.parse.quote_plus('{"author":"John","content":"message2","words_count":5000}')
+        response = self.cli2.get(f'/scripting/ipfs_database_insert{url_params}')
         self.assertEqual(response.status_code, 200)
 
-    def test04_find_with_default_output_find(self):
+    def test04_find_with_default_output(self):
         name = 'ipfs_database_find'
         condition_filter = {'author': '$params.author'}
         col_filter = {'author': '$params.author', "words_count": {"$gt": "$params.start", "$lt": "$params.end"}}
@@ -128,10 +130,16 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 'type': 'find',
                 'body': {
                     'collection': self.collection_name,
-                    'filter': col_filter
+                    'filter': col_filter,
+                    'options': {
+                        'sort': [['author', pymongo.ASCENDING]]  # sort with mongodb style.
+                    }
                 }
-            }}, {'params': {'author': 'John', 'start': 5000, 'end': 15000}})
+            }}, {'params': {'author': 'John', 'start': 0, 'end': 15000}})
         self.assertIsNotNone(body)
+        self.assertTrue(name in body and 'items' in body.get(name))
+        ids = list(map(lambda i: i['author'], body.get(name)['items']))
+        self.assertTrue(all(ids[i] <= ids[i + 1] for i in range(len(ids) - 1)))
 
     def test04_find_with_multiple_conditions(self):
         name = 'ipfs_database_find_multiple_conditions'
@@ -180,7 +188,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 'type': 'find',
                 'body': {
                     'collection': self.collection_name,
-                    'filter': col_filter
+                    'filter': col_filter,
+                    'options': {
+                        'sort': {'author': pymongo.DESCENDING}  # sort with hive style.
+                    }
                 }
             },
             "allowAnonymousUser": True,
@@ -191,6 +202,9 @@ class IpfsScriptingTestCase(unittest.TestCase):
         }}
         body = self.__set_and_call_script(name, script_body, run_body)
         self.assertIsNotNone(body)
+        self.assertTrue(name in body and 'items' in body.get(name))
+        ids = list(map(lambda i: i['author'], body.get(name)['items']))
+        self.assertTrue(all(ids[i] >= ids[i + 1] for i in range(len(ids) - 1)))
 
     def test05_update(self):
         name = 'ipfs_database_update'

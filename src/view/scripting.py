@@ -289,8 +289,8 @@ class CallScriptUrl(Resource):
 
         .. sourcecode:: http
 
-            <context_str> # context for running the script.
-            <params> # params for running the script.
+            <context_str> # context for running the script. format: <target_did>@<target_app_did>
+            <params> # params for running the script with json format.
 
         **Response OK**:
 

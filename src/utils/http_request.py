@@ -49,6 +49,7 @@ class BaseParams:
 
 class RequestParams(BaseParams):
     def __init__(self):
+        """ request body args """
         super().__init__()
 
     def get_root(self):
@@ -99,6 +100,7 @@ class RequestParams(BaseParams):
 
 class RequestArgs(BaseParams):
     def __init__(self):
+        """ url args """
         super().__init__()
 
     def get_root(self):

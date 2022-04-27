@@ -571,6 +571,22 @@ class Scripting:
         update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
         return result
 
+    def set_script_for_anonymous_file(self, script_name: str, file_path: str):
+        json_data = {
+            "executable": {
+                "output": True,
+                "name": script_name,
+                "type": "fileDownload",
+                "body": {
+                    "path": file_path
+                }
+            },
+            "allowAnonymousUser": True,
+            "allowAnonymousApp": True
+        }
+        result = self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
+        update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
+
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
         col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
         json_data['name'] = script_name

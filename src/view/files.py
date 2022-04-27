@@ -212,6 +212,8 @@ class WritingOperation(Resource):
 
         .. :quickref: 04 Files; Copy/upload
 
+        Copy the file from 'path' to 'dest'.
+
         **Request**:
 
         .. sourcecode:: http
@@ -256,9 +258,12 @@ class WritingOperation(Resource):
 
         **Request**:
 
+        **URL Parameters**:
+
         .. sourcecode:: http
 
-            None
+            public=<true|false> # whether the file uploaded can be access anonymously.
+            script_name=<string> # script name used to set up for downloading by scripting module. the script can be run without params.
 
         **Response OK**:
 
@@ -269,7 +274,8 @@ class WritingOperation(Resource):
         .. code-block:: json
 
             {
-                “name”: “<path/to/res>”
+                “name”: “<path/to/res>”,
+                “cid”: “<cid>”  # the cid of ipfs proxy if public=true, else empty.
             }
 
         **Response Error**:
@@ -297,7 +303,11 @@ class WritingOperation(Resource):
 
         dst_path, _ = rqargs.get_str('dest')
         if not dst_path:
-            return self.ipfs_files.upload_file(path)
+            is_public, msg = rqargs.get_bool('public', False)
+            script_name, msg = rqargs.get_str('script_name', '')
+            if is_public and not script_name:
+                raise InvalidParameterException(msg='MUST provide script name when public is true.')
+            return self.ipfs_files.upload_file(path, is_public, script_name)
 
         if path == dst_path:
             raise InvalidParameterException(msg=f'The source file {path} can be copied to a target file with same name')

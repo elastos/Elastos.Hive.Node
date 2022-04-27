@@ -71,6 +71,7 @@ class TokenCache:
 class TestConfig(metaclass=Singleton):
     def __init__(self):
         hive_port = os.environ.get('HIVE_PORT', 5000)
+        print(f'HIVE_PORT={hive_port}')
         self.url_vault = f'http://localhost:{hive_port}'
         self.url_backup = self.url_vault
 

@@ -46,7 +46,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
     def tearDownClass(cls):
         pass
 
-    def __register_script(self, script_name, body):
+    def register_script(self, script_name, body):
         response = self.cli.put(f'/scripting/{script_name}', body)
         self.assertEqual(response.status_code, 200)
         return json.loads(response.text)
@@ -63,10 +63,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
         return response.text if is_raw else json.loads(response.text)
 
     def __set_and_call_script(self, name, set_data, run_data):
-        self.__register_script(name, set_data)
+        self.register_script(name, set_data)
         return self.__call_script(name, run_data)
 
-    def __call_script_for_transaction_id(self, script_name, check_anonymous=False):
+    def call_script_for_transaction_id(self, script_name, check_anonymous=False):
         response_body = self.__call_script(script_name, {
             "params": {
                 "path": self.file_name
@@ -82,7 +82,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         return response_body[script_name]['transaction_id']
 
     def test01_register_script_insert(self):
-        self.__register_script('ipfs_database_insert', {"executable": {
+        self.register_script('ipfs_database_insert', {"executable": {
             "output": True,
             "name": "database_insert",
             "type": "insert",
@@ -233,7 +233,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     def test06_file_upload(self):
         name = 'ipfs_file_upload'
-        self.__register_script(name, {"executable": {
+        self.register_script(name, {"executable": {
                 "output": True,
                 "name": name,
                 "type": "fileUpload",
@@ -242,13 +242,13 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-        response = self.cli2.put(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}',
+        response = self.cli2.put(f'/scripting/stream/{self.call_script_for_transaction_id(name)}',
                                  self.file_content.encode(), is_json=False)
         self.assertEqual(response.status_code, 200)
 
     def test07_file_download(self):
         name = 'ipfs_file_download'
-        self.__register_script(name, {"executable": {
+        self.register_script(name, {"executable": {
                 "output": True,
                 "name": name,
                 "type": "fileDownload",
@@ -257,7 +257,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 }
             }
         })
-        response = self.cli2.get(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}')
+        response = self.cli2.get(f'/scripting/stream/{self.call_script_for_transaction_id(name)}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.file_content)
 
@@ -311,7 +311,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     def test10_get_anonymous_file(self):
         name = 'ipfs_get_anonymous_file'
-        self.__register_script(name, {"executable": {
+        self.register_script(name, {"executable": {
                 "output": True,
                 "name": name,
                 "type": "fileDownload",
@@ -323,7 +323,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
             "allowAnonymousApp": True
         })
         # This will keep transaction for anyone accessing the file by 'anonymous_url'.
-        trans_id = self.__call_script_for_transaction_id(name, check_anonymous=True)
+        trans_id = self.call_script_for_transaction_id(name, check_anonymous=True)
         # Execute normal download to remove the transaction.
         response = self.cli2.get(f'/scripting/stream/{trans_id}')
         self.assertEqual(response.status_code, 200)
@@ -344,7 +344,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     def test11_aggregated(self):
         name = 'ipfs_aggregated'
-        self.__register_script(name, {
+        self.register_script(name, {
             "executable": {
                 "output": True,
                 "name": name,
@@ -362,7 +362,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
             "allowAnonymousUser": True,
             "allowAnonymousApp": True
         })
-        response = self.cli2.get(f'/scripting/stream/{self.__call_script_for_transaction_id(name)}')
+        response = self.cli2.get(f'/scripting/stream/{self.call_script_for_transaction_id(name)}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.file_content)
 

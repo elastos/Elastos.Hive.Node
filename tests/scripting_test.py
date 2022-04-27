@@ -206,6 +206,46 @@ class IpfsScriptingTestCase(unittest.TestCase):
         ids = list(map(lambda i: i['author'], body.get(name)['items']))
         self.assertTrue(all(ids[i] >= ids[i + 1] for i in range(len(ids) - 1)))
 
+    def test04_find_aggregated(self):
+        name, col_filter = 'ipfs_find_aggregated', {'author': '$params.author'}
+        run_body = {'params': {
+            'author': 'John'
+        }}
+        body = self.__set_and_call_script(name, {
+            "executable": {
+                "output": True,
+                "name": name,
+                "type": "aggregated",
+                "body": [
+                    {
+                        'name': "ipfs_find_aggregated1",
+                        'type': 'find',
+                        'body': {
+                            'collection': self.collection_name,
+                            'filter': col_filter,
+                            'options': {
+                                'sort': {'author': pymongo.DESCENDING}  # sort with hive style.
+                            }
+                        }
+                    }, {
+                        'name': "ipfs_find_aggregated2",
+                        'type': 'find',
+                        'body': {
+                            'collection': self.collection_name,
+                            'filter': col_filter,
+                            'options': {
+                                'sort': {'author': pymongo.ASCENDING}  # sort with hive style.
+                            }
+                        }
+                    },
+                ]},
+            "allowAnonymousUser": False,
+            "allowAnonymousApp": False
+        }, run_body)
+        self.assertIsNotNone(body)
+        self.assertIn("ipfs_find_aggregated1", body)
+        self.assertIn("ipfs_find_aggregated2", body)
+
     def test05_update(self):
         name = 'ipfs_database_update'
         col_filter = {'author': '$params.author'}
@@ -377,6 +417,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         response = self.cli.delete('/scripting/ipfs_database_find2')
         response = self.cli.delete('/scripting/ipfs_database_update')
         response = self.cli.delete('/scripting/ipfs_database_delete')
+        response = self.cli.delete('/scripting/ipfs_find_aggregated')
         response = self.cli.delete('/scripting/ipfs_aggregated')
         response = self.cli.delete('/scripting/ipfs_file_upload')
         response = self.cli.delete('/scripting/ipfs_file_download')

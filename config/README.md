@@ -36,12 +36,13 @@ DID document:
   # ......
 }
 
-# export the content of the service DID.
+# export the content of the service DID to file ~/ipUGBPuAgEx6Le99f4TyDfNZtXVT2****.
 didshell $ did export -o ~/ipUGBPuAgEx6Le99f4TyDfNZtXVT2**** did:elastos:ipUGBPuAgEx6Le99f4TyDfNZtXVT2N****
 Export password: 
 Confirm export password: 
 
-# please use the content of file ~/ipUGBPuAgEx6Le99f4TyDfNZtXVT2**** as service DID.
+# Get the content of exported file, encode with base58, and set as the value of SERVICE_DID
+# The entered password can be treat as the value of PASSPHRASE.
 ```
 
 ## NODE_CREDENTIAL
@@ -61,7 +62,7 @@ Validation period(h/d/m/y): 3y
 Credential did:elastos:ipUGBPuAgEx6Le99f4TyDfNZtXVT2NKXPR#B7fLV2XXjYkvpardVmXuep created.
 
 Credential:
-# this is the expected credential content.
+# this is the expected credential content. encode with base58 and set as the value of NODE_CREDENTIAL.
 {
   "@context" : [ "https://www.w3.org/2018/credentials/v1", "https://ns.elastos.org/credentials/v1", "https://ns.elastos.org/credentials/hive/nodeowner/v1" ],
   "id" : "did:elastos:ipUGBPuAgEx6Le99f4TyDfNZtXVT2N****#B7fLV2XXjYkvpardVmXuep",

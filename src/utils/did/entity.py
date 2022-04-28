@@ -16,7 +16,7 @@ class Entity:
         """
         :param file_content: base58
         """
-        passphrase, storepass = passphrase if passphrase else 'secret', storepass if storepass else 'password'
+        passphrase, storepass = 'secret' if passphrase is None else passphrase, 'password' if storepass is None else storepass
         self.name = name
         store_dir = hive_setting.DID_DATA_STORE_PATH + os.sep + self.name
         self.did_store: DIDStore = DIDStore(store_dir, storepass)

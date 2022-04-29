@@ -220,6 +220,7 @@ class InsertOrCount(Resource):
         if msg or not json_body:
             raise InvalidParameterException(msg=f'Invalid request body.')
         if op == 'count':
+            # INFO：use post because 'GET' can not take the 'filter' in the request body.
             if 'filter' not in json_body or type(json_body.get('filter')) is not dict:
                 raise InvalidParameterException()
             return self.database.count_document(collection_name, json_body)

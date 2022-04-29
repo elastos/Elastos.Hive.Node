@@ -73,7 +73,7 @@ class VaultSubscription(metaclass=Singleton):
         doc = self.get_checked_vault(g.usr_did)
         logging.debug(f'start remove the vault of the user {g.usr_did}, _id, {str(doc["_id"])}')
         delete_user_vault_data(g.usr_did)
-        apps = cli.get_all_user_apps(g.usr_did)
+        apps = cli.get_all_user_apps(user_did=g.usr_did)
         for app in apps:
             cli.remove_database(g.usr_did, app[APP_ID])
         self.payment.archive_orders(g.usr_did)
@@ -91,8 +91,7 @@ class VaultSubscription(metaclass=Singleton):
         return self.__get_vault_info(doc)
 
     def get_app_stats(self):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
-        apps = cli.get_all_user_apps(g.usr_did)
+        apps = cli.get_all_user_apps(user_did=g.usr_did, current_item={USER_DID: g.usr_did, APP_ID: g.app_did})
         results = list(filter(lambda b: b is not None, map(lambda a: self.get_app_detail(a), apps)))
         if not results:
             raise ApplicationNotFoundException()

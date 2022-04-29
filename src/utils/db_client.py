@@ -238,7 +238,7 @@ class DatabaseClient:
         s = datetime(1970, 1, 1, 0, 0, 0)
         return int((t - s).total_seconds())
 
-    def get_all_user_apps(self, user_did=None):
+    def get_all_user_apps(self, user_did=None, current_item=None):
         # INFO: Need consider the adaptation of the old user information.
         query = {APP_INSTANCE_DID: {'$exists': True}, APP_ID: {'$exists': True}, USER_DID: {'$exists': True}}
         if user_did:
@@ -246,8 +246,13 @@ class DatabaseClient:
         docs = self.find_many_origin(DID_INFO_DB_NAME,
                                      DID_INFO_REGISTER_COL, query, create_on_absence=False, throw_exception=False)
         if not docs:
-            return list()
-        return get_unique_dict_item_from_list([{USER_DID: d[USER_DID], APP_ID: d[APP_ID]} for d in docs])
+            return [current_item, ] if current_item else []
+
+        # INFO: appending current app info is just compatible for old data.
+        items = [{USER_DID: d[USER_DID], APP_ID: d[APP_ID]} for d in docs]
+        if current_item:
+            items.append(current_item)
+        return get_unique_dict_item_from_list(items)
 
     def get_all_user_dids(self):
         user_apps = self.get_all_user_apps()

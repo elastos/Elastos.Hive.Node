@@ -127,6 +127,21 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
+    def count(self, user_did, app_did, collection_name, col_filter, options=None,
+              create_on_absence=False, throw_exception=True):
+        return self.count_origin(self.get_user_database_name(user_did, app_did),
+                                 collection_name, col_filter, options,
+                                 create_on_absence=create_on_absence, throw_exception=throw_exception)
+
+    def count_origin(self, db_name, collection_name, col_filter, options=None,
+                     create_on_absence=False, throw_exception=True):
+        col = self.get_origin_collection(db_name, collection_name, create_on_absence=create_on_absence)
+        if not create_on_absence and not col:
+            if not throw_exception:
+                return 0
+            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+        return col.count_documents(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
+
     def insert_one(self, user_did, app_did, collection_name, document, options=None, create_on_absence=False, **kwargs):
         return self.insert_one_origin(self.get_user_database_name(user_did, app_did), collection_name, document,
                                       options, create_on_absence, **kwargs)

@@ -344,9 +344,11 @@ class FindExecutable(Executable):
 
     def execute(self):
         cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_R)
+        filter_ = self.get_populated_filter()
         items = cli.find_many(self.get_target_did(), self.get_target_app_did(),
-                              self.get_collection_name(), self.get_populated_filter(), populate_find_options_from_body(self.body))
-        return self.get_output_data({"items": json.loads(json_util.dumps(items))})
+                              self.get_collection_name(), filter_, populate_find_options_from_body(self.body))
+        total = cli.count(self.get_target_did(), self.get_target_app_did(), self.get_collection_name(), filter_, throw_exception=False)
+        return self.get_output_data({'total': total, 'items': json.loads(json_util.dumps(items))})
 
 
 class InsertExecutable(Executable):

@@ -29,7 +29,7 @@ Elastos Hive will keep the promise that **users remain in total control of their
 ## Deploy Hive with Docker on Ubuntu/Debian system
 
 #### 1. Prerequisites Installed (Docker and Python3)
-Assumed the Docker and Python3 already shipped on your system. Otherwise, you need to install them manually. Generally, there is python3.6 already built inside Ubuntu 18.04.  To Docker, you can run the following commands to install it:
+Assumed the Docker and Python3 already shipped on your system. Otherwise, you need to install them manually. Generally, there is python3.9 already built inside Ubuntu 18.04.  To Docker, you can run the following commands to install it:
 
 ```shell
 $ curl -fsSL https://get.docker.com -o get-docker.sh

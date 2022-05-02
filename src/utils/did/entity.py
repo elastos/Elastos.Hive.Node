@@ -88,7 +88,7 @@ class Entity:
     def get_doc(self) -> DIDDocument:
         return self.doc
 
-    def get_did_string(self):
+    def get_did_string(self) -> str:
         return self.did_str
 
     def create_credential(self, type_, props, owner_did: DID = None) -> Credential:

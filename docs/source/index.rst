@@ -368,7 +368,26 @@ get payments
   :undoc-static:
   :endpoints: provider.filled_orders
 
-Appendix A: Collections
+Appendix A: Error Response
+==========================
+
+When failed with API calling as some error happened in the hive node,
+the error response will return, such as **HTTP/1.1 400 Bad Request**.
+
+The body of the error response should contain the following format content
+which will help caller debug the errors.
+
+.. sourcecode:: http
+
+    {
+        “error”: {
+            “message”: “the specific error description”, // [mandatory]
+            “internal_code”:  <number> // [optional],
+            ... //other customized items if it's necessary to report more information. [optional]
+        }
+    }
+
+Appendix B: Collections
 =======================
 
 auth_register

@@ -17,37 +17,35 @@ BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 class TokenCache:
     enabled = True
 
-    @staticmethod
-    def get_token_cache_file_path():
-        return os.path.join(BASE_DIR, '../../data/access_token')
+    # tokens cache for every user did.
 
     @staticmethod
-    def get_node_did_file_path():
-        return os.path.join(BASE_DIR, '../../data/node_did')
+    def get_token_cache_file_path(did: str):
+        return os.path.join(BASE_DIR, f'../../data/{did.split(":")[2]}')
 
     @staticmethod
-    def save_token(token):
+    def save_token(did: str, token):
         if not TokenCache.enabled:
             return
-        with open(TokenCache.get_token_cache_file_path(), 'w') as f:
+        with open(TokenCache.get_token_cache_file_path(did), 'w') as f:
             f.write(token)
             f.flush()
 
     @staticmethod
-    def get_token():
+    def get_token(did: str):
         if not TokenCache.enabled:
             return ''
-        token_file = TokenCache.get_token_cache_file_path()
+        token_file = TokenCache.get_token_cache_file_path(did)
         if not Path(token_file).exists():
             return ''
         with open(token_file, 'r') as f:
             return f.read()
 
+    # the node did of the connected hive node.
+
     @staticmethod
-    def clear_token():
-        if not TokenCache.enabled:
-            return
-        Path(TokenCache.get_token_cache_file_path()).unlink()
+    def get_node_did_file_path():
+        return os.path.join(BASE_DIR, '../../data/node_did')
 
     @staticmethod
     def save_node_did(node_did):
@@ -99,10 +97,10 @@ class RemoteResolver:
 
     def get_token(self):
         user_did = self.get_current_user_did()
-        token = TokenCache.get_token()
+        token = TokenCache.get_token(user_did.get_did_string())
         if not token:
             token = self._get_remote_token(user_did)
-            TokenCache.save_token(token)
+            TokenCache.save_token(user_did.get_did_string(), token)
         return token
 
     def get_current_user_did(self):

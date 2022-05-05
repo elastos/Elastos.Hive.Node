@@ -294,7 +294,7 @@ class Executable:
             raise BadRequestException(msg='Cannot retrieve the transaction ID.')
 
         update_used_storage_for_mongodb_data(self.get_target_did(),
-                                         get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
         result = {
             "transaction_id": jwt.encode({
@@ -393,7 +393,7 @@ class UpdateExecutable(Executable):
                               populate_options_update_one(self.body))
 
         update_used_storage_for_mongodb_data(self.get_did(),
-                                         get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
         return self.get_output_data(data)
 
@@ -437,7 +437,6 @@ class FilePropertiesExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        cli.check_vault_access(self.script.user_did, VAULT_ACCESS_R)
         body = self.get_populated_file_body()
         logging.info(f'get file properties: is_ipfs={self.is_ipfs}, path={body["path"]}')
         if self.is_ipfs:
@@ -463,7 +462,6 @@ class FileHashExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        cli.check_vault_access(self.script.user_did, VAULT_ACCESS_R)
         body = self.get_populated_file_body()
         logging.info(f'get file hash: is_ipfs={self.is_ipfs}, path={body["path"]}')
         if self.is_ipfs:
@@ -638,8 +636,6 @@ class Scripting:
         return self.handle_transaction(transaction_id)
 
     def handle_transaction(self, transaction_id, is_download=False):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R if is_download else VAULT_ACCESS_WR)
-
         # check by transaction id
         row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)
         col_filter = {"_id": ObjectId(row_id)}

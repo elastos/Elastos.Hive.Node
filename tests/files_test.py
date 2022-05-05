@@ -68,9 +68,12 @@ class IpfsFilesTestCase(unittest.TestCase):
 
         # check fileDownload script
         from tests.scripting_test import IpfsScriptingTestCase
-        response = self.cli.get(f'/scripting/stream/{IpfsScriptingTestCase().call_script_for_transaction_id(script_name)}')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.text, self.src_file_content)
+        scripting_test = IpfsScriptingTestCase()
+        scripting_test.call_and_stream(script_name, None, file_content=self.src_file_content)
+
+        # clean the script and the file.
+        scripting_test.delete_script(script_name)
+        self.__delete_file(self.src_public_name)
 
     def test01_upload_file_invalid_parameter(self):
         response = self.cli.put(f'/files/', self.src_file_content.encode(), is_json=False)
@@ -134,8 +137,6 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.__delete_file(self.src_file_name)
         self.__delete_file(self.src_file_name2)
         self.__delete_file(self.dst_file_name)
-        response = self.cli.delete(f'/scripting/{self.src_public_name.split(".")[0]}')
-        self.__delete_file(self.src_public_name)
 
     def test08_delete_file_not_exist(self):
         response = self.cli.delete(f'/files/{self.name_not_exist}')

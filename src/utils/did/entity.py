@@ -69,7 +69,7 @@ class Entity:
 
     def init_did_by_root_identity(self, root_identity: RootIdentity, need_resolve=True):
         did, doc = root_identity.get_did_0(), None
-        if self.did_store.contains_did(did) and self.did_store.contains_did(did):
+        if self.did_store.contains_did(did):
             # direct get
             return did, self.did_store.load_did(did)
 

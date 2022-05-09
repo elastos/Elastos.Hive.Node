@@ -225,8 +225,12 @@ class IpfsScriptingTestCase(unittest.TestCase):
         body = self.__register_and_call_script(script_name, script_body, run_body, executable_name=executable_name)
 
         self.assertTrue('items' in body.get(executable_name))
+        self.assertTrue('total' in body.get(executable_name))
+        # check the order of items
         ids = list(map(lambda i: i['author'], body.get(executable_name)['items']))
         self.assertTrue(all(ids[i] >= ids[i + 1] for i in range(len(ids) - 1)))
+        # check total
+        self.assertTrue(body.get(executable_name)['total'] > 0)
 
         self.delete_script(script_name)
 

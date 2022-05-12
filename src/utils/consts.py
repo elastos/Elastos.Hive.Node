@@ -25,6 +25,7 @@ ORIGINAL_SIZE = 'original_size'
 IS_UPGRADED = 'is_upgraded'
 CID = 'cid'
 COUNT = 'count'
+VERSION = 'version'
 
 COL_ORDERS = 'vault_order'
 COL_ORDERS_SUBSCRIPTION = 'subscription'

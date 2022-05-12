@@ -218,6 +218,9 @@ class Auth(Entity, metaclass=Singleton):
 
         return body["token"]
 
+    def create_proof_for_order(self, user_did, props: dict, exp: int):
+        return super().create_jwt_token('Hive Payment', user_did, exp, 'props', json.dumps(props))
+
     def create_order_proof(self, user_did, doc_id, amount=0, is_receipt=False):
         exp = int(datetime.utcnow().timestamp()) + 7 * 24 * 3600 if not is_receipt else -1
         props = {'receipt_id': doc_id, 'amount': amount} if is_receipt else {'order_id': doc_id}

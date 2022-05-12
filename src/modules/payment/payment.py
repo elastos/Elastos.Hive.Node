@@ -16,7 +16,7 @@ from src.modules.scripting.scripting import validate_exists
 from src.utils.consts import COL_ORDERS, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, \
     COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, COL_ORDERS_PROOF, CREATE_TIME, MODIFY_TIME, \
     COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, \
-    COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_PAID, USR_DID
+    COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_PAID, USR_DID, VERSION
 from src.utils.db_client import cli
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, \
     ReceiptNotFoundException
@@ -42,50 +42,59 @@ class Payment(metaclass=Singleton):
     def get_version(self):
         return {'version': self._get_vault_subscription().get_price_plans_version()}
 
-    def place_order(self, json_body):
+    def place_order(self, subscription_name: str, pricing_name: str):
+        """ Place a new order for upgrade user's vault.
+        :param subscription_name vault/backup
+        :param pricing_name the name of pricing package.
+        """
         cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
-        subscription, plan = self._check_place_order_params(json_body)
-        return self._get_order_vo(self._create_order(g.usr_did, subscription, plan))
+        plan = self.__get_pricing_plan(subscription_name, pricing_name)
+        doc = self.__create_order(g.usr_did, subscription_name, plan)
+        return self.__get_order_vo(doc)
 
-    def _check_place_order_params(self, json_body):
-        if not json_body:
-            raise InvalidParameterException(msg='Request body should not empty.')
-        validate_exists(json_body, '', ('subscription', 'pricing_name'))
-
-        subscription, pricing_name = json_body.get('subscription', None), json_body.get('pricing_name', None)
-        if subscription not in ('vault', 'backup'):
-            raise InvalidParameterException(msg=f'Invalid subscription: {subscription}.')
-
-        plan = self._get_vault_subscription().get_price_plan(subscription, pricing_name)
+    def __get_pricing_plan(self, subscription_name, pricing_name):
+        plan = self._get_vault_subscription().get_price_plan(subscription_name, pricing_name)
         if not plan:
             raise InvalidParameterException(msg=f'Invalid pricing_name: {pricing_name}.')
 
         if plan['amount'] <= 0:
             raise InvalidParameterException(msg=f'Invalid pricing_name which is free.')
 
-        return subscription, plan
+        return plan
 
-    def _create_order(self, user_did, subscription, plan):
+    def __create_order(self, user_did, subscription, plan):
         doc = {
             USR_DID: user_did,
             COL_ORDERS_SUBSCRIPTION: subscription,
+            VERSION: PaymentConfig.get_all_package_info().get('version', '1.0'),
             COL_ORDERS_PRICING_NAME: plan['name'],
             COL_ORDERS_ELA_AMOUNT: plan['amount'],
             COL_ORDERS_ELA_ADDRESS: self.ela_address,
-            COL_ORDERS_PROOF: '',
+            COL_ORDERS_PROOF: None,
             COL_ORDERS_STATUS: COL_ORDERS_STATUS_NORMAL
         }
-
         res = cli.insert_one_origin(DID_INFO_DB_NAME, COL_ORDERS, doc, create_on_absence=True)
 
         doc['_id'] = res['inserted_id']
-        doc[COL_ORDERS_PROOF] = self.auth.create_order_proof(user_did, doc['_id'])
+        now = int(datetime.utcnow().timestamp())
+        exp = now + 7 * 24 * 3600
+        props = {
+            "interim_orderid": str(doc['_id']),
+            "subscription": doc[COL_ORDERS_SUBSCRIPTION],
+            "pricing_plan": doc[COL_ORDERS_PRICING_NAME],
+            "payment_amount": doc[COL_ORDERS_ELA_AMOUNT],
+            "create_time": now,
+            "expiration_time": exp,
+            "receiving_address": doc[COL_ORDERS_ELA_ADDRESS]
+        }
+        doc[COL_ORDERS_PROOF] = self.auth.create_proof_for_order(user_did, props, exp)
+
         cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {'_id': ObjectId(doc['_id'])},
                               {'$set': {COL_ORDERS_PROOF: doc[COL_ORDERS_PROOF]}}, is_extra=True)
 
         return doc
 
-    def _get_order_vo(self, order):
+    def __get_order_vo(self, order):
         return {
             'order_id': str(order['_id']),
             COL_ORDERS_SUBSCRIPTION: order[COL_ORDERS_SUBSCRIPTION],

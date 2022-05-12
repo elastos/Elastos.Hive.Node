@@ -6,7 +6,7 @@ from src.utils_v1.error_code import BAD_REQUEST
 
 
 def massage_keys_with_dollar_signs(d):
-    for key, value in d.items():
+    for key, value in d.copy().items():
         if key[0] == "$" and key not in [SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_CALLER_APP_DID,
                                          SCRIPTING_EXECUTABLE_PARAMS]:
             d[key.replace("$", "'$'")] = d.pop(key)
@@ -18,7 +18,7 @@ def massage_keys_with_dollar_signs(d):
 
 
 def unmassage_keys_with_dollar_signs(d):
-    for key, value in d.items():
+    for key, value in d.copy().items():
         if key[0:3] == "'$'":
             d[key.replace("'$'", "$")] = d.pop(key)
         if type(value) is dict:
@@ -77,7 +77,7 @@ def populate_with_params_values(did, app_did, options, params):
     if not options or not params:
         return None
 
-    for key, value in options.items():
+    for key, value in options.copy().items():
         if isinstance(value, dict):
             populate_with_params_values(did, app_did, value, params)
         elif isinstance(value, str):

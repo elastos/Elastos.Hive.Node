@@ -20,10 +20,8 @@ $ pip install sphinx-rtd-theme
 #### Generate the document
 
 ```shell script
-# Replace the HIVE_SOURCE_ROOT with the full path of the hive node source codes.
-# Please check the folder python3.9 and get the corrected one.
 $ cd docs
-$ PYTHONPATH="${PYTHONPATH}:<HIVE_SOURCE_ROOT>:<HIVE_SOURCE_ROOT>/.venv/lib/python3.9/site-packages" sphinx-build -b html source build
+$ ./make.sh
 ```
 
-The index of the document is located under <HIVE_SOURCE_ROOT>/docs/build/index.html.
+The index of the document is located under `build/index.html`.

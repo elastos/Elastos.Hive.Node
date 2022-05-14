@@ -19,10 +19,10 @@
 
 project = 'Hive Node'
 copyright = 'Elastos'
-author = 'Fred'
+author = 'Fred Chen'
 
 # The full version, including alpha/beta/rc tags
-release = '2.3.0'
+release = '2.7.2'
 
 
 # -- General configuration ---------------------------------------------------

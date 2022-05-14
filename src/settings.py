@@ -91,6 +91,14 @@ class HiveSetting:
         return os.path.join(BASE_DIR, name)
 
     @property
+    def PAYMENT_CONTRACT_URL(self):
+        return self.env_config('PAYMENT_CONTRACT_URL', default='', cast=str)
+
+    @property
+    def PAYMENT_CONTRACT_ADDRESS(self):
+        return self.env_config('PAYMENT_CONTRACT_ADDRESS', default='', cast=str)
+
+    @property
     def PAYMENT_ADDRESS(self):
         return self.env_config('PAYMENT_ADDRESS', default='EN9YK69ScA6WFgVQW3UZcmSRLSCStaU2pQ', cast=str)
 

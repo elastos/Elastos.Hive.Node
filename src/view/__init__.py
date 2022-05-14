@@ -88,10 +88,15 @@ def init_app(app: Flask, api: Api):
     api.add_resource(provider.Vaults, '/provider/vaults', endpoint='provider.vaults')
     api.add_resource(provider.Backups, '/provider/backups', endpoint='provider.backups')
     api.add_resource(provider.FilledOrders, '/provider/filled_orders', endpoint='provider.filled_orders')
+
     # about service
-    api.add_resource(about.Version, '/about/version', '/node/version', endpoint='node.version')
-    api.add_resource(about.CommitId, '/about/commit_id', '/node/commit_id', endpoint='node.commit_id')
+    # INFO: one class with two lines for the documentation to hide '/about'.
+    api.add_resource(about.Version, '/node/version', endpoint='node.version')
+    api.add_resource(about.Version, '/about/version', endpoint='about.version')
+    api.add_resource(about.CommitId, '/node/commit_id', endpoint='node.commit_id')
+    api.add_resource(about.CommitId, '/about/commit_id', endpoint='about.commit_id')
     api.add_resource(about.NodeInfo, '/node/info', endpoint='node.info')
+
     if hive_setting.PAYMENT_ENABLED:
         # payment service
         api.add_resource(payment.Version, '/payment/version', endpoint='payment.version')

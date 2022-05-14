@@ -11,14 +11,14 @@ from flask import g
 
 from src import hive_setting
 from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
+from src.modules.subscription.vault import Vault
 from src.utils_v1.common import gene_temp_file_name
-from src.utils_v1.constants import VAULT_ACCESS_WR, VAULT_ACCESS_R
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data
 from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
     COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, USR_DID
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
-from src.utils.http_exception import FileNotFoundException, AlreadyExistsException, BadRequestException
+from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
 
 
 class IpfsFiles:
@@ -34,7 +34,7 @@ class IpfsFiles:
         pass
 
     def upload_file(self, path, is_public: bool, script_name: str):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        Vault(g.usr_did).check_vault(check_storage=True)
         cid = self.upload_file_with_path(g.usr_did, g.app_did, path, is_public=is_public)
         if is_public:
             from src.modules.scripting.scripting import Scripting
@@ -45,7 +45,7 @@ class IpfsFiles:
         }
 
     def download_file(self, path):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        Vault(g.usr_did).check_vault()
         return self.download_file_with_path(g.usr_did, g.app_did, path)
 
     def delete_file(self, path):
@@ -56,10 +56,11 @@ class IpfsFiles:
         :param path:
         :return:
         """
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        Vault(g.usr_did).check_vault()
         self.delete_file_with_path(g.usr_did, g.app_did, path, check_exist=True)
 
     def delete_file_with_path(self, user_did, app_did, path, check_exist=False):
+        """ 'public' for v1 """
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
@@ -78,11 +79,11 @@ class IpfsFiles:
         update_used_storage_for_files_data(user_did, 0 - doc[SIZE])
 
     def move_file(self, src_path, dst_path):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        Vault(g.usr_did).check_vault()
         return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path)
 
     def copy_file(self, src_path, dst_path):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        Vault(g.usr_did).check_vault(check_storage=True)
         return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path, is_copy=True)
 
     def list_folder(self, path):
@@ -91,13 +92,14 @@ class IpfsFiles:
         :param path: Empty means root folder.
         :return: File list.
         """
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        Vault(g.usr_did).check_vault()
         docs = self.list_folder_with_path(g.usr_did, g.app_did, path)
         return {
             'value': list(map(lambda d: self._get_list_file_info_by_doc(d), docs))
         }
 
     def list_folder_with_path(self, user_did, app_did, path):
+        """ 'public' for v1 """
         col_filter = {USR_DID: user_did, APP_DID: app_did}
         if path:
             folder_path = path if path[len(path) - 1] == '/' else f'{path}/'
@@ -110,7 +112,7 @@ class IpfsFiles:
         return docs
 
     def get_properties(self, path):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        Vault(g.usr_did).check_vault()
         metadata = self.get_file_metadata(g.usr_did, g.app_did, path)
         return {
             'name': metadata[COL_IPFS_FILES_PATH],
@@ -121,7 +123,7 @@ class IpfsFiles:
         }
 
     def get_hash(self, path):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        Vault(g.usr_did).check_vault()
         metadata = self.get_file_metadata(g.usr_did, g.app_did, path)
         return {
             'name': metadata[COL_IPFS_FILES_PATH],
@@ -135,6 +137,8 @@ class IpfsFiles:
             2. Add this file onto IPFS node and return with CID;
             3. Create a new metadata with the CID and store them as document;
             4. Cached the temp file to specific cache directory.
+
+        'public' for v1, scripting service
 
         :param user_did: the user did
         :param app_did: the application did
@@ -156,6 +160,8 @@ class IpfsFiles:
         2. insert/update file metadata for the user.
         3. cache the file to the cache dir of the user's vault.
         4. cache the file to global cache folder if public
+
+        'public' for upgrading files service from v1 to v2 (local -> ipfs)
 
         :param user_did:
         :param app_did:
@@ -219,6 +225,7 @@ class IpfsFiles:
         return size
 
     def delete_file_metadata(self, user_did, app_did, rel_path, cid):
+        """ 'public' for upgrading files service from v1 to v2 (local -> ipfs) """
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: rel_path}
@@ -228,11 +235,12 @@ class IpfsFiles:
         logging.info(f'[ipfs-files] Remove an existing file {rel_path}')
 
     def download_file_with_path(self, user_did, app_did, path: str):
-        """
-        Download the target file with the following steps:
-        1. Check target file already be cached, then just use this file, otherwise:
-        2. Download file from IPFS to cache directory;
-        3. Response to requrester with this cached file.
+        """ Download the target file with the following steps:
+            1. Check target file already be cached, then just use this file, otherwise:
+            2. Download file from IPFS to cache directory;
+            3. Response to requrester with this cached file.
+
+        'public' for v1, scripting service
 
         :param user_did: The user did.
         :param app_did: The application did
@@ -246,11 +254,12 @@ class IpfsFiles:
         return fm.get_response_by_file_path(cached_file)
 
     def move_copy_file(self, user_did, app_did, src_path, dst_path, is_copy=False):
-        """
-        Move/Copy file with the following steps:
-        1. Check source file existing and file with destination name existing. If not, then
-        2. Move or copy file;
-        3. Update metadata
+        """ Move/Copy file with the following steps:
+            1. Check source file existing and file with destination name existing. If not, then
+            2. Move or copy file;
+            3. Update metadata
+
+        'public' for v1
 
         :param user_did:
         :param app_did:
@@ -296,6 +305,7 @@ class IpfsFiles:
         }
 
     def get_file_metadata(self, user_did, app_did, path: str, throw_exception=True):
+        """ 'public' for v1, scripting service """
         col_filter = {USR_DID: user_did,
                       APP_DID: app_did,
                       COL_IPFS_FILES_PATH: path}
@@ -308,4 +318,5 @@ class IpfsFiles:
         return metadata
 
     def get_ipfs_file_access_url(self, metadata):
+        """ 'public' for scripting service """
         return f'{hive_setting.IPFS_GATEWAY_URL}/ipfs/{metadata[COL_IPFS_FILES_IPFS_CID]}'

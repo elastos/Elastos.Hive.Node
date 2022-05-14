@@ -11,6 +11,7 @@ from flask import request, g
 from bson import ObjectId, json_util
 
 from src import hive_setting
+from src.modules.subscription.vault import Vault
 from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
@@ -343,7 +344,7 @@ class FindExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_R)
+        Vault(self.get_target_did()).check_vault()
         filter_ = self.get_populated_filter()
         items = cli.find_many(self.get_target_did(), self.get_target_app_did(),
                               self.get_collection_name(), filter_, populate_find_options_from_body(self.body))
@@ -356,7 +357,7 @@ class InsertExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_WR)
+        Vault(self.get_target_did()).check_vault(check_storage=True)
 
         document = self.get_document()
         msg = populate_with_params_values(self.get_did(), self.get_app_id(), document, self.get_params())
@@ -380,7 +381,7 @@ class UpdateExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_WR)
+        Vault(self.get_target_did()).check_vault(check_storage=True)
 
         col_update = self.get_update()
         msg = populate_with_params_values(self.get_did(), self.get_app_id(), col_update.get('$set'), self.get_params())
@@ -405,7 +406,7 @@ class DeleteExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        cli.check_vault_access(self.get_target_did(), VAULT_ACCESS_DEL)
+        Vault(self.get_target_did()).check_vault()
 
         data = cli.delete_one(self.get_target_did(),
                               self.get_target_app_did(),
@@ -413,7 +414,7 @@ class DeleteExecutable(Executable):
                               self.get_populated_filter())
 
         update_used_storage_for_mongodb_data(self.get_did(),
-                                         get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
         return self.get_output_data(data)
 
@@ -653,11 +654,15 @@ class Scripting:
             if is_download:
                 data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
             else:
+                # Place here because not want to change the logic for v1.
+                Vault(target_did).check_vault(check_storage=True)
                 self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
         else:
             if is_download:
                 data = self.get_files().download_file_by_did(target_did, target_app_did, trans['document']['file_name'])
             else:
+                # Place here because not want to change the logic for v1.
+                Vault(target_did).check_vault(check_storage=True)
                 self.get_files().upload_file_by_did(target_did, target_app_did, trans['document']['file_name'])
 
         # recalculate the storage usage of the database

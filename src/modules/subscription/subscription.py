@@ -40,9 +40,9 @@ class VaultSubscription(metaclass=Singleton):
         now = datetime.utcnow().timestamp()  # seconds in UTC
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
         doc = {VAULT_SERVICE_DID: user_did,
-               VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,
-               VAULT_SERVICE_FILE_USE_STORAGE: 0,
-               VAULT_SERVICE_DB_USE_STORAGE: 0,
+               VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,  # unit: byte (MB on v1, checked by 1024 * 1024)
+               VAULT_SERVICE_FILE_USE_STORAGE: 0,  # unit: byte
+               VAULT_SERVICE_DB_USE_STORAGE: 0,  # unit: byte
                IS_UPGRADED: is_upgraded,
                VAULT_SERVICE_START_TIME: now,
                VAULT_SERVICE_END_TIME: end_time,

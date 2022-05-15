@@ -11,7 +11,7 @@ from flask import request, g
 from bson import ObjectId, json_util
 
 from src import hive_setting
-from src.modules.subscription.vault import Vault
+from src.modules.subscription.vault import VaultManager
 from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
@@ -178,6 +178,7 @@ class Executable:
         self.is_output = executable_data.get('output', True)
         self.is_ipfs = script.is_ipfs
         self.ipfs_files = IpfsFiles()
+        self.vault_manager = VaultManager()
 
     @staticmethod
     def validate_data(json_data):
@@ -344,11 +345,13 @@ class FindExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        Vault(self.get_target_did()).check_vault()
+        self.vault_manager.get_vault(self.get_target_did())
+
         filter_ = self.get_populated_filter()
         items = cli.find_many(self.get_target_did(), self.get_target_app_did(),
                               self.get_collection_name(), filter_, populate_find_options_from_body(self.body))
         total = cli.count(self.get_target_did(), self.get_target_app_did(), self.get_collection_name(), filter_, throw_exception=False)
+
         return self.get_output_data({'total': total, 'items': json.loads(json_util.dumps(items))})
 
 
@@ -357,7 +360,7 @@ class InsertExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        Vault(self.get_target_did()).check_vault(check_storage=True)
+        self.vault_manager.get_vault(self.get_target_did()).check_storage()
 
         document = self.get_document()
         msg = populate_with_params_values(self.get_did(), self.get_app_id(), document, self.get_params())
@@ -381,7 +384,7 @@ class UpdateExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        Vault(self.get_target_did()).check_vault(check_storage=True)
+        self.vault_manager.get_vault(self.get_target_did()).check_storage()
 
         col_update = self.get_update()
         msg = populate_with_params_values(self.get_did(), self.get_app_id(), col_update.get('$set'), self.get_params())
@@ -406,7 +409,7 @@ class DeleteExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        Vault(self.get_target_did()).check_vault()
+        self.vault_manager.get_vault(self.get_target_did())
 
         data = cli.delete_one(self.get_target_did(),
                               self.get_target_app_did(),
@@ -442,21 +445,13 @@ class FilePropertiesExecutable(Executable):
     def execute(self):
         body = self.get_populated_file_body()
         logging.info(f'get file properties: is_ipfs={self.is_ipfs}, path={body["path"]}')
-        if self.is_ipfs:
-            doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
-            return self.get_output_data({
-                "type": "file" if doc[COL_IPFS_FILES_IS_FILE] else "folder",
-                "name": body['path'],
-                "size": doc[SIZE],
-                "last_modify": doc['modified']
-            })
-        full_path, stat = self.script.scripting\
-            .get_files().get_file_stat_by_did(self.get_target_did(), self.get_target_app_did(), body['path'])
+
+        doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
         return self.get_output_data({
-            "type": "file" if full_path.is_file() else "folder",
+            "type": "file" if doc[COL_IPFS_FILES_IS_FILE] else "folder",
             "name": body['path'],
-            "size": stat.st_size,
-            "last_modify": stat.st_mtime
+            "size": doc[SIZE],
+            "last_modify": doc['modified']
         })
 
 
@@ -629,12 +624,6 @@ class Scripting:
         Script.validate_run_data(json_data)
         return Script(script_name, json_data, g.usr_did, g.app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
 
-    def get_files(self):
-        if not self.files:
-            from src.modules.deprecated.files import Files
-            self.files = Files()
-        return self.files
-
     def upload_file(self, transaction_id):
         return self.handle_transaction(transaction_id)
 
@@ -650,20 +639,12 @@ class Scripting:
         data = None
         logging.info(f'handle transaction by id: is_ipfs={self.is_ipfs}, '
                      f'is_download={is_download}, file_name={trans["document"]["file_name"]}')
-        if self.is_ipfs:
-            if is_download:
-                data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
-            else:
-                # Place here because not want to change the logic for v1.
-                Vault(target_did).check_vault(check_storage=True)
-                self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
+        if is_download:
+            data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
         else:
-            if is_download:
-                data = self.get_files().download_file_by_did(target_did, target_app_did, trans['document']['file_name'])
-            else:
-                # Place here because not want to change the logic for v1.
-                Vault(target_did).check_vault(check_storage=True)
-                self.get_files().upload_file_by_did(target_did, target_app_did, trans['document']['file_name'])
+            # Place here because not want to change the logic for v1.
+            VaultManager().get_vault(target_did).check_storage()
+            self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
 
         # recalculate the storage usage of the database
         cli.delete_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)

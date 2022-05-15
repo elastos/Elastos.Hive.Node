@@ -4,39 +4,50 @@
 The entrance for database module.
 """
 import json
+from bson import json_util
 from datetime import datetime
 
-from bson import json_util
 from flask import g
 
-from src.modules.subscription.vault import Vault
+from src.modules.database.mongodb_client import MongodbClient
+from src.modules.subscription.vault import VaultManager
 from src.utils_v1.did_mongo_db_resource import get_mongo_database_size, convert_oid, options_filter, \
     options_pop_timestamp, populate_find_options_from_body
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
-from src.utils.db_client import cli
-from src.utils.http_exception import CollectionNotFoundException
 
 
 class Database:
     def __init__(self):
-        ...
+        self.mcli = MongodbClient()
+        self.vault_mgr = VaultManager()
 
     def create_collection(self, collection_name):
-        Vault(g.usr_did).check_vault(check_storage=True)
-        cli.create_collection(g.usr_did, g.app_did, collection_name)
+        """ Create collection by name
+
+        :v2 API:
+        """
+        self.vault_mgr.get_vault(g.usr_did).check_storage()
+
+        self.mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
         return {'name': collection_name}
 
     def delete_collection(self, collection_name):
-        Vault(g.usr_did).check_vault()
-        cli.delete_collection(g.usr_did, g.app_did, collection_name, is_check_exist=True)
+        """ Delete collection by name
+
+        :v2 API:
+        """
+        self.vault_mgr.get_vault(g.usr_did)
+
+        self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
         update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
 
     def __get_collection(self, collection_name, check_storage=False):
-        Vault(g.usr_did).check_vault(check_storage=check_storage)
-        col = cli.get_user_collection(g.usr_did, g.app_did, collection_name)
-        if not col:
-            raise CollectionNotFoundException(msg=f'The collection {collection_name} can not be found.')
-        return g.usr_did, g.app_did, col
+        vault = self.vault_mgr.get_vault(g.usr_did)
+        if check_storage:
+            vault.check_storage()
+
+        col = self.mcli.get_user_collection(g.usr_did, g.app_did, collection_name)
+        return g.usr_did, g.app_did, col.col
 
     def insert_document(self, collection_name, json_body):
         user_did, app_did, col = self.__get_collection(collection_name, check_storage=True)

@@ -11,7 +11,7 @@ from flask import g
 
 from src import hive_setting
 from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
-from src.modules.subscription.vault import Vault
+from src.modules.subscription.vault import VaultManager
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data
 from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
@@ -31,10 +31,12 @@ class IpfsFiles:
         first, afterwards it also would be uploaded and pined to the paired IPFS node.
         4. The CID to the block data on IPFS would be managed as the field of metadata in the collection.
         """
-        pass
+        self.vault_manager = VaultManager()
 
     def upload_file(self, path, is_public: bool, script_name: str):
-        Vault(g.usr_did).check_vault(check_storage=True)
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did).check_storage()
+
         cid = self.upload_file_with_path(g.usr_did, g.app_did, path, is_public=is_public)
         if is_public:
             from src.modules.scripting.scripting import Scripting
@@ -45,7 +47,9 @@ class IpfsFiles:
         }
 
     def download_file(self, path):
-        Vault(g.usr_did).check_vault()
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did)
+
         return self.download_file_with_path(g.usr_did, g.app_did, path)
 
     def delete_file(self, path):
@@ -55,8 +59,11 @@ class IpfsFiles:
         2. Unpin the file data from corresponding IPFS node.
         :param path:
         :return:
+
+        :v2 API:
         """
-        Vault(g.usr_did).check_vault()
+        self.vault_manager.get_vault(g.usr_did)
+
         self.delete_file_with_path(g.usr_did, g.app_did, path, check_exist=True)
 
     def delete_file_with_path(self, user_did, app_did, path, check_exist=False):
@@ -79,11 +86,15 @@ class IpfsFiles:
         update_used_storage_for_files_data(user_did, 0 - doc[SIZE])
 
     def move_file(self, src_path, dst_path):
-        Vault(g.usr_did).check_vault()
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did)
+
         return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path)
 
     def copy_file(self, src_path, dst_path):
-        Vault(g.usr_did).check_vault(check_storage=True)
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did).check_storage()
+
         return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path, is_copy=True)
 
     def list_folder(self, path):
@@ -91,8 +102,11 @@ class IpfsFiles:
         List the files under the specific directory.
         :param path: Empty means root folder.
         :return: File list.
+
+        :v2 API:
         """
-        Vault(g.usr_did).check_vault()
+        self.vault_manager.get_vault(g.usr_did)
+
         docs = self.list_folder_with_path(g.usr_did, g.app_did, path)
         return {
             'value': list(map(lambda d: self._get_list_file_info_by_doc(d), docs))
@@ -112,7 +126,9 @@ class IpfsFiles:
         return docs
 
     def get_properties(self, path):
-        Vault(g.usr_did).check_vault()
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did)
+
         metadata = self.get_file_metadata(g.usr_did, g.app_did, path)
         return {
             'name': metadata[COL_IPFS_FILES_PATH],
@@ -123,7 +139,9 @@ class IpfsFiles:
         }
 
     def get_hash(self, path):
-        Vault(g.usr_did).check_vault()
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did)
+
         metadata = self.get_file_metadata(g.usr_did, g.app_did, path)
         return {
             'name': metadata[COL_IPFS_FILES_PATH],

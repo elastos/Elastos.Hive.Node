@@ -1,31 +1,36 @@
 from src.modules.database.mongodb_client import MongodbClient
-from src.utils.file_manager import fm
 from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException
+from src.utils_v1.constants import VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, VAULT_SERVICE_DID
 
 
 class Vault:
-    """ Vault operation like get information. """
+    """ Represents a user vault """
 
-    def __init__(self, user_did):
-        self.user_did = user_did
-        self.mcli = MongodbClient()
-        self.fm = fm
+    def __init__(self, doc):
+        self.doc = doc
 
     def get_storage_gap(self):
-        return self.fm.get_vault_max_size(self.user_did) - self.fm.get_vault_storage_size(self.user_did)
+        return int(self.doc[VAULT_SERVICE_MAX_STORAGE] - (self.doc[VAULT_SERVICE_FILE_USE_STORAGE] + self.doc[VAULT_SERVICE_DB_USE_STORAGE]))
 
     def is_storage_full(self):
-        return self.get_storage_gap() > 0
+        return self.get_storage_gap() <= 0
 
-    def check_vault(self, check_vault=True, check_storage=False):
-        """ Check vault exits and storage is enough
-
-        :param check_vault if check the vault exists.
-        :param check_storage if check the storage.
-        """
-        if check_vault and not self.mcli.get_vault_info(self.user_did):
-            raise VaultNotFoundException()
-
-        # Simplify handle this. Just check if current is enough.
-        if check_storage and self.is_storage_full():
+    def check_storage(self):
+        if self.is_storage_full():
             raise InsufficientStorageException()
+
+
+class VaultManager:
+    """ VaultManager is for other modules as a common class. """
+
+    def __init__(self):
+        self.mcli = MongodbClient()
+
+    def get_vault(self, user_did):
+        """ Get the vault for user or raise not-found exception. """
+        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
+
+        doc = col.find_one({VAULT_SERVICE_DID: user_did})
+        if not doc:
+            raise VaultNotFoundException()
+        return Vault(doc)

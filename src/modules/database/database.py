@@ -19,14 +19,14 @@ from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mo
 class Database:
     def __init__(self):
         self.mcli = MongodbClient()
-        self.vault_mgr = VaultManager()
+        self.vault_manager = VaultManager()
 
     def create_collection(self, collection_name):
         """ Create collection by name
 
         :v2 API:
         """
-        self.vault_mgr.get_vault(g.usr_did).check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_storage()
 
         self.mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
         return {'name': collection_name}
@@ -36,13 +36,13 @@ class Database:
 
         :v2 API:
         """
-        self.vault_mgr.get_vault(g.usr_did)
+        self.vault_manager.get_vault(g.usr_did)
 
         self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
         update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
 
     def __get_collection(self, collection_name, check_storage=False):
-        vault = self.vault_mgr.get_vault(g.usr_did)
+        vault = self.vault_manager.get_vault(g.usr_did)
         if check_storage:
             vault.check_storage()
 

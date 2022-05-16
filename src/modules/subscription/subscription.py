@@ -12,10 +12,11 @@ from flask import g
 
 from src.modules.auth.auth import Auth
 from src.modules.payment.order import OrderManager
+from src.modules.subscription.vault import VaultManager
 from src.utils.consts import IS_UPGRADED
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
-    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, APP_ID, VAULT_ACCESS_R, USER_DID
+    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, APP_ID, USER_DID
 from src.utils.did.did_wrapper import DID, DIDDocument
 from src.utils_v1.did_file_info import get_vault_path
 from src.utils_v1.payment.payment_config import PaymentConfig
@@ -29,10 +30,12 @@ from src.utils.singleton import Singleton
 
 class VaultSubscription(metaclass=Singleton):
     def __init__(self):
-        self.order_manager = OrderManager()
         self.auth = Auth()
+        self.order_manager = OrderManager()
+        self.vault_manager = VaultManager()
 
     def subscribe(self):
+        """ :v2 API: """
         self.get_checked_vault(g.usr_did, is_not_exist_raise=False)
         return self.__get_vault_info(self.create_vault(g.usr_did, self.get_price_plan('vault', 'Free')))
 
@@ -70,6 +73,7 @@ class VaultSubscription(metaclass=Singleton):
         }
 
     def unsubscribe(self):
+        """ :v2 API: """
         doc = self.get_checked_vault(g.usr_did)
         logging.debug(f'start remove the vault of the user {g.usr_did}, _id, {str(doc["_id"])}')
         delete_user_vault_data(g.usr_did)
@@ -86,11 +90,12 @@ class VaultSubscription(metaclass=Singleton):
         raise NotImplementedException()
 
     def get_info(self):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
-        doc = self.get_checked_vault(g.usr_did)
+        """ :v2 API: """
+        doc = self.vault_manager.get_vault(g.usr_did).doc
         return self.__get_vault_info(doc)
 
     def get_app_stats(self):
+        """ :v2 API: """
         apps = cli.get_all_user_apps(user_did=g.usr_did, current_item={USER_DID: g.usr_did, APP_ID: g.app_did})
         results = list(filter(lambda b: b is not None, map(lambda a: self.get_app_detail(a), apps)))
         if not results:
@@ -162,25 +167,6 @@ class VaultSubscription(metaclass=Singleton):
         if throw_exception and not is_not_exist_raise and doc:
             raise AlreadyExistsException(msg='The vault already exists.')
         return doc
-
-    def upgrade_vault_plan(self, user_did, vault, pricing_name):
-        remain_days = 0
-        now = datetime.utcnow().timestamp()  # seconds in UTC
-        plan = self.get_price_plan('vault', pricing_name)
-        if vault[VAULT_SERVICE_END_TIME] != -1:
-            cur_plan = self.get_price_plan('vault', vault[VAULT_SERVICE_PRICING_USING])
-            remain_days = self._get_remain_days(cur_plan, vault[VAULT_SERVICE_END_TIME], now, plan)
-
-        end_time = -1 if plan['serviceDays'] == -1 else now + (plan['serviceDays'] + remain_days) * 24 * 60 * 60
-        col_filter = {VAULT_SERVICE_DID: user_did}
-        update = {VAULT_SERVICE_PRICING_USING: pricing_name,
-                  VAULT_SERVICE_MAX_STORAGE: int(plan["maxStorage"]) * 1024 * 1024,
-                  VAULT_SERVICE_START_TIME: now,
-                  VAULT_SERVICE_END_TIME: end_time,
-                  VAULT_SERVICE_MODIFY_TIME: now,
-                  VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING}
-
-        cli.update_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, col_filter, {"$set": update})
 
     def _get_remain_days(self, cur_plan, cur_end_timestamp, now_timestamp, plan):
         if cur_plan['amount'] < 0.01 or cur_plan['serviceDays'] == -1 or cur_end_timestamp == -1:

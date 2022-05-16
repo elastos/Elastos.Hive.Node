@@ -3,13 +3,13 @@ from datetime import datetime
 
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_STATE, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_PRICING_USING, \
-    VAULT_ACCESS_WR, USER_DID, APP_ID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, \
-    VAULT_SERVICE_MODIFY_TIME, VAULT_ACCESS_DEL
+    USER_DID, APP_ID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, \
+    VAULT_SERVICE_MODIFY_TIME
 
 from src.utils_v1.did_file_info import get_dir_size, get_vault_path
 from src.utils_v1.did_info import get_all_did_info_by_did
 from src.utils_v1.did_mongo_db_resource import delete_mongo_database, get_mongo_database_size, create_db_client
-from src.utils_v1.error_code import NOT_FOUND, LOCKED, NOT_ENOUGH_SPACE, SUCCESS, METHOD_NOT_ALLOWED
+from src.utils_v1.error_code import SUCCESS, METHOD_NOT_ALLOWED
 from src.utils_v1.payment.payment_config import PaymentConfig
 from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_service
 
@@ -113,27 +113,6 @@ def get_vault_service(did):
     return service
 
 
-def can_access_vault(did, access_vault):
-    info = get_vault_service(did)
-    if not info:
-        return NOT_FOUND, "vault does not exist."
-
-    if access_vault == VAULT_ACCESS_WR:
-        if (VAULT_SERVICE_STATE in info) and (info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE):
-            return LOCKED, "vault have been freeze, can not write"
-        elif not __less_than_max_storage(did):
-            return NOT_ENOUGH_SPACE, "not enough storage space"
-        else:
-            return SUCCESS, None
-    elif access_vault == VAULT_ACCESS_DEL:
-        if (VAULT_SERVICE_STATE in info) and (info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE):
-            return LOCKED, "vault have been freeze, can not write"
-        else:
-            return SUCCESS, None
-    else:
-        return SUCCESS, None
-
-
 def can_access_backup(did):
     info = get_vault_backup_service(did)
     if not info:
@@ -165,7 +144,7 @@ def proc_expire_vault_job():
         if service[VAULT_SERVICE_END_TIME] == -1:
             continue
         elif now > service[VAULT_SERVICE_END_TIME]:
-            free_info = PaymentConfig.get_free_vault_info()
+            free_info = PaymentConfig.get_free_vault_plan()
             query_id = {"_id": service["_id"]}
             value = {"$set": {VAULT_SERVICE_PRICING_USING: VAULT_SERVICE_FREE,
                               VAULT_SERVICE_MAX_STORAGE: free_info["maxStorage"],

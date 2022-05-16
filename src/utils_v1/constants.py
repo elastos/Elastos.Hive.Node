@@ -38,7 +38,8 @@ VAULT_ORDER_CREATE_TIME = "creat_time"
 VAULT_ORDER_PAY_TIME = "pay_time"
 VAULT_ORDER_MODIFY_TIME = "modify_time"
 
-VAULT_SERVICE_COL = "vault_service"
+# for vault collection
+VAULT_SERVICE_COL = "vault_service"  # collection name
 VAULT_SERVICE_DID = "did"  # compatible with v1
 VAULT_SERVICE_MAX_STORAGE = "max_storage"
 VAULT_SERVICE_FILE_USE_STORAGE = "file_use_storage"
@@ -106,12 +107,6 @@ SUB_MESSAGE_DATA = "message_data"
 SUB_MESSAGE_TIME = "message_time"
 SUB_MESSAGE_MODIFY_TIME = "modify_time"
 # pubsub end
-
-# other
-VAULT_ACCESS_WR = "vault_write_read"
-VAULT_ACCESS_R = "vault_read"
-VAULT_ACCESS_DEL = "vault_delete"
-
 
 VAULT_STORAGE_DB = "vault_db"
 VAULT_STORAGE_FILE = "vault_file"

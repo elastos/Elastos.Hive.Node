@@ -108,7 +108,7 @@ def proc_expire_vault_backup_job():
         if service[VAULT_BACKUP_SERVICE_END_TIME] == -1:
             continue
         elif now > service[VAULT_BACKUP_SERVICE_END_TIME]:
-            free_info = PaymentConfig.get_free_vault_info()
+            free_info = PaymentConfig.get_free_vault_plan()
             query_id = {"_id": service["_id"]}
             value = {"$set": {VAULT_BACKUP_SERVICE_USING: VAULT_BACKUP_SERVICE_FREE_STATE,
                               VAULT_BACKUP_SERVICE_MAX_STORAGE: free_info["maxStorage"],

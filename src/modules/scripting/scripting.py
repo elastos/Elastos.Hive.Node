@@ -16,7 +16,7 @@ from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTI
     SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_SCRIPT_COLLECTION, \
-    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL
+    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from src.utils_v1.did_file_info import query_upload_get_filepath, query_hash
 from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size, \
     populate_find_options_from_body, populate_options_insert_one, populate_options_update_one
@@ -265,8 +265,10 @@ class Executable:
         populate_file_body(self.body, self.get_params())
         return self.body
 
-    def _create_transaction(self, permission, action_type):
-        cli.check_vault_access(self.get_target_did(), permission)
+    def _create_transaction(self, action_type):
+        vault = self.vault_manager.get_vault(self.get_target_did())
+        if action_type == 'upload':
+            vault.check_storage()
 
         body = self.get_populated_file_body()
         anonymous_url = ''
@@ -427,7 +429,7 @@ class FileUploadExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        return self._create_transaction(VAULT_ACCESS_WR, 'upload')
+        return self._create_transaction('upload')
 
 
 class FileDownloadExecutable(Executable):
@@ -435,7 +437,7 @@ class FileDownloadExecutable(Executable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        return self._create_transaction(VAULT_ACCESS_R, 'download')
+        return self._create_transaction('download')
 
 
 class FilePropertiesExecutable(Executable):
@@ -556,9 +558,10 @@ class Scripting:
         self.files = None
         self.is_ipfs = is_ipfs
         self.ipfs_files = IpfsFiles()
+        self.vault_manager = VaultManager()
 
     def set_script(self, script_name):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_WR)
+        self.vault_manager.get_vault(g.usr_did).check_storage()
 
         json_data = request.get_json(force=True, silent=True)
         Script.validate_script_data(json_data)
@@ -597,7 +600,7 @@ class Scripting:
         }
 
     def delete_script(self, script_name):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_DEL)
+        self.vault_manager.get_vault(g.usr_did)
 
         col = cli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
 

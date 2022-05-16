@@ -29,6 +29,7 @@ from flask import g
 
 from src.modules.auth.auth import Auth
 from src.modules.ipfs.ipfs_backup_executor import BackupExecutor, RestoreExecutor
+from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_INPROGRESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
@@ -40,7 +41,7 @@ from src.utils.file_manager import fm
 from src.utils.http_client import HttpClient
 from src.utils.http_exception import BadRequestException, InsufficientStorageException, HiveException
 from src.utils_v1.common import gene_temp_file_name
-from src.utils_v1.constants import VAULT_ACCESS_R, DID_INFO_DB_NAME
+from src.utils_v1.constants import DID_INFO_DB_NAME
 from src.utils_v1.did_mongo_db_resource import dump_mongodb_to_full_path, restore_mongodb_from_full_path
 
 
@@ -48,9 +49,11 @@ class IpfsBackupClient:
     def __init__(self):
         self.auth = Auth()
         self.http = HttpClient()
+        self.vault_manager = VaultManager()
 
     def get_state(self):
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did)
         return self.__get_remote_backup_state(g.usr_did)
 
     def backup(self, credential, is_force):
@@ -63,8 +66,10 @@ class IpfsBackupClient:
             --- send this CID value to remote backup hive node;
             --- remote backup hive node will synchronize valut data from IPFS network to
                 its local IPFS node via the root CID.
+
+        :v2 API:
         """
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        self.vault_manager.get_vault(g.usr_did)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
             self.__check_remote_backup_in_progress(g.usr_did)
@@ -80,8 +85,10 @@ class IpfsBackupClient:
             --- Get a root CID from the backup node;
             --- Synhorize the vault data from local IPFS node (but currently from Gatway node)
                 via root CID
+
+        :v2 API:
         """
-        cli.check_vault_access(g.usr_did, VAULT_ACCESS_R)
+        self.vault_manager.get_vault(g.usr_did)
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
             self.__check_remote_backup_in_progress(g.usr_did)
@@ -95,7 +102,7 @@ class IpfsBackupClient:
 
     def __get_remote_backup_state(self, user_did):
         state, result, msg = BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, ''
-        req = self.get_request(user_did)
+        req = self.__get_request(user_did)
         if req:
             state = req.get(BACKUP_REQUEST_ACTION)
             result = req.get(BACKUP_REQUEST_STATE)
@@ -120,7 +127,7 @@ class IpfsBackupClient:
             'message': msg if msg else '',
         }
 
-    def get_request(self, user_did):
+    def __get_request(self, user_did):
         col_filter = {USR_DID: user_did,
                       BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE}
         return cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, col_filter,
@@ -132,12 +139,12 @@ class IpfsBackupClient:
         target_host = credential_info['targetHost']
         access_token = self.__get_access_token_from_backup_server(target_host, credential)
         target_host, target_did = credential_info['targetHost'], credential_info['targetDID']
-        req = self.get_request(user_did)
+        req = self.__get_request(user_did)
         if not req:
-            self.insert_request(user_did, target_host, target_did, access_token, is_restore=is_restore)
+            self.__insert_request(user_did, target_host, target_did, access_token, is_restore=is_restore)
         else:
-            self.update_request(user_did, target_host, target_did, access_token, req, is_restore=is_restore)
-        return self.get_request(user_did)
+            self.__update_request(user_did, target_host, target_did, access_token, req, is_restore=is_restore)
+        return self.__get_request(user_did)
 
     def __get_access_token_from_backup_server(self, target_host, credential):
         try:
@@ -147,7 +154,7 @@ class IpfsBackupClient:
         except Exception as e:
             raise BadRequestException(msg=f'Failed to get the token from the backup server: {str(e)}')
 
-    def insert_request(self, user_did, target_host, target_did, access_token, is_restore=False):
+    def __insert_request(self, user_did, target_host, target_did, access_token, is_restore=False):
         new_doc = {
             USR_DID: user_did,
             BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE,
@@ -160,7 +167,7 @@ class IpfsBackupClient:
         }
         cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, new_doc, create_on_absence=True)
 
-    def update_request(self, user_did, target_host, target_did, access_token, req, is_restore=False):
+    def __update_request(self, user_did, target_host, target_did, access_token, req, is_restore=False):
         # if request.args.get('is_multi') != 'True':
         #     # INFO: Use url parameter 'is_multi' to skip this check.
         #     cur_target_host = req.get(BACKUP_REQUEST_TARGET_HOST)
@@ -236,7 +243,7 @@ class IpfsBackupClient:
                 'size': size,
                 'is_force': is_force}
 
-        req = self.get_request(user_did)
+        req = self.__get_request(user_did)
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_BACKUP,
                        req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
 
@@ -247,7 +254,7 @@ class IpfsBackupClient:
         - get a json document by the root cid, where the json document contains a list of CIDs
           to the files and database data on IPFS network.
         """
-        req = self.get_request(user_did)
+        req = self.__get_request(user_did)
         data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])
         vault_metadata = fm.ipfs_download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
@@ -273,7 +280,7 @@ class IpfsBackupClient:
             logging.info(f'[IpfsBackupClient] Success to restore the dump file for database {d["name"]}.')
 
     def retry_backup_request(self, user_did):
-        req = self.get_request(user_did)
+        req = self.__get_request(user_did)
         if not req or req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
             return
         logging.info(f"[IpfsBackupClient] Found uncompleted request({req.get(USR_DID)}), retry.")

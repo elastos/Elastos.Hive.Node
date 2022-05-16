@@ -4,6 +4,7 @@
 The entrance for payment module.
 """
 import traceback
+import typing
 from datetime import datetime
 
 from bson import ObjectId
@@ -124,7 +125,7 @@ class Payment(metaclass=Singleton):
 
         return order
 
-    def get_orders(self, subscription: str, order_id: int):
+    def get_orders(self, subscription: typing.Optional[str], order_id: typing.Optional[int]):
         """ :v2 API: """
         col_filter = {}
         if subscription:
@@ -143,7 +144,7 @@ class Payment(metaclass=Singleton):
                                               COL_ORDERS_STATUS: o[COL_ORDERS_STATUS],
                                               CREATE_TIME: int(o[CREATE_TIME])}, orders))}
 
-    def get_receipt_info(self, order_id: int):
+    def get_receipts(self, order_id: typing.Optional[int]):
         """ :v2 API: """
         order = self.__check_param_order_id(g.usr_did, order_id)
         receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,

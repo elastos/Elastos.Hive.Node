@@ -11,6 +11,7 @@ import typing as t
 from flask import g
 
 from src.modules.auth.auth import Auth
+from src.modules.payment.order import OrderManager
 from src.utils.consts import IS_UPGRADED
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
@@ -19,7 +20,6 @@ from src.utils.did.did_wrapper import DID, DIDDocument
 from src.utils_v1.did_file_info import get_vault_path
 from src.utils_v1.payment.payment_config import PaymentConfig
 from src.utils_v1.payment.vault_service_manage import delete_user_vault_data
-from src.modules.payment.payment import Payment
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
@@ -29,7 +29,7 @@ from src.utils.singleton import Singleton
 
 class VaultSubscription(metaclass=Singleton):
     def __init__(self):
-        self.payment = Payment()
+        self.order_manager = OrderManager()
         self.auth = Auth()
 
     def subscribe(self):
@@ -76,7 +76,7 @@ class VaultSubscription(metaclass=Singleton):
         apps = cli.get_all_user_apps(user_did=g.usr_did)
         for app in apps:
             cli.remove_database(g.usr_did, app[APP_ID])
-        self.payment.archive_orders(g.usr_did)
+        self.order_manager.archive_orders_receipts(g.usr_did)
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: g.usr_did}, is_check_exist=False)
 
     def activate(self):

@@ -7,7 +7,6 @@ import traceback
 import typing
 from datetime import datetime
 
-from bson import ObjectId
 from flask import g
 
 from src import hive_setting
@@ -15,15 +14,8 @@ from src.modules.payment.order import OrderManager, Order
 from src.modules.payment.order_contract import OrderContract
 from src.modules.subscription.backup import BackupManager
 from src.modules.subscription.vault import VaultManager
-from src.utils_v1.constants import DID_INFO_DB_NAME
 from src.modules.auth.auth import Auth
-from src.utils.consts import COL_ORDERS, COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, \
-    COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, COL_ORDERS_PROOF, CREATE_TIME, MODIFY_TIME, \
-    COL_RECEIPTS_ID, COL_RECEIPTS_ORDER_ID, COL_RECEIPTS_TRANSACTION_ID, COL_RECEIPTS_PAID_DID, COL_RECEIPTS, \
-    COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_ORDERS_STATUS_ARCHIVE, USR_DID
-from src.utils.db_client import cli
-from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, \
-    ReceiptNotFoundException
+from src.utils.http_exception import InvalidParameterException, BadRequestException
 from src.utils.resolver import ElaResolver
 from src.utils.singleton import Singleton
 from src.utils_v1.payment.payment_config import PaymentConfig
@@ -72,7 +64,7 @@ class Payment(metaclass=Singleton):
 
         # create order with proof
         order = self.order_manager.insert_order(g.usr_did, subscription, plan)
-        proof = self.auth.create_proof_for_order(g.usr_did, *order.get_proof_details())
+        proof = self.auth.create_proof_for_order(g.usr_did, order.get_proof_details(), order.get_expire_time())
         self.order_manager.update_proof(order, proof)
 
         return {
@@ -125,73 +117,16 @@ class Payment(metaclass=Singleton):
 
         return order
 
-    def get_orders(self, subscription: typing.Optional[str], order_id: typing.Optional[int]):
+    def get_orders(self, subscription: typing.Optional[str], contract_order_id: typing.Optional[int]):
         """ :v2 API: """
-        col_filter = {}
-        if subscription:
-            col_filter[COL_ORDERS_SUBSCRIPTION] = subscription
-        if order_id:
-            col_filter[COL_RECEIPTS_ORDER_ID] = order_id
-        orders = cli.find_many_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, throw_exception=False)
-        if not orders:
-            raise OrderNotFoundException(msg='Can not get the matched orders.')
-        return {'orders': list(map(lambda o: {'order_id': str(o['_id']),
-                                              COL_ORDERS_SUBSCRIPTION: o[COL_ORDERS_SUBSCRIPTION],
-                                              COL_ORDERS_PRICING_NAME: o[COL_ORDERS_PRICING_NAME],
-                                              COL_ORDERS_ELA_AMOUNT: o[COL_ORDERS_ELA_AMOUNT],
-                                              COL_ORDERS_ELA_ADDRESS: o[COL_ORDERS_ELA_ADDRESS],
-                                              COL_ORDERS_PROOF: o[COL_ORDERS_PROOF],
-                                              COL_ORDERS_STATUS: o[COL_ORDERS_STATUS],
-                                              CREATE_TIME: int(o[CREATE_TIME])}, orders))}
-
-    def get_receipts(self, order_id: typing.Optional[int]):
-        """ :v2 API: """
-        order = self.__check_param_order_id(g.usr_did, order_id)
-        receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
-                                      {COL_RECEIPTS_ORDER_ID: order_id}, throw_exception=False)
-        if not receipt:
-            raise ReceiptNotFoundException(msg='Receipt can not be found by order_id.')
-        return self.__get_receipt_vo(order, receipt)
-
-    def __check_param_order_id(self, user_did, order_id, is_pay_order=False):
-        if not order_id:
-            raise InvalidParameterException(msg='Order id MUST be provided.')
-
-        col_filter = {'_id': ObjectId(order_id), USR_DID: user_did}
-        if is_pay_order:
-            col_filter[COL_ORDERS_STATUS] = COL_ORDERS_STATUS_NORMAL
-        order = cli.find_one_origin(DID_INFO_DB_NAME, COL_ORDERS, col_filter, throw_exception=False)
-        if not order:
-            raise InvalidParameterException(msg='Order id is invalid because of not finding the order.')
-
-        if is_pay_order:
-            receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
-                                          {COL_RECEIPTS_ORDER_ID: order_id}, throw_exception=False)
-            if receipt:
-                raise InvalidParameterException(msg='Order id is invalid because of existing the relating receipt.')
-
-        return order
-
-    def __get_receipt_vo(self, order, receipt):
+        orders = self.order_manager.get_orders(subscription, contract_order_id)
         return {
-            COL_RECEIPTS_ID: str(receipt['_id']),
-            COL_RECEIPTS_ORDER_ID: str(order['_id']),
-            COL_RECEIPTS_TRANSACTION_ID: receipt[COL_RECEIPTS_TRANSACTION_ID],
-            COL_ORDERS_PRICING_NAME: order[COL_ORDERS_PRICING_NAME],
-            COL_RECEIPTS_PAID_DID: receipt[COL_RECEIPTS_PAID_DID],
-            COL_ORDERS_ELA_AMOUNT: order[COL_ORDERS_ELA_AMOUNT],
-            COL_ORDERS_PROOF: order[COL_ORDERS_PROOF]
+            'orders': [o.to_get_orders() for o in orders]
         }
 
-    def archive_orders(self, user_did):
-        """ for unsubscribe the vault """
-        update = {
-            COL_ORDERS_STATUS: COL_ORDERS_STATUS_ARCHIVE,
-            MODIFY_TIME: datetime.utcnow().timestamp(),
+    def get_receipts(self, contract_order_id: typing.Optional[int]):
+        """ :v2 API: """
+        receipts = self.order_manager.get_receipts(contract_order_id)
+        return {
+            'receipts': [o.to_get_receipts() for o in receipts]
         }
-        if cli.is_col_exists(DID_INFO_DB_NAME, COL_ORDERS):
-            cli.update_one_origin(DID_INFO_DB_NAME, COL_ORDERS, {USR_DID: user_did}, {'$set': update},
-                                  is_many=True, is_extra=True)
-        if cli.is_col_exists(DID_INFO_DB_NAME, COL_RECEIPTS):
-            cli.update_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {USR_DID: user_did}, {'$set': update},
-                                  is_many=True, is_extra=True)

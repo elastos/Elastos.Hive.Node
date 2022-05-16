@@ -285,13 +285,11 @@ class Orders(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        subscription, msg = rqargs.get_str('subscription')
-        if msg or subscription not in ['vault', 'backup']:
+        subscription, msg = rqargs.get_str('subscription', None)
+        if subscription is not None and subscription not in ['vault', 'backup']:
             raise InvalidParameterException(msg='Invalid parameter "subscription"')
 
-        order_id, msg = rqargs.get_int('order_id')
-        if msg:
-            raise InvalidParameterException(msg=msg)
+        order_id, msg = rqargs.get_int('order_id', None)
 
         return self.payment.get_orders(subscription, order_id)
 
@@ -350,8 +348,8 @@ class Receipts(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        order_id, msg = rqargs.get_int('order_id')
+        order_id, msg = rqargs.get_int('order_id', None)
         if msg:
             raise InvalidParameterException(msg=msg)
 
-        return self.payment.get_receipt_info(order_id)
+        return self.payment.get_receipts(order_id)

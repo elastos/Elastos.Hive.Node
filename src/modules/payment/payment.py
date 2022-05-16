@@ -47,6 +47,7 @@ class Payment(metaclass=Singleton):
         return self.vault_subscription
 
     def get_version(self):
+        """ :v2 API: """
         return {'version': self._get_vault_subscription().get_price_plans_version()}
 
     def place_order(self, subscription: str, pricing_name: str):
@@ -123,11 +124,8 @@ class Payment(metaclass=Singleton):
 
         return order
 
-    def get_orders(self, subscription, order_id):
+    def get_orders(self, subscription: str, order_id: int):
         """ :v2 API: """
-        if subscription not in ('vault', 'backup'):
-            raise InvalidParameterException(msg=f'Invalid subscription: {subscription}.')
-
         col_filter = {}
         if subscription:
             col_filter[COL_ORDERS_SUBSCRIPTION] = subscription
@@ -145,7 +143,8 @@ class Payment(metaclass=Singleton):
                                               COL_ORDERS_STATUS: o[COL_ORDERS_STATUS],
                                               CREATE_TIME: int(o[CREATE_TIME])}, orders))}
 
-    def get_receipt_info(self, order_id):
+    def get_receipt_info(self, order_id: int):
+        """ :v2 API: """
         order = self.__check_param_order_id(g.usr_did, order_id)
         receipt = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS,
                                       {COL_RECEIPTS_ORDER_ID: order_id}, throw_exception=False)

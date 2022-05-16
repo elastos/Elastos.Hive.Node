@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 
 from src.settings import hive_setting
@@ -75,3 +76,24 @@ class PaymentConfig:
                 return backup_plan
 
         return None
+
+    @staticmethod
+    def get_current_plan_remain_days(cur_plan: dict, cur_end_timestamp, dst_plan: dict):
+        """ Get the remaining days if the plan from 'cur_plan' to 'dst_plan' """
+        now = datetime.utcnow().timestamp()
+
+        # current end timestamp expired
+        if cur_end_timestamp <= now:
+            return 0
+
+        # check if the current plan is free
+        if cur_plan['amount'] < 0.01 or cur_plan['serviceDays'] == -1 or cur_end_timestamp == -1:
+            return 0
+
+        # destination plan is also free
+        if dst_plan['amount'] < 0.01 or dst_plan['serviceDays'] == -1:
+            return 0
+
+        # other, take current plan as destination one by the ratio of amounts.
+        days = (cur_end_timestamp - now) / (24 * 60 * 60)
+        return days * cur_plan['amount'] / dst_plan['amount']

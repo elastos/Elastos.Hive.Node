@@ -1,13 +1,17 @@
 import hashlib
 import logging
+import typing
+from datetime import datetime
 
+from bson import ObjectId
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from src import hive_setting
 from src.utils_v1.constants import DID_INFO_DB_NAME
-from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException
-from src.utils_v1.did_mongo_db_resource import convert_oid
+from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException, BadRequestException
+
+_T = typing.TypeVar('_T', dict, list, tuple)
 
 
 class MongodbCollection:
@@ -16,9 +20,70 @@ class MongodbCollection:
     def __init__(self, col):
         self.col = col
 
+    def insert_one(self, doc, contains_extra=True, **kwargs):
+        if contains_extra:
+            now_timestamp = datetime.utcnow().timestamp()
+            doc['created'] = now_timestamp
+            doc['modified'] = now_timestamp
+
+        # kwargs are the options
+        result = self.col.insert_one(MongodbCollection.convert_oid(doc), **kwargs)
+        if not result['inserted_id']:
+            raise BadRequestException(msg=f'Failed to insert the doc: {str(doc)}.')
+
+        return {
+            "acknowledged": result.acknowledged,
+            "inserted_id": ObjectId(str(result.inserted_id))
+        }
+
+    def update_one(self, filter_, update, contains_extra=True, **kwargs):
+        if contains_extra:
+            now_timestamp = datetime.utcnow().timestamp()
+            if '$setOnInsert' in update:
+                update["$setOnInsert"]['created'] = now_timestamp
+            else:
+                update["$setOnInsert"] = {"created": now_timestamp}
+            if "$set" in update:
+                update["$set"]["modified"] = now_timestamp
+
+        # kwargs are the options
+        result = self.col.update_one(MongodbCollection.convert_oid(filter_),
+                                     MongodbCollection.convert_oid(update), **kwargs)
+        return {
+            "acknowledged": result.acknowledged,
+            "matched_count": result.matched_count,
+            "modified_count": result.modified_count,
+            "upserted_id": ObjectId(str(result.upserted_id)) if result.upserted_id else None,
+        }
+
     def find_one(self, filter_: dict, **kwargs) -> dict:
-        # kwargs are the options of 'find'.
-        return self.col.find_one(convert_oid(filter_) if filter_ else None, **kwargs)
+        # kwargs are the options
+        return self.col.find_one(MongodbCollection.convert_oid(filter_) if filter_ else None, **kwargs)
+
+    @staticmethod
+    def convert_oid(value: _T):
+        """ try to convert the following dict recursively.
+
+            { "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"} }
+
+        to:
+
+            { "group_id": ObjectId("5f497bb83bd36ab235d82e6a") }
+        """
+        if type(value) in (list, tuple):
+            for o in value:
+                if isinstance(o, dict) or type(o) in (list, tuple):
+                    MongodbCollection.convert_oid(o)
+        elif isinstance(value, dict):
+            for k, v in value.copy().items():
+                if isinstance(v, dict):
+                    if '$oid' in v:
+                        value[k] = ObjectId(v['$oid'])
+                    else:
+                        value[k] = MongodbCollection.convert_oid(v)
+                elif type(v) in (list, tuple):
+                    value[k] = MongodbCollection.convert_oid(v)
+        return value
 
 
 class MongodbClient:

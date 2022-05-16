@@ -7,9 +7,55 @@ Testing file for the database module.
 import unittest
 
 import pymongo
+from bson import ObjectId
 
+from src.modules.database.mongodb_client import MongodbCollection
 from tests.utils.http_client import HttpClient
 from tests import init_test
+
+
+class MongodbClientTestCase(unittest.TestCase):
+    def __init__(self, method_name='runTest'):
+        super().__init__(method_name)
+
+    def test01_convert_oid(self):
+        name, gid = 'Fred', '5f497bb83bd36ab235d82e6a'
+        gid_dict = {'$oid': gid}
+        doc = {
+            'name': name,
+            'gid': gid_dict,
+            'items': [{'name': name, 'gid': gid_dict}],
+            'items2': ({'name': name, 'gid': gid_dict}, ),
+            'items3': {
+                'name': name,
+                'gid': gid_dict,
+                'items4': {'name': name, 'gid': gid_dict},
+                'items5': {'name': name, 'gid': gid_dict, 'items6': {
+                    'name': name,
+                    'gid': gid_dict
+                }}
+            },
+        }
+        doc2 = MongodbCollection.convert_oid(doc)
+
+        def assert_gid_dict(value):
+            self.assertEqual(type(value), ObjectId)
+            self.assertEqual(str(value), gid)
+
+        self.assertEqual(doc2['name'], name)
+        assert_gid_dict(doc2['gid'])
+        self.assertEqual(doc2['items'][0]['name'], name)
+        assert_gid_dict(doc2['items'][0]['gid'])
+        self.assertEqual(doc2['items2'][0]['name'], name)
+        assert_gid_dict(doc2['items2'][0]['gid'])
+        self.assertEqual(doc2['items3']['name'], name)
+        assert_gid_dict(doc2['items3']['gid'])
+        self.assertEqual(doc2['items3']['items4']['name'], name)
+        assert_gid_dict(doc2['items3']['items4']['gid'])
+        self.assertEqual(doc2['items3']['items5']['name'], name)
+        assert_gid_dict(doc2['items3']['items5']['gid'])
+        self.assertEqual(doc2['items3']['items5']['items6']['name'], name)
+        assert_gid_dict(doc2['items3']['items5']['items6']['gid'])
 
 
 class DatabaseTestCase(unittest.TestCase):

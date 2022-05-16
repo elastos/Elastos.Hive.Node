@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import inspect
 import json
+import typing
 from datetime import datetime
 
 from src.utils.did.eladid import ffi, lib
@@ -48,6 +49,12 @@ class JWT:
             raise ElaDIDException(ElaError.get('JWT.parse'))
         return JWT(jwt)
 
+    def get_subject(self):
+        subject = lib.JWT_GetSubject(self.jwt)
+        if not subject:
+            raise ElaDIDException(ElaError.get_from_method())
+        return ffi.string(subject).decode()
+
     def get_claim_as_json(self, claim_key) -> str:
         claim_value = lib.JWT_GetClaimAsJson(self.jwt, claim_key.encode())
         if not claim_value:
@@ -83,14 +90,15 @@ class JWTBuilder:
     def __init__(self, store, builder):
         self.store, self.builder = store, builder
 
-    def create_token(self, subject: str, audience_did_str: str, expire: int, claim_key: str, claim_value: any, claim_json: bool = True) -> str:
+    def create_token(self, subject: str, audience_did_str: str, expire: typing.Optional[int], claim_key: str, claim_value: any, claim_json: bool = True) -> str:
         ticks, sign_key = int(datetime.now().timestamp()), ffi.NULL
         lib.JWTBuilder_SetHeader(self.builder, "type".encode(), "JWT".encode())
         lib.JWTBuilder_SetHeader(self.builder, "version".encode(), "1.0".encode())
         lib.JWTBuilder_SetSubject(self.builder, subject.encode())
         lib.JWTBuilder_SetAudience(self.builder, audience_did_str.encode())
         lib.JWTBuilder_SetIssuedAt(self.builder, ticks)
-        lib.JWTBuilder_SetExpiration(self.builder, ticks + expire)
+        if expire is not None:
+            lib.JWTBuilder_SetExpiration(self.builder, ticks + expire)
         lib.JWTBuilder_SetNotBefore(self.builder, ticks)
         if claim_json:
             lib.JWTBuilder_SetClaimWithJson(self.builder, claim_key.encode(), claim_value.encode())

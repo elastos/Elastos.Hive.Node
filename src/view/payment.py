@@ -3,12 +3,11 @@
 """
 The view of payment module.
 """
-from flask import request
 from flask_restful import Resource
 
 from src.modules.payment.payment import Payment
 from src.utils.http_exception import InvalidParameterException
-from src.utils.http_request import params
+from src.utils.http_request import params, rqargs
 
 
 class Version(Resource):
@@ -135,7 +134,7 @@ class PlaceOrder(Resource):
 
         subscription, msg = params.get_str('subscription')
         if msg or subscription not in ['vault', 'backup']:
-            raise InvalidParameterException(msg=msg)
+            raise InvalidParameterException(msg='Invalid parameter "subscription"')
 
         pricing_name, msg = params.get_str('pricing_name')
         if msg:
@@ -254,15 +253,16 @@ class Orders(Resource):
 
             {
                "orders":[
-                  {
-                     "order_id": "5f910273dc81b7a0b3f585fc",
-                     "subscription": "vault",
-                     "pricing_name": "Rookie",
-                     "ela_amount": "5",
-                     "ela_address": "912ec803b2ce49e4a541068d495ab570",
-                     "proof": "d444f18dc350fb334c811d9c4b0dfdf63f67df47",
-                     "create_time": 1626217349
-                  }
+                   {
+                        "order_id": 1234,
+                        "subscription": "vault",
+                        "pricing_plan": "Rookie",
+                        "payment_amount": "5",  // ELA
+                        "create_time": 1600073834,
+                        "expiration_time": 1755161834,
+                        "receiving_address": "912ec803b2ce49e4a541068d49******",
+                        "proof": "<jwt str>"
+                   }
                ]
             }
 
@@ -285,11 +285,18 @@ class Orders(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        subscription, order_id = request.args.get('subscription'), request.args.get('order_id')
+        subscription, msg = rqargs.get_str('subscription')
+        if msg or subscription not in ['vault', 'backup']:
+            raise InvalidParameterException(msg='Invalid parameter "subscription"')
+
+        order_id, msg = rqargs.get_int('order_id')
+        if msg:
+            raise InvalidParameterException(msg=msg)
+
         return self.payment.get_orders(subscription, order_id)
 
 
-class ReceiptInfo(Resource):
+class Receipts(Resource):
     def __init__(self):
         self.payment = Payment()
 
@@ -313,13 +320,15 @@ class ReceiptInfo(Resource):
         .. code-block:: json
 
             {
-                "receipt_id": “8f0e7a8a0ebe84271e079889c9c9b8b3”,
-                "order_id": “912ec803b2ce49e4a541068d495ab570”,
-                "transaction_id": “a677abfcc88c8126deedd719202e5092”,
-                "pricing_name": "Rookie",
-                "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEHh3D8Vq”,
-                "ela_amount": “5”,
-                "proof": "d444f18dc350fb334c811d9c4b0dfdf63f67df47”
+                "receipt_id": “<ObjectId str>”,
+                "order_id": 1234,
+                "subscription": "vault",
+                "pricing_plan": "Rookie",
+                "payment_amount": "5",  // ELA
+                "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEH******”,
+                "create_time": 1600073834,
+                "receiving_address": "912ec803b2ce49e4a541068d49******",
+                "proof": "<jwt str>"
             }
 
         **Response Error**:
@@ -341,4 +350,8 @@ class ReceiptInfo(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        return self.payment.get_receipt_info(request.args.get('order_id'))
+        order_id, msg = rqargs.get_int('order_id')
+        if msg:
+            raise InvalidParameterException(msg=msg)
+
+        return self.payment.get_receipt_info(order_id)

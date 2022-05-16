@@ -64,7 +64,7 @@ class Order:
     def get_receipt_proof_details(self, receipt: Receipt):
         return {
             "receipt_id": str(receipt.get_id()),
-            "order_id": str(self.doc['_id']),
+            "order_id": self.doc[COL_ORDERS_CONTRACT_ORDER_ID],
             "subscription": self.doc[COL_ORDERS_SUBSCRIPTION],
             "pricing_plan": self.doc[COL_ORDERS_PRICING_NAME],
             "paying_did": self.doc[USR_DID],

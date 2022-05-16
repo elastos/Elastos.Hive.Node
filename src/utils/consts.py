@@ -27,23 +27,24 @@ CID = 'cid'
 COUNT = 'count'
 VERSION = 'version'
 
+# for the order collection
 COL_ORDERS = 'vault_order'
 COL_ORDERS_SUBSCRIPTION = 'subscription'
 COL_ORDERS_PRICING_NAME = 'pricing_name'
 COL_ORDERS_ELA_AMOUNT = 'ela_amount'
 COL_ORDERS_ELA_ADDRESS = 'ela_address'
+COL_ORDERS_EXPIRE_TIME = 'expire_time'
+COL_ORDERS_CONTRACT_ORDER_ID = 'contract_order_id'
 COL_ORDERS_PROOF = 'proof'
 COL_ORDERS_STATUS = 'status'
-COL_ORDERS_CONTRACT_ORDER_ID = 'contract_order_id'
 
 COL_ORDERS_STATUS_NORMAL = 'normal'
 COL_ORDERS_STATUS_PAID = 'paid'
 COL_ORDERS_STATUS_ARCHIVE = 'archive'
 
+# for receipt, contains some fields of order collection
 COL_RECEIPTS = 'vault_receipt'
-COL_RECEIPTS_ID = 'receipt_id'
 COL_RECEIPTS_ORDER_ID = 'order_id'
-COL_RECEIPTS_TRANSACTION_ID = 'transaction_id'
 COL_RECEIPTS_PAID_DID = 'paid_did'
 
 COL_IPFS_FILES = 'ipfs_files'

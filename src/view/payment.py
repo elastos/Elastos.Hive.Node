@@ -252,18 +252,16 @@ class Orders(Resource):
         .. code-block:: json
 
             {
-               "orders":[
-                   {
-                        "order_id": 1234,
-                        "subscription": "vault",
-                        "pricing_plan": "Rookie",
-                        "payment_amount": "5",  // ELA
-                        "create_time": 1600073834,
-                        "expiration_time": 1755161834,
-                        "receiving_address": "912ec803b2ce49e4a541068d49******",
-                        "proof": "<jwt str>"
-                   }
-               ]
+               "orders": [{
+                    "order_id": 1234,
+                    "subscription": "vault",
+                    "pricing_plan": "Rookie",
+                    "payment_amount": "5",  // ELA
+                    "create_time": 1600073834,
+                    "expiration_time": 1755161834,
+                    "receiving_address": "912ec803b2ce49e4a541068d49******",
+                    "proof": "<jwt str>"
+                }]
             }
 
         **Response Error**:
@@ -318,15 +316,17 @@ class Receipts(Resource):
         .. code-block:: json
 
             {
-                "receipt_id": “<ObjectId str>”,
-                "order_id": 1234,
-                "subscription": "vault",
-                "pricing_plan": "Rookie",
-                "payment_amount": "5",  // ELA
-                "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEH******”,
-                "create_time": 1600073834,
-                "receiving_address": "912ec803b2ce49e4a541068d49******",
-                "proof": "<jwt str>"
+                "receipts": [{
+                    "receipt_id": “<ObjectId str>”,
+                    "order_id": 1234,
+                    "subscription": "vault",
+                    "pricing_plan": "Rookie",
+                    "payment_amount": "5",  // ELA
+                    "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEH******”,
+                    "create_time": 1600073834,
+                    "receiving_address": "912ec803b2ce49e4a541068d49******",
+                    "proof": "<jwt str>"
+                }]
             }
 
         **Response Error**:

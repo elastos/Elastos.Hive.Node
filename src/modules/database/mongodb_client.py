@@ -60,6 +60,11 @@ class MongodbCollection:
         # kwargs are the options
         return self.col.find_one(MongodbCollection.convert_oid(filter_) if filter_ else None, **kwargs)
 
+    def find_many(self, filter_: dict, **kwargs) -> list:
+        # kwargs are the options
+        # BUGBUG: Getting all documents out maybe not well.
+        return list(self.col.find(MongodbCollection.convert_oid(filter_) if filter_ else None, **kwargs))
+
     @staticmethod
     def convert_oid(value: _T):
         """ try to convert the following dict recursively.

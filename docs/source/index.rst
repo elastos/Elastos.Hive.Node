@@ -22,7 +22,7 @@ Summary
     scripting.register_script, scripting.call_script, scripting.call_script_url,
     scripting.delete_script, scripting.upload_file, scripting.download_file,
     backup.state, backup.backup_restore, backup.server_promotion,
-    payment.version, payment.place_order, payment.pay_order, payment.orders, payment.receipt_info,
+    payment.version, payment.place_order, payment.settle_order, payment.orders, payment.receipt_info,
     node.version, node.commit_id, node.info,
     provider.vaults, provider.backups, provider.filled_orders
 
@@ -295,12 +295,12 @@ place order
   :undoc-static:
   :endpoints: payment.place_order
 
-pay order
----------
+settle order
+------------
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: payment.pay_order
+  :endpoints: payment.settle_order
 
 get orders
 ----------

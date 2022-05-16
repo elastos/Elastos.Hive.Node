@@ -34,6 +34,7 @@ COL_ORDERS_ELA_AMOUNT = 'ela_amount'
 COL_ORDERS_ELA_ADDRESS = 'ela_address'
 COL_ORDERS_PROOF = 'proof'
 COL_ORDERS_STATUS = 'status'
+COL_ORDERS_CONTRACT_ORDER_ID = 'contract_order_id'
 
 COL_ORDERS_STATUS_NORMAL = 'normal'
 COL_ORDERS_STATUS_PAID = 'paid'

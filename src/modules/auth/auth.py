@@ -219,30 +219,26 @@ class Auth(Entity, metaclass=Singleton):
         return body["token"]
 
     def create_proof_for_order(self, user_did, props: dict, exp: int):
-        return super().create_jwt_token('Hive Payment', user_did, exp, 'props', json.dumps(props))
+        """ Only for payment proof creation """
+        return super().create_jwt_token('Hive Payment', user_did, exp, 'order', json.dumps(props))
 
-    def create_order_proof(self, user_did, doc_id, amount=0, is_receipt=False):
-        exp = int(datetime.utcnow().timestamp()) + 7 * 24 * 3600 if not is_receipt else -1
-        props = {'receipt_id': doc_id, 'amount': amount} if is_receipt else {'order_id': doc_id}
-        return super().create_jwt_token('ORDER_PROOF', user_did, exp, 'props', json.dumps(props), claim_json=False)
+    def get_proof_info(self, proof, user_did):
+        """ Only for payment to parse not-empty proof and return info """
+        if not proof:
+            raise BadRequestException(msg=f"Invalid proof {proof} from contract.")
 
-    def verify_order_proof(self, proof, user_did, order_id):
         jwt = JWT.parse(proof)
-        issuer = jwt.get_issuer()
-        if issuer != super().get_did_string():
-            raise BadRequestException(msg=f'the issue of the proof not match: {issuer}')
 
-        audience = jwt.get_audience()
-        if audience != user_did:
-            raise BadRequestException(msg=f'the audience of the proof not match: {audience}')
+        if jwt.get_issuer() != self.get_did_string() \
+                or jwt.get_audience() != user_did \
+                or jwt.get_subject() != 'Hive Payment':
+            raise BadRequestException(msg=f"Invalid proof {proof} from contract: invalid issuer or audience or subject")
 
-        props = json.loads(jwt.get_claim('props'))
-        if props.get('order_id') != order_id:
-            raise BadRequestException(msg=f'the order_id of the proof not match: {props.get("order_id")}')
+        return json.loads(jwt.get_claim_as_json('order'))
 
-        expire, now = jwt.get_expiration(), int(datetime.now().timestamp())
-        if now > expire:
-            raise BadRequestException(msg=f'the proof is expired (valid for 7 days)')
+    def create_receipt_proof_for_order(self, user_did, props: dict):
+        """ Only for payment receipt proof creation """
+        return super().create_jwt_token('Hive Receipt', user_did, None, 'receipt', json.dumps(props))
 
     def get_ownership_presentation(self, credential: str):
         vc = Credential.from_json(credential)

@@ -22,7 +22,7 @@ class OrderContract:
         web3 = Web3(Web3.HTTPProvider(self.url))
         return web3.eth.contract(address=self.address, abi=self.abi)
 
-    def get_order(self, order_id) -> t.Optional[dict]:
+    def get_order(self, order_id: int) -> t.Optional[dict]:
         order = self.__get_contract().functions.getOrder(order_id).call()
         if not order:
             return None

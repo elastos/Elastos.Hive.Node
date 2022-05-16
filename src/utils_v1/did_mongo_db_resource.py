@@ -20,6 +20,14 @@ def create_db_client():
 
 
 def convert_oid(query, update=False):
+    """ for v2: to make the following convert
+
+        "group_id": {"$oid": "5f497bb83bd36ab235d82e6a"}
+
+    to:
+
+        "group_id": ObjectId("5f497bb83bd36ab235d82e6a")
+    """
     new_query = {}
     for key, value in query.items():
         new_query[key] = value

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
+import typing
 
 import base58
 
@@ -101,6 +102,6 @@ class Entity:
     def create_vp_token(self, vp_json, subject, hive_did: str, expire) -> str:
         return self.create_jwt_token(subject, hive_did, expire, 'presentation', vp_json)
 
-    def create_jwt_token(self, subject: str, audience_did_str: str, expire: int, claim_key: str, claim_value: any, claim_json: bool = True) -> str:
+    def create_jwt_token(self, subject: str, audience_did_str: str, expire: typing.Optional[int], claim_key: str, claim_value: any, claim_json: bool = True) -> str:
         builder: JWTBuilder = self.did_store.get_jwt_builder(self.doc)
         return builder.create_token(subject, audience_did_str, expire, claim_key, claim_value, claim_json=claim_json)

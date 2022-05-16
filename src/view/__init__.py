@@ -103,7 +103,7 @@ def init_app(app: Flask, api: Api):
         api.add_resource(payment.PlaceOrder, '/payment/order', endpoint='payment.place_order')
         api.add_resource(payment.SettleOrder, '/payment/order/<order_id>', endpoint='payment.settle_order')
         api.add_resource(payment.Orders, '/payment/order', endpoint='payment.orders')
-        api.add_resource(payment.ReceiptInfo, '/payment/receipt', endpoint='payment.receipt_info')
+        api.add_resource(payment.Receipts, '/payment/receipt', endpoint='payment.receipts')
 
     RetryIpfsBackupThread().start()
     scheduler_init(app)

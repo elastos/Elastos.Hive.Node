@@ -82,19 +82,6 @@ class DatabaseClient:
     def get_vault_service(self, user_did):
         return self.__get_connection()[DID_INFO_DB_NAME][VAULT_SERVICE_COL].find_one({VAULT_SERVICE_DID: user_did})
 
-    def check_vault_access(self, user_did, access_vault=None):
-        """
-        Check if the vault can be accessed by specific permission
-        """
-        info = self.get_vault_service(user_did)
-        if not info:
-            raise VaultNotFoundException()
-
-        # INFO: no need check permission.
-        # if (access_vault == VAULT_ACCESS_WR or access_vault == VAULT_ACCESS_DEL) \
-        #         and info[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_FREEZE:
-        #     raise ForbiddenException(msg="The vault can't be written.")
-
     def find_many(self, user_did, app_did, collection_name, col_filter, options=None, throw_exception=True):
         col = self.get_user_collection(user_did, app_did, collection_name)
         if not col:

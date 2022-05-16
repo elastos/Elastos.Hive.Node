@@ -46,6 +46,7 @@ COL_ORDERS_STATUS_ARCHIVE = 'archive'
 COL_RECEIPTS = 'vault_receipt'
 COL_RECEIPTS_ORDER_ID = 'order_id'
 COL_RECEIPTS_PAID_DID = 'paid_did'
+# order end
 
 COL_IPFS_FILES = 'ipfs_files'
 COL_IPFS_FILES_PATH = 'path'

@@ -120,7 +120,7 @@ class IpfsBackupServer:
         doc = self.find_backup_request(g.usr_did, throw_exception=False)
         if doc:
             raise AlreadyExistsException('The backup service is already subscribed.')
-        return self._get_vault_info(self._create_backup(g.usr_did, PaymentConfig.get_free_backup_info()))
+        return self._get_vault_info(self._create_backup(g.usr_did, PaymentConfig.get_free_backup_plan()))
 
     def unsubscribe(self):
         doc = self.find_backup_request(g.usr_did, throw_exception=True)

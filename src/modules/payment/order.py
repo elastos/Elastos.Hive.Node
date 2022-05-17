@@ -151,7 +151,7 @@ class OrderManager:
             raise OrderNotFoundException()
         return Order(doc)
 
-    def get_receipts(self, contract_order_id: t.Optional[int]):
+    def get_receipts(self, contract_order_id: t.Optional[int] = None):
         """ get receipt by conditional options: contract_order_id """
         col = self.mcli.get_management_collection(COL_RECEIPTS)
 

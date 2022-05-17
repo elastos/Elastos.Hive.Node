@@ -14,6 +14,33 @@ from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsE
 _T = typing.TypeVar('_T', dict, list, tuple)
 
 
+class Dotdict(dict):
+    """ Base class for all mongodb document.
+
+    if you define a document like this (all keys must be underscore):
+
+        {
+            "did": "xxx",
+            "max_storage": 2097152000,
+            "pricing_using": "Rockie"
+        }
+
+    Then you can define class like this. So please just use in the class.
+
+        class Vault(Dotdict):
+            def get_user_did():
+                return self.did
+
+    Usage like this:
+
+        vault = Vault(**doc)
+
+    """
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
 class MongodbCollection:
     """ all collection wrapper and base class for specific collection
 

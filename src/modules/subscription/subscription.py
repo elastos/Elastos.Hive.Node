@@ -93,8 +93,8 @@ class VaultSubscription(metaclass=Singleton):
 
     def get_info(self):
         """ :v2 API: """
-        doc = self.vault_manager.get_vault(g.usr_did).doc
-        return self.__get_vault_info(doc)
+        vault = self.vault_manager.get_vault(g.usr_did)
+        return self.__get_vault_info(vault)
 
     def get_app_stats(self):
         """ :v2 API: """

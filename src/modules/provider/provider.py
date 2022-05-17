@@ -9,15 +9,13 @@ import typing as t
 from datetime import datetime
 
 import base58
-from bson import ObjectId
 from flask import g
 
 from src import hive_setting
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
+from src.modules.payment.order import OrderManager
 from src.modules.subscription.subscription import VaultSubscription
-from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID, COL_RECEIPTS, COL_RECEIPTS_ORDER_ID, \
-    COL_ORDERS_SUBSCRIPTION, COL_ORDERS_PRICING_NAME, COL_ORDERS_ELA_AMOUNT, COL_ORDERS_ELA_ADDRESS, \
-    COL_RECEIPTS_PAID_DID, DID
+from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID
 from src.utils.db_client import cli
 from src.utils.http_exception import ForbiddenException, VaultNotFoundException, BackupNotFoundException, \
     ReceiptNotFoundException
@@ -33,6 +31,7 @@ class Provider:
         logging.info(f'Owner DID: {self.owner_did}')
         self.subscription = VaultSubscription()
         self.backup_server = IpfsBackupServer()
+        self.order_manager = OrderManager()
 
     @staticmethod
     def get_verified_owner_did():
@@ -78,30 +77,16 @@ class Provider:
 
     def get_filled_orders(self):
         self.check_auth_owner_id()
-        receipts = cli.find_many_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {},
-                                        create_on_absence=True, throw_exception=False)
+        receipts = self.order_manager.get_receipts()
         if not receipts:
-            raise ReceiptNotFoundException(msg='Payment not found.')
-        return {"payments": list(map(lambda r: self.get_filled_order(r), receipts))}
+            raise ReceiptNotFoundException()
+        return {
+            'orders': [o.to_get_receipts() for o in receipts]
+        }
 
     def check_auth_owner_id(self):
         if g.usr_did != self.owner_did:
             raise ForbiddenException(msg='No permission for accessing node information.')
-
-    def get_filled_order(self, receipt):
-        order = cli.find_one_origin(DID_INFO_DB_NAME, COL_RECEIPTS, {'_id': ObjectId(receipt[COL_RECEIPTS_ORDER_ID])},
-                                    create_on_absence=True, throw_exception=False)
-        return {
-            "order_id": receipt[COL_RECEIPTS_ORDER_ID],
-            "receipt_id": receipt['_id'],
-            # info: compatible because of the key for user_did update from 'did' to 'user_did'.
-            "user_did": receipt[USR_DID] if USR_DID in receipt else receipt[DID],
-            "subscription": order[COL_ORDERS_SUBSCRIPTION] if order else None,
-            "pricing_name": order[COL_ORDERS_PRICING_NAME] if order else None,
-            "ela_amount": order[COL_ORDERS_ELA_AMOUNT] if order else None,
-            "ela_address": order[COL_ORDERS_ELA_ADDRESS] if order else None,
-            "paid_did": receipt[COL_RECEIPTS_PAID_DID],
-        }
 
     @staticmethod
     def _get_verifiable_credential_info(vc_str: str) -> (t.Optional[dict], str):

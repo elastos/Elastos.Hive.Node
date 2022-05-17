@@ -21,8 +21,10 @@ class PaymentTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # subscript a vault if not exists
+        # subscribe a vault if not exists
         HttpClient(f'/api/v2').put('/subscription/vault')
+        # subscribe a backup if not exists
+        HttpClient(f'/api/v2', is_backup_node=True).put('/subscription/backup')
 
     def test01_get_version(self):
         response = self.cli.get('/version')
@@ -43,6 +45,18 @@ class PaymentTestCase(unittest.TestCase):
         self.assertTrue(jwt.get_expiration() > datetime.utcnow().timestamp())
 
     @unittest.skip
+    def test02_place_order_backup(self):
+        response = self.cli.put('/order', body={'subscription': 'backup', 'pricing_name': 'Rookie'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('proof' in response.json())
+        proof = response.json().get('proof')
+        print(f'PROOF: {proof}')
+        jwt = JWT.parse(proof)
+        self.assertEqual(jwt.get_issuer(), self.cli.remote_resolver.get_node_did())
+        self.assertEqual(jwt.get_audience(), self.cli.remote_resolver.get_current_user_did_str())
+        self.assertTrue(jwt.get_expiration() > datetime.utcnow().timestamp())
+
+    @unittest.skip
     def test03_get_contract_order(self):
         # To pay the order on contract, please use other script.
         # Here is for testing the contract to getting order information.
@@ -52,10 +66,15 @@ class PaymentTestCase(unittest.TestCase):
 
     @unittest.skip
     def test04_settle_order(self):
-        contract_order_id = 4
+        contract_order_id = 6
         response = self.cli.post(f'/order/{contract_order_id}')
         self.assertEqual(response.status_code, 201)
         self.assertTrue('receipt_proof' in response.json())
+        proof = response.json().get('receipt_proof')
+        print(f'RECEIPT PROOF: {proof}')
+        jwt = JWT.parse(proof)
+        self.assertEqual(jwt.get_issuer(), self.cli.remote_resolver.get_node_did())
+        self.assertEqual(jwt.get_audience(), self.cli.remote_resolver.get_current_user_did_str())
 
     @unittest.skip
     def test05_get_orders(self):

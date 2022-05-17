@@ -53,15 +53,18 @@ VAULT_SERVICE_PRICING_USING = "pricing_using"
 VAULT_SERVICE_STATE = "state"
 # constants of db end
 
+# for backup server collection
 VAULT_BACKUP_SERVICE_COL = "vault_backup_service"
-VAULT_BACKUP_SERVICE_DID = "did"  # only for v1
+VAULT_BACKUP_SERVICE_USING = "backup_using"  # pricing_name
 VAULT_BACKUP_SERVICE_MAX_STORAGE = "max_storage"
 VAULT_BACKUP_SERVICE_USE_STORAGE = "use_storage"
-VAULT_BACKUP_SERVICE_MODIFY_TIME = "modify_time"
 VAULT_BACKUP_SERVICE_START_TIME = "start_time"
 VAULT_BACKUP_SERVICE_END_TIME = "end_time"
-VAULT_BACKUP_SERVICE_USING = "backup_using"
-VAULT_BACKUP_SERVICE_STATE = "state"
+# end backup server collection
+
+# to be removed
+VAULT_BACKUP_SERVICE_DID = "did"  # only for v1
+VAULT_BACKUP_SERVICE_MODIFY_TIME = "modify_time"
 
 # scripting begin
 SCRIPTING_SCRIPT_COLLECTION = "scripts"

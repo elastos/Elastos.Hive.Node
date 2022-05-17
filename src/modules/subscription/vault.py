@@ -47,17 +47,24 @@ class VaultManager:
 
     def get_vault(self, user_did) -> Vault:
         """ Get the vault for user or raise not-found exception. """
+        vault = self.__only_get_vault(user_did)
+
+        # try to revert to free package plan
+        return self.__try_to_downgrade_to_free(user_did, vault)
+
+    def __only_get_vault(self, user_did):
+        """ common method to all other method in this class """
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
 
         doc = col.find_one({VAULT_SERVICE_DID: user_did})
         if not doc:
             raise VaultNotFoundException()
+        return Vault(doc)
 
-        # try to revert to free package plan
-        return self.try_to_downgrade_to_free(user_did, Vault(doc))
-
-    def upgrade(self, user_did, plan: dict):
-        vault = self.get_vault(user_did)
+    def upgrade(self, user_did, plan: dict, vault: Vault = None):
+        # Support vault = None to avoid recursive calling with 'get_vault()'
+        if not vault:
+            vault = self.__only_get_vault(user_did)
 
         # upgrading contains: vault size, expired date, plan
         start, end = PaymentConfig.get_plan_period(vault.get_plan(), vault.get_end_time(), plan)
@@ -74,7 +81,7 @@ class VaultManager:
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
         col.update_one(filter_, {'$set': update}, contains_extra=False)
 
-    def try_to_downgrade_to_free(self, user_did, vault: Vault):
+    def __try_to_downgrade_to_free(self, user_did, vault: Vault):
         if PaymentConfig.is_free_plan(vault.get_plan_name()):
             return vault
 
@@ -82,8 +89,8 @@ class VaultManager:
             return vault
 
         # downgrade now
-        self.upgrade(user_did, PaymentConfig.get_free_vault_plan())
-        return vault
+        self.upgrade(user_did, PaymentConfig.get_free_vault_plan(), vault=vault)
+        return self.__only_get_vault(user_did)
 
     def update_database_size(self, user_did: str):
         """ Get all databases of user DID and sum the sizes. """

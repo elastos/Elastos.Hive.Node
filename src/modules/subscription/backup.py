@@ -18,10 +18,10 @@ class Backup:
         return PaymentConfig.get_backup_plan(self.get_plan_name())
 
     def get_plan_name(self):
-        return self.doc[VAULT_SERVICE_PRICING_USING]
+        return self.doc[VAULT_BACKUP_SERVICE_USING]
 
     def is_expired(self):
-        return 0 < self.doc[VAULT_BACKUP_SERVICE_END_TIME] < datetime.utcnow().timestamp()
+        return 0 < self.get_end_time() < datetime.utcnow().timestamp()
 
     def get_end_time(self):
         return self.doc[VAULT_BACKUP_SERVICE_END_TIME]
@@ -33,6 +33,11 @@ class BackupManager:
 
     def get_backup(self, user_did):
         """ Get the backup for user or raise not-found exception. """
+        backup = self.__only_get_backup(user_did)
+        return self.try_to_downgrade_to_free(user_did, backup)
+
+    def __only_get_backup(self, user_did):
+        """ common method to all other method in this class """
         col = self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER)
 
         doc = col.find_one({USR_DID: user_did})
@@ -40,8 +45,9 @@ class BackupManager:
             raise BackupNotFoundException()
         return Backup(doc)
 
-    def upgrade(self, user_did, plan: dict):
-        backup = self.get_backup(user_did)
+    def upgrade(self, user_did, plan: dict, backup=None):
+        if not backup:
+            backup = self.get_backup(user_did)
 
         # upgrading contains: backup size, expired date, plan
         start, end = PaymentConfig.get_plan_period(backup.get_plan(), backup.get_end_time(), plan)
@@ -64,5 +70,5 @@ class BackupManager:
             return backup
 
         # downgrade now
-        self.upgrade(user_did, PaymentConfig.get_free_backup_plan())
-        return backup
+        self.upgrade(user_did, PaymentConfig.get_free_backup_plan(), backup=backup)
+        return self.__only_get_backup(user_did)

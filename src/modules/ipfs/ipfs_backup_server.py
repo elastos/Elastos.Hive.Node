@@ -120,7 +120,7 @@ class IpfsBackupServer:
         doc = self.find_backup_request(g.usr_did, throw_exception=False)
         if doc:
             raise AlreadyExistsException('The backup service is already subscribed.')
-        return self._get_vault_info(self._create_backup(g.usr_did, PaymentConfig.get_free_backup_plan()))
+        return self._get_backup_info(self._create_backup(g.usr_did, PaymentConfig.get_free_backup_plan()))
 
     def unsubscribe(self):
         doc = self.find_backup_request(g.usr_did, throw_exception=True)
@@ -141,7 +141,7 @@ class IpfsBackupServer:
                               is_check_exist=False)
 
     def get_info(self):
-        return self._get_vault_info(self.find_backup_request(g.usr_did, throw_exception=True))
+        return self._get_backup_info(self.find_backup_request(g.usr_did, throw_exception=True))
 
     def activate(self):
         raise NotImplementedException()
@@ -150,26 +150,27 @@ class IpfsBackupServer:
         raise NotImplementedException()
 
     def _create_backup(self, user_did, price_plan):
-        now = datetime.utcnow().timestamp()
+        now = int(datetime.utcnow().timestamp())
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
         doc = {USR_DID: user_did,
                VAULT_BACKUP_SERVICE_USING: price_plan['name'],
                VAULT_BACKUP_SERVICE_MAX_STORAGE: price_plan["maxStorage"] * 1024 * 1024,
                VAULT_BACKUP_SERVICE_USE_STORAGE: 0,
                VAULT_BACKUP_SERVICE_START_TIME: now,
-               VAULT_BACKUP_SERVICE_END_TIME: end_time
-               }
+               VAULT_BACKUP_SERVICE_END_TIME: int(end_time)}
         cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_SERVER, doc, create_on_absence=True, is_extra=True)
         return doc
 
-    def _get_vault_info(self, doc):
+    def _get_backup_info(self, doc):
         return {
-            'pricing_plan': doc[VAULT_BACKUP_SERVICE_USING],
             'service_did': self.auth.get_did_string(),
+            'pricing_plan': doc[VAULT_BACKUP_SERVICE_USING],
             'storage_quota': int(doc[VAULT_BACKUP_SERVICE_MAX_STORAGE]),
             'storage_used': int(doc.get(VAULT_BACKUP_SERVICE_USE_STORAGE, 0)),
-            'created': doc.get('created'),
-            'updated': doc.get('modified'),
+            'start_time': int(doc[VAULT_BACKUP_SERVICE_START_TIME]),
+            'end_time': int(doc[VAULT_BACKUP_SERVICE_END_TIME]),
+            'created': int(doc.get('created')),
+            'updated': int(doc.get('modified')),
         }
 
     def update_storage_usage(self, user_did, size):

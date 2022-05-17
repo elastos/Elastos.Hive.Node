@@ -35,6 +35,8 @@ class IpfsBackupTestCase(unittest.TestCase):
     def test02_get_info(self):
         response = self.backup_cli.get('/subscription/backup')
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(isinstance(response.json(), dict))
+        print(f'backup info: {response.json()}')
 
     def test03_backup_invalid_parameter(self):
         r = self.cli.post('/vault/content?to=hive_node')

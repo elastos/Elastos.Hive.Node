@@ -29,6 +29,8 @@ class SubscriptionTestCase(unittest.TestCase):
     def test03_vault_get_info(self):
         response = self.cli.get('/subscription/vault')
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(isinstance(response.json(), dict))
+        print(f'vault info: {response.json()}')
 
     def test04_vault_get_app_stats(self):
         response = self.cli.get('/subscription/vault/app_stats')

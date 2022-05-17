@@ -85,15 +85,20 @@ class TestConfig(metaclass=Singleton):
 class RemoteResolver:
     def __init__(self, http_client, is_did2=False, is_owner=False):
         """ For HttpClient and only manage DIDs. """
+        self.app_did = AppDID("testapp", "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+
+        # user_did or user_did2 is as the user did
         # did: did:elastos:imedtHyjLS155Gedhv7vKP3FTWjpBUAUm4
         self.user_did = UserDID("didapp", "firm dash language credit twist puzzle crouch order slim now issue trap")
         self.user_did2 = UserDID("crossUser", "stage west lava group genre ten farm pony small family february drink")
+
+        # this should be setup to the owner of the node (here is just simplify)
         self.owner_did = self.user_did
-        self.app_did = AppDID("testapp", "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+
         self.test_config = TestConfig()
         self.http_client = http_client
-        self.is_did2 = is_did2
-        self.is_owner = is_owner
+        self.is_did2 = is_did2  # True means use user_did2
+        self.is_owner = is_owner  # True means owner_did
 
     def get_token(self):
         user_did = self.get_current_user_did()

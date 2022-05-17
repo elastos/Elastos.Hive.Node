@@ -77,9 +77,6 @@ class Payment(metaclass=Singleton):
         except Exception as e:
             raise BadRequestException(msg=f'Failed get order info from contract: {str(e)}, {traceback.format_exc()}')
 
-        if not order_info:
-            raise BadRequestException(msg=f'Not found order info by order id.')
-
         order = self.__verify_contract_order(order_info)
 
         # Upgrade vault or backup.
@@ -98,6 +95,9 @@ class Payment(metaclass=Singleton):
         }
 
     def __verify_contract_order(self, contract_order):
+        if contract_order['to'] != self.ela_address:
+            raise BadRequestException(msg=f'The oder from order_id is not for this hive node.')
+
         # Make sure the proof is in this node.
         order = self.order_manager.get_order_by_proof(contract_order['memo'])
         if order.is_settled():

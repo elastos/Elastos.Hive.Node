@@ -30,23 +30,23 @@ class MongodbCollection:
 
     def insert_one(self, doc, contains_extra=True, **kwargs):
         if contains_extra:
-            now_timestamp = datetime.utcnow().timestamp()
+            now_timestamp = int(datetime.utcnow().timestamp())
             doc['created'] = now_timestamp
             doc['modified'] = now_timestamp
 
         # kwargs are the options
         result = self.col.insert_one(self.convert_oid(doc), **kwargs)
-        if not result['inserted_id']:
+        if not result.inserted_id:
             raise BadRequestException(msg=f'Failed to insert the doc: {str(doc)}.')
 
         return {
             "acknowledged": result.acknowledged,
-            "inserted_id": ObjectId(str(result.inserted_id))
+            "inserted_id": result.inserted_id  # ObjectId
         }
 
     def update_one(self, filter_, update, contains_extra=True, **kwargs):
         if contains_extra:
-            now_timestamp = datetime.utcnow().timestamp()
+            now_timestamp = int(datetime.utcnow().timestamp())
             if '$setOnInsert' in update:
                 update["$setOnInsert"]['created'] = now_timestamp
             else:

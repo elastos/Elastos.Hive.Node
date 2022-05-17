@@ -70,9 +70,17 @@ def populate_file_body(body, params):
 
 
 def populate_with_params_values(did, app_did, options, params):
-    """
-    replace $params to the real value in options.
-    :return error message
+    """ Do some 'value' replacement on options (dict), 'key' will not change.
+    "options" will be updated.
+
+        - "$params.<parameter name>" (str) -> value (any type)
+        - "$caller_did" -> did
+        - "$caller_app_did" -> app_did
+
+    NOTE: Array nesting is not supported
+
+    :return error message, None means no error.
+
     """
     if not options or not params:
         return None

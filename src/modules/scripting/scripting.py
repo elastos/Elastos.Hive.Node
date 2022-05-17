@@ -171,6 +171,8 @@ class Context:
 
 
 class Executable:
+    """ Executable represents an action which contains operation for database and files. """
+
     def __init__(self, script, executable_data):
         self.script = script
         self.name = executable_data['name']
@@ -262,6 +264,7 @@ class Executable:
         return col_filter
 
     def get_populated_file_body(self):
+        """ only for the body of file types """
         populate_file_body(self.body, self.get_params())
         return self.body
 
@@ -346,12 +349,19 @@ class FindExecutable(Executable):
     def __init__(self, script, executable_data):
         super().__init__(script, executable_data)
 
+    def __get_populated_find_options(self):
+        options = populate_find_options_from_body(self.body)
+        msg = populate_with_params_values(self.get_did(), self.get_app_id(), options, self.get_params())
+        if msg:
+            raise BadRequestException(msg=f'Cannot get the value of the parameters for the find options: {msg}')
+        return options
+
     def execute(self):
         self.vault_manager.get_vault(self.get_target_did())
 
         filter_ = self.get_populated_filter()
         items = cli.find_many(self.get_target_did(), self.get_target_app_did(),
-                              self.get_collection_name(), filter_, populate_find_options_from_body(self.body))
+                              self.get_collection_name(), filter_, self.__get_populated_find_options())
         total = cli.count(self.get_target_did(), self.get_target_app_did(), self.get_collection_name(), filter_, throw_exception=False)
 
         return self.get_output_data({'total': total, 'items': json.loads(json_util.dumps(items))})
@@ -474,6 +484,26 @@ class FileHashExecutable(Executable):
 
 
 class Script:
+    """ Represents a script registered by owner and ran by caller.
+    Their user DIDs can be same or not.
+
+    # Parameter Replacement
+
+    The following format can be defined on the value of script elements
+    which includes: condition ( filter ), executable ( as the following details )
+
+        - database types: find: filter, options; insert: document; update: filter, update; delete: filter;
+        - file types: 'path' parameter;
+
+    Parameter definition: "$params.<parameter name>"
+    Example of key-value: "group": "$params.group"  # the $param definition MUST the whole part of the value
+
+    For the 'path' parameter of file types, the following patterns also support:
+
+        - "path": "/data/$params.file_name"  # the $param definition can be as the part of the path
+        - "path": "/data/${params.folder_name}/avatar.png"  # another form for the $param definition
+
+    """
     DOLLAR_REPLACE = '%%'
 
     def __init__(self, script_name, run_data, user_did, app_did, scripting=None, is_ipfs=False):

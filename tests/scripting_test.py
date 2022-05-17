@@ -212,6 +212,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
                     'collection': self.collection_name,
                     'filter': col_filter,
                     'options': {
+                        'limit': "$params.limit",
+                        'skip': "$params.skip",
                         'sort': {'author': pymongo.DESCENDING}  # sort with hive style.
                     }
                 }
@@ -220,7 +222,9 @@ class IpfsScriptingTestCase(unittest.TestCase):
             "allowAnonymousApp": True
         }
         run_body = {'params': {
-            'author': 'John'
+            'author': 'John',
+            'limit': 10,
+            'skip': 0,
         }}
         body = self.__register_and_call_script(script_name, script_body, run_body, executable_name=executable_name)
 

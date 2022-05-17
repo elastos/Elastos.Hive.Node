@@ -105,7 +105,7 @@ class PaymentConfig:
     @staticmethod
     def get_plan_period(src_plan: dict, src_end_timestamp, dst_plan: dict):
         """ Get the period after move plan from 'src_plan' to 'dst_plan' """
-        now = datetime.utcnow().timestamp()
+        now = int(datetime.utcnow().timestamp())
         remain_days = PaymentConfig.get_current_plan_remain_days(src_plan, src_end_timestamp, dst_plan)
         end_time = -1 if dst_plan['serviceDays'] <= 0 else now + (dst_plan['serviceDays'] + remain_days) * 24 * 60 * 60
-        return now, end_time
+        return now, int(end_time)

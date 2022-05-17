@@ -64,10 +64,12 @@ class VaultSubscription(metaclass=Singleton):
                         else int(doc[VAULT_SERVICE_MAX_STORAGE])
         storage_used = int(doc[VAULT_SERVICE_FILE_USE_STORAGE] + doc[VAULT_SERVICE_DB_USE_STORAGE])
         return {
-            'pricing_plan': doc[VAULT_SERVICE_PRICING_USING],
             'service_did': self.auth.get_did_string(),
+            'pricing_plan': doc[VAULT_SERVICE_PRICING_USING],
             'storage_quota': storage_quota,
             'storage_used': storage_used,
+            'start_time': int(doc[VAULT_SERVICE_START_TIME]),
+            'end_time': int(doc[VAULT_SERVICE_END_TIME]),
             'created': cli.timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),
             'updated': cli.timestamp_to_epoch(doc[VAULT_SERVICE_MODIFY_TIME]),
         }

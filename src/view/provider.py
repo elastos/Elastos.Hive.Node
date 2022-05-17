@@ -144,14 +144,15 @@ class FilledOrders(Resource):
 
             {
                 "orders": [{
-                    "order_id": <str>,
-                    "receipt_id": <str>,
-                    "user_did": <str>,
-                    "subscription": <vault,backup|str>,
-                    "pricing_name": <str>,
-                    "ela_amount": <float>,
-                    "ela_address": <str>,
-                    "paid_did": <user did|str>,
+                    "receipt_id": “<ObjectId str>”,
+                    "order_id": 1234,
+                    "subscription": "vault",
+                    "pricing_plan": "Rookie",
+                    "payment_amount": "5",  // ELA
+                    "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEH******”,
+                    "create_time": 1600073834,
+                    "receiving_address": "912ec803b2ce49e4a541068d49******",
+                    "proof": "<jwt str>"
                 }]
             }
 

@@ -1,22 +1,22 @@
 from datetime import datetime
 
 from src.modules.auth.user import UserManager
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.database.mongodb_client import MongodbClient, Dotdict
 from src.utils.db_client import VAULT_SERVICE_STATE_RUNNING
 from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException
-from src.utils_v1.constants import VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
+from src.utils_v1.constants import VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 
-class Vault:
+class Vault(Dotdict):
     """ Represents a user vault """
 
-    def __init__(self, doc):
-        self.doc = doc
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def get_storage_gap(self):
-        return int(self.doc[VAULT_SERVICE_MAX_STORAGE] - (self.doc[VAULT_SERVICE_FILE_USE_STORAGE] + self.doc[VAULT_SERVICE_DB_USE_STORAGE]))
+        return int(self.max_storage - (self.file_use_storage + self.db_use_storage))
 
     def is_storage_full(self):
         return self.get_storage_gap() <= 0
@@ -26,16 +26,16 @@ class Vault:
             raise InsufficientStorageException()
 
     def get_plan(self):
-        return PaymentConfig.get_pricing_plan(self.get_plan_name())
+        return PaymentConfig.get_pricing_plan(self.pricing_using)
 
     def get_plan_name(self):
-        return self.doc[VAULT_SERVICE_PRICING_USING]
+        return self.pricing_using
 
     def is_expired(self):
-        return 0 < self.doc[VAULT_SERVICE_END_TIME] < datetime.utcnow().timestamp()
+        return 0 < self.end_time < datetime.utcnow().timestamp()
 
     def get_end_time(self):
-        return self.doc[VAULT_SERVICE_END_TIME]
+        return self.end_time
 
 
 class VaultManager:
@@ -59,7 +59,7 @@ class VaultManager:
         doc = col.find_one({VAULT_SERVICE_DID: user_did})
         if not doc:
             raise VaultNotFoundException()
-        return Vault(doc)
+        return Vault(**doc)
 
     def upgrade(self, user_did, plan: dict, vault: Vault = None):
         # Support vault = None to avoid recursive calling with 'get_vault()'

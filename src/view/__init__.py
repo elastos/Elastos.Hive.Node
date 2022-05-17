@@ -101,7 +101,7 @@ def init_app(app: Flask, api: Api):
         # payment service
         api.add_resource(payment.Version, '/payment/version', endpoint='payment.version')
         api.add_resource(payment.PlaceOrder, '/payment/order', endpoint='payment.place_order')
-        api.add_resource(payment.SettleOrder, '/payment/order/<contract_order_id>', endpoint='payment.settle_order')
+        api.add_resource(payment.SettleOrder, '/payment/order/<order_id>', endpoint='payment.settle_order')
         api.add_resource(payment.Orders, '/payment/order', endpoint='payment.orders')
         api.add_resource(payment.Receipts, '/payment/receipt', endpoint='payment.receipts')
 

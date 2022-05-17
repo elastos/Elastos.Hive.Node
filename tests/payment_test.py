@@ -81,10 +81,12 @@ class PaymentTestCase(unittest.TestCase):
         response = self.cli.get('/order?subscription=vault')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('orders' in response.json())
+        print(f'orders: {response.json()["orders"]}')
 
     @unittest.skip
-    def test06_get_receipt(self):
-        response = self.cli.get(f'/receipt?order_id={self.order_id}')
+    def test06_get_receipts(self):
+        contract_order_id = 6
+        response = self.cli.get(f'/receipt?order_id={contract_order_id}')
         self.assertEqual(response.status_code, 200)
-        self.assertTrue('order_id' in response.json())
-        self.assertTrue('receipt_id' in response.json())
+        self.assertTrue('receipts' in response.json())
+        print(f'receipts: {response.json()["receipts"]}')

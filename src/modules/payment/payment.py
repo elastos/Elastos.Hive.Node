@@ -15,7 +15,7 @@ from src.modules.payment.order_contract import OrderContract
 from src.modules.subscription.backup import BackupManager
 from src.modules.subscription.vault import VaultManager
 from src.modules.auth.auth import Auth
-from src.utils.http_exception import InvalidParameterException, BadRequestException
+from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, ReceiptNotFoundException
 from src.utils.resolver import ElaResolver
 from src.utils.singleton import Singleton
 from src.utils_v1.payment.payment_config import PaymentConfig
@@ -72,6 +72,7 @@ class Payment(metaclass=Singleton):
 
     def pay_order(self, contract_order_id: int):
         """ :v2 API: """
+        # first step is to get the contract order information
         try:
             order_info = self.order_contract.get_order(contract_order_id)
         except Exception as e:
@@ -79,7 +80,14 @@ class Payment(metaclass=Singleton):
 
         order = self.__verify_contract_order(order_info)
 
+        # check the existence of the vault or backup, maybe removed by user :-(
+        if order.get_subscription() == Order.SUBSCRIPTION_VAULT:
+            self.vault_manager.get_vault(g.usr_did)
+        else:
+            self.backup_manager.get_backup(g.usr_did)
+
         # Upgrade vault or backup.
+        order.set_contract_order_id(contract_order_id)
         self.order_manager.upgrade_vault_or_backup(g.usr_did, order)
 
         # Create a receipt.
@@ -119,6 +127,8 @@ class Payment(metaclass=Singleton):
     def get_orders(self, subscription: typing.Optional[str], contract_order_id: typing.Optional[int]):
         """ :v2 API: """
         orders = self.order_manager.get_orders(subscription, contract_order_id)
+        if not orders:
+            raise OrderNotFoundException()
         return {
             'orders': [o.to_get_orders() for o in orders]
         }
@@ -126,6 +136,8 @@ class Payment(metaclass=Singleton):
     def get_receipts(self, contract_order_id: typing.Optional[int]):
         """ :v2 API: """
         receipts = self.order_manager.get_receipts(contract_order_id)
+        if not receipts:
+            raise ReceiptNotFoundException()
         return {
             'receipts': [o.to_get_receipts() for o in receipts]
         }

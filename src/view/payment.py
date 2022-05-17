@@ -147,7 +147,7 @@ class SettleOrder(Resource):
     def __init__(self):
         self.payment = Payment()
 
-    def post(self, contract_order_id):
+    def post(self, order_id):
         """ Notify the payment contract is already done and let hive node upgrade the user vault.
 
         After this, the vault will be upgraded for a specific pricing plan.
@@ -221,10 +221,10 @@ class SettleOrder(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        if not contract_order_id or not isinstance(contract_order_id, str) or not contract_order_id.isnumeric():
+        if not order_id or not isinstance(order_id, str) or not order_id.isnumeric():
             raise InvalidParameterException('order_id must be number.')
 
-        return self.payment.pay_order(int(contract_order_id))
+        return self.payment.pay_order(int(order_id))
 
 
 class Orders(Resource):

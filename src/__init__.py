@@ -21,6 +21,7 @@ from src import view
 
 import hive.settings
 import hive.main
+from src.utils_v1.payment.payment_config import PaymentConfig
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')
@@ -79,8 +80,10 @@ def init_log():
 def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     # init v1 configure items
     hive.settings.hive_setting.init_config(hive_config)
-
+    # init v2 configure items
     hive_setting.init_config(hive_config)
+    PaymentConfig.init_config()
+
     init_log()
     logging.getLogger("src_init").info("##############################")
     logging.getLogger("src_init").info("HIVE NODE IS STARTING")
@@ -89,8 +92,9 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
 
     # init v1 APIs
     hive.main.init_app(app, mode)
-
+    # init v2 APIs
     view.init_app(app, api)
+
     logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
     logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
     if hive_setting.SENTRY_ENABLED and hive_setting.SENTRY_DSN != "":

@@ -24,7 +24,6 @@ from src.utils_v1.payment.payment_config import PaymentConfig
 class Payment(metaclass=Singleton):
     def __init__(self):
         self.ela_address = hive_setting.PAYMENT_ADDRESS
-        PaymentConfig.init_config()
         self.auth = Auth()
         self.vault_subscription = None
         self.ela_resolver = ElaResolver(hive_setting.ESC_RESOLVER_URL)

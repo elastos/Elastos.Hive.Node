@@ -240,11 +240,13 @@ class DatabaseClient:
         s = datetime(1970, 1, 1, 0, 0, 0)
         return int((t - s).total_seconds())
 
-    def get_all_user_apps(self, user_did=None, current_item=None):
+    def get_all_user_apps(self, user_did=None, current_item=None) -> list:
         # INFO: Need consider the adaptation of the old user information.
         query = {APP_INSTANCE_DID: {'$exists': True}, APP_ID: {'$exists': True}, USER_DID: {'$exists': True}}
         if user_did:
-            query[USER_DID] = user_did
+            query['$and'] = [{USER_DID: {'$exists': True}}, {USER_DID: user_did}]
+        else:
+            query[USER_DID] = {'$exists': True}
         docs = self.find_many_origin(DID_INFO_DB_NAME,
                                      DID_INFO_REGISTER_COL, query, create_on_absence=False, throw_exception=False)
         if not docs:

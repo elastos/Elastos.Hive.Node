@@ -39,7 +39,7 @@ class Database:
         self.vault_manager.get_vault(g.usr_did)
 
         self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
-        update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
+        self.vault_manager.update_database_size(g.usr_did)
 
     def __get_collection(self, collection_name, check_storage=False):
         vault = self.vault_manager.get_vault(g.usr_did)

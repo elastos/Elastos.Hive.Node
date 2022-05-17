@@ -100,7 +100,7 @@ URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'
 URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
 
 
-def get_unique_dict_item_from_list(dict_list: list):
+def get_unique_dict_item_from_list(dict_list: list) -> list:
     if not dict_list:
         return list()
     return list({frozenset(item.items()): item for item in dict_list}.values())

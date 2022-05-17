@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
 from src.utils.db_client import VAULT_SERVICE_STATE_RUNNING
 from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException
@@ -42,6 +43,7 @@ class VaultManager:
 
     def __init__(self):
         self.mcli = MongodbClient()
+        self.user_manager = UserManager()
 
     def get_vault(self, user_did) -> Vault:
         """ Get the vault for user or raise not-found exception. """
@@ -82,3 +84,18 @@ class VaultManager:
         # downgrade now
         self.upgrade(user_did, PaymentConfig.get_free_vault_plan())
         return vault
+
+    def update_database_size(self, user_did: str):
+        """ Get all databases of user DID and sum the sizes. """
+        # Get all application DIDs of user DID, then get their sizes.
+        app_dids = self.user_manager.get_all_app_dids(user_did)
+        size = sum(list(map(lambda d: self.mcli.get_user_database_size(user_did, d), app_dids)))
+
+        filter_ = {VAULT_SERVICE_DID: user_did}
+        update = {
+            VAULT_SERVICE_DB_USE_STORAGE: size,
+            VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp()
+        }
+
+        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
+        col.update_one(filter_, {'$set': update}, contains_extra=False)

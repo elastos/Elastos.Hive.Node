@@ -46,7 +46,7 @@ class VaultSubscription(metaclass=Singleton):
                VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,  # unit: byte (MB on v1, checked by 1024 * 1024)
                VAULT_SERVICE_FILE_USE_STORAGE: 0,  # unit: byte
                VAULT_SERVICE_DB_USE_STORAGE: 0,  # unit: byte
-               IS_UPGRADED: is_upgraded,
+               IS_UPGRADED: is_upgraded,  # True, the vault is from the promotion.
                VAULT_SERVICE_START_TIME: now,
                VAULT_SERVICE_END_TIME: end_time,
                VAULT_SERVICE_MODIFY_TIME: now,

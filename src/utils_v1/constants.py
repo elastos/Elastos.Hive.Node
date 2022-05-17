@@ -1,14 +1,16 @@
 # constants of db start
 DID_INFO_DB_NAME = "hive_manage_info"
 
+# for auth collection, must compatible with v1
 DID_INFO_REGISTER_COL = "auth_register"
-USER_DID = "userDid"  # compatible with v1
-APP_ID = "appDid"
-APP_INSTANCE_DID = "appInstanceDid"
+USER_DID = "userDid"  # added when /auth
+APP_ID = "appDid"  # added when /auth
+APP_INSTANCE_DID = "appInstanceDid"  # added when /signin
 DID_INFO_NONCE = "nonce"
 DID_INFO_TOKEN = "token"
 DID_INFO_NONCE_EXPIRED = "nonce_expired"
 DID_INFO_TOKEN_EXPIRED = "token_expired"
+# auth end
 
 DID_SYNC_INFO_COL = "did_sync_info"
 DID_SYNC_INFO_STATE = "state"
@@ -38,9 +40,9 @@ VAULT_ORDER_CREATE_TIME = "creat_time"
 VAULT_ORDER_PAY_TIME = "pay_time"
 VAULT_ORDER_MODIFY_TIME = "modify_time"
 
-# for vault collection
+# for vault collection, must compatible with v1
 VAULT_SERVICE_COL = "vault_service"  # collection name
-VAULT_SERVICE_DID = "did"  # compatible with v1
+VAULT_SERVICE_DID = "did"  # user_did
 VAULT_SERVICE_MAX_STORAGE = "max_storage"
 VAULT_SERVICE_FILE_USE_STORAGE = "file_use_storage"
 VAULT_SERVICE_DB_USE_STORAGE = "db_use_storage"

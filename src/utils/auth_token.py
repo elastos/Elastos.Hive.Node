@@ -11,30 +11,47 @@ from src.modules.auth.auth import Auth
 from src.utils.did.did_wrapper import JWT
 
 
-def __get_info_from_token(token):
+def __get_token_details(token, is_internal):
+    """ check the token is valid JWT string and get the details inside
+
+    :param is_internal: True means request is from other hive node, else is from user
+    """
     token_splits = token.split(".")
     if token_splits is None:
-        return None, "Then token is invalid because of not containing dot!"
+        return None, "The token is invalid because of not containing dot!"
 
     if (len(token_splits) != 3) or token_splits[2] == "":
-        return None, "Then token is invalid because of containing invalid parts!"
+        return None, "The token is invalid because of containing invalid parts!"
 
     jwt = JWT.parse(token)
+    # check the subject name on /did/auth and /did/backup_auth
+    subject = jwt.get_subject()
+    if is_internal and subject != "BackupToken":
+        return None, "The subject of the token for internal is invalid!"
+    if not is_internal and subject != "AccessToken":
+        return None, "The subject of the token is invalid!"
+
     issuer = jwt.get_issuer()
     if issuer != Auth().get_did_string():
-        return None, "The issuer is invalid!"
+        return None, "The issuer of the token is invalid!"
 
-    if int(datetime.now().timestamp()) > jwt.get_expiration():
+    if datetime.now().timestamp() > float(jwt.get_expiration()):
         return None, "Then token is expired!"
 
     props_json = json.loads(jwt.get_claim('props'))
     if USER_DID not in props_json:
-        return None, 'The token must contains user DID'
+        return None, 'The token MUST contain user DID'
+
+    # There is no application DID in the internal token
+    if not is_internal and APP_ID not in props_json:
+        return None, 'The token MUST contain application DID'
+
     props_json[APP_INSTANCE_DID] = jwt.get_audience()
     return props_json, None
 
 
-def _get_token_info():
+def _get_token_details_from_header(is_internal=False):
+    """ Make sure the token in header is valid string """
     author = request.headers.get("Authorization")
     if author is None:
         return None, "Can't find the Authorization!"
@@ -50,13 +67,14 @@ def _get_token_info():
     if not access_token:
         return None, "The token is empty!"
 
-    return __get_info_from_token(access_token)
+    return __get_token_details(access_token, is_internal=is_internal)
 
 
 class TokenParser:
-    except_urls = ['/api/v2/about/version', '/api/v2/node/version', '/api/v2/about/commit_id', '/api/v2/node/commit_id',
+    EXCEPT_URLS = ['/api/v2/about/version', '/api/v2/node/version', '/api/v2/about/commit_id', '/api/v2/node/commit_id',
                    URL_V2 + URL_SIGN_IN, URL_V2 + URL_AUTH, URL_V2 + URL_BACKUP_AUTH]
-    internal_urls = [URL_V2 + URL_SERVER_INTERNAL_BACKUP, URL_V2 + URL_SERVER_INTERNAL_STATE, URL_V2 + URL_SERVER_INTERNAL_RESTORE]
+    INTERNAL_URLS = [URL_V2 + URL_SERVER_INTERNAL_BACKUP, URL_V2 + URL_SERVER_INTERNAL_STATE, URL_V2 + URL_SERVER_INTERNAL_RESTORE]
+    SCRIPTING_PREFIX = URL_V2 + '/vault/scripting'
 
     def __init__(self):
         """ Parse the token from the request header if exists and set the following items:
@@ -69,23 +87,50 @@ class TokenParser:
         g.usr_did, g.app_did, g.app_ins_did = None, None, None
 
     def __no_need_auth(self):
-        return any(map(lambda url: request.full_path.startswith(url), self.except_urls))
+        return any(map(lambda url: request.full_path.startswith(url), self.EXCEPT_URLS))
 
-    def __internal_request(self):
-        return any(map(lambda url: request.full_path.startswith(url), self.internal_urls))
+    def __script_anonymous_request(self):
+        # if the request is for scripting service
+        if not request.full_path.startswith(self.SCRIPTING_PREFIX):
+            return False
+
+        # upload or download by transaction id
+        if request.full_path.startswith(URL_V2 + '/vault/scripting/stream/') \
+                and request.method.upper() in ['PUT', 'GET']:
+            return True
+
+        # call script or call script by only url
+        if request.full_path.startswith(URL_V2 + '/vault/scripting') \
+                and request.method.upper() in ['PATCH', 'GET']:
+            return True
+
+        return False
 
     def parse(self):
-        if not request.full_path.startswith('/api/v2') or self.__no_need_auth():
+        """ Only handle the access token of v2 APIs.
+        The token for v1 APIs will be checked on related request handler.
+        """
+        if not request.full_path.startswith(URL_V2) or self.__no_need_auth():
             return
 
-        info, err = _get_token_info()
-        if err:
-            raise UnauthorizedException(msg=f'Parse token error: {err}')
+        # The scripting support anonymous running the script when two anonymous options are True
+        # So here is just do some checking about token, and record the error on g object
+        # In real request handling, it will check if the token is required (g.token_error not None).
+        if self.__script_anonymous_request():
+            info, err = _get_token_details_from_header()
+            g.usr_did = g.app_ins_did = g.app_did, g.token_error = None  # Set the attributes to g.
+            if err is not None:
+                g.token_error = err
+                return
 
-        g.usr_did, g.app_ins_did = info[USER_DID], info[APP_INSTANCE_DID]
-        if self.__internal_request():
+            g.usr_did, g.app_ins_did, g.app_did = info[USER_DID], info[APP_INSTANCE_DID], info[APP_ID]
             return
 
-        if APP_ID not in info:
-            return None, 'The token must contains application DID'
-        g.app_did = info[APP_ID]
+        # Access token has two types: normal from user, internal (for backup) from other hive nodes.
+        is_internal = any(map(lambda url: request.full_path.startswith(url), self.INTERNAL_URLS))
+        info, err = _get_token_details_from_header(is_internal=is_internal)
+        if err is not None:
+            raise UnauthorizedException(msg=f'Parse access token error: {err}')
+
+        # Only normal token contains application DID.
+        g.usr_did, g.app_ins_did, g.app_did = info[USER_DID], info[APP_INSTANCE_DID], info.get(APP_ID)

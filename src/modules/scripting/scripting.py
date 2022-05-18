@@ -17,7 +17,6 @@ from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTI
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from src.utils_v1.did_file_info import query_hash
 from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size, \
     populate_find_options_from_body, populate_options_insert_one, populate_options_update_one
 from src.utils_v1.did_scripting import populate_with_params_values, populate_file_body
@@ -154,7 +153,6 @@ class Executable:
         self.name = executable_data['name']
         self.body = executable_data['body']
         self.is_output = executable_data.get('output', True)
-        self.is_ipfs = script.is_ipfs
         self.ipfs_files = IpfsFiles()
         self.vault_manager = VaultManager()
 
@@ -416,7 +414,8 @@ class FilePropertiesExecutable(Executable):
 
     def execute(self):
         body = self.get_populated_file_body()
-        logging.info(f'get file properties: is_ipfs={self.is_ipfs}, path={body["path"]}')
+
+        logging.info(f'get file properties: path={body["path"]}')
 
         doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
         return self.get_output_data({
@@ -433,14 +432,11 @@ class FileHashExecutable(Executable):
 
     def execute(self):
         body = self.get_populated_file_body()
-        logging.info(f'get file hash: is_ipfs={self.is_ipfs}, path={body["path"]}')
-        if self.is_ipfs:
-            doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
-            return self.get_output_data({"SHA256": doc[COL_IPFS_FILES_SHA256]})
-        data, err = query_hash(self.get_target_did(), self.get_target_app_did(), body['path'])
-        if err:
-            raise BadRequestException(msg='Failed to get file hash code with error message: ' + str(err))
-        return self.get_output_data(data)
+
+        logging.info(f'get file hash: path={body["path"]}')
+
+        doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
+        return self.get_output_data({"SHA256": doc[COL_IPFS_FILES_SHA256]})
 
 
 class Script:
@@ -490,7 +486,7 @@ class Script:
     """
     DOLLAR_REPLACE = '%%'
 
-    def __init__(self, script_name, run_data, user_did, app_did, scripting=None, is_ipfs=False):
+    def __init__(self, script_name, run_data, user_did, app_did, scripting=None):
         self.user_did = user_did
         self.app_did = app_did
 
@@ -501,9 +497,6 @@ class Script:
         self.params = run_data.get('params', None) if run_data else None
 
         self.scripting = scripting
-
-        # TODO: to be removed
-        self.is_ipfs = is_ipfs
 
     @staticmethod
     def validate_script_data(json_data):
@@ -573,9 +566,8 @@ class Script:
 
 
 class Scripting:
-    def __init__(self, is_ipfs=False):
+    def __init__(self):
         self.files = None
-        self.is_ipfs = is_ipfs
         self.ipfs_files = IpfsFiles()
         self.vault_manager = VaultManager()
 
@@ -633,7 +625,7 @@ class Scripting:
     def run_script(self, script_name):
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
-        return Script(script_name, json_data, g.usr_did, g.app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
+        return Script(script_name, json_data, g.usr_did, g.app_did, scripting=self).execute()
 
     def run_script_url(self, script_name, target_did, target_app_did, params):
         json_data = {
@@ -645,7 +637,7 @@ class Scripting:
                 'target_app_did': target_app_did
             }
         Script.validate_run_data(json_data)
-        return Script(script_name, json_data, g.usr_did, g.app_did, scripting=self, is_ipfs=self.is_ipfs).execute()
+        return Script(script_name, json_data, g.usr_did, g.app_did, scripting=self).execute()
 
     def upload_file(self, transaction_id):
         return self.handle_transaction(transaction_id)
@@ -666,8 +658,7 @@ class Scripting:
 
         # executing uploading or downloading
         data = None
-        logging.info(f'handle transaction by id: is_ipfs={self.is_ipfs}, '
-                     f'is_download={is_download}, file_name={trans["document"]["file_name"]}')
+        logging.info(f'handle transaction by id: is_download={is_download}, file_name={trans["document"]["file_name"]}')
         if is_download:
             data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
         else:

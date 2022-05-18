@@ -13,7 +13,7 @@ from src.utils.http_response import response_stream
 
 class RegisterScript(Resource):
     def __init__(self):
-        self.scripting = Scripting(is_ipfs=True)
+        self.scripting = Scripting()
 
     def put(self, script_name):
         """ Register a new script for the vault data owner by the script name.
@@ -172,7 +172,7 @@ class RegisterScript(Resource):
 
 class DeleteScript(Resource):
     def __init__(self):
-        self.scripting = Scripting(is_ipfs=True)
+        self.scripting = Scripting()
 
     def delete(self, script_name):
         """ Remove the script by the script name and the script can not be called anymore.
@@ -211,7 +211,7 @@ class DeleteScript(Resource):
 
 class CallScript(Resource):
     def __init__(self):
-        self.scripting = Scripting(is_ipfs=True)
+        self.scripting = Scripting()
 
     def patch(self, script_name):
         """ Run the script registered by the owner.
@@ -276,7 +276,7 @@ class CallScript(Resource):
 
 class CallScriptUrl(Resource):
     def __init__(self):
-        self.scripting = Scripting(is_ipfs=True)
+        self.scripting = Scripting()
 
     def get(self, script_name, context_str, params):
         """ Run the script registered by the owner by the URL parameters.
@@ -334,7 +334,7 @@ class CallScriptUrl(Resource):
 
 class UploadFile(Resource):
     def __init__(self):
-        self.scripting = Scripting(is_ipfs=True)
+        self.scripting = Scripting()
 
     def put(self, transaction_id):
         """ Upload file by transaction id returned by the running script for the executable type 'fileUpload'.
@@ -373,7 +373,7 @@ class UploadFile(Resource):
 
 class DownloadFile(Resource):
     def __init__(self):
-        self.scripting = Scripting(is_ipfs=True)
+        self.scripting = Scripting()
 
     @response_stream
     def get(self, transaction_id):

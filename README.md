@@ -8,12 +8,12 @@ Elastos Hive is an essential service infrastructure as a decentralized network o
 
 To developers, we strongly recommend applications to integrate the **Client SDKs (Java/Swift)** to use the vault service from Hive Nodes instead of directly using the Restful APIs.
 
-#### 1. Three Level of APIs 
+#### 1. Three Levels of APIs 
 
 There will be the following category of APIs to Client SDKs:
   - Global APIs to query the information related to Nodes;
 
-  - Management APIs for vault/backup lifecycles and payment subscription that could be called authorized applications;
+  - Management APIs for vault/backup lifecycles and payment subscriptions that could be called authorized applications;
 
   - Vault services access APIs to general applications.
 
@@ -24,7 +24,7 @@ To the general applications, it would support the following types of data storag
 - Structured data object access and store onto MongoDB;
 - Customized Scripting to select other users to read or contribute the data.
 
-Elastos Hive will keep the promise that **users remain in total control of their own data** and committing the practice on it.
+Elastos Hive will keep the promise that **users remain in total control of their own data** and commit the practice on it.
 
 ## Deploy Hive with Docker on Ubuntu/Debian system
 
@@ -38,7 +38,7 @@ $ sudo usermod -aG docker your-userid
 ```
 ***Notice here:*** *you will need to sign out from the target server and log in again to make Docker work effectively.*
 
-#### 2. Download package and unzip it
+#### 2. Download the package and unzip it
 Download the latest version of packages and untar it onto your server. At the time of this writing, you can run the commands as below:
 
 ```shell
@@ -46,7 +46,7 @@ $ curl -fsL https://github.com/elastos/Elastos.NET.Hive.Node/archive/release-v2.
 $ tar -xzvf release.tar.gz 
 ```
 #### 3. Start the installation
-Enter into the source code folder, directly run the command to install the Hive node service:
+Enter into the source code folder, and directly run the command to install the Hive node service:
 
 ```shell
 $ /bin/bash -c "$(curl -fsSL https://www.trinity-tech.io/hivenode/scripts/run.sh)" -s docker
@@ -56,7 +56,7 @@ After all the stuff has been finished, use the following command to check whethe
 $ docker ps
 ```
 #### 4. Run the test-cases
-Run the next command to launch test-cases to verify the deployed node at the same device:
+Run the next command to launch test cases to verify the deployed node at the same device:
 
 ```shell
 ./run.sh test

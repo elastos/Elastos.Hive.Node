@@ -17,7 +17,7 @@ from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTI
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from src.utils_v1.did_file_info import query_upload_get_filepath, query_hash
+from src.utils_v1.did_file_info import query_hash
 from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size, \
     populate_find_options_from_body, populate_options_insert_one, populate_options_update_one
 from src.utils_v1.did_scripting import populate_with_params_values, populate_file_body
@@ -25,7 +25,7 @@ from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mo
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
-from src.utils.http_exception import BadRequestException, CollectionNotFoundException, ScriptNotFoundException
+from src.utils.http_exception import BadRequestException, CollectionNotFoundException, ScriptNotFoundException, UnauthorizedException
 
 
 def validate_exists(json_data, parent_name, prop_list):
@@ -60,8 +60,7 @@ def fix_dollar_keys(data, is_save=True):
 
 
 class Condition:
-    def __init__(self, condition_data, params, user_did, app_did):
-        self.condition_data = condition_data if condition_data else {}
+    def __init__(self, params, user_did, app_did):
         self.params = params
         self.user_did = user_did
         self.app_did = app_did
@@ -93,32 +92,20 @@ class Condition:
         else:
             validate_exists(json_data['body'], 'condition.body', ['collection', ])
 
-    def is_satisfied(self, context) -> bool:
-        return self.__is_satisfied(self.condition_data, context)
-
-    def __is_satisfied(self, condition_data, context) -> bool:
+    def is_satisfied(self, condition_data, context) -> bool:
+        """ If the caller matches the condition """
         if not condition_data:
             return True
 
-        ctype = condition_data['type']
-        if ctype == 'or':
-            for data in condition_data['body']:
-                is_sat = self.__is_satisfied(data, context)
-                if is_sat:
-                    return True
-            return False
-        elif ctype == 'and':
-            for data in condition_data['body']:
-                is_sat = self.__is_satisfied(data, context)
-                if not is_sat:
-                    return False
-            return True
-        else:
-            return self.__is_satisfied_query_has_result(condition_data['body'], context)
+        type_, body = condition_data['type'], condition_data['body']
+        if type_ == 'or':
+            return any([self.is_satisfied(data, context) for data in body])
+        elif type_ == 'and':
+            return all([self.is_satisfied(data, context) for data in body])
 
-    def __is_satisfied_query_has_result(self, con_body_data, context):
-        col_name = con_body_data['collection']
-        col_filter = con_body_data.get('filter', {})
+        # type: 'queryHasResults'
+
+        col_name, col_filter = body['collection'], body.get('filter', {})
         msg = populate_with_params_values(self.user_did, self.app_did, col_filter, self.params)
         if msg:
             raise BadRequestException(msg='Cannot find parameter: ' + msg)
@@ -128,7 +115,7 @@ class Condition:
             raise BadRequestException(msg='Do not find condition collection with name ' + col_name)
 
         # INFO: 'options' is the internal supporting.
-        options = populate_options_count_documents(con_body_data.get('options', {}))
+        options = populate_options_count_documents(body.get('options', {}))
         return col.count_documents(convert_oid(col_filter), **options) > 0
 
 
@@ -155,19 +142,8 @@ class Context:
         """ get the script data by target_did and target_app_did """
         col = cli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
         if not col:
-            raise CollectionNotFoundException(msg='The collection scripts can not be found.')
+            raise CollectionNotFoundException(msg='The collection scripts of target user can not be found.')
         return col.find_one({'name': script_name})
-
-    def can_anonymous_access(self, anonymous_user: bool, anonymous_app: bool):
-        """ check the script option of 'anonymous_user' and 'anonymous_app' """
-        if not anonymous_user and not anonymous_app:
-            return self.user_did == self.target_did and self.app_did == self.target_app_did
-        elif not anonymous_user and anonymous_app:
-            return self.user_did == self.target_did
-        elif anonymous_user and not anonymous_app:
-            return self.app_did == self.target_app_did
-        else:
-            return True
 
 
 class Executable:
@@ -269,24 +245,11 @@ class Executable:
         return self.body
 
     def _create_transaction(self, action_type):
-        vault = self.vault_manager.get_vault(self.get_target_did())
-        if action_type == 'upload':
-            vault.check_storage()
-
+        """ Here just create a transaction for later uploading and downloading. """
         body = self.get_populated_file_body()
-        anonymous_url = ''
-        if self.is_ipfs:
-            if action_type == 'download':
-                metadata = self.ipfs_files.get_file_metadata(self.get_target_did(),
-                                                             self.get_target_app_did(),
-                                                             body['path'])
-                anonymous_url = self.ipfs_files.get_ipfs_file_access_url(metadata)
-        else:
-            _, err = query_upload_get_filepath(self.get_target_did(), self.get_target_app_did(), body['path'])
-            if err:
-                raise BadRequestException(msg='Cannot get file full path with error message: ' + str(err))
 
-        # INFO: Do not consider run script twice.
+        # The created transaction record can only be use once. So do not consider run script twice.
+        # If the user not call this transaction later, the transaction record will keep forever.
         data = cli.insert_one(self.get_target_did(),
                               self.get_target_app_did(),
                               SCRIPTING_SCRIPT_TEMP_TX_COLLECTION,
@@ -298,24 +261,21 @@ class Executable:
                                   'anonymous': self.script.anonymous_app and self.script.anonymous_user
                               }, create_on_absence=True)
         if not data.get('inserted_id', None):
-            raise BadRequestException(msg='Cannot retrieve the transaction ID.')
+            raise BadRequestException(msg='Cannot create a new transaction.')
 
         update_used_storage_for_mongodb_data(self.get_target_did(),
                                              get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
 
-        result = {
+        return {
             "transaction_id": jwt.encode({
                 "row_id": data.get('inserted_id', None),
                 "target_did": self.get_target_did(),
                 "target_app_did": self.get_target_app_did()
             }, hive_setting.PASSWORD, algorithm='HS256')
         }
-        if action_type == 'download' and self.is_ipfs and self.script.anonymous_app and self.script.anonymous_user:
-            result['anonymous_url'] = anonymous_url
-        return result
 
     @staticmethod
-    def create(script, executable_data):
+    def create_executables(script, executable_data):
         result = []
         Executable.__create(result, script, executable_data)
         return result
@@ -485,23 +445,47 @@ class FileHashExecutable(Executable):
 
 class Script:
     """ Represents a script registered by owner and ran by caller.
-    Their user DIDs can be same or not.
+    Their user DIDs can be same or not, or even the caller is anonymous.
 
-    # Parameter Replacement
+    .. Parameter Replacement ( $params )
 
     The following format can be defined on the value of script elements
-    which includes: condition ( filter ), executable ( as the following details )
+    which includes: condition ( filter ), executable ( as the following details ).
 
-        - database types: find: filter, options; insert: document; update: filter, update; delete: filter;
-        - file types: 'path' parameter;
+    Database types::
 
-    Parameter definition: "$params.<parameter name>"
-    Example of key-value: "group": "$params.group"  # the $param definition MUST the whole part of the value
+        find: filter, options;
+        insert: document;
+        update: filter, update;
+        delete: filter;
 
-    For the 'path' parameter of file types, the following patterns also support:
+    File types::
 
-        - "path": "/data/$params.file_name"  # the $param definition can be as the part of the path
-        - "path": "/data/${params.folder_name}/avatar.png"  # another form for the $param definition
+        'path';
+
+    Parameter definition::
+
+        "$params.<parameter name>"
+
+    Example of key-value::
+
+        "group": "$params.group"  # the $param definition MUST the whole part of the value
+
+    For the 'path' parameter of file types, the following patterns also support::
+
+        "path": "/data/$params.file_name"  # the $param definition can be as the part of the path
+
+        "path": "/data/${params.folder_name}/avatar.png"  # another form for the $param definition
+
+    .. allowAnonymousUser, allowAnonymousApp
+
+    These two options is for first checking when caller calls the script.
+
+    allowAnonymousUser=True, allowAnonymousApp=True
+        Caller can run the script without 'access token'.
+
+    others
+        Caller can run the script with 'access token'.
 
     """
     DOLLAR_REPLACE = '%%'
@@ -509,14 +493,16 @@ class Script:
     def __init__(self, script_name, run_data, user_did, app_did, scripting=None, is_ipfs=False):
         self.user_did = user_did
         self.app_did = app_did
+
+        # The script content will be got by 'self.name' dynamically.
+        # Keeping the script name and running data is enough
         self.name = script_name
         self.context = Context(run_data.get('context', None) if run_data else None, user_did, app_did)
         self.params = run_data.get('params', None) if run_data else None
-        self.condition = None
-        self.executables = []
-        self.anonymous_user = False
-        self.anonymous_app = False
+
         self.scripting = scripting
+
+        # TODO: to be removed
         self.is_ipfs = is_ipfs
 
     @staticmethod
@@ -544,43 +530,46 @@ class Script:
         script_data = self.context.get_script_data(self.name)
         if not script_data:
             raise BadRequestException(msg=f"Can't get the script with name '{self.name}'")
-        Script.fixDollarKeysRecursively(script_data, is_save=False)
-        self.executables = Executable.create(self, script_data['executable'])
-        self.anonymous_user = script_data.get('allowAnonymousUser', False)
-        self.anonymous_app = script_data.get('allowAnonymousApp', False)
 
-        result = dict()
-        for executable in self.executables:
-            self.condition = Condition(script_data.get('condition'),
-                                       executable.get_params(), self.user_did, self.app_did)
-            if not self.context.can_anonymous_access(self.anonymous_user, self.anonymous_app) \
-                    and not self.condition.is_satisfied(self.context):
-                raise BadRequestException(msg="Caller can't match the condition or access anonymously for the script.")
+        # The feature support that the script can be run without access token when two anonymous options are all True
+        anonymous_access = script_data.get('allowAnonymousUser', False) and script_data.get('allowAnonymousApp', False)
+        if not anonymous_access and g.token_error is not None:
+            raise UnauthorizedException(msg=f'Parse access token for running script error: {g.token_error}')
 
-            ret = executable.execute()
-            if ret:
-                result[executable.name] = ret
+        # Reverse the script content to let the key contains '$'
+        Script.fix_dollar_keys_recursively(script_data, is_save=False)
 
-        return result
+        # condition checking for all executables
+        condition = Condition(self.params, self.user_did, self.app_did)
+        if not condition.is_satisfied(script_data.get('condition'), self.context):
+            raise BadRequestException(msg="Caller can't match the condition.")
+
+        # run executables and get the results
+        executables = Executable.create_executables(self, script_data['executable'])
+        return list(filter(lambda r: r, [e.execute() for e in executables]))
 
     @staticmethod
-    def fixDollarKeysRecursively(iterable, is_save=True):
+    def fix_dollar_keys_recursively(data, is_save=True):
         """ Used for registering script content to skip $ restrictions in the field name of the document.
-        Recursively replace the key which start with 'src' to 'dst'.
+
+        Recursively replace the key from '$' to '%%' or backward.
+        
+        :param data: dict | list
+        :param is_save: True means trying to save the data (script content) to mongo database, else means loading.
         """
         src = '$' if is_save else Script.DOLLAR_REPLACE
         dst = Script.DOLLAR_REPLACE if is_save else '$'
-        if type(iterable) is dict:
-            for key in list(iterable.keys()):
+        if type(data) is dict:
+            for key in list(data.keys()):
                 if key.startswith(src):
                     new_key = dst + key[len(src):]
-                    iterable[new_key] = iterable.pop(key)
+                    data[new_key] = data.pop(key)
                 else:
                     new_key = key
-                Script.fixDollarKeysRecursively(iterable[new_key], is_save=is_save)
-        elif type(iterable) is list:
-            for v in iterable:
-                Script.fixDollarKeysRecursively(v, is_save=is_save)
+                Script.fix_dollar_keys_recursively(data[new_key], is_save=is_save)
+        elif type(data) is list:
+            for v in data:
+                Script.fix_dollar_keys_recursively(v, is_save=is_save)
 
 
 class Scripting:
@@ -601,6 +590,7 @@ class Scripting:
         return result
 
     def set_script_for_anonymous_file(self, script_name: str, file_path: str):
+        """ set script for uploading public file """
         json_data = {
             "executable": {
                 "output": True,
@@ -619,7 +609,7 @@ class Scripting:
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
         col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
         json_data['name'] = script_name
-        Script.fixDollarKeysRecursively(json_data)
+        Script.fix_dollar_keys_recursively(json_data)
         ret = col.replace_one({"name": script_name}, convert_oid(json_data),
                               upsert=True, bypass_document_validation=False)
         return {
@@ -661,12 +651,18 @@ class Scripting:
         return self.handle_transaction(transaction_id)
 
     def handle_transaction(self, transaction_id, is_download=False):
-        # check by transaction id
+        """ Do real uploading or downloading for caller """
+        # check by transaction id from request body
         row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)
         col_filter = {"_id": ObjectId(row_id)}
         trans = cli.find_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
         if not trans:
             raise BadRequestException(msg="Cannot find the transaction by id.")
+
+        # Do anonymous checking, it's same as 'Script.execute'
+        anonymous_access = trans.get('anonymous', False)
+        if not anonymous_access and g.token_error is not None:
+            raise UnauthorizedException(msg=f'Parse access token for running script error: {g.token_error}')
 
         # executing uploading or downloading
         data = None

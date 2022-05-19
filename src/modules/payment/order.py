@@ -177,7 +177,7 @@ class OrderManager:
             COL_ORDERS_STATUS: COL_ORDERS_STATUS_NORMAL
         }
         col = self.mcli.get_management_collection(COL_ORDERS)
-        doc['_id'] = col.insert_one(doc)['inserted_id']
+        doc['_id'] = ObjectId(col.insert_one(doc)['inserted_id'])
         return Order(doc)
 
     def update_proof(self, order: Order, proof: str):
@@ -206,7 +206,7 @@ class OrderManager:
             COL_RECEIPTS_PAID_DID: user_did,
         }
         col = self.mcli.get_management_collection(COL_RECEIPTS)
-        receipt['_id'] = col.insert_one(receipt)['inserted_id']
+        receipt['_id'] = ObjectId(col.insert_one(receipt)['inserted_id'])
         return Receipt(receipt)
 
     def update_receipt_proof(self, receipt: Receipt, receipt_proof: str):

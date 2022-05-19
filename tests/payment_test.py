@@ -10,7 +10,7 @@ from datetime import datetime
 from src.modules.payment.order_contract import OrderContract
 from src.utils.did.did_wrapper import JWT
 from tests.utils.http_client import HttpClient
-from tests import init_test
+from tests import init_test, test_log
 
 
 class PaymentTestCase(unittest.TestCase):
@@ -38,7 +38,7 @@ class PaymentTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue('proof' in response.json())
         proof = response.json().get('proof')
-        print(f'PROOF: {proof}')
+        test_log(f'PROOF: {proof}')
         jwt = JWT.parse(proof)
         self.assertEqual(jwt.get_issuer(), self.cli.remote_resolver.get_node_did())
         self.assertEqual(jwt.get_audience(), self.cli.remote_resolver.get_current_user_did_str())
@@ -50,7 +50,7 @@ class PaymentTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue('proof' in response.json())
         proof = response.json().get('proof')
-        print(f'PROOF: {proof}')
+        test_log(f'PROOF: {proof}')
         jwt = JWT.parse(proof)
         self.assertEqual(jwt.get_issuer(), self.cli.remote_resolver.get_node_did())
         self.assertEqual(jwt.get_audience(), self.cli.remote_resolver.get_current_user_did_str())
@@ -62,7 +62,7 @@ class PaymentTestCase(unittest.TestCase):
         # Here is for testing the contract to getting order information.
         contract = OrderContract()
         order = contract.get_order(4)
-        print(f'get a contract order: {order}')
+        test_log(f'get a contract order: {order}')
 
     @unittest.skip
     def test04_settle_order(self):
@@ -71,7 +71,7 @@ class PaymentTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertTrue('receipt_proof' in response.json())
         proof = response.json().get('receipt_proof')
-        print(f'RECEIPT PROOF: {proof}')
+        test_log(f'RECEIPT PROOF: {proof}')
         jwt = JWT.parse(proof)
         self.assertEqual(jwt.get_issuer(), self.cli.remote_resolver.get_node_did())
         self.assertEqual(jwt.get_audience(), self.cli.remote_resolver.get_current_user_did_str())
@@ -81,7 +81,7 @@ class PaymentTestCase(unittest.TestCase):
         response = self.cli.get('/order?subscription=vault')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('orders' in response.json())
-        print(f'orders: {response.json()["orders"]}')
+        test_log(f'orders: {response.json()["orders"]}')
 
     @unittest.skip
     def test06_get_receipts(self):
@@ -89,4 +89,4 @@ class PaymentTestCase(unittest.TestCase):
         response = self.cli.get(f'/receipt?order_id={contract_order_id}')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('receipts' in response.json())
-        print(f'receipts: {response.json()["receipts"]}')
+        test_log(f'receipts: {response.json()["receipts"]}')

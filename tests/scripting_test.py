@@ -142,7 +142,6 @@ class IpfsScriptingTestCase(unittest.TestCase):
                     "words_count": "$params.words_count"
                 },
                 "options": {
-                    "ordered": True,
                     "bypass_document_validation": False
                 }
             }

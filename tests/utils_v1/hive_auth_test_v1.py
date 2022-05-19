@@ -1,10 +1,5 @@
-import logging
-
 from src.utils.did.did_wrapper import DID, Credential
 from src.utils.did.entity import Entity
-
-logger = logging.getLogger()
-logger.level = logging.DEBUG
 
 
 class UserDID(Entity):

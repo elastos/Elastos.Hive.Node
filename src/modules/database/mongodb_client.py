@@ -57,9 +57,7 @@ class MongodbCollection:
 
     def insert_one(self, doc, contains_extra=True, **kwargs):
         if contains_extra:
-            now_timestamp = int(datetime.utcnow().timestamp())
-            doc['created'] = now_timestamp
-            doc['modified'] = now_timestamp
+            doc['created'] = doc['modified'] = int(datetime.utcnow().timestamp())
 
         # kwargs are the options
         options = {k: v for k, v in kwargs.items() if k in ["bypass_document_validation"]}
@@ -70,7 +68,7 @@ class MongodbCollection:
 
         return {
             "acknowledged": result.acknowledged,
-            "inserted_id": result.inserted_id  # ObjectId
+            "inserted_id": str(result.inserted_id)  # ObjectId -> str
         }
 
     def update_one(self, filter_, update, contains_extra=True, **kwargs):

@@ -71,23 +71,23 @@ class BadRequestException(HiveException):
     BACKUP_IS_IN_PROCESSING = 2
     ELADID_ERROR = 3
 
-    def __init__(self, internal_code=INVALID_PARAMETER, msg='Invalid parameter'):
+    def __init__(self, msg='Invalid parameter', internal_code=INVALID_PARAMETER):
         super().__init__(400, internal_code, msg)
 
 
 class InvalidParameterException(BadRequestException):
     def __init__(self, msg='Invalid parameter'):
-        super().__init__(super().INVALID_PARAMETER, msg=msg)
+        super().__init__(internal_code=super().INVALID_PARAMETER, msg=msg)
 
 
 class BackupIsInProcessingException(BadRequestException):
     def __init__(self, msg='Backup is in processing.'):
-        super().__init__(super().BACKUP_IS_IN_PROCESSING, msg=msg)
+        super().__init__(internal_code=super().BACKUP_IS_IN_PROCESSING, msg=msg)
 
 
 class ElaDIDException(BadRequestException):
     def __init__(self, msg):
-        super().__init__(super().ELADID_ERROR, msg=msg)
+        super().__init__(internal_code=super().ELADID_ERROR, msg=msg)
 
 
 # UnauthorizedException
@@ -120,7 +120,7 @@ class NotFoundException(HiveException):
     RECEIPT_NOT_FOUND = 8
     APPLICATION_NOT_FOUND = 9
 
-    def __init__(self, internal_code=VAULT_NOT_FOUND, msg='The vault can not be found or is not activate.'):
+    def __init__(self, msg='The vault can not be found or is not activate.', internal_code=VAULT_NOT_FOUND):
         super().__init__(404, internal_code, msg)
 
 

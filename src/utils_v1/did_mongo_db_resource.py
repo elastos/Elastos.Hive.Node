@@ -44,15 +44,11 @@ def convert_oid(query, update=False):
     return new_query
 
 
-def options_filter(body, args):
-    ops = dict()
-    if not body or "options" not in body:
-        return ops
-    options = body["options"]
-    for arg in args:
-        if arg in options:
-            ops[arg] = options[arg]
-    return ops
+def options_filter(body, option_keys):
+    """ filter options in options_keys from the "options" of body """
+    if not body or not isinstance(body.get('options'), dict):
+        return {}
+    return {k: v for k, v in body.get('options') if k in option_keys}
 
 
 def options_pop_timestamp(request_body):

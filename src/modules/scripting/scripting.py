@@ -3,40 +3,50 @@
 """
 The main handling file of scripting module.
 """
-import json
 import logging
 
 import jwt
 from flask import request, g
-from bson import ObjectId, json_util
+from bson import ObjectId
 
 from src import hive_setting
+from src.modules.scripting.executable import Executable, get_populated_value_with_params
 from src.modules.subscription.vault import VaultManager
-from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, \
-    SCRIPTING_EXECUTABLE_TYPE_INSERT, SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, \
-    SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
-    SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_SCRIPT_COLLECTION, \
+from src.utils_v1.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size, \
-    populate_find_options_from_body, populate_options_insert_one, populate_options_update_one
-from src.utils_v1.did_scripting import populate_with_params_values, populate_file_body
+from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.modules.ipfs.ipfs_files import IpfsFiles
-from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
 from src.utils.db_client import cli
 from src.utils.http_exception import BadRequestException, CollectionNotFoundException, ScriptNotFoundException, UnauthorizedException
 
 
-def validate_exists(json_data, parent_name, prop_list):
-    """ check the input parameters exist, support dot, such as: a.b.c """
-    for prop in prop_list:
-        parts = prop.split('.')
-        prop_name = parent_name + '.' + parts[0] if parent_name else parts[0]
-        if len(parts) > 1:
-            validate_exists(json_data[parts[0]], prop_name, '.'.join(parts[1:]))
-        else:
-            if not json_data.get(prop, None):
-                raise BadRequestException(msg=f'Parameter {prop_name} MUST be provided')
+def validate_exists(json_data, parent_name, properties):
+    """ check the input parameters exist, support dot, such as: a.b.c
+
+    :param json_data: dict
+    :param parent_name: parent name which will find first and all are 'dict', support 'a.b.c'
+    :param properties: properties under 'json_data'['parent_name']
+    """
+    if not isinstance(json_data, dict):
+        raise BadRequestException(msg=f'Invalid parameter: {str(json_data)}')
+
+    # try to get the parent dict
+    if not parent_name:
+        data = json_data
+    else:
+        # get first child, if exists, recursive validate
+        parts = parent_name.split('.')
+        data = json_data.get(parts[0])
+        if not isinstance(data, dict):
+            raise BadRequestException(msg=f'Invalid parameter: {str(json_data)}')
+
+        validate_exists(data, '.'.join(parts[1:]) if len(parts) > 1 else '', properties)
+
+    # directly check
+    for prop in properties:
+        if prop not in data:
+            raise BadRequestException(msg=f'Invalid parameter: {str(json_data)}')
 
 
 def fix_dollar_keys(data, is_save=True):
@@ -59,10 +69,10 @@ def fix_dollar_keys(data, is_save=True):
 
 
 class Condition:
-    def __init__(self, params, user_did, app_did):
+    def __init__(self, params):
         self.params = params
-        self.user_did = user_did
-        self.app_did = app_did
+        self.user_did = g.usr_did
+        self.app_did = g.app_did
 
     @staticmethod
     def validate_data(json_data):
@@ -104,10 +114,8 @@ class Condition:
 
         # type: 'queryHasResults'
 
-        col_name, col_filter = body['collection'], body.get('filter', {})
-        msg = populate_with_params_values(self.user_did, self.app_did, col_filter, self.params)
-        if msg:
-            raise BadRequestException(msg='Cannot find parameter: ' + msg)
+        col_name = body['collection']
+        col_filter = get_populated_value_with_params(body.get('filter', {}), self.user_did, self.app_did, self.params)
 
         col = cli.get_user_collection(context.target_did, context.target_app_did, col_name)
         if not col:
@@ -119,10 +127,11 @@ class Condition:
 
 
 class Context:
-    def __init__(self, context_data, user_did, app_did):
-        self.user_did, self.app_did = user_did, app_did
-        self.target_did = user_did
-        self.target_app_did = app_did
+    def __init__(self, context_data):
+        self.user_did, self.app_did = g.usr_did, g.app_did
+
+        # default is caller's DID
+        self.target_did, self.target_app_did = g.usr_did, g.app_did
         if context_data:
             self.target_did = context_data['target_did']
             self.target_app_did = context_data['target_app_did']
@@ -143,300 +152,6 @@ class Context:
         if not col:
             raise CollectionNotFoundException(msg='The collection scripts of target user can not be found.')
         return col.find_one({'name': script_name})
-
-
-class Executable:
-    """ Executable represents an action which contains operation for database and files. """
-
-    def __init__(self, script, executable_data):
-        self.script = script
-        self.name = executable_data['name']
-        self.body = executable_data['body']
-        self.is_output = executable_data.get('output', True)
-        self.ipfs_files = IpfsFiles()
-        self.vault_manager = VaultManager()
-
-    @staticmethod
-    def validate_data(json_data):
-        validate_exists(json_data, 'executable', ['name', 'type', 'body'])
-
-        if json_data['type'] not in [SCRIPTING_EXECUTABLE_TYPE_AGGREGATED,
-                                     SCRIPTING_EXECUTABLE_TYPE_FIND,
-                                     SCRIPTING_EXECUTABLE_TYPE_INSERT,
-                                     SCRIPTING_EXECUTABLE_TYPE_UPDATE,
-                                     SCRIPTING_EXECUTABLE_TYPE_DELETE,
-                                     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD,
-                                     SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD,
-                                     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES,
-                                     SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
-            raise BadRequestException(msg=f"Invalid type {json_data['type']} of the executable.")
-
-        if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED \
-                and (not isinstance(json_data['body'], list) or len(json_data['body']) < 1):
-            raise BadRequestException(msg=f"Executable body MUST be list for type "
-                                          f"'{SCRIPTING_EXECUTABLE_TYPE_AGGREGATED}'.")
-
-        if json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FIND,
-                                 SCRIPTING_EXECUTABLE_TYPE_INSERT,
-                                 SCRIPTING_EXECUTABLE_TYPE_UPDATE,
-                                 SCRIPTING_EXECUTABLE_TYPE_DELETE]:
-            validate_exists(json_data['body'], 'executable.body', ['collection', ])
-
-        if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_INSERT:
-            validate_exists(json_data['body'], 'executable.body', ['document', ])
-
-        if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
-            validate_exists(json_data['body'], 'executable.body', ['update', ])
-
-        if json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD,
-                                 SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD,
-                                 SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES,
-                                 SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
-            validate_exists(json_data['body'], 'executable.body', ['path', ])
-
-    def execute(self):
-        pass
-
-    def get_did(self):
-        return self.script.user_did
-
-    def get_app_id(self):
-        return self.script.app_did
-
-    def get_target_did(self):
-        return self.script.context.target_did
-
-    def get_target_app_did(self):
-        return self.script.context.target_app_did
-
-    def get_collection_name(self):
-        return self.body['collection']
-
-    def get_filter(self):
-        return self.body.get('filter', {})
-
-    def get_context(self):
-        return self.script.context
-
-    def get_document(self):
-        return self.body.get('document', {})
-
-    def get_update(self):
-        return self.body.get('update', {})
-
-    def get_params(self):
-        return self.script.params
-
-    def get_output_data(self, data):
-        return data if self.is_output else None
-
-    def get_populated_filter(self):
-        col_filter = self.get_filter()
-        msg = populate_with_params_values(self.get_did(), self.get_app_id(), col_filter, self.get_params())
-        if msg:
-            raise BadRequestException(msg='Cannot get parameter value for the executable filter: ' + msg)
-        return col_filter
-
-    def get_populated_file_body(self):
-        """ only for the body of file types """
-        populate_file_body(self.body, self.get_params())
-        return self.body
-
-    def _create_transaction(self, action_type):
-        """ Here just create a transaction for later uploading and downloading. """
-        body = self.get_populated_file_body()
-
-        # The created transaction record can only be use once. So do not consider run script twice.
-        # If the user not call this transaction later, the transaction record will keep forever.
-        data = cli.insert_one(self.get_target_did(),
-                              self.get_target_app_did(),
-                              SCRIPTING_SCRIPT_TEMP_TX_COLLECTION,
-                              {
-                                  "document": {
-                                      "file_name": body['path'],
-                                      "fileapi_type": action_type
-                                  },
-                                  'anonymous': self.script.anonymous_app and self.script.anonymous_user
-                              }, create_on_absence=True)
-        if not data.get('inserted_id', None):
-            raise BadRequestException(msg='Cannot create a new transaction.')
-
-        update_used_storage_for_mongodb_data(self.get_target_did(),
-                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
-
-        return {
-            "transaction_id": jwt.encode({
-                "row_id": data.get('inserted_id', None),
-                "target_did": self.get_target_did(),
-                "target_app_did": self.get_target_app_did()
-            }, hive_setting.PASSWORD, algorithm='HS256')
-        }
-
-    @staticmethod
-    def create_executables(script, executable_data):
-        result = []
-        Executable.__create(result, script, executable_data)
-        return result
-
-    @staticmethod
-    def __create(result, script, executable_data):
-        executable_type = executable_data['type']
-        executable_body = executable_data['body']
-        if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
-            for data in executable_body:
-                Executable.__create(result, script, data)
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
-            result.append(FindExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
-            result.append(InsertExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
-            result.append(UpdateExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
-            result.append(DeleteExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD:
-            result.append(FileUploadExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
-            result.append(FileDownloadExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES:
-            result.append(FilePropertiesExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_HASH:
-            result.append(FileHashExecutable(script, executable_data))
-
-
-class FindExecutable(Executable):
-    def __init__(self, script, executable_data):
-        super().__init__(script, executable_data)
-
-    def __get_populated_find_options(self):
-        options = populate_find_options_from_body(self.body)
-        msg = populate_with_params_values(self.get_did(), self.get_app_id(), options, self.get_params())
-        if msg:
-            raise BadRequestException(msg=f'Cannot get the value of the parameters for the find options: {msg}')
-        return options
-
-    def execute(self):
-        self.vault_manager.get_vault(self.get_target_did())
-
-        filter_ = self.get_populated_filter()
-        items = cli.find_many(self.get_target_did(), self.get_target_app_did(),
-                              self.get_collection_name(), filter_, self.__get_populated_find_options())
-        total = cli.count(self.get_target_did(), self.get_target_app_did(), self.get_collection_name(), filter_, throw_exception=False)
-
-        return self.get_output_data({'total': total, 'items': json.loads(json_util.dumps(items))})
-
-
-class InsertExecutable(Executable):
-    def __init__(self, script, executable_data):
-        super().__init__(script, executable_data)
-
-    def execute(self):
-        self.vault_manager.get_vault(self.get_target_did()).check_storage()
-
-        document = self.get_document()
-        msg = populate_with_params_values(self.get_did(), self.get_app_id(), document, self.get_params())
-        if msg:
-            raise BadRequestException(msg='Cannot get parameter value for the executable document: ' + msg)
-
-        data = cli.insert_one(self.get_target_did(),
-                              self.get_target_app_did(),
-                              self.get_collection_name(),
-                              document,
-                              populate_options_insert_one(self.body))
-
-        update_used_storage_for_mongodb_data(self.get_did(),
-                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
-
-        return self.get_output_data(data)
-
-
-class UpdateExecutable(Executable):
-    def __init__(self, script, executable_data):
-        super().__init__(script, executable_data)
-
-    def execute(self):
-        self.vault_manager.get_vault(self.get_target_did()).check_storage()
-
-        col_update = self.get_update()
-        msg = populate_with_params_values(self.get_did(), self.get_app_id(), col_update.get('$set'), self.get_params())
-        if msg:
-            raise BadRequestException(msg='Cannot get parameter value for the executable update: ' + msg)
-
-        data = cli.update_one(self.get_target_did(),
-                              self.get_target_app_did(),
-                              self.get_collection_name(),
-                              self.get_populated_filter(),
-                              col_update,
-                              populate_options_update_one(self.body))
-
-        update_used_storage_for_mongodb_data(self.get_did(),
-                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
-
-        return self.get_output_data(data)
-
-
-class DeleteExecutable(Executable):
-    def __init__(self, script, executable_data):
-        super().__init__(script, executable_data)
-
-    def execute(self):
-        self.vault_manager.get_vault(self.get_target_did())
-
-        data = cli.delete_one(self.get_target_did(),
-                              self.get_target_app_did(),
-                              self.get_collection_name(),
-                              self.get_populated_filter())
-
-        update_used_storage_for_mongodb_data(self.get_did(),
-                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
-
-        return self.get_output_data(data)
-
-
-class FileUploadExecutable(Executable):
-    def __init__(self, script, executable_data):
-        super().__init__(script, executable_data)
-
-    def execute(self):
-        return self._create_transaction('upload')
-
-
-class FileDownloadExecutable(Executable):
-    def __init__(self, script, executable_data):
-        super().__init__(script, executable_data)
-
-    def execute(self):
-        return self._create_transaction('download')
-
-
-class FilePropertiesExecutable(Executable):
-    def __init__(self, script, executable_data):
-        super().__init__(script, executable_data)
-
-    def execute(self):
-        body = self.get_populated_file_body()
-
-        logging.info(f'get file properties: path={body["path"]}')
-
-        doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
-        return self.get_output_data({
-            "type": "file" if doc[COL_IPFS_FILES_IS_FILE] else "folder",
-            "name": body['path'],
-            "size": doc[SIZE],
-            "last_modify": doc['modified']
-        })
-
-
-class FileHashExecutable(Executable):
-    def __init__(self, script, executable_data):
-        super().__init__(script, executable_data)
-
-    def execute(self):
-        body = self.get_populated_file_body()
-
-        logging.info(f'get file hash: path={body["path"]}')
-
-        doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), body['path'])
-        return self.get_output_data({"SHA256": doc[COL_IPFS_FILES_SHA256]})
 
 
 class Script:
@@ -486,15 +201,18 @@ class Script:
     """
     DOLLAR_REPLACE = '%%'
 
-    def __init__(self, script_name, run_data, user_did, app_did, scripting=None):
-        self.user_did = user_did
-        self.app_did = app_did
+    def __init__(self, script_name, run_data, scripting=None):
+        self.user_did = g.usr_did
+        self.app_did = g.app_did
 
         # The script content will be got by 'self.name' dynamically.
         # Keeping the script name and running data is enough
         self.name = script_name
-        self.context = Context(run_data.get('context', None) if run_data else None, user_did, app_did)
+        self.context = Context(run_data.get('context', None) if run_data else None)
         self.params = run_data.get('params', None) if run_data else None
+
+        # for file uploading and downloading
+        self.anonymous_app = self.anonymous_user = False
 
         self.scripting = scripting
 
@@ -524,8 +242,11 @@ class Script:
         if not script_data:
             raise BadRequestException(msg=f"Can't get the script with name '{self.name}'")
 
+        self.anonymous_app = script_data.get('allowAnonymousUser', False)
+        self.anonymous_user = script_data.get('allowAnonymousApp', False)
+
         # The feature support that the script can be run without access token when two anonymous options are all True
-        anonymous_access = script_data.get('allowAnonymousUser', False) and script_data.get('allowAnonymousApp', False)
+        anonymous_access = self.anonymous_app and self.anonymous_user
         if not anonymous_access and g.token_error is not None:
             raise UnauthorizedException(msg=f'Parse access token for running script error: {g.token_error}')
 
@@ -533,13 +254,14 @@ class Script:
         Script.fix_dollar_keys_recursively(script_data, is_save=False)
 
         # condition checking for all executables
-        condition = Condition(self.params, self.user_did, self.app_did)
+        condition = Condition(self.params)
         if not condition.is_satisfied(script_data.get('condition'), self.context):
             raise BadRequestException(msg="Caller can't match the condition.")
 
         # run executables and get the results
-        executables = Executable.create_executables(self, script_data['executable'])
-        return list(filter(lambda r: r, [e.execute() for e in executables]))
+        executables: [Executable] = Executable.create_executables(self, script_data['executable'])
+        # executable_name: executable_result ( MUST not None ), this is for the executable option 'is_out'
+        return {k: v for k, v in {e.name: e.execute() for e in executables}.items() if v is not None}
 
     @staticmethod
     def fix_dollar_keys_recursively(data, is_save=True):
@@ -625,7 +347,7 @@ class Scripting:
     def run_script(self, script_name):
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
-        return Script(script_name, json_data, g.usr_did, g.app_did, scripting=self).execute()
+        return Script(script_name, json_data, scripting=self).execute()
 
     def run_script_url(self, script_name, target_did, target_app_did, params):
         json_data = {
@@ -637,7 +359,7 @@ class Scripting:
                 'target_app_did': target_app_did
             }
         Script.validate_run_data(json_data)
-        return Script(script_name, json_data, g.usr_did, g.app_did, scripting=self).execute()
+        return Script(script_name, json_data, scripting=self).execute()
 
     def upload_file(self, transaction_id):
         return self.handle_transaction(transaction_id)

@@ -82,7 +82,7 @@ class MongodbCollection:
                 update["$set"]["modified"] = now_timestamp
 
         # kwargs are the options
-        result = self.col.update_one(self.convert_oid(filter_), self.convert_oid(update), **kwargs)
+        result = self.col.update_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **kwargs)
         return {
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,
@@ -94,10 +94,32 @@ class MongodbCollection:
         # kwargs are the options
         return self.col.find_one(self.convert_oid(filter_) if filter_ else None, **kwargs)
 
-    def find_many(self, filter_: dict, **kwargs) -> list:
+    def find_many(self, filter_: dict, filter_options: bool = False, **kwargs) -> list:
         # kwargs are the options
+        options = kwargs
+
+        # filter to expected ones
+        if filter_options:
+            options = {k: v for k, v in options if k in ("projection",
+                                                         "skip",
+                                                         "limit",
+                                                         "sort",
+                                                         "allow_partial_results",
+                                                         "return_key",
+                                                         "show_record_id",
+                                                         "batch_size")}
+
+        # extra sort support
+        if 'sort' in options:
+            if isinstance(options['sort'], dict):
+                # value example: {'author', -1} => [('author', -1)]
+                options['sort'] = options['sort'].items()
+
         # BUGBUG: Getting all documents out maybe not well.
-        return list(self.col.find(self.convert_oid(filter_) if filter_ else None, **kwargs))
+        return list(self.col.find(self.convert_oid(filter_) if filter_ else None, **options))
+
+    def count(self, filter_):
+        return self.col.count_documents(self.convert_oid(filter_) if filter_ else None)
 
     def convert_oid(self, value: _T):
         """ try to convert the following dict recursively.

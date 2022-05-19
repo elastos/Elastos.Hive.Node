@@ -262,8 +262,9 @@ class WritingOperation(Resource):
 
         .. sourcecode:: http
 
-            public=<true|false> # whether the file uploaded can be access anonymously.
-            script_name=<string> # script name used to set up for downloading by scripting module. the script can be run without params.
+            public=<true|false>    # whether the file uploaded can be access anonymously.
+            script_name=<string>   # script name used to set up for downloading by scripting module. the script can be run without params.
+                                   # the executable name of the script is the same as the script name.
 
         **Response OK**:
 

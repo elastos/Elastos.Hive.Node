@@ -5,7 +5,7 @@ Testing file for the ipfs-backup module.
 """
 import unittest
 
-from tests import init_test
+from tests import init_test, test_log
 from tests.utils.http_client import HttpClient
 
 
@@ -36,7 +36,7 @@ class IpfsBackupTestCase(unittest.TestCase):
         response = self.backup_cli.get('/subscription/backup')
         self.assertEqual(response.status_code, 200)
         self.assertTrue(isinstance(response.json(), dict))
-        print(f'backup info: {response.json()}')
+        test_log(f'backup info: {response.json()}')
 
     def test03_backup_invalid_parameter(self):
         r = self.cli.post('/vault/content?to=hive_node')

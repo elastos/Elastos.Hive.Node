@@ -10,15 +10,14 @@ from flask import request, g
 from bson import ObjectId
 
 from src import hive_setting
-from src.modules.scripting.executable import Executable, get_populated_value_with_params
-from src.modules.subscription.vault import VaultManager
-from src.utils_v1.constants import SCRIPTING_SCRIPT_COLLECTION, \
-    SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, convert_oid, get_mongo_database_size
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
+from src.utils_v1.constants import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
+from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, get_mongo_database_size
+from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException
 from src.modules.ipfs.ipfs_files import IpfsFiles
-from src.utils.db_client import cli
-from src.utils.http_exception import BadRequestException, CollectionNotFoundException, ScriptNotFoundException, UnauthorizedException
+from src.modules.subscription.vault import VaultManager
+from src.modules.database.mongodb_client import MongodbClient
+from src.modules.scripting.executable import Executable, get_populated_value_with_params
 
 
 def validate_exists(json_data, parent_name, properties):
@@ -70,36 +69,39 @@ def fix_dollar_keys(data, is_save=True):
 
 class Condition:
     def __init__(self, params):
-        self.params = params
         self.user_did = g.usr_did
         self.app_did = g.app_did
+        self.params = params
+        self.mcli = MongodbClient()
 
     @staticmethod
     def validate_data(json_data):
+        """ Validate the condition data, can not nest than 5 layers. """
         if not json_data:
             return
-        Condition.__validate_type(json_data, 1)
 
-    @staticmethod
-    def __validate_type(json_data, layer):
-        if layer > 5:
-            raise BadRequestException(msg='Too more nested conditions.')
+        def validate(data, layer):
+            if layer > 5:
+                raise BadRequestException(msg='Too more nested conditions.')
 
-        validate_exists(json_data, 'condition', ['name', 'type', 'body'])
+            validate_exists(data, 'condition', ['name', 'type', 'body'])
 
-        condition_type = json_data['type']
-        if condition_type not in ['or', 'and', 'queryHasResults']:
-            raise BadRequestException(msg=f"Unsupported condition type {condition_type}")
+            condition_type = data['type']
+            if condition_type not in ['or', 'and', 'queryHasResults']:
+                raise BadRequestException(msg=f"Unsupported condition type {condition_type}")
 
-        if condition_type in ['and', 'or']:
-            if not isinstance(json_data['body'], list)\
-                    or not json_data['body']:
-                raise BadRequestException(msg=f"Condition body MUST be list "
-                                              f"and at least contain one element for the type '{condition_type}'")
-            for data in json_data['body']:
-                Condition.__validate_type(data, layer + 1)
-        else:
-            validate_exists(json_data['body'], 'condition.body', ['collection', ])
+            if condition_type in ['and', 'or']:
+                if not isinstance(data['body'], list)\
+                        or not data['body']:
+                    raise BadRequestException(msg=f"Condition body MUST be list "
+                                                  f"and at least contain one element for the type '{condition_type}'")
+                for data in data['body']:
+                    validate(data, layer + 1)
+            else:
+                # Just 'queryHasResults'
+                validate_exists(data['body'], 'condition.body', ['collection', ])
+
+        validate(json_data, 1)
 
     def is_satisfied(self, condition_data, context) -> bool:
         """ If the caller matches the condition """
@@ -116,14 +118,11 @@ class Condition:
 
         col_name = body['collection']
         col_filter = get_populated_value_with_params(body.get('filter', {}), self.user_did, self.app_did, self.params)
-
-        col = cli.get_user_collection(context.target_did, context.target_app_did, col_name)
-        if not col:
-            raise BadRequestException(msg='Do not find condition collection with name ' + col_name)
-
         # INFO: 'options' is the internal supporting.
         options = populate_options_count_documents(body.get('options', {}))
-        return col.count_documents(convert_oid(col_filter), **options) > 0
+
+        col = self.mcli.get_user_collection(context.target_did, context.target_app_did, col_name)
+        return col.count(col_filter, options=options) > 0
 
 
 class Context:
@@ -135,6 +134,8 @@ class Context:
         if context_data:
             self.target_did = context_data['target_did']
             self.target_app_did = context_data['target_app_did']
+
+        self.mcli = MongodbClient()
 
     @staticmethod
     def validate_data(json_data):
@@ -148,9 +149,7 @@ class Context:
 
     def get_script_data(self, script_name):
         """ get the script data by target_did and target_app_did """
-        col = cli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
-        if not col:
-            raise CollectionNotFoundException(msg='The collection scripts of target user can not be found.')
+        col = self.mcli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
         return col.find_one({'name': script_name})
 
 
@@ -292,6 +291,7 @@ class Scripting:
         self.files = None
         self.ipfs_files = IpfsFiles()
         self.vault_manager = VaultManager()
+        self.mcli = MongodbClient()
 
     def set_script(self, script_name):
         self.vault_manager.get_vault(g.usr_did).check_storage()
@@ -317,29 +317,23 @@ class Scripting:
             "allowAnonymousUser": True,
             "allowAnonymousApp": True
         }
-        result = self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
+        self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
         update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
 
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
-        col = cli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
-        json_data['name'] = script_name
         Script.fix_dollar_keys_recursively(json_data)
-        ret = col.replace_one({"name": script_name}, convert_oid(json_data),
-                              upsert=True, bypass_document_validation=False)
-        return {
-            "acknowledged": ret.acknowledged,
-            "matched_count": ret.matched_count,
-            "modified_count": ret.modified_count,
-            "upserted_id": str(ret.upserted_id) if ret.upserted_id else '',
-        }
+        json_data['name'] = script_name
+
+        col = self.mcli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        return col.replace_one({"name": script_name}, json_data)
 
     def delete_script(self, script_name):
         self.vault_manager.get_vault(g.usr_did)
 
-        col = cli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        result = col.delete_many({'name': script_name})
 
-        ret = col.delete_many({'name': script_name})
-        if ret.deleted_count > 0:
+        if result.deleted_count > 0:
             update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
         else:
             raise ScriptNotFoundException(f'The script {script_name} does not exist.')
@@ -369,9 +363,8 @@ class Scripting:
         # check by transaction id from request body
         row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)
         col_filter = {"_id": ObjectId(row_id)}
-        trans = cli.find_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
-        if not trans:
-            raise BadRequestException(msg="Cannot find the transaction by id.")
+        col = self.mcli.get_user_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, create_on_absence=True)
+        trans = col.find_one({"_id": ObjectId(row_id)})
 
         # Do anonymous checking, it's same as 'Script.execute'
         anonymous_access = trans.get('anonymous', False)
@@ -389,7 +382,7 @@ class Scripting:
             self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
 
         # recalculate the storage usage of the database
-        cli.delete_one(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, col_filter)
+        col.delete_many(col_filter)
         update_used_storage_for_mongodb_data(target_did, get_mongo_database_size(target_did, target_app_did))
 
         # return the content of the file

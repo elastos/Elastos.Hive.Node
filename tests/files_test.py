@@ -69,7 +69,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         # check fileDownload script
         from tests.scripting_test import IpfsScriptingTestCase
         scripting_test = IpfsScriptingTestCase()
-        scripting_test.call_and_stream(script_name, None, file_content=self.src_file_content)
+        scripting_test.call_and_execute_transaction(script_name, script_name, download_content=self.src_file_content)
 
         # clean the script and the file.
         scripting_test.delete_script(script_name)

@@ -167,9 +167,9 @@ class RemoteResolver:
 
 def _log_http_request(func):
     def wrapper(self, *args, **kwargs):
-        logging.debug(f'REQUEST:{func.__name__},{args},{kwargs}')
+        print(f'REQUEST:{func.__name__},{args},{kwargs}')
         response = func(self, *args, **kwargs)
-        logging.debug(f'RESPONSE:{func.__name__},{response.status_code},{response.text}')
+        print(f'RESPONSE:{func.__name__},{response.status_code},{response.text}')
         return response
     return wrapper
 
@@ -194,7 +194,7 @@ class HttpClient:
             headers['Content-type'] = 'application/json'
         if need_token:
             headers['Authorization'] = 'token ' + self.remote_resolver.get_token()
-        logging.debug(f'HEADER: {headers}')
+        print(f'HEADER: {headers}')
         return headers
 
     def get_current_did(self):
@@ -231,8 +231,8 @@ class HttpClient:
         return requests.put(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request
-    def patch(self, relative_url, body=None):
-        return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
+    def patch(self, relative_url, body=None, need_token=True):
+        return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(need_token=need_token), json=body)
 
     @_log_http_request
     def delete(self, relative_url, body=None, is_json=False):

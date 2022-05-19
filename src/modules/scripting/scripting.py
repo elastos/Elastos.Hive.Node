@@ -20,15 +20,16 @@ from src.modules.database.mongodb_client import MongodbClient
 from src.modules.scripting.executable import Executable, get_populated_value_with_params
 
 
-def validate_exists(json_data, parent_name, properties):
+def validate_exists(json_data, properties, parent_name=None):
     """ check the input parameters exist, support dot, such as: a.b.c
 
     :param json_data: dict
     :param parent_name: parent name which will find first and all are 'dict', support 'a.b.c'
+                        can be None, then directly check on 'json_data'
     :param properties: properties under 'json_data'['parent_name']
     """
     if not isinstance(json_data, dict):
-        raise BadRequestException(msg=f'Invalid parameter: {str(json_data)}')
+        raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" (not dict)')
 
     # try to get the parent dict
     if not parent_name:
@@ -38,14 +39,14 @@ def validate_exists(json_data, parent_name, properties):
         parts = parent_name.split('.')
         data = json_data.get(parts[0])
         if not isinstance(data, dict):
-            raise BadRequestException(msg=f'Invalid parameter: {str(json_data)}')
+            raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" ("{parts[0]}" is not dict)')
 
-        validate_exists(data, '.'.join(parts[1:]) if len(parts) > 1 else '', properties)
+        validate_exists(data, properties, parent_name='.'.join(parts[1:]) if len(parts) > 1 else None)
 
     # directly check
     for prop in properties:
         if prop not in data:
-            raise BadRequestException(msg=f'Invalid parameter: {str(json_data)}')
+            raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" ("{prop}" not exist)')
 
 
 def fix_dollar_keys(data, is_save=True):
@@ -76,7 +77,9 @@ class Condition:
 
     @staticmethod
     def validate_data(json_data):
-        """ Validate the condition data, can not nest than 5 layers. """
+        """ Validate the condition data, can not nest than 5 layers.
+        :param json_data: condition content.
+        """
         if not json_data:
             return
 
@@ -84,7 +87,7 @@ class Condition:
             if layer > 5:
                 raise BadRequestException(msg='Too more nested conditions.')
 
-            validate_exists(data, 'condition', ['name', 'type', 'body'])
+            validate_exists(data, ['name', 'type', 'body'])
 
             condition_type = data['type']
             if condition_type not in ['or', 'and', 'queryHasResults']:
@@ -95,11 +98,11 @@ class Condition:
                         or not data['body']:
                     raise BadRequestException(msg=f"Condition body MUST be list "
                                                   f"and at least contain one element for the type '{condition_type}'")
-                for data in data['body']:
-                    validate(data, layer + 1)
+                for d in data['body']:
+                    validate(d, layer + 1)
             else:
                 # Just 'queryHasResults'
-                validate_exists(data['body'], 'condition.body', ['collection', ])
+                validate_exists(data, ['collection'], parent_name='body')
 
         validate(json_data, 1)
 
@@ -122,7 +125,7 @@ class Condition:
         options = populate_options_count_documents(body.get('options', {}))
 
         col = self.mcli.get_user_collection(context.target_did, context.target_app_did, col_name)
-        return col.count(col_filter, options=options) > 0
+        return col.count(col_filter, **options) > 0
 
 
 class Context:
@@ -217,10 +220,11 @@ class Script:
 
     @staticmethod
     def validate_script_data(json_data):
+        """ json_data: script content """
         if not json_data:
             raise BadRequestException(msg="Script definition can't be empty.")
 
-        validate_exists(json_data, '', ['executable', ])
+        validate_exists(json_data, ['executable'])
 
         Condition.validate_data(json_data.get('condition', None))
         Executable.validate_data(json_data['executable'])
@@ -331,9 +335,9 @@ class Scripting:
         self.vault_manager.get_vault(g.usr_did)
 
         col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
-        result = col.delete_many({'name': script_name})
+        result = col.delete_one({'name': script_name})
 
-        if result.deleted_count > 0:
+        if result['deleted_count'] > 0:
             update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
         else:
             raise ScriptNotFoundException(f'The script {script_name} does not exist.')

@@ -62,10 +62,10 @@ class InsertExecutable(DatabaseExecutable):
         options = self.get_options()
 
         # timestamp = True, to add extra 'created' and 'modified' fields.
-        is_timestamp = options.pop('timestamp', False)
+        is_timestamp = options.pop('timestamp', False) == True
 
         col = self.get_target_user_collection()
-        result = col.insert_one(self.get_populated_filter(), self.get_populated_update(), contains_extra=is_timestamp, **options)
+        result = col.insert_one(self.get_populated_document(), contains_extra=is_timestamp, **options)
 
         update_used_storage_for_mongodb_data(self.get_user_did(), get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
         return self.get_result_data(result)

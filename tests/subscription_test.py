@@ -7,7 +7,7 @@ Testing file for the scripting module.
 import unittest
 
 from tests.utils.http_client import HttpClient
-from tests import init_test
+from tests import init_test, test_log
 
 
 class SubscriptionTestCase(unittest.TestCase):
@@ -30,7 +30,7 @@ class SubscriptionTestCase(unittest.TestCase):
         response = self.cli.get('/subscription/vault')
         self.assertEqual(response.status_code, 200)
         self.assertTrue(isinstance(response.json(), dict))
-        print(f'vault info: {response.json()}')
+        test_log(f'vault info: {response.json()}')
 
     def test04_vault_get_app_stats(self):
         response = self.cli.get('/subscription/vault/app_stats')

@@ -2,12 +2,12 @@
 import os
 from pathlib import Path
 
-import requests
 import json
-import logging
+import requests
 
 from src.utils.singleton import Singleton
 from src.utils.did.did_wrapper import JWT
+from tests import test_log
 from tests.utils_v1.hive_auth_test_v1 import AppDID, UserDID
 
 
@@ -69,7 +69,7 @@ class TokenCache:
 class TestConfig(metaclass=Singleton):
     def __init__(self):
         hive_port = os.environ.get('HIVE_PORT', 5000)
-        print(f'HIVE_PORT={hive_port}')
+        test_log(f'HIVE_PORT={hive_port}')
         self.url_vault = f'http://localhost:{hive_port}'
         self.url_backup = self.url_vault
 
@@ -167,9 +167,9 @@ class RemoteResolver:
 
 def _log_http_request(func):
     def wrapper(self, *args, **kwargs):
-        print(f'REQUEST:{func.__name__},{args},{kwargs}')
+        test_log(f'REQUEST:{func.__name__},{args},{kwargs}')
         response = func(self, *args, **kwargs)
-        print(f'RESPONSE:{func.__name__},{response.status_code},{response.text}')
+        test_log(f'RESPONSE:{func.__name__},{response.status_code},{response.text}')
         return response
     return wrapper
 
@@ -181,7 +181,7 @@ class HttpClient:
         self.base_url = test_config.host_url if not is_backup_node else test_config.backup_url
         self.prefix_url = prefix_url if prefix_url else ''
         self.remote_resolver = RemoteResolver(self, is_did2, is_owner)
-        logging.debug(f'HttpClient.base_url: {self.base_url}')
+        test_log(f'HttpClient.base_url: {self.base_url}')
 
     def __get_url(self, relative_url, is_skip_prefix=False):
         if is_skip_prefix:
@@ -194,7 +194,7 @@ class HttpClient:
             headers['Content-type'] = 'application/json'
         if need_token:
             headers['Authorization'] = 'token ' + self.remote_resolver.get_token()
-        print(f'HEADER: {headers}')
+        test_log(f'HEADER: {headers}')
         return headers
 
     def get_current_did(self):

@@ -150,6 +150,11 @@ class Context:
         if not target_did or not target_app_did:
             raise BadRequestException(msg='target_did or target_app_did MUST be set.')
 
+    def check_target_dids(self):
+        """ add this check because of supporting anonymously running script """
+        if not self.target_did or not self.target_app_did:
+            raise BadRequestException(msg=f"target_did and target_app_did MUST be provided when do anonymous access.")
+
     def get_script_data(self, script_name):
         """ get the script data by target_did and target_app_did """
         col = self.mcli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
@@ -159,6 +164,27 @@ class Context:
 class Script:
     """ Represents a script registered by owner and ran by caller.
     Their user DIDs can be same or not, or even the caller is anonymous.
+
+    .. allowAnonymousUser, allowAnonymousApp
+
+    These two options is for first checking when caller calls the script.
+
+    allowAnonymousUser=True, allowAnonymousApp=True
+        Caller can run the script without 'access token'.
+
+    others
+        Caller can run the script with 'access token'.
+
+
+    .. context
+
+    The context which used to specify the owner of script contains the two items:
+
+        target_did
+        target_app_did
+
+    If not specified, relating did of caller will be used.
+
 
     .. Parameter Replacement ( $params )
 
@@ -182,23 +208,16 @@ class Script:
 
     Example of key-value::
 
-        "group": "$params.group"  # the $param definition MUST the whole part of the value
+        # the $param definition MUST the whole part of the value
+        "group": "$params.group"
 
     For the 'path' parameter of file types, the following patterns also support::
 
-        "path": "/data/$params.file_name"  # the $param definition can be as the part of the path
+        # the $param definition can be as the part of the path
+        "path": "/data/$params.file_name"
 
-        "path": "/data/${params.folder_name}/avatar.png"  # another form for the $param definition
-
-    .. allowAnonymousUser, allowAnonymousApp
-
-    These two options is for first checking when caller calls the script.
-
-    allowAnonymousUser=True, allowAnonymousApp=True
-        Caller can run the script without 'access token'.
-
-    others
-        Caller can run the script with 'access token'.
+        # another form for the $param definition
+        "path": "/data/${params.folder_name}/avatar.png"
 
     """
     DOLLAR_REPLACE = '%%'
@@ -241,6 +260,8 @@ class Script:
         """
         Run executables and return response data for the executable which output option is true.
         """
+        self.context.check_target_dids()
+
         script_data = self.context.get_script_data(self.name)
         if not script_data:
             raise BadRequestException(msg=f"Can't get the script with name '{self.name}'")

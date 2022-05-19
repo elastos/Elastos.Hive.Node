@@ -26,6 +26,10 @@ class FileExecutable(Executable):
 
     def _create_transaction(self, action_type):
         """ Here just create a transaction for later uploading and downloading. """
+        vault = self.vault_manager.get_vault(self.get_target_did())
+        if action_type == 'upload':
+            vault.check_storage()
+
         # The created transaction record can only be use once. So do not consider run script twice.
         # If the user not call this transaction later, the transaction record will keep forever.
         data = cli.insert_one(self.get_target_did(),
@@ -74,6 +78,8 @@ class FilePropertiesExecutable(FileExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
+        self.vault_manager.get_vault(self.get_target_did())
+
         path = self.get_populated_path()
 
         doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), path)
@@ -90,5 +96,7 @@ class FileHashExecutable(FileExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
+        self.vault_manager.get_vault(self.get_target_did())
+
         doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), self.get_populated_path())
         return self.get_result_data({"SHA256": doc[COL_IPFS_FILES_SHA256]})

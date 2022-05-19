@@ -46,7 +46,10 @@ class VaultManager:
         self.user_manager = UserManager()
 
     def get_vault(self, user_did) -> Vault:
-        """ Get the vault for user or raise not-found exception. """
+        """ Get the vault for user or raise not-found exception.
+
+        This method is also used to check the existence of the vault
+        """
         vault = self.__only_get_vault(user_did)
 
         # try to revert to free package plan

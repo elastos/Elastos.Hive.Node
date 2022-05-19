@@ -355,7 +355,7 @@ class DIDStore:
         """
         dids = []
 
-        @ffi.callback("int(DID *, void *)")
+        @ffi.callback("int(struct DID *, void *)")
         def did_callback(did, context):
             # INFO: contains a terminating signal by a did with None.
             if did:
@@ -363,6 +363,8 @@ class DIDStore:
                 did_str = lib.DID_ToString(did, did_str, 64)
                 d = lib.DID_FromString(did_str)
                 dids.append(DID(ffi.gc(d, lib.DID_Destroy)))
+            # 0 means no error.
+            return 0
 
         filter_has_private_keys = 1
         ret_value = lib.DIDStore_ListDIDs(self.store, filter_has_private_keys, did_callback, ffi.NULL)

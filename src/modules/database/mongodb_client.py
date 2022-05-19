@@ -87,7 +87,17 @@ class MongodbCollection:
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,
             "modified_count": result.modified_count,
-            "upserted_id": ObjectId(str(result.upserted_id)) if result.upserted_id else None,
+            "upserted_id": str(result.inserted_id) if result.inserted_id else None
+        }
+
+    def replace_one(self, filter_, document, upsert=True):
+        # default 'bypass_document_validation': False
+        result = self.col.replace_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(document), upsert=upsert)
+        return {
+            "acknowledged": result.acknowledged,
+            "matched_count": result.matched_count,
+            "modified_count": result.modified_count,
+            "upserted_id": str(result.inserted_id) if result.inserted_id else None
         }
 
     def find_one(self, filter_: dict, **kwargs) -> dict:
@@ -118,8 +128,15 @@ class MongodbCollection:
         # BUGBUG: Getting all documents out maybe not well.
         return list(self.col.find(self.convert_oid(filter_) if filter_ else None, **options))
 
-    def count(self, filter_):
-        return self.col.count_documents(self.convert_oid(filter_) if filter_ else None)
+    def count(self, filter_, options: typing.Optional[dict] = None):
+        options = {k: v for k, v in options if k in ("skip", "limit", "maxTimeMS")} if options else {}
+        return self.col.count_documents(self.convert_oid(filter_) if filter_ else None, **options)
+
+    def delete_many(self, filter_):
+        result = self.col.delete_many(self.convert_oid(filter_) if filter_ else None)
+        return {
+            "deleted_count": result.deleted_count
+        }
 
     def convert_oid(self, value: _T):
         """ try to convert the following dict recursively.
@@ -209,7 +226,7 @@ class MongodbClient:
             if create_on_absence:
                 database.create_collection(col_name)
             else:
-                raise CollectionNotFoundException()
+                raise CollectionNotFoundException(msg=f'Can not find collection {col_name}')
         return MongodbCollection(database[col_name], is_management=False)
 
     def create_user_collection(self, user_did, app_did, col_name) -> MongodbCollection:

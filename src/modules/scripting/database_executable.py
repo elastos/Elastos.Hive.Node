@@ -1,9 +1,10 @@
 import json
 
-from src.modules.database.mongodb_client import MongodbClient
-from src.utils.db_client import cli
-from src.utils_v1.did_mongo_db_resource import populate_options_insert_one, get_mongo_database_size, populate_options_update_one
+from bson import json_util
+
+from src.utils_v1.did_mongo_db_resource import get_mongo_database_size
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
+from src.modules.database.mongodb_client import MongodbClient
 from src.modules.scripting.executable import Executable, get_populated_value_with_params
 from src.modules.scripting.scripting import Script
 
@@ -16,8 +17,8 @@ class DatabaseExecutable(Executable):
     def get_collection_name(self):
         return self.body['collection']
 
-    def get_user_collection(self):
-        return self.mcli.get_user_collection(self.get_user_did(), self.get_app_did(), self.get_collection_name())
+    def get_target_user_collection(self):
+        return self.mcli.get_user_collection(self.get_target_did(), self.get_target_app_did(), self.get_collection_name())
 
     def get_populated_filter(self):
         return get_populated_value_with_params(self.body.get('filter', {}), self.get_user_did(), self.get_app_did(), self.get_params())
@@ -43,11 +44,12 @@ class FindExecutable(DatabaseExecutable):
         self.vault_manager.get_vault(self.get_target_did())
 
         filter_, options = self.get_populated_filter(), self.get_populated_options()
-        col = self.get_user_collection()
-        items = col.find_many(filter_, filter_options=True, **options)
+        col = self.get_target_user_collection()
+        items = col.find_many(filter_, **options)
         total = col.count(filter_)
 
-        return self.get_result_data({'total': total, 'items': json.loads(json.dumps(items))})
+        # json decode&encode is used for ObjectId or other mongo data types.
+        return self.get_result_data({'total': total, 'items': json.loads(json_util.dumps(items))})
 
 
 class InsertExecutable(DatabaseExecutable):
@@ -57,16 +59,16 @@ class InsertExecutable(DatabaseExecutable):
     def execute(self):
         self.vault_manager.get_vault(self.get_target_did()).check_storage()
 
-        data = cli.insert_one(self.get_target_did(),
-                              self.get_target_app_did(),
-                              self.get_collection_name(),
-                              self.get_populated_document(),
-                              populate_options_insert_one(self.body))
+        options = self.get_options()
 
-        update_used_storage_for_mongodb_data(self.get_user_did(),
-                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+        # timestamp = True, to add extra 'created' and 'modified' fields.
+        is_timestamp = options.pop('timestamp', False)
 
-        return self.get_result_data(data)
+        col = self.get_target_user_collection()
+        result = col.insert_one(self.get_populated_filter(), self.get_populated_update(), contains_extra=is_timestamp, **options)
+
+        update_used_storage_for_mongodb_data(self.get_user_did(), get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+        return self.get_result_data(result)
 
 
 class UpdateExecutable(DatabaseExecutable):
@@ -76,17 +78,16 @@ class UpdateExecutable(DatabaseExecutable):
     def execute(self):
         self.vault_manager.get_vault(self.get_target_did()).check_storage()
 
-        data = cli.update_one(self.get_target_did(),
-                              self.get_target_app_did(),
-                              self.get_collection_name(),
-                              self.get_populated_filter(),
-                              self.get_populated_update(),
-                              populate_options_update_one(self.body))
+        options = self.get_options()
 
-        update_used_storage_for_mongodb_data(self.get_user_did(),
-                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+        # timestamp = True, to update extra 'modified' fields.
+        is_timestamp = options.pop('timestamp', False)
 
-        return self.get_result_data(data)
+        col = self.get_target_user_collection()
+        result = col.update_one(self.get_populated_filter(), self.get_populated_update(), contains_extra=is_timestamp, **options)
+
+        update_used_storage_for_mongodb_data(self.get_user_did(), get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+        return self.get_result_data(result)
 
 
 class DeleteExecutable(DatabaseExecutable):
@@ -96,12 +97,8 @@ class DeleteExecutable(DatabaseExecutable):
     def execute(self):
         self.vault_manager.get_vault(self.get_target_did())
 
-        data = cli.delete_one(self.get_target_did(),
-                              self.get_target_app_did(),
-                              self.get_collection_name(),
-                              self.get_populated_filter())
+        col = self.get_target_user_collection()
+        result = col.delete_one(self.get_populated_filter())
 
-        update_used_storage_for_mongodb_data(self.get_user_did(),
-                                             get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
-
-        return self.get_result_data(data)
+        update_used_storage_for_mongodb_data(self.get_user_did(), get_mongo_database_size(self.get_target_did(), self.get_target_app_did()))
+        return self.get_result_data(result)

@@ -62,7 +62,9 @@ class MongodbCollection:
             doc['modified'] = now_timestamp
 
         # kwargs are the options
-        result = self.col.insert_one(self.convert_oid(doc), **kwargs)
+        options = {k: v for k, v in kwargs.items() if k in ["bypass_document_validation"]}
+
+        result = self.col.insert_one(self.convert_oid(doc), **options)
         if not result.inserted_id:
             raise BadRequestException(msg=f'Failed to insert the doc: {str(doc)}.')
 
@@ -82,12 +84,14 @@ class MongodbCollection:
                 update["$set"]["modified"] = now_timestamp
 
         # kwargs are the options
-        result = self.col.update_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **kwargs)
+        options = {k: v for k, v in kwargs.items() if k in ("upsert", "bypass_document_validation")}
+
+        result = self.col.update_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **options)
         return {
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,
             "modified_count": result.modified_count,
-            "upserted_id": str(result.inserted_id) if result.inserted_id else None
+            "upserted_id": str(result.upserted_id) if result.upserted_id else None
         }
 
     def replace_one(self, filter_, document, upsert=True):
@@ -97,44 +101,49 @@ class MongodbCollection:
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,
             "modified_count": result.modified_count,
-            "upserted_id": str(result.inserted_id) if result.inserted_id else None
+            "upserted_id": str(result.upserted_id) if result.upserted_id else None  # ObjectId -> str
         }
 
     def find_one(self, filter_: dict, **kwargs) -> dict:
         # kwargs are the options
         return self.col.find_one(self.convert_oid(filter_) if filter_ else None, **kwargs)
 
-    def find_many(self, filter_: dict, filter_options: bool = False, **kwargs) -> list:
+    def find_many(self, filter_: dict, **kwargs) -> list:
         # kwargs are the options
-        options = kwargs
-
-        # filter to expected ones
-        if filter_options:
-            options = {k: v for k, v in options if k in ("projection",
-                                                         "skip",
-                                                         "limit",
-                                                         "sort",
-                                                         "allow_partial_results",
-                                                         "return_key",
-                                                         "show_record_id",
-                                                         "batch_size")}
+        options = {k: v for k, v in kwargs.items() if k in ("projection",
+                                                            "skip",
+                                                            "limit",
+                                                            "sort",
+                                                            "allow_partial_results",
+                                                            "return_key",
+                                                            "show_record_id",
+                                                            "batch_size")}
 
         # extra sort support
         if 'sort' in options:
             if isinstance(options['sort'], dict):
                 # value example: {'author', -1} => [('author', -1)]
-                options['sort'] = options['sort'].items()
+                options['sort'] = [(k, v) for k, v in options['sort'].items()]
 
         # BUGBUG: Getting all documents out maybe not well.
         return list(self.col.find(self.convert_oid(filter_) if filter_ else None, **options))
 
-    def count(self, filter_, options: typing.Optional[dict] = None):
-        options = {k: v for k, v in options if k in ("skip", "limit", "maxTimeMS")} if options else {}
+    def count(self, filter_, **kwargs):
+        options = {k: v for k, v in kwargs.items() if k in ("skip", "limit", "maxTimeMS")}
+
         return self.col.count_documents(self.convert_oid(filter_) if filter_ else None, **options)
+
+    def delete_one(self, filter_):
+        result = self.col.delete_one(self.convert_oid(filter_) if filter_ else None)
+        return {
+            "acknowledged": result.acknowledged,
+            "deleted_count": result.deleted_count
+        }
 
     def delete_many(self, filter_):
         result = self.col.delete_many(self.convert_oid(filter_) if filter_ else None)
         return {
+            "acknowledged": result.acknowledged,
             "deleted_count": result.deleted_count
         }
 

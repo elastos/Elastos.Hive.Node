@@ -3,31 +3,48 @@
 """
 Testing file for the ipfs-scripting module.
 """
-import unittest
-import json
-import urllib.parse
-import typing as t
 import pymongo
+import unittest
+import typing as t
+import urllib.parse
 
-from tests.utils.http_client import HttpClient
 from tests import init_test
+from tests.utils.dict_asserter import DictAsserter
+from tests.utils.http_client import HttpClient
 from tests.utils_v1.hive_auth_test_v1 import AppDID
 
 
 class IpfsScriptingTestCase(unittest.TestCase):
+    """ All test case are registering by owner, calling by caller (different user DID)
+
+    Two types of test cases: functional testing, feature testing.
+
+    functional testing
+        Just make sure the relating function work, such as insert document.
+
+    feature testing
+        Show the features supported by scription service, such as anonymously calling, $params on options, etc
+
+    """
     collection_name = 'script_database'
     file_name = 'ipfs-scripting/test.txt'
     file_content = 'File Content: 1234567890'
+    file_sha256 = '161d165c6b49616cc82846814ccb2bbaa0928b8570bac7f6ba642c65d6006cfe'
     name_not_exist = 'name_not_exist'
 
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
+
+        # owner client.
         self.cli = HttpClient(f'/api/v2/vault')
+
+        # caller client.
         self.cli2 = HttpClient(f'/api/v2/vault', is_did2=True)
+
         # Owner's did and application did.
-        self.did = self.cli.get_current_did()
-        self.app_did = AppDID.app_did
+        self.target_did = self.cli.get_current_did()
+        self.target_app_did = AppDID.app_did
 
     @classmethod
     def setUpClass(cls):
@@ -40,81 +57,87 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """ clean """
         # clean the testing collection.
         HttpClient(f'/api/v2/vault').delete(f'/db/{cls.collection_name}')
         # clean the testing file.
         response = HttpClient(f'/api/v2/vault').delete(f'/files/{cls.file_name}')
 
     def __register_script(self, script_name, body):
+        """
+        :return: the response body (dict) of registering.
+        """
         response = self.cli.put(f'/scripting/{script_name}', body)
         self.assertEqual(response.status_code, 200)
-        return json.loads(response.text)
+        # check update existing one or insert a new one
+        body = DictAsserter(response.json())
+        self.assertTrue(body.get_int('modified_count') == 1 or body.get_str('upserted_id'))
+        return body.data
 
-    def __call_script(self, script_name, body=None, executable_name=None):
-        executable_name = executable_name if executable_name else script_name
-        body = body if body else dict()
+    def __call_script(self, script_name, body=None, except_error=200, need_token=True):
+        """ Call script successfully
+
+        :return: the response body (dict) of calling.
+        """
+        body = body if body else {}
         body['context'] = {
-            'target_did': self.did,
-            'target_app_did': self.app_did,
+            'target_did': self.target_did,
+            'target_app_did': self.target_app_did,
         }
-        return self.__check_call_response(self.cli2.patch(f'/scripting/{script_name}', body), executable_name)
+        response = self.cli2.patch(f'/scripting/{script_name}', body, need_token=need_token)
+        self.assertEqual(response.status_code, except_error)
+        return DictAsserter(response.json()).data if except_error == 200 else None
 
-    def __check_call_response(self, response, executable_name):
-        self.assertEqual(response.status_code, 200)
-        body = json.loads(response.text)
-        self.assertTrue(isinstance(body, dict))
-        names = executable_name if type(executable_name) in [list, tuple] else [executable_name, ]
-        for name in names:
-            self.assertTrue(name in body)
-            self.assertTrue(isinstance(body[name], dict))
-        return body
+    def call_and_execute_transaction(self, script_name, executable_name,
+                                     path: t.Optional[str] = None, is_download=True, download_content=None):
+        """ Call uploading or downloading script and run relating transaction.
 
-    def __register_and_call_script(self, script_name, reg_body, call_body, executable_name=None):
-        self.__register_script(script_name, reg_body)
-        return self.__call_script(script_name, call_body, executable_name=executable_name)
+        Also, for files service testing.
 
-    def call_and_stream(self, script_name, path: t.Optional[str],
-                        executable_name=None, is_download=True, check_anonymous=False, file_content=None):
-        executable_name = executable_name if executable_name else script_name
-        body = self.__call_script(script_name, {"params": {"path": path}}, executable_name=executable_name)
-        self.assertTrue('transaction_id' in body[executable_name])
-        self.assertTrue(body[executable_name]['transaction_id'])
-        if check_anonymous:
-            self.assertTrue('anonymous_url' in body[executable_name])
-            self.assertTrue(body[executable_name]['anonymous_url'])
-        if not is_download:
+        :path: used for 'params', default is 'self.file_name'
+        :is_download: True, download file, else upload file.
+        :download_content: for files service.
+        """
+        # call the script for uploading or downloading
+        body = self.__call_script(script_name, {"params": {"path": path if path else self.file_name}})
+        self.assertTrue(DictAsserter(body).check_dict(executable_name).get_str('transaction_id'))
+
+        # call relating transaction
+        if is_download:
+            response = self.cli2.get(f'/scripting/stream/{body[executable_name]["transaction_id"]}')
+        else:
             response = self.cli2.put(f'/scripting/stream/{body[executable_name]["transaction_id"]}',
                                      self.file_content.encode(), is_json=False)
-        else:
-            response = self.cli2.get(f'/scripting/stream/{body[executable_name]["transaction_id"]}')
         self.assertEqual(response.status_code, 200)
+
+        # check the result
         if is_download:
-            self.assertEqual(response.text, file_content if file_content else self.file_content)
+            self.assertEqual(response.text, download_content if download_content else self.file_content)
         else:
             # nothing returned
             pass
 
-    def __register_call_and_stream(self, script_name, reg_body, path: str,
-                                   executable_name=None, is_download=True, check_anonymous=False, file_content=None):
-        self.__register_script(script_name, reg_body)
-        self.call_and_stream(script_name, path, executable_name=executable_name,
-                             is_download=is_download, check_anonymous=check_anonymous, file_content=file_content)
-
     def delete_script(self, script_name: str, expect_status=204):
+        """ delete a script
+
+        Also, for files service testing.
+
+        :param script_name: script name
+        :param expect_status: for error checking, such as 404
+        """
         response = self.cli.delete(f'/scripting/{script_name}')
         self.assertEqual(response.status_code, expect_status)
 
     def test01_insert(self):
+        """ test insert and insert """
         script_name, executable_name = 'ipfs_database_insert', 'database_insert'
-        # normal calling.
-        self.__register_and_call_script(script_name, {"executable": {
-            "output": True,
+        self.__register_script(script_name, {"executable": {
             "name": executable_name,
             "type": "insert",
             "body": {
                 "collection": self.collection_name,
                 "document": {
-                    "author": "$params.author",
+                    "author": "$params.author",  # key of 'find'
                     "content": "$params.content",
                     "words_count": "$params.words_count"
                 },
@@ -123,300 +146,434 @@ class IpfsScriptingTestCase(unittest.TestCase):
                     "bypass_document_validation": False
                 }
             }
-        }}, {
-            "params": {
-                "author": "John",
-                "content": "message",
-                "words_count": 10000
-            }
-        }, executable_name=executable_name)
-        # calling by url.
-        url_params = f'/{self.did}@{self.app_did}/' + urllib.parse.quote_plus('{"author":"John","content":"message2","words_count":5000}')
-        body = self.__check_call_response(self.cli2.get(f'/scripting/{script_name}{url_params}'), executable_name)
-        self.assertTrue(body[executable_name].get('inserted_id'))
+        }})
+
+        # insert multiple documents for further testing
+        def insert_document(content: str, words_count: int):
+            body = self.__call_script(script_name, body={
+                "params": {
+                    "author": "John",
+                    "content": content,
+                    "words_count": words_count
+                }
+            })
+            self.assertTrue(DictAsserter(body).check_dict(executable_name).get_str('inserted_id'))
+
+        insert_document('message1', 10000)
+        insert_document('message3', 30000)
+        insert_document('message5', 50000)
+        insert_document('message7', 70000)
+        insert_document('message9', 90000)
+        insert_document('message2', 20000)
+        insert_document('message4', 40000)
+        insert_document('message6', 60000)
+        insert_document('message8', 80000)
+
         # remove script
         self.delete_script(script_name)
 
-    def test02_find_with_default_output(self):
-        script_name, executable_name, condition_filter = 'ipfs_database_find', 'database_find', {'author': '$params.author'}
-        col_filter = {'author': '$params.author', "words_count": {"$gt": "$params.start", "$lt": "$params.end"}}
-        body = self.__register_and_call_script(script_name, {'condition': {
+    def test02_find(self):
+        script_name, executable_name = 'ipfs_database_find', 'database_find'
+
+        self.__register_script(script_name, {'executable': {
+            'name': executable_name,
+            'type': 'find',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author'}
+            }
+        }})
+
+        body = self.__call_script(script_name, {"params": {"author": "John"}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('total'), 9)
+        items = executable.get_list('items')
+        self.assertEqual(len(items), 9)
+        self.assertTrue(all([a['author'] == 'John' for a in items]))
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 1)
+
+        self.delete_script(script_name)
+
+    def test03_find_with_only_url(self):
+        script_name, executable_name = 'ipfs_database_find_with_only_url', 'database_find'
+
+        self.__register_script(script_name, {'executable': {
+            'name': executable_name,
+            'type': 'find',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author', 'content': '$params.content'}
+            }
+        }})
+
+        # calling by url.
+        url_params = f'/{self.target_did}@{self.target_app_did}/' + urllib.parse.quote_plus('{"author":"John","content":"message1"}')
+        response = self.cli2.get(f'/scripting/{script_name}{url_params}')
+        self.assertEqual(response.status_code, 200)
+        executable = DictAsserter(response.json()).check_dict(executable_name)
+        self.assertEqual(executable.get_int('total'), 1)
+        items = executable.get_list('items')
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['author'], 'John')
+        self.assertEqual(items[0]['content'], 'message1')
+        self.assertEqual(items[0]['words_count'], 10000)
+
+        self.delete_script(script_name)
+
+    def test03_find_with_gt_lt(self):
+        script_name, executable_name = 'ipfs_database_find_with_gt_lt', 'database_find'
+
+        self.__register_script(script_name, {'executable': {
+            'name': executable_name,
+            'type': 'find',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author', "words_count": {"$gt": "$params.start", "$lt": "$params.end"}}
+            }
+        }})
+
+        body = self.__call_script(script_name, {"params": {"author": "John", "start": 5000, "end": 15000}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('total'), 1)
+        items = executable.get_list('items')
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['author'], 'John')
+        self.assertEqual(items[0]['content'], 'message1')
+        self.assertEqual(items[0]['words_count'], 10000)
+
+        self.delete_script(script_name)
+
+    def test03_find_with_condition(self):
+        script_name, executable_name = 'ipfs_database_find_with_condition', 'database_find'
+
+        self.__register_script(script_name, {'condition': {
                 'name': 'verify_user_permission',
                 'type': 'queryHasResults',
                 'body': {
                     'collection': self.collection_name,
-                    'filter': condition_filter
+                    'filter': {'author': '$params.condition_author'}
                 }
             }, 'executable': {
-                'name': executable_name,
-                'type': 'find',
-                'body': {
-                    'collection': self.collection_name,
-                    'filter': col_filter,
-                    'options': {
-                        'sort': [['author', pymongo.ASCENDING]]  # sort with mongodb style.
-                    }
-                }
-            }}, {'params': {'author': 'John', 'start': 0, 'end': 15000}}, executable_name=executable_name)
+            'name': executable_name,
+            'type': 'find',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'content': '$params.content'}
+            }
+        }})
 
-        self.assertTrue('items' in body.get(executable_name))
-        ids = list(map(lambda i: i['author'], body.get(executable_name)['items']))
-        self.assertTrue(all(ids[i] <= ids[i + 1] for i in range(len(ids) - 1)))
+        # not match checking
+        self.__call_script(script_name, {"params": {"condition_author": "Andersen", "content": "message1"}}, except_error=400)
+
+        # match checking
+        body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('total'), 1)
+        items = executable.get_list('items')
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['author'], 'John')
+        self.assertEqual(items[0]['content'], 'message1')
+        self.assertEqual(items[0]['words_count'], 10000)
 
         self.delete_script(script_name)
 
-    def test02_find_with_multiple_conditions(self):
-        script_name, executable_name, col_filter = 'ipfs_database_find', 'database_find', {'author': '$params.author'}
-        query_condition = {
+    def test03_find_with_multi_conditions(self):
+        script_name, executable_name = 'ipfs_database_find_with_multi_conditions', 'database_find'
+        condition = {
+            'name': 'verify_user_permission',
+            'type': 'queryHasResults',
+            'body': {'collection': self.collection_name, 'filter': {'author': '$params.condition_author'}}
+        }
+
+        self.__register_script(script_name, {'condition': {
+                'name': 'verify_user_permission',
+                'type': 'or',
+                'body': [condition, condition, {
+                    'name': 'verify_user_permission',
+                    'type': 'and',
+                    'body': [condition, condition]
+                }, {
+                    'name': 'verify_user_permission',
+                    'type': 'and',
+                    'body': [condition, condition]
+                }]
+            }, 'executable': {
+            'name': executable_name,
+            'type': 'find',
+            'body': {'collection': self.collection_name, 'filter': {'content': '$params.content'}}
+        }})
+
+        # match checking
+        body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('total'), 1)
+        items = executable.get_list('items')
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['author'], 'John')
+        self.assertEqual(items[0]['content'], 'message1')
+        self.assertEqual(items[0]['words_count'], 10000)
+
+        self.delete_script(script_name)
+
+    def test03_find_with_sort(self):
+        script_name, executable_name = 'ipfs_database_find_with_sort', 'database_find'
+
+        self.__register_script(script_name, {'executable': {
+            'name': executable_name,
+            'type': 'find',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author'},
+                'options': {'sort': '$params.sort'}
+            }
+        }})
+
+        # sort with pymongo.ASCENDING on mongo style.
+        body = self.__call_script(script_name, {"params": {"author": "John", 'sort': [['words_count', pymongo.ASCENDING]]}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('total'), 9)
+        # check the order is pymongo.ASCENDING
+        counts = list(map(lambda i: i['words_count'], executable.get_list('items')))
+        self.assertTrue(all(counts[i] < counts[i + 1] for i in range(len(counts) - 1)))
+
+        # sort with pymongo.ASCENDING on hive style.
+        body = self.__call_script(script_name, {"params": {"author": "John", 'sort': {'words_count': pymongo.DESCENDING}}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('total'), 9)
+        # check the order is pymongo.DESCENDING
+        counts = list(map(lambda i: i['words_count'], executable.get_list('items')))
+        self.assertTrue(all(counts[i] > counts[i + 1] for i in range(len(counts) - 1)))
+
+        self.delete_script(script_name)
+
+    def test03_find_with_anonymous(self):
+        script_name, executable_name = 'ipfs_database_find_with_anonymous', 'database_find'
+
+        self.__register_script(script_name, {'condition': {
             'name': 'verify_user_permission',
             'type': 'queryHasResults',
             'body': {
                 'collection': self.collection_name,
-                'filter': col_filter
+                'filter': {'author': '$params.condition_author'}
             }
-        }
-        body = self.__register_and_call_script(script_name, {'condition': {
-                'name': 'multiple_conditions',
-                'type': 'and',
-                'body': [query_condition, {
-                        'name': 'multiple_conditions2',
-                        'type': 'and',
-                        'body': [query_condition, query_condition]
-                    }
-                ]
-            }, 'executable': {
-                'name': executable_name,
-                'type': 'find',
-                'body': {
-                    'collection': self.collection_name,
-                    'filter': col_filter
-                }
-            }}, {'params': {'author': 'John'}}, executable_name=executable_name)
-        self.delete_script(script_name)
+        }, 'executable': {
+            'name': executable_name,
+            'type': 'find',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'content': '$params.content'}
+            }
+        }, 'allowAnonymousUser': True, 'allowAnonymousApp': True})
 
-    def test02_find_with_anonymous(self):
-        script_name, executable_name, col_filter = 'ipfs_database_find', 'database_find', {'author': '$params.author'}
-        script_body = {
-            'condition': {
-                'name': 'verify_user_permission',
-                'type': 'queryHasResults',
-                'body': {
-                    'collection': self.collection_name,
-                    'filter': col_filter
-                }
-            },
-            'executable': {
-                'name': executable_name,
-                'type': 'find',
-                'body': {
-                    'collection': self.collection_name,
-                    'filter': col_filter,
-                    'options': {
-                        'limit': "$params.limit",
-                        'skip': "$params.skip",
-                        'sort': {'author': pymongo.DESCENDING}  # sort with hive style.
-                    }
-                }
-            },
-            "allowAnonymousUser": True,
-            "allowAnonymousApp": True
-        }
-        run_body = {'params': {
-            'author': 'John',
-            'limit': 10,
-            'skip': 0,
-        }}
-        body = self.__register_and_call_script(script_name, script_body, run_body, executable_name=executable_name)
+        # not match checking without token
+        self.__call_script(script_name, {"params": {"condition_author": "Andersen", "content": "message1"}}, need_token=False, except_error=400)
 
-        self.assertTrue('items' in body.get(executable_name))
-        self.assertTrue('total' in body.get(executable_name))
-        # check the order of items
-        ids = list(map(lambda i: i['author'], body.get(executable_name)['items']))
-        self.assertTrue(all(ids[i] >= ids[i + 1] for i in range(len(ids) - 1)))
-        # check total
-        self.assertTrue(body.get(executable_name)['total'] > 0)
+        # not match checking with token
+        self.__call_script(script_name, {"params": {"condition_author": "Andersen", "content": "message1"}}, need_token=True, except_error=400)
+
+        def validate_body(b):
+            executable = DictAsserter(b).check_dict(executable_name)
+            self.assertEqual(executable.get_int('total'), 1)
+            items = executable.get_list('items')
+            self.assertEqual(len(items), 1)
+            self.assertEqual(items[0]['author'], 'John')
+            self.assertEqual(items[0]['content'], 'message1')
+            self.assertEqual(items[0]['words_count'], 10000)
+
+        # match checking without token
+        body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}}, need_token=False)
+        validate_body(body)
+
+        # match checking with token
+        body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}}, need_token=True)
+        validate_body(body)
 
         self.delete_script(script_name)
 
-    def test03_aggregated_find(self):
-        script_name, col_filter = 'ipfs_aggregated', {'author': '$params.author'}
-        run_body = {'params': {
-            'author': 'John'
-        }}
-        body = self.__register_and_call_script(script_name, {
-            "executable": {
-                "output": True,
-                "name": script_name,
-                "type": "aggregated",
-                "body": [
-                    {
-                        'name': "ipfs_find_1",
-                        'type': 'find',
-                        'body': {
-                            'collection': self.collection_name,
-                            'filter': col_filter,
-                            'options': {
-                                'sort': {'author': pymongo.DESCENDING}  # sort with hive style.
-                            }
-                        }
-                    }, {
-                        'name': "ipfs_find_2",
-                        'type': 'find',
-                        'body': {
-                            'collection': self.collection_name,
-                            'filter': col_filter,
-                            'options': {
-                                'sort': {'author': pymongo.ASCENDING}  # sort with hive style.
-                            }
-                        }
-                    },
-                ]},
-            "allowAnonymousUser": False,
-            "allowAnonymousApp": False
-        }, run_body, executable_name=['ipfs_find_1', 'ipfs_find_2'])
+    def test03_find_with_aggregated(self):
+        script_name, executable_name = 'ipfs_database_find_with_aggregated', 'database_find'
+        executable_count = 5
+
+        def get_executable(index: str):
+            return {
+                'name': executable_name + index,
+                'type': 'find',
+                'body': {
+                    'collection': self.collection_name,
+                    'filter': {'content': '$params.content' + index}
+                }
+            }
+
+        self.__register_script(script_name, {'executable': {
+            'name': executable_name,
+            'type': 'aggregated',
+            'body': [get_executable(str(i)) for i in range(1, executable_count + 1)]
+        }})
+
+        params = {'content' + str(i): 'message' + str(i) for i in range(1, executable_count + 1)}
+        body = self.__call_script(script_name, {"params": params})
+        executables = DictAsserter(body)
+
+        def assert_executable(index: str):
+            executable = executables.check_dict(executable_name + index)
+            self.assertEqual(executable.get_int('total'), 1)
+            items = executable.get_list('items')
+            self.assertEqual(len(items), 1)
+            self.assertEqual(items[0]['author'], 'John')
+            self.assertEqual(items[0]['content'], f'message{index}')
+            self.assertEqual(items[0]['words_count'], int(f'{index}0000'))
+
+        [assert_executable(str(i)) for i in range(1, executable_count + 1)]
 
         self.delete_script(script_name)
 
     def test04_update(self):
-        script_name, executable_name, col_filter = 'ipfs_database_update', 'database_update', {'author': '$params.author'}
-        body = self.__register_and_call_script(script_name, {'executable': {
+        script_name, executable_name = 'ipfs_database_update', 'database_update'
+
+        self.__register_script(script_name, {'executable': {
             'name': executable_name,
             'type': 'update',
-            'output': True,
             'body': {
                 'collection': self.collection_name,
-                'filter': col_filter,
+                'filter': {'content': '$params.content'},
                 'update': {
                     '$set': {
-                        'author': '$params.author',
-                        'content': '$params.content'
+                        'words_count': '$params.words_count'
                     }
-                }, 'options': {
-                    'bypass_document_validation': False,
-                    'upsert': True
                 }
-            }}}, {'params': {
-                'author': 'John',
-                'content': 'message2'
-        }}, executable_name=executable_name)
-        self.assertTrue('matched_count' in body.get(executable_name))
-        self.assertTrue('modified_count' in body.get(executable_name))
-        self.assertTrue('upserted_id' in body.get(executable_name))
+            }
+        }})
+
+        body = self.__call_script(script_name, {"params": {"content": "message9", "words_count": 100000}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('modified_count'), 1)
+
+        body = self.__call_script(script_name, {"params": {"content": "message9", "words_count": 90000}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('modified_count'), 1)
+
         self.delete_script(script_name)
 
     def test05_delete(self):
         script_name, executable_name = 'ipfs_database_delete', 'database_delete'
-        body = self.__register_and_call_script(script_name, {'executable': {
+
+        self.__register_script(script_name, {'executable': {
             'name': executable_name,
             'type': 'delete',
-            'output': True,
             'body': {
                 'collection': self.collection_name,
-                'filter': {'author': '$params.author'}
-            }}}, {'params': {'author': 'John'}}, executable_name=executable_name)
-        self.assertTrue('deleted_count' in body.get(executable_name))
+                'filter': {'content': '$params.content'}
+            }}
+        })
+
+        body = self.__call_script(script_name, {"params": {"content": "message9"}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('deleted_count'), 1)
+
         self.delete_script(script_name)
 
     def test06_file_upload(self):
         script_name, executable_name = 'ipfs_file_upload', 'file_upload'
-        self.__register_call_and_stream(script_name, {"executable": {
-                "output": True,
-                "name": executable_name,
-                "type": "fileUpload",
-                "body": {
-                    "path": "$params.path"
-                }
-            }
-        }, self.file_name, executable_name=executable_name, is_download=False)
+
+        self.__register_script(script_name, {"executable": {
+            "name": executable_name,
+            "type": "fileUpload",
+            "body": {
+                "path": "$params.path"
+            }}
+        })
+
+        self.call_and_execute_transaction(script_name, executable_name, is_download=False)
+
         self.delete_script(script_name)
 
     def test07_file_download(self):
         script_name, executable_name = 'ipfs_file_download', 'file_download'
-        self.__register_call_and_stream(script_name, {"executable": {
-                "output": True,
-                "name": executable_name,
-                "type": "fileDownload",
-                "body": {
-                    "path": "$params.path"
-                }
-            }
-        }, self.file_name, executable_name=executable_name)
+
+        self.__register_script(script_name, {"executable": {
+            "name": executable_name,
+            "type": "fileDownload",
+            "body": {
+                "path": "$params.path"
+            }}
+        })
+
+        self.call_and_execute_transaction(script_name, executable_name)
+
         self.delete_script(script_name)
 
-    def test07_file_download_anonymous_file(self):
-        script_name, executable_name = 'ipfs_file_download', 'file_download'
-        self.__register_call_and_stream(script_name, {"executable": {
-                "output": True,
-                "name": executable_name,
-                "type": "fileDownload",
-                "body": {
-                    "path": "$params.path"
-                }
-            },
-            "allowAnonymousUser": True,
-            "allowAnonymousApp": True
-        }, self.file_name, executable_name=executable_name, check_anonymous=True)
-        self.delete_script(script_name)
-
-    def test08_file_properties_without_params(self):
+    def test08_file_properties(self):
         script_name, executable_name = 'ipfs_file_properties', 'file_properties'
-        body = self.__register_and_call_script(script_name, {'executable': {
-            'name': executable_name,
-            'type': 'fileProperties',
-            'output': True,
-            'body': {
-                'path': self.file_name
-            }}}, None, executable_name=executable_name)
-        self.assertEqual(body[executable_name]['size'], len(self.file_content))
-        self.assertEqual(body[executable_name]['name'], self.file_name)
-        self.assertTrue('type' in body[executable_name])
-        self.assertTrue('last_modify' in body[executable_name])
+
+        self.__register_script(script_name, {"executable": {
+            "name": executable_name,
+            "type": "fileProperties",
+            "body": {
+                "path": "$params.path"
+            }}
+        })
+
+        body = self.__call_script(script_name, {'params': {'path': self.file_name}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('size'), len(self.file_content))
+        self.assertEqual(executable.get_str('name'), self.file_name)
+        self.assertIn('type', executable.data)
+        self.assertIn('last_modify', executable.data)
+
         self.delete_script(script_name)
 
     def test09_file_hash(self):
         script_name, executable_name = 'ipfs_file_hash', 'file_hash'
-        body = self.__register_and_call_script(script_name, {'executable': {
-            'name': executable_name,
-            'type': 'fileHash',
-            'output': True,
-            'body': {
-                'path': '$params.path'
-            }}}, {'params': {'path': self.file_name}}, executable_name=executable_name)
-        self.assertTrue(body[executable_name].get('SHA256'))
+
+        self.__register_script(script_name, {"executable": {
+            "name": executable_name,
+            "type": "fileHash",
+            "body": {
+                "path": "$params.path"
+            }}
+        })
+
+        body = self.__call_script(script_name, {'params': {'path': self.file_name}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_str('SHA256'), self.file_sha256)
+
         self.delete_script(script_name)
 
     def test09_file_hash_with_part_params(self):
-        script_name, executable_name = 'ipfs_file_hash', 'file_hash'
-        body = self.__register_and_call_script(script_name, {'executable': {
-            'name': executable_name,
-            'type': 'fileHash',
-            'output': True,
-            'body': {
-                'path': 'ipfs-scripting/$params.path'
-            }}}, {'params': {'path': 'test.txt'}}, executable_name=executable_name)
-        self.assertTrue(body[executable_name].get('SHA256'))
-        self.delete_script(script_name)
+        script_name, executable_name = 'ipfs_file_hash_with_part_params', 'file_hash'
 
-    def test09_file_hash_with_part_params_2(self):
-        script_name, executable_name = 'ipfs_file_hash', 'file_hash'
-        body = self.__register_and_call_script(script_name, {'executable': {
-            'name': executable_name,
-            'type': 'fileHash',
-            'output': True,
-            'body': {
-                'path': 'ipfs-scripting/${params.path}.txt'
-            }}}, {'params': {'path': 'test'}}, executable_name=executable_name)
-        self.assertTrue(body[executable_name].get('SHA256'))
-        self.delete_script(script_name)
+        def register_hash(path_pattern: str):
+            self.__register_script(script_name, {"executable": {
+                "name": executable_name,
+                "type": "fileHash",
+                "body": {
+                    "path": path_pattern
+                }}
+            })
 
-    def test10_aggregated_download(self):
-        script_name, executable_name = 'ipfs_aggregated', 'aggregated_download'
-        self.__register_call_and_stream(script_name, {"executable": {
-            "output": True,
-            "name": executable_name,
-            "type": "fileDownload",
-            "body": {"path": "$params.path"}}
-        }, self.file_name, executable_name=executable_name)
+        def validate_call(path_value: str):
+            body = self.__call_script(script_name, {'params': {'path': path_value}})
+            executable = DictAsserter(body).check_dict(executable_name)
+            self.assertEqual(executable.get_str('SHA256'), self.file_sha256)
+
+        # 'ipfs-scripting/test.txt'
+        register_hash('ipfs-scripting/$params.path')
+        validate_call('test.txt')
+
+        register_hash('$params.path/test.txt')
+        validate_call('ipfs-scripting')
+
+        register_hash('ipfs-scripting/${params.path}.txt')
+        validate_call('test')
+
         self.delete_script(script_name)
 
     def test11_delete_script_not_exist(self):

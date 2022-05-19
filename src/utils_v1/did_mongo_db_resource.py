@@ -48,7 +48,7 @@ def options_filter(body, option_keys):
     """ filter options in options_keys from the "options" of body """
     if not body or not isinstance(body.get('options'), dict):
         return {}
-    return {k: v for k, v in body.get('options') if k in option_keys}
+    return {k: v for k, v in body.get('options').items() if k in option_keys}
 
 
 def options_pop_timestamp(request_body):

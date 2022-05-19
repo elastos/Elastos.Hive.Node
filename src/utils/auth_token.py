@@ -118,7 +118,7 @@ class TokenParser:
         # In real request handling, it will check if the token is required (g.token_error not None).
         if self.__script_anonymous_request():
             info, err = _get_token_details_from_header()
-            g.usr_did = g.app_ins_did = g.app_did, g.token_error = None  # Set the attributes to g.
+            g.usr_did = g.app_ins_did = g.app_did = g.token_error = None  # Set the attributes to g.
             if err is not None:
                 g.token_error = err
                 return

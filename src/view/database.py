@@ -546,6 +546,4 @@ class Query(Resource):
         if not isinstance(json_body.get('options', {}), dict):
             raise InvalidParameterException(msg='Invalid parameter options.')
 
-        return self.database.query_document(json_body['collection'],
-                                            json_body.get('filter', {}),
-                                            json_body.get('options', {}))
+        return self.database.query_document(json_body['collection'], json_body)

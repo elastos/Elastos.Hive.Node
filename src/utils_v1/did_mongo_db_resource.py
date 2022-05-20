@@ -51,12 +51,6 @@ def options_filter(body, option_keys):
     return {k: v for k, v in body.get('options').items() if k in option_keys}
 
 
-def options_pop_timestamp(request_body):
-    if "options" not in request_body:
-        return True
-    return request_body.get('options').pop('timestamp', True)
-
-
 def gene_sort(sorts_src):
     sorts = list()
     if isinstance(sorts_src, list):

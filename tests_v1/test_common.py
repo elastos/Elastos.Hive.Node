@@ -1,5 +1,4 @@
 import json
-import logging
 import shutil
 from io import BytesIO
 
@@ -10,6 +9,7 @@ from hive.util.did_info import get_did_info_by_did_appid
 
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import setup_vault_service, remove_vault_service, get_vault_path
+from tests import test_log
 
 did = "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"
 app_id = "appid"
@@ -67,7 +67,7 @@ def test_auth_common(self, user_did, app_did):
     # sign_in
     doc = lib.DIDStore_LoadDID(app_did.get_did_store(), app_did.get_did())
     doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
-    logging.getLogger("test_auth_common").debug(f"\ndoc_str: {doc_str}")
+    test_log(f"test_auth_common: \ndoc_str: {doc_str}")
     doc = json.loads(doc_str)
     rt, s = self.parse_response(
         self.test_client.post('/api/v1/did/sign_in',
@@ -94,7 +94,7 @@ def test_auth_common(self, user_did, app_did):
     vp_json = app_did.create_presentation_str(vc, nonce, hive_did)
     auth_token = app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
     # print(auth_token)
-    logging.getLogger("test_auth_common").debug(f"\nauth_token: {auth_token}")
+    test_log(f"test_auth_common: \nauth_token: {auth_token}")
 
     rt, s = self.parse_response(
         self.test_client.post('/api/v1/did/auth',
@@ -113,7 +113,7 @@ def test_auth_common(self, user_did, app_did):
     issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
     lib.JWT_Destroy(jws)
     # print(token)
-    logging.getLogger("test_auth_common").debug(f"\ntoken: {token}")
+    test_log(f"test_auth_common: \ntoken: {token}")
     app_did.set_access_token(token)
 
     # auth_check
@@ -150,11 +150,11 @@ def create_upload_file(self, client, file_name, data):
 
     self.assert200(s)
     self.assertEqual(r3["_status"], "OK")
-    logging.getLogger("HiveFileTestCase").debug(json.dumps(r3))
+    test_log(f"HiveFileTestCase: {json.dumps(r3)}")
 
 
 def upsert_collection(self, col_name, doc):
-    logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_1_create_collection")
+    test_log("HiveMongoDbTestCase: \nRunning test_1_create_collection")
     r, s = self.parse_response(
         self.test_client.post('/api/v1/db/create_collection',
                               data=json.dumps(
@@ -181,6 +181,7 @@ def upsert_collection(self, col_name, doc):
 
 
 def prepare_vault_data(self):
+    """ skip this. """
     doc = dict()
     for i in range(1, 10):
         doc["work" + str(i)] = "work_content" + str(i)
@@ -195,8 +196,8 @@ def prepare_vault_data(self):
 def copy_to_backup_data(self):
     vault_path = get_vault_path(self.did)
     backup_path = get_vault_backup_path(self.did)
-    print(vault_path.as_posix())
-    print(backup_path.as_posix())
+    test_log(vault_path.as_posix())
+    test_log(backup_path.as_posix())
     if backup_path.exists():
         shutil.rmtree(backup_path.as_posix())
     shutil.copytree(vault_path.as_posix(), backup_path.as_posix())
@@ -205,8 +206,8 @@ def copy_to_backup_data(self):
 def move_to_backup_data(self):
     vault_path = get_vault_path(self.did)
     backup_path = get_vault_backup_path(self.did)
-    print(vault_path.as_posix())
-    print(backup_path.as_posix())
+    test_log(vault_path.as_posix())
+    test_log(backup_path.as_posix())
     if backup_path.exists():
         shutil.rmtree(backup_path.as_posix())
     shutil.move(vault_path.as_posix(), backup_path.as_posix())

@@ -1,13 +1,11 @@
 import json
 import unittest
 import flask_unittest
-import logging
+
+from tests import test_log
 from tests_v1 import test_common
 from hive.util.constants import HIVE_MODE_TEST
 from src import create_app
-
-logger = logging.getLogger()
-logger.level = logging.DEBUG
 
 
 class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
@@ -15,14 +13,14 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
 
     @classmethod
     def setUpClass(cls):
-        logging.getLogger("HiveMongoDbTestCase").debug("Setting up HiveMongoDbTestCase\n")
+        test_log("HiveMongoDbTestCase: Setting up HiveMongoDbTestCase\n")
 
     @classmethod
     def tearDownClass(cls):
-        logging.getLogger("HiveMongoDbTestCase").debug("\n\nShutting down HiveMongoDbTestCase")
+        test_log("HiveMongoDbTestCase: \n\nShutting down HiveMongoDbTestCase")
 
     def setUp(self, client):
-        logging.getLogger("HiveMongoDbTestCase").info("\n")
+        test_log("HiveMongoDbTestCase: \n")
         self.app.config['TESTING'] = True
         self.content_type = ("Content-Type", "application/json")
         self.json_header = [self.content_type, ]
@@ -42,14 +40,14 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
 
     def tearDown(self, client):
         test_common.delete_test_auth_token()
-        logging.getLogger("HiveMongoDbTestCase").info("\n")
+        test_log("HiveMongoDbTestCase: \n")
 
     def init_db(self):
         pass
 
     def parse_response(self, r):
         try:
-            logging.getLogger("HiveMongoDbTestCase").debug("\nret:" + str(r.get_data()))
+            test_log(f"HiveMongoDbTestCase: \nret: {str(r.get_data())}")
             v = json.loads(r.get_data())
         except json.JSONDecodeError:
             v = None
@@ -62,7 +60,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(status, 201)
 
     def create_collection(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_1_create_collection")
+        test_log("HiveMongoDbTestCase: \nRunning test_1_create_collection")
         r, s = self.parse_response(
             client.post('/api/v1/db/create_collection', data=json.dumps({"collection": "works"}), headers=self.auth)
         )
@@ -76,7 +74,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertTrue(r["existing"])
 
     def test_2_insert_one(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_2_insert_one")
+        test_log("HiveMongoDbTestCase: \nRunning test_2_insert_one")
         r, s = self.parse_response(
             client.post('/api/v1/db/insert_one', data=json.dumps(
                               {
@@ -93,7 +91,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_3_insert_many(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_3_insert_many")
+        test_log("HiveMongoDbTestCase: \nRunning test_3_insert_many")
         r, s = self.parse_response(
             client.post('/api/v1/db/insert_many', data=json.dumps(
                               {
@@ -120,7 +118,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_4_count_documents(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_8_count_documents")
+        test_log("HiveMongoDbTestCase: \nRunning test_8_count_documents")
         r, s = self.parse_response(
             client.post('/api/v1/db/count_documents', data=json.dumps(
                                       {
@@ -140,7 +138,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_5_find_one(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_9_find_one")
+        test_log("HiveMongoDbTestCase: \nRunning test_9_find_one")
         r, s = self.parse_response(
             client.post('/api/v1/db/find_one', data=json.dumps(
                                       {
@@ -164,7 +162,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_6_1_find_one_null_filter(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_9_1_find_one_null_filter")
+        test_log("HiveMongoDbTestCase: \nRunning test_9_1_find_one_null_filter")
         r, s = self.parse_response(
             client.post('/api/v1/db/find_one', data=json.dumps(
                                       {
@@ -185,7 +183,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_7_find_many(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_10_find_many")
+        test_log("HiveMongoDbTestCase: \nRunning test_10_find_many")
         r, s = self.parse_response(
             client.post('/api/v1/db/find_many', data=json.dumps(
                                       {
@@ -210,7 +208,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_8_find_many_none_filter(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_10_find_many_none_filter")
+        test_log("HiveMongoDbTestCase: \nRunning test_10_find_many_none_filter")
         r, s = self.parse_response(
             client.post('/api/v1/db/find_many', data=json.dumps(
                                       {
@@ -232,7 +230,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_9_update_one(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_4_update_one")
+        test_log("HiveMongoDbTestCase: \nRunning test_4_update_one")
         r, s = self.parse_response(
             client.post('/api/v1/db/update_one', data=json.dumps(
                                       {
@@ -255,7 +253,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_10_update_many(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_5_update_many")
+        test_log("HiveMongoDbTestCase: \nRunning test_5_update_many")
         r, s = self.parse_response(
             client.post('/api/v1/db/update_many', data=json.dumps(
                                       {
@@ -278,7 +276,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_11_delete_one(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_6_delete_one")
+        test_log("HiveMongoDbTestCase: \nRunning test_6_delete_one")
         r, s = self.parse_response(
             client.post('/api/v1/db/delete_one', data=json.dumps(
                                       {
@@ -293,7 +291,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_12_delete_many(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_7_delete_many")
+        test_log("HiveMongoDbTestCase: \nRunning test_7_delete_many")
         r, s = self.parse_response(
             client.post('/api/v1/db/delete_many', data=json.dumps(
                                       {
@@ -308,7 +306,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_13_delete_collection(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning test_1_2_delete_collection")
+        test_log("HiveMongoDbTestCase: \nRunning test_1_2_delete_collection")
         r, s = self.parse_response(
             client.post('/api/v1/db/delete_collection', data=json.dumps(
                                       {

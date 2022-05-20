@@ -52,7 +52,7 @@ class FileUploadExecutable(FileExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        return self._create_transaction('upload')
+        return self.get_result_data(self._create_transaction('upload'))
 
 
 class FileDownloadExecutable(FileExecutable):
@@ -60,7 +60,7 @@ class FileDownloadExecutable(FileExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        return self._create_transaction('download')
+        return self.get_result_data(self._create_transaction('download'))
 
 
 class FilePropertiesExecutable(FileExecutable):

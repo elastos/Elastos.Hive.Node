@@ -9,16 +9,15 @@ from pathlib import Path
 
 from flask import g
 
-from src import hive_setting
-from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
-from src.modules.subscription.vault import VaultManager, AppSpaceDetector
-from src.utils_v1.common import gene_temp_file_name
-from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data
 from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
     COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, USR_DID
+from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
+from src.utils_v1.common import gene_temp_file_name
+from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
-from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
+from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
+from src.modules.subscription.vault import VaultManager, AppSpaceDetector
 
 
 class IpfsFiles:
@@ -63,9 +62,8 @@ class IpfsFiles:
 
         :v2 API:
         """
-        self.vault_manager.get_vault(g.usr_did)
-
-        self.delete_file_with_path(g.usr_did, g.app_did, path, check_exist=True)
+        with AppSpaceDetector(g.usr_did, g.app_did) as _:
+            self.delete_file_with_path(g.usr_did, g.app_did, path, check_exist=True)
 
     def delete_file_with_path(self, user_did, app_did, path, check_exist=False):
         """ 'public' for v1 """
@@ -94,9 +92,10 @@ class IpfsFiles:
 
     def copy_file(self, src_path, dst_path):
         """ :v2 API: """
-        self.vault_manager.get_vault(g.usr_did).check_storage()
+        with AppSpaceDetector(g.usr_did, g.app_did) as vault:
+            vault.check_storage()
 
-        return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path, is_copy=True)
+            return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path, is_copy=True)
 
     def list_folder(self, path):
         """
@@ -110,7 +109,7 @@ class IpfsFiles:
 
         docs = self.list_folder_with_path(g.usr_did, g.app_did, path)
         return {
-            'value': list(map(lambda d: self._get_list_file_info_by_doc(d), docs))
+            'value': list(map(lambda d: self.__get_list_file_info_by_doc(d), docs))
         }
 
     def list_folder_with_path(self, user_did, app_did, path):
@@ -316,7 +315,7 @@ class IpfsFiles:
             'name': dst_path
         }
 
-    def _get_list_file_info_by_doc(self, file_doc):
+    def __get_list_file_info_by_doc(self, file_doc):
         return {
             'name': file_doc[COL_IPFS_FILES_PATH],
             'is_file': file_doc[COL_IPFS_FILES_IS_FILE],
@@ -335,7 +334,3 @@ class IpfsFiles:
                 raise FileNotFoundException(msg=f'No file metadata with path: {path} found')
             return None
         return metadata
-
-    def get_ipfs_file_access_url(self, metadata):
-        """ 'public' for scripting service """
-        return f'{hive_setting.IPFS_GATEWAY_URL}/ipfs/{metadata[COL_IPFS_FILES_IPFS_CID]}'

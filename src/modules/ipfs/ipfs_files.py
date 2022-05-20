@@ -11,7 +11,7 @@ from flask import g
 
 from src import hive_setting
 from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
-from src.modules.subscription.vault import VaultManager
+from src.modules.subscription.vault import VaultManager, AppSpaceDetector
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data
 from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
@@ -35,16 +35,17 @@ class IpfsFiles:
 
     def upload_file(self, path, is_public: bool, script_name: str):
         """ :v2 API: """
-        self.vault_manager.get_vault(g.usr_did).check_storage()
+        with AppSpaceDetector(g.usr_did, g.app_did) as vault:
+            vault.check_storage()
 
-        cid = self.upload_file_with_path(g.usr_did, g.app_did, path, is_public=is_public)
-        if is_public:
-            from src.modules.scripting.scripting import Scripting
-            Scripting().set_script_for_anonymous_file(script_name, path)
-        return {
-            'name': path,
-            'cid': cid if is_public else ''
-        }
+            cid = self.upload_file_with_path(g.usr_did, g.app_did, path, is_public=is_public)
+            if is_public:
+                from src.modules.scripting.scripting import Scripting
+                Scripting().set_script_for_anonymous_file(script_name, path)
+            return {
+                'name': path,
+                'cid': cid if is_public else ''
+            }
 
     def download_file(self, path):
         """ :v2 API: """

@@ -90,7 +90,10 @@ class Executable:
         self.script = script
         self.name = executable_data['name']
         self.body = executable_data['body']
-        self.is_output = executable_data.get('output', True)
+
+        # If execute this executable with output or not.
+        self.output = executable_data.get('output', True)
+
         self.ipfs_files = IpfsFiles()
         self.vault_manager = VaultManager()
         self.mcli = MongodbClient()
@@ -116,7 +119,7 @@ class Executable:
 
     def get_result_data(self, data):
         """ for response with the option 'is_output' of the executable """
-        return data if self.is_output else None
+        return data if self.output else None
 
     @staticmethod
     def validate_data(json_data, can_aggregated=True):

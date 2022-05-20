@@ -8,7 +8,7 @@ import unittest
 import typing as t
 import urllib.parse
 
-from tests import init_test
+from tests import init_test, is_valid_object_id
 from tests.utils.dict_asserter import DictAsserter
 from tests.utils.http_client import HttpClient
 from tests.utils_v1.hive_auth_test_v1 import AppDID
@@ -74,16 +74,17 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertTrue(body.get_int('modified_count') == 1 or body.get_str('upserted_id'))
         return body.data
 
-    def __call_script(self, script_name, body=None, except_error=200, need_token=True):
+    def __call_script(self, script_name, body=None, except_error=200, need_token=True, need_context=True):
         """ Call script successfully
 
         :return: the response body (dict) of calling.
         """
         body = body if body else {}
-        body['context'] = {
-            'target_did': self.target_did,
-            'target_app_did': self.target_app_did,
-        }
+        if need_context:
+            body['context'] = {
+                'target_did': self.target_did,
+                'target_app_did': self.target_app_did,
+            }
         response = self.cli2.patch(f'/scripting/{script_name}', body, need_token=need_token)
         self.assertEqual(response.status_code, except_error)
         return DictAsserter(response.json()).data if except_error == 200 else None
@@ -198,6 +199,101 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 1)
         self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 1)
         self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 1)
+
+        self.delete_script(script_name)
+
+    def test03_find_with_output(self):
+        script_name, executable_name = 'ipfs_database_find_with_output', 'database_find'
+
+        def register_with_is_out(output):
+            self.__register_script(script_name, {'executable': {
+                'name': executable_name,
+                'type': 'find',
+                'output': output,
+                'body': {
+                    'collection': self.collection_name,
+                    'filter': {'author': '$params.author'}
+                }
+            }})
+
+        # check with 'is_out' = True
+        register_with_is_out(True)
+        body = self.__call_script(script_name, {"params": {"author": "John"}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertEqual(executable.get_int('total'), 9)
+        items = executable.get_list('items')
+        self.assertEqual(len(items), 9)
+        self.assertTrue(all([a['author'] == 'John' for a in items]))
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 1)
+        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 1)
+
+        # check with 'is_out' = False
+        register_with_is_out(False)
+        body = self.__call_script(script_name, {"params": {"author": "John"}})
+        self.assertIsInstance(body, dict)
+        self.assertFalse(body)
+
+        self.delete_script(script_name)
+
+    def test03_find_with_limit_skip(self):
+        script_name, executable_name = 'ipfs_database_find_with_limit_skip', 'database_find'
+
+        def register(limit, skip):
+            self.__register_script(script_name, {'executable': {
+                'name': executable_name,
+                'type': 'find',
+                'body': {
+                    'collection': self.collection_name,
+                    'filter': {'author': '$params.author'},
+                    'options': {
+                        'limit': limit,
+                        'skip': skip,
+                        'sort': [['words_count', pymongo.ASCENDING]]
+                    }
+                }
+            }})
+
+        def check_result(items_count, first_content, extra_params=None):
+            request_body = {"params": {"author": "John"}}
+            if extra_params:
+                request_body['params'].update(extra_params)
+            body = self.__call_script(script_name, request_body)
+            executable = DictAsserter(body).check_dict(executable_name)
+            self.assertEqual(executable.get_int('total'), 9)
+            items = executable.get_list('items')
+            self.assertEqual(len(items), items_count)
+            self.assertEqual(items[0]['content'], first_content)
+
+        # total 9
+        register(3, 0), check_result(3, 'message1')
+        register(5, 3), check_result(5, 'message4')
+        register(7, 5), check_result(4, 'message6')
+
+        # options also support $params
+        register('$params.limit', '$params.skip'), check_result(2, 'message3', extra_params={'limit': 2, 'skip': 2})
+
+        self.delete_script(script_name)
+
+    def test03_find_without_context(self):
+        script_name, executable_name = 'ipfs_database_find_without_context', 'database_find'
+
+        self.__register_script(script_name, {'executable': {
+            'name': executable_name,
+            'type': 'find',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author'}
+            }
+        }})
+
+        self.__call_script(script_name, {"params": {"author": "John"}}, need_context=False, except_error=400)
 
         self.delete_script(script_name)
 
@@ -458,6 +554,29 @@ class IpfsScriptingTestCase(unittest.TestCase):
         body = self.__call_script(script_name, {"params": {"content": "message9", "words_count": 90000}})
         executable = DictAsserter(body).check_dict(executable_name)
         self.assertEqual(executable.get_int('modified_count'), 1)
+
+        self.delete_script(script_name)
+
+    def test04_update_insert_if_not_exists(self):
+        script_name, executable_name = 'ipfs_database_update_insert_if_not_exists', 'database_update'
+
+        self.__register_script(script_name, {'executable': {
+            'name': executable_name,
+            'type': 'update',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author'},
+                'update': {'$setOnInsert': {
+                    'content': '$params.content',
+                    'words_count': '$params.words_count'
+                }},
+                'options': {'upsert': True}
+            }
+        }})
+
+        body = self.__call_script(script_name, {"params": {"author": "Alex", "content": "message10", "words_count": 100000}})
+        executable = DictAsserter(body).check_dict(executable_name)
+        self.assertTrue(is_valid_object_id(executable.get_str('upserted_id')))
 
         self.delete_script(script_name)
 

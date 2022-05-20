@@ -1,15 +1,12 @@
 import json
 import unittest
 import flask_unittest
-import logging
 
 from src import create_app
 from hive.util.constants import HIVE_MODE_TEST
+from tests import test_log
 from tests_v1 import test_common
 from tests_v1.test_common import did
-
-logger = logging.getLogger()
-logger.level = logging.DEBUG
 
 
 class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
@@ -17,14 +14,14 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
 
     @classmethod
     def setUpClass(cls):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("Setting up HiveMongoScriptingTestCase\n")
+        test_log("HiveMongoScriptingTestCase: Setting up HiveMongoScriptingTestCase\n")
 
     @classmethod
     def tearDownClass(cls):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\n\nShutting down HiveMongoScriptingTestCase")
+        test_log("HiveMongoScriptingTestCase: \n\nShutting down HiveMongoScriptingTestCase")
 
     def setUp(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").info("\n")
+        test_log("HiveMongoScriptingTestCase: \n")
         self.app.config['TESTING'] = True
         self.content_type = ("Content-Type", "application/json")
         self.json_header = [self.content_type, ]
@@ -41,11 +38,11 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
 
     def tearDown(self, client):
         test_common.delete_test_auth_token()
-        logging.getLogger("HiveMongoScriptingTestCase").info("\n")
+        test_log("HiveMongoScriptingTestCase: \n")
 
     def parse_response(self, r):
         try:
-            logging.getLogger("HiveMongoScriptingTestCase").debug("\nret:" + str(r.get_data()))
+            test_log(f"HiveMongoScriptingTestCase: \nret: {str(r.get_data())}")
             v = json.loads(r.get_data())
         except json.JSONDecodeError:
             v = None
@@ -58,7 +55,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(status, 201)
 
     def init_collection_for_test(self, client):
-        logging.getLogger("HiveMongoDbTestCase").debug("\nRunning init_collection_for_test")
+        test_log("HiveMongoDbTestCase: \nRunning init_collection_for_test")
         r, s = self.parse_response(
             client.post('/api/v1/db/create_collection', data=json.dumps(
                                       {
@@ -83,7 +80,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_1_set_script_without_condition(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_1_set_script_without_condition")
+        test_log("HiveMongoScriptingTestCase: \nRunning test_1_set_script_without_condition")
         r, s = self.parse_response(
             client.post('/api/v1/scripting/set_script', data=json.dumps(
                                       {
@@ -105,7 +102,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_2_set_script_with_condition(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_2_set_script_with_condition")
+        test_log("HiveMongoScriptingTestCase: \nRunning test_2_set_script_with_condition")
         r, s = self.parse_response(
             client.post('/api/v1/scripting/set_script', data=json.dumps(
                                       {
@@ -138,7 +135,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_3_set_script_with_complex_condition(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_3_set_script_with_complex_condition")
+        test_log("HiveMongoScriptingTestCase: \nRunning test_3_set_script_with_complex_condition")
         r, s = self.parse_response(
             client.post('/api/v1/scripting/set_script', data=json.dumps(
                                       {
@@ -188,7 +185,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_4_set_script_with_anonymous_access(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_set_script_with_anonymous_access")
+        test_log("HiveMongoScriptingTestCase: \nRunning test_4_set_script_with_anonymous_access")
         r, s = self.parse_response(
             client.post('/api/v1/scripting/set_script', data=json.dumps(
                                       {
@@ -209,7 +206,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_5_run_script_without_condition(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_run_script_without_condition")
+        test_log("HiveMongoScriptingTestCase: \nRunning test_4_run_script_without_condition")
         r, s = self.parse_response(
             client.post('/api/v1/scripting/run_script', data=json.dumps(
                                       {
@@ -221,8 +218,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_5_1_run_other_user_script_without_condition(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug(
-            "\nRunning test_4_1_run_other_user_script_without_condition")
+        test_log("HiveMongoScriptingTestCase: \nRunning test_4_1_run_other_user_script_without_condition")
 
         token = test_common.get_auth_token2()
         auth = [
@@ -245,7 +241,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_6_run_script_with_condition(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_5_run_script_with_condition")
+        test_log("HiveMongoScriptingTestCase: \nRunning test_5_run_script_with_condition")
 
         # Set up the pre-requisites to run this test
         client.post('/api/v1/db/create_collection', data=json.dumps({"collection": "test_group"}), headers=self.auth)
@@ -274,7 +270,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         client.post('/api/v1/db/delete_collection', data=json.dumps({"collection": "test_group"}), headers=self.auth)
 
     def test_7_run_script_with_anonymous_access(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_4_run_script_with_anonymous_access")
+        test_log("HiveMongoScriptingTestCase: \nRunning test_4_run_script_with_anonymous_access")
         r, s = self.parse_response(
             client.post('/api/v1/scripting/run_script', data=json.dumps(
                                       {
@@ -290,7 +286,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test_8_run_script_with_url(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test_8_run_script_with_url")
+        test_log("HiveMongoScriptingTestCase: \nRunning test_8_run_script_with_url")
         r, s = self.parse_response(
             client.get('/api/v1/scripting/run_script_url/did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN@appid/script_anonymous_access')
         )
@@ -298,7 +294,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test01_upload_file(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test01_upload_file")
+        test_log("HiveMongoScriptingTestCase: \nRunning test01_upload_file")
         file_path, script_name = 'scripting/test_01.txt', "script_upload_file"
         file_content, executable_name = f'{file_path} content 12345678', 'upload_file'
         r, s = self.parse_response(
@@ -344,7 +340,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test02_upload_file_by_url(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test02_upload_file_by_url")
+        test_log("HiveMongoScriptingTestCase: \nRunning test02_upload_file_by_url")
         file_path = 'scripting/test_02.txt'
         r, s = self.parse_response(
             client.post('/api/v1/scripting/set_script', data=json.dumps(
@@ -378,7 +374,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r["_status"], "OK")
 
     def test03_download_file(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test03_download_file")
+        test_log("HiveMongoScriptingTestCase: \nRunning test03_download_file")
         file_path, script_name = 'scripting/test_01.txt', "script_download_file"
         file_content, executable_name = f'{file_path} content 12345678', 'download_file'
         r, s = self.parse_response(
@@ -422,7 +418,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertEqual(r.get_data(as_text=True), file_content)
 
     def test04_file_properties(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test04_file_properties")
+        test_log("HiveMongoScriptingTestCase: \nRunning test04_file_properties")
         file_path, script_name, executable_name = 'scripting/test_01.txt', "script_file_properties", 'file_properties'
         r, s = self.parse_response(
             client.post('/api/v1/scripting/set_script', data=json.dumps(
@@ -462,7 +458,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.assertTrue(executable_name in r)
 
     def test05_file_hash(self, client):
-        logging.getLogger("HiveMongoScriptingTestCase").debug("\nRunning test05_file_hash")
+        test_log("HiveMongoScriptingTestCase: \nRunning test05_file_hash")
         file_path, script_name, executable_name = 'scripting/test_01.txt', "script_file_hash", 'file_hash'
         r, s = self.parse_response(
             client.post('/api/v1/scripting/set_script', data=json.dumps(
@@ -513,7 +509,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
 
     @unittest.skip("Just for manually test.")
     def test_8_1_run_script_with_url_exception(self, client):
-        logging.getLogger('ScriptingTest').debug("Enter test_8_1_run_script_with_url_exception")
+        test_log("ScriptingTest: Enter test_8_1_run_script_with_url_exception")
         r, s = self.parse_response(
             client.post('/api/v1/scripting/set_script', json={
                                       "name": "script_anonymous_access2",
@@ -536,7 +532,7 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
                        'script_anonymous_access2'))
         self.assertEqual(s, 400)
         self.assertEqual(r["_status"], "ERR")
-        logging.getLogger('ScriptingTest').debug(f"test_8_1 error message: {r['_error']['message']}")
+        test_log(f"ScriptingTest: test_8_1 error message: {r['_error']['message']}")
 
 
 if __name__ == '__main__':

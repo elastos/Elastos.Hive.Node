@@ -40,10 +40,10 @@ class FileExecutable(Executable):
 
             return {
                 "transaction_id": jwt.encode({
-                    "row_id": result.get['inserted_id'],
-                    "target_did": self.get_target_did(),
-                    "target_app_did": self.get_target_app_did()
-                }, hive_setting.PASSWORD, algorithm='HS256')
+                        "row_id": result['inserted_id'],
+                        "target_did": self.get_target_did(),
+                        "target_app_did": self.get_target_app_did()
+                    }, hive_setting.PASSWORD, algorithm='HS256')
             }
 
 

@@ -44,7 +44,7 @@ class Database:
 
     @staticmethod
     def __is_timestamp(json_body):
-        return json_body.get('options', {}).get('timestamp') is True
+        return json_body.get('options', {}).get('timestamp', True) is True
 
     def insert_document(self, collection_name, json_body):
         """ :v2 API: """
@@ -117,11 +117,12 @@ class Database:
 
         return self.__do_internal_find(collection_name, col_filter, {'skip': skip, 'limit': limit})
 
-    def query_document(self, collection_name, filter_, options):
+    def query_document(self, collection_name, json_body):
         """ :v2 API: """
         self.vault_manager.get_vault(g.usr_did)
 
-        return self.__do_internal_find(collection_name, filter_, populate_find_options_from_body(options))
+        options = populate_find_options_from_body(json_body)
+        return self.__do_internal_find(collection_name, json_body.get('filter', {}), options)
 
     def __do_internal_find(self, collection_name, col_filter, options):
         user_did, app_did, col = self.__get_collection(collection_name)

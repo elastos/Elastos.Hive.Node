@@ -129,7 +129,7 @@ def run_executable_find(did, app_did, target_did, target_app_did, executable_bod
         return None, err_message
 
     col = get_collection(target_did, target_app_did, executable_body.get('collection'))
-    if not col:
+    if col is None:
         return None, f'Can not find the collection {executable_body.get("collection")}'
     data, err_message = query_find_many(col, executable_body, options)
     if err_message:
@@ -242,7 +242,7 @@ def run_executable_file_upload(did, app_did, target_did, target_app_did, executa
         }
     }
     col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
-    if not col:
+    if col is None:
         return None, f"collection {SCRIPTING_SCRIPT_TEMP_TX_COLLECTION} does not exist"
     data, err_message = query_insert_one(col, content, {})
     if err_message:
@@ -288,7 +288,7 @@ def run_executable_file_download(did, app_did, target_did, target_app_did, execu
         }
     }
     col = get_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
-    if not col:
+    if col is None:
         return None, f"collection {SCRIPTING_SCRIPT_TEMP_TX_COLLECTION} does not exist"
     data, err_message = query_insert_one(col, content, {})
     if err_message:

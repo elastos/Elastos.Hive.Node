@@ -84,7 +84,7 @@ class DatabaseClient:
 
     def find_many(self, user_did, app_did, collection_name, col_filter, options=None, throw_exception=True):
         col = self.get_user_collection(user_did, app_did, collection_name)
-        if not col:
+        if col is None:
             if not throw_exception:
                 return []
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
@@ -93,7 +93,7 @@ class DatabaseClient:
     def find_many_origin(self, db_name, collection_name, col_filter,
                          options=None, create_on_absence=True, throw_exception=True):
         col = self.get_origin_collection(db_name, collection_name, create_on_absence=create_on_absence)
-        if not col:
+        if col is None:
             if not throw_exception:
                 return []
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
@@ -108,7 +108,7 @@ class DatabaseClient:
     def find_one_origin(self, db_name, collection_name, col_filter, options=None,
                         create_on_absence=False, throw_exception=True):
         col = self.get_origin_collection(db_name, collection_name, create_on_absence=create_on_absence)
-        if not create_on_absence and not col:
+        if not create_on_absence and col is None:
             if not throw_exception:
                 return None
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
@@ -123,7 +123,7 @@ class DatabaseClient:
     def count_origin(self, db_name, collection_name, col_filter, options=None,
                      create_on_absence=False, throw_exception=True):
         col = self.get_origin_collection(db_name, collection_name, create_on_absence=create_on_absence)
-        if not create_on_absence and not col:
+        if not create_on_absence and col is None:
             if not throw_exception:
                 return 0
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
@@ -136,7 +136,7 @@ class DatabaseClient:
     def insert_one_origin(self, db_name, collection_name, document, options=None,
                           create_on_absence=False, is_extra=True, **kwargs):
         col = self.get_origin_collection(db_name, collection_name, create_on_absence)
-        if not col:
+        if col is None:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
         if is_extra:
@@ -159,7 +159,7 @@ class DatabaseClient:
     def update_one_origin(self, db_name, collection_name, col_filter, col_update,
                           options=None, create_on_absence=False, is_many=False, is_extra=False, **kwargs):
         col = self.get_origin_collection(db_name, collection_name, create_on_absence=create_on_absence)
-        if not col:
+        if col is None:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
         if is_extra:
@@ -188,7 +188,7 @@ class DatabaseClient:
 
     def delete_one_origin(self, db_name, collection_name, col_filter, is_check_exist=True):
         col = self.get_origin_collection(db_name, collection_name)
-        if not col:
+        if col is None:
             if is_check_exist:
                 raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
             else:

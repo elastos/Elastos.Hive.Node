@@ -1,10 +1,10 @@
 from datetime import datetime
 
 from src.modules.database.mongodb_client import MongodbClient
+from src.utils_v1.constants import VAULT_BACKUP_SERVICE_USING, \
+    VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME
 from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID
 from src.utils.http_exception import BackupNotFoundException
-from src.utils_v1.constants import VAULT_SERVICE_PRICING_USING, VAULT_BACKUP_SERVICE_USING, \
-    VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 

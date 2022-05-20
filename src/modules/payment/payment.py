@@ -10,15 +10,14 @@ from datetime import datetime
 from flask import g
 
 from src import hive_setting
-from src.modules.payment.order import OrderManager, Order
-from src.modules.payment.order_contract import OrderContract
-from src.modules.subscription.backup import BackupManager
-from src.modules.subscription.vault import VaultManager
-from src.modules.auth.auth import Auth
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, ReceiptNotFoundException
-from src.utils.resolver import ElaResolver
 from src.utils.singleton import Singleton
 from src.utils_v1.payment.payment_config import PaymentConfig
+from src.modules.auth.auth import Auth
+from src.modules.subscription.vault import VaultManager
+from src.modules.subscription.backup import BackupManager
+from src.modules.payment.order import OrderManager, Order
+from src.modules.payment.order_contract import OrderContract
 
 
 class Payment(metaclass=Singleton):
@@ -26,7 +25,6 @@ class Payment(metaclass=Singleton):
         self.ela_address = hive_setting.PAYMENT_ADDRESS
         self.auth = Auth()
         self.vault_subscription = None
-        self.ela_resolver = ElaResolver(hive_setting.ESC_RESOLVER_URL)
         self.vault_manager = VaultManager()
         self.backup_manager = BackupManager()
         self.order_contract = OrderContract()

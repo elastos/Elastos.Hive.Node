@@ -2,9 +2,39 @@ from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTI
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_CALLER_DID, \
     SCRIPTING_EXECUTABLE_CALLER_APP_DID, SCRIPTING_EXECUTABLE_PARAMS
-from src.utils.http_exception import BadRequestException
+from src.utils.http_exception import BadRequestException, NotImplementedException
+from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.modules.subscription.vault import VaultManager
+
+
+def validate_exists(json_data, properties, parent_name=None):
+    """ check the input parameters exist, support dot, such as: a.b.c
+
+    :param json_data: dict
+    :param parent_name: parent name which will find first and all are 'dict', support 'a.b.c'
+                        can be None, then directly check on 'json_data'
+    :param properties: properties under 'json_data'['parent_name']
+    """
+    if not isinstance(json_data, dict):
+        raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" (not dict)')
+
+    # try to get the parent dict
+    if not parent_name:
+        data = json_data
+    else:
+        # get first child, if exists, recursive validate
+        parts = parent_name.split('.')
+        data = json_data.get(parts[0])
+        if not isinstance(data, dict):
+            raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" ("{parts[0]}" is not dict)')
+
+        validate_exists(data, properties, parent_name='.'.join(parts[1:]) if len(parts) > 1 else None)
+
+    # directly check
+    for prop in properties:
+        if prop not in data:
+            raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" ("{prop}" not exist)')
 
 
 def get_populated_value_with_params(data, user_did, app_did, params):
@@ -21,24 +51,28 @@ def get_populated_value_with_params(data, user_did, app_did, params):
     if not data or not params:
         return data
 
-    def populate_value(v):
-        if isinstance(v, dict):
-            return get_populated_value_with_params(v, user_did, app_did, params)
-        elif isinstance(v, list):  # tuple can not change the element, so skip
-            return get_populated_value_with_params(v, user_did, app_did, params)
-        elif isinstance(v, str):
-            if v == SCRIPTING_EXECUTABLE_CALLER_DID:
+    def populate_value(value):
+        if isinstance(value, dict):
+            return get_populated_value_with_params(value, user_did, app_did, params)
+        elif isinstance(value, list):  # tuple can not change the element, so skip
+            return get_populated_value_with_params(value, user_did, app_did, params)
+        elif isinstance(value, str):
+            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
+                if not user_did:
+                    raise BadRequestException(f"Can not find caller's 'user_did' as '$caller_did' exists in script.")
                 return user_did
-            elif v == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+                if not app_did:
+                    raise BadRequestException(f"Can not find caller's 'app_did' as '$caller_app_did' exists in script.")
                 return app_did
-            elif v.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                p = v.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
+                p = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
                 if p not in params:
-                    raise BadRequestException(f'Can not find parameter "{p}" for the script.')
+                    raise BadRequestException(f'Can not find "{p}" of "params" for the script.')
                 return params[p]
-            return v
+            return value
         else:
-            return v
+            return value
 
     if isinstance(data, dict):
         for k, v in data.items():
@@ -59,6 +93,30 @@ class Executable:
         self.is_output = executable_data.get('output', True)
         self.ipfs_files = IpfsFiles()
         self.vault_manager = VaultManager()
+        self.mcli = MongodbClient()
+
+    def execute(self):
+        # Override
+        raise NotImplementedException()
+
+    def get_user_did(self):
+        return self.script.user_did
+
+    def get_app_did(self):
+        return self.script.app_did
+
+    def get_target_did(self):
+        return self.script.context.target_did
+
+    def get_target_app_did(self):
+        return self.script.context.target_app_did
+
+    def get_params(self):
+        return self.script.params
+
+    def get_result_data(self, data):
+        """ for response with the option 'is_output' of the executable """
+        return data if self.is_output else None
 
     @staticmethod
     def validate_data(json_data, can_aggregated=True):
@@ -67,8 +125,6 @@ class Executable:
         :param can_aggregated: recursive option.
         :param json_data: executable data (dict)
         """
-        from src.modules.scripting.scripting import validate_exists
-
         # validate first layer members
         validate_exists(json_data, ['name', 'type', 'body'])
 
@@ -120,32 +176,6 @@ class Executable:
             path = json_data['body']['path']
             if not path or not isinstance(path, str):
                 raise BadRequestException(msg=f'Invalid parameter "path" {json_data}')
-
-    def execute(self):
-        # override
-        pass
-
-    def get_user_did(self):
-        return self.script.user_did
-
-    def get_app_did(self):
-        return self.script.app_did
-
-    def get_target_did(self):
-        return self.script.context.target_did
-
-    def get_target_app_did(self):
-        return self.script.context.target_app_did
-
-    def get_context(self):
-        return self.script.context
-
-    def get_params(self):
-        return self.script.params
-
-    def get_result_data(self, data):
-        """ for response """
-        return data if self.is_output else None
 
     @staticmethod
     def create_executables(script, executable_data) -> ['Executable']:

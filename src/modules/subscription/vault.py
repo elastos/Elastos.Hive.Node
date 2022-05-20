@@ -15,6 +15,9 @@ class Vault(Dotdict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def get_database_usage(self):
+        return self.db_use_storage
+
     def get_storage_gap(self):
         return int(self.max_storage - (self.file_use_storage + self.db_use_storage))
 
@@ -36,6 +39,25 @@ class Vault(Dotdict):
 
     def get_end_time(self):
         return self.end_time
+
+
+class AppSpaceDetector:
+    """ can only detect the database space size changes
+
+    Files storage size changing can be checked by file size accurately.
+    """
+
+    def __init__(self, user_did, app_did):
+        self.user_did, self.app_did = user_did, app_did
+        self.vault_manager = VaultManager()
+        self.dbsize_before = self.vault_manager.get_user_database_size(user_did, app_did)
+
+    def __enter__(self):
+        return self.vault_manager.get_vault(self.user_did)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        dbsize_after = self.vault_manager.get_user_database_size(self.user_did, self.app_did)
+        self.vault_manager.update_user_database_size(self.user_did, dbsize_after - self.dbsize_before)
 
 
 class VaultManager:
@@ -101,10 +123,18 @@ class VaultManager:
         app_dids = self.user_manager.get_all_app_dids(user_did)
         size = sum(list(map(lambda d: self.mcli.get_user_database_size(user_did, d), app_dids)))
 
+        self.update_user_database_size(user_did, size)
+
+    def get_user_database_size(self, user_did, app_did):
+        return self.mcli.get_user_database_size(user_did, app_did)
+
+    def update_user_database_size(self, user_did, size: int, delta_size: bool = False):
+        new_size = self.get_vault(user_did).get_database_usage() + size if delta_size else size
+
         filter_ = {VAULT_SERVICE_DID: user_did}
         update = {
-            VAULT_SERVICE_DB_USE_STORAGE: size,
-            VAULT_SERVICE_MODIFY_TIME: datetime.utcnow().timestamp()
+            VAULT_SERVICE_DB_USE_STORAGE: int(new_size),
+            VAULT_SERVICE_MODIFY_TIME: int(datetime.utcnow().timestamp())
         }
 
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)

@@ -10,62 +10,37 @@ from flask import request, g
 from bson import ObjectId
 
 from src import hive_setting
-from src.utils_v1.payment.vault_service_manage import update_used_storage_for_mongodb_data
 from src.utils_v1.constants import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from src.utils_v1.did_mongo_db_resource import populate_options_count_documents, get_mongo_database_size
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException
-from src.modules.ipfs.ipfs_files import IpfsFiles
-from src.modules.subscription.vault import VaultManager
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.scripting.executable import Executable, get_populated_value_with_params
+from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.subscription.vault import VaultManager, AppSpaceDetector
+from src.modules.scripting.executable import Executable, get_populated_value_with_params, validate_exists
+
+_DOLLAR_REPLACE = '%%'
 
 
-def validate_exists(json_data, properties, parent_name=None):
-    """ check the input parameters exist, support dot, such as: a.b.c
+def fix_dollar_keys_recursively(data, is_save=True):
+    """ Used for registering script content to skip $ restrictions in the field name of the document.
 
-    :param json_data: dict
-    :param parent_name: parent name which will find first and all are 'dict', support 'a.b.c'
-                        can be None, then directly check on 'json_data'
-    :param properties: properties under 'json_data'['parent_name']
+    Recursively replace the key from '$' to '%%' or backward.
+
+    :param data: dict | list
+    :param is_save: True means trying to save the data (script content) to mongo database, else load
     """
-    if not isinstance(json_data, dict):
-        raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" (not dict)')
-
-    # try to get the parent dict
-    if not parent_name:
-        data = json_data
-    else:
-        # get first child, if exists, recursive validate
-        parts = parent_name.split('.')
-        data = json_data.get(parts[0])
-        if not isinstance(data, dict):
-            raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" ("{parts[0]}" is not dict)')
-
-        validate_exists(data, properties, parent_name='.'.join(parts[1:]) if len(parts) > 1 else None)
-
-    # directly check
-    for prop in properties:
-        if prop not in data:
-            raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" ("{prop}" not exist)')
-
-
-def fix_dollar_keys(data, is_save=True):
-    """ use this because of mongo not support key starts with $ """
-    if type(data) is not dict:
-        return
-
-    src = '$set' if is_save else '"$"set'
-    dst = '"$"set' if is_save else '$set'
-    for k, v in list(data.items()):
-        if k == src:
-            data[dst] = data.pop(k)
-
-    for k, v in data.items():
-        if type(v) is dict:
-            fix_dollar_keys(v, is_save)
-        elif type(v) is list:
-            for item in v:
-                fix_dollar_keys(item, is_save)
+    src = '$' if is_save else _DOLLAR_REPLACE
+    dst = _DOLLAR_REPLACE if is_save else '$'
+    if type(data) is dict:
+        for key in list(data.keys()):
+            if key.startswith(src):
+                new_key = dst + key[len(src):]
+                data[new_key] = data.pop(key)
+            else:
+                new_key = key
+            fix_dollar_keys_recursively(data[new_key], is_save=is_save)
+    elif type(data) is list:
+        for v in data:
+            fix_dollar_keys_recursively(v, is_save=is_save)
 
 
 class Condition:
@@ -119,10 +94,9 @@ class Condition:
 
         # type: 'queryHasResults'
 
-        col_name = body['collection']
+        # 'options' is for internal
+        col_name, options = body['collection'], body.get('options', {})
         col_filter = get_populated_value_with_params(body.get('filter', {}), self.user_did, self.app_did, self.params)
-        # INFO: 'options' is the internal supporting.
-        options = populate_options_count_documents(body.get('options', {}))
 
         col = self.mcli.get_user_collection(context.target_did, context.target_app_did, col_name)
         return col.count(col_filter, **options) > 0
@@ -132,7 +106,8 @@ class Context:
     def __init__(self, context_data):
         self.user_did, self.app_did = g.usr_did, g.app_did
 
-        # default is caller's DID
+        # default is caller's DIDs, None if no caller and not specify
+        # any None is prohibited, to be checked before 'Script.execute()'
         self.target_did, self.target_app_did = g.usr_did, g.app_did
         if context_data:
             self.target_did = context_data['target_did']
@@ -223,6 +198,7 @@ class Script:
     DOLLAR_REPLACE = '%%'
 
     def __init__(self, script_name, run_data, scripting=None):
+        # Caller's user DID and application, all None if anonymous access
         self.user_did = g.usr_did
         self.app_did = g.app_did
 
@@ -275,7 +251,7 @@ class Script:
             raise UnauthorizedException(msg=f'Parse access token for running script error: {g.token_error}')
 
         # Reverse the script content to let the key contains '$'
-        Script.fix_dollar_keys_recursively(script_data, is_save=False)
+        fix_dollar_keys_recursively(script_data, is_save=False)
 
         # condition checking for all executables
         condition = Condition(self.params)
@@ -287,29 +263,6 @@ class Script:
         # executable_name: executable_result ( MUST not None ), this is for the executable option 'is_out'
         return {k: v for k, v in {e.name: e.execute() for e in executables}.items() if v is not None}
 
-    @staticmethod
-    def fix_dollar_keys_recursively(data, is_save=True):
-        """ Used for registering script content to skip $ restrictions in the field name of the document.
-
-        Recursively replace the key from '$' to '%%' or backward.
-        
-        :param data: dict | list
-        :param is_save: True means trying to save the data (script content) to mongo database, else means loading.
-        """
-        src = '$' if is_save else Script.DOLLAR_REPLACE
-        dst = Script.DOLLAR_REPLACE if is_save else '$'
-        if type(data) is dict:
-            for key in list(data.keys()):
-                if key.startswith(src):
-                    new_key = dst + key[len(src):]
-                    data[new_key] = data.pop(key)
-                else:
-                    new_key = key
-                Script.fix_dollar_keys_recursively(data[new_key], is_save=is_save)
-        elif type(data) is list:
-            for v in data:
-                Script.fix_dollar_keys_recursively(v, is_save=is_save)
-
 
 class Scripting:
     def __init__(self):
@@ -319,17 +272,20 @@ class Scripting:
         self.mcli = MongodbClient()
 
     def set_script(self, script_name):
-        self.vault_manager.get_vault(g.usr_did).check_storage()
+        """ :v2 API: """
+        with AppSpaceDetector(g.usr_did, g.app_did) as vault:
+            vault.check_storage()
 
-        json_data = request.get_json(force=True, silent=True)
-        Script.validate_script_data(json_data)
+            json_data = request.get_json(force=True, silent=True)
+            Script.validate_script_data(json_data)
 
-        result = self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
-        update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
-        return result
+            return self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
 
     def set_script_for_anonymous_file(self, script_name: str, file_path: str):
-        """ set script for uploading public file """
+        """ set script for uploading public file on files service
+
+        Note: database size changing has been checked by uploading file.
+        """
         json_data = {
             "executable": {
                 "output": True,
@@ -343,32 +299,31 @@ class Scripting:
             "allowAnonymousApp": True
         }
         self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
-        update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
 
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
-        Script.fix_dollar_keys_recursively(json_data)
+        fix_dollar_keys_recursively(json_data)
         json_data['name'] = script_name
 
         col = self.mcli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
         return col.replace_one({"name": script_name}, json_data)
 
     def delete_script(self, script_name):
-        self.vault_manager.get_vault(g.usr_did)
+        """ :v2 API: """
+        with AppSpaceDetector(g.usr_did, g.app_did) as _:
+            col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+            result = col.delete_one({'name': script_name})
 
-        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
-        result = col.delete_one({'name': script_name})
-
-        if result['deleted_count'] > 0:
-            update_used_storage_for_mongodb_data(g.usr_did, get_mongo_database_size(g.usr_did, g.app_did))
-        else:
-            raise ScriptNotFoundException(f'The script {script_name} does not exist.')
+            if result['deleted_count'] <= 0:
+                raise ScriptNotFoundException(f'The script {script_name} does not exist.')
 
     def run_script(self, script_name):
+        """ :v2 API: """
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
         return Script(script_name, json_data, scripting=self).execute()
 
     def run_script_url(self, script_name, target_did, target_app_did, params):
+        """ :v2 API: """
         json_data = {
             'params': params
         }
@@ -381,12 +336,13 @@ class Scripting:
         return Script(script_name, json_data, scripting=self).execute()
 
     def upload_file(self, transaction_id):
-        return self.handle_transaction(transaction_id)
+        """ :v2 API: """
+        return self.__handle_transaction(transaction_id)
 
-    def handle_transaction(self, transaction_id, is_download=False):
+    def __handle_transaction(self, transaction_id, is_download=False):
         """ Do real uploading or downloading for caller """
         # check by transaction id from request body
-        row_id, target_did, target_app_did = self.parse_transaction_id(transaction_id)
+        row_id, target_did, target_app_did = Scripting.__parse_transaction_id(transaction_id)
         col_filter = {"_id": ObjectId(row_id)}
         col = self.mcli.get_user_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, create_on_absence=True)
         trans = col.find_one({"_id": ObjectId(row_id)})
@@ -396,27 +352,29 @@ class Scripting:
         if not anonymous_access and g.token_error is not None:
             raise UnauthorizedException(msg=f'Parse access token for running script error: {g.token_error}')
 
-        # executing uploading or downloading
-        data = None
-        logging.info(f'handle transaction by id: is_download={is_download}, file_name={trans["document"]["file_name"]}')
-        if is_download:
-            data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
-        else:
-            # Place here because not want to change the logic for v1.
-            VaultManager().get_vault(target_did).check_storage()
-            self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
+        with AppSpaceDetector(target_did, target_app_did) as vault:
+            # executing uploading or downloading
+            data = None
+            logging.info(f'handle transaction by id: is_download={is_download}, file_name={trans["document"]["file_name"]}')
+            if is_download:
+                data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
+            else:
+                # Place here because not want to change the logic for v1.
+                vault.check_storage()
+                self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
 
-        # recalculate the storage usage of the database
-        col.delete_many(col_filter)
-        update_used_storage_for_mongodb_data(target_did, get_mongo_database_size(target_did, target_app_did))
+            # transaction can be used only once.
+            col.delete_one(col_filter)
 
-        # return the content of the file
-        return data
+            # return the content of the file if download else nothing.
+            return data
 
     def download_file(self, transaction_id):
-        return self.handle_transaction(transaction_id, is_download=True)
+        """ :v2 API: """
+        return self.__handle_transaction(transaction_id, is_download=True)
 
-    def parse_transaction_id(self, transaction_id):
+    @staticmethod
+    def __parse_transaction_id(transaction_id):
         try:
             trans = jwt.decode(transaction_id, hive_setting.PASSWORD, algorithms=['HS256'])
             return trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)

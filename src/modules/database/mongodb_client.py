@@ -253,7 +253,7 @@ class MongodbClient:
         else:
             database.drop_collection(col_name)
 
-    def get_user_database_size(self, user_did, app_did):
+    def get_user_database_size(self, user_did, app_did) -> int:
         """ Get the size of the user database, if not exist, return 0 """
         name = self.__get_user_database_name(user_did, app_did)
         if not self.exists_database(name):
@@ -261,4 +261,4 @@ class MongodbClient:
 
         database = self.__get_database(name)
         status = database.command("dbstats")
-        return status["storageSize"] + status["indexSize"]
+        return int(status["storageSize"] + status["indexSize"])

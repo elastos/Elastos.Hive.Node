@@ -87,7 +87,7 @@ class HiveMongoDb:
         options = populate_options_insert_one(content)
 
         col = get_collection(did, app_id, content["collection"])
-        if not col:
+        if col is None:
             return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_insert_one(col, content, options)
@@ -106,7 +106,7 @@ class HiveMongoDb:
             return err
 
         col = get_collection(did, app_id, content["collection"])
-        if not col:
+        if col is None:
             return self.response.response_err(NOT_FOUND, "collection not exist")
 
         options = options_filter(content, ("bypass_document_validation", "ordered"))
@@ -138,7 +138,7 @@ class HiveMongoDb:
         options = populate_options_update_one(content)
 
         col = get_collection(did, app_id, content["collection"])
-        if not col:
+        if col is None:
             return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_update_one(col, content, options)
@@ -156,7 +156,7 @@ class HiveMongoDb:
             return err
 
         col = get_collection(did, app_id, content["collection"])
-        if not col:
+        if col is None:
             return self.response.response_err(NOT_FOUND, "collection not exist")
 
         options = options_filter(content, ("upsert", "bypass_document_validation"))
@@ -192,7 +192,7 @@ class HiveMongoDb:
             return err
 
         col = get_collection(did, app_id, content["collection"])
-        if not col:
+        if col is None:
             return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_delete_one(col, content)
@@ -210,7 +210,7 @@ class HiveMongoDb:
             return err
 
         col = get_collection(did, app_id, content["collection"])
-        if not col:
+        if col is None:
             return self.response.response_err(NOT_FOUND, "collection not exist")
 
         try:
@@ -234,7 +234,7 @@ class HiveMongoDb:
         options = populate_options_count_documents(content)
 
         col = get_collection(did, app_id, content["collection"])
-        if not col:
+        if col is None:
             return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_count_documents(col, content, options)
@@ -249,7 +249,7 @@ class HiveMongoDb:
             return err
 
         col = get_collection(did, app_id, content["collection"])
-        if not col:
+        if col is None:
             return self.response.response_err(NOT_FOUND, "collection not exist")
 
         options = options_filter(content, ("projection",
@@ -282,7 +282,7 @@ class HiveMongoDb:
         options = populate_options_find_many(content)
 
         col = get_collection(did, app_id, content.get('collection'))
-        if not col:
+        if col is None:
             return self.response.response_err(NOT_FOUND, "collection not exist")
 
         data, err_message = query_find_many(col, content, options)

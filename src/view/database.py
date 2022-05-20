@@ -215,19 +215,23 @@ class InsertOrCount(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        op, _ = rqargs.get_str('op')
         json_body, msg = params.get_root()
         if msg or not json_body:
             raise InvalidParameterException(msg=f'Invalid request body.')
+
+        op, _ = rqargs.get_str('op')
         if op == 'count':
             # INFO：use post because 'GET' can not take the 'filter' in the request body.
             if 'filter' not in json_body or type(json_body.get('filter')) is not dict:
                 raise InvalidParameterException()
             return self.database.count_document(collection_name, json_body)
+
         if 'document' not in json_body or type(json_body.get('document')) != list:
             raise InvalidParameterException('Invalid type of the field document.')
+
         if 'options' in json_body and type(json_body.get('options')) != dict:
             raise InvalidParameterException('Invalid type of the field options.')
+
         return self.database.insert_document(collection_name, json_body)
 
 
@@ -532,8 +536,16 @@ class Query(Resource):
         json_body, msg = params.get_root()
         if msg:
             raise InvalidParameterException(msg=msg)
+
         if 'collection' not in json_body or not json_body['collection']:
             raise InvalidParameterException(msg='No collection name in the request body.')
-        if 'filter' not in json_body or type(json_body.get('filter')) is not dict:
+
+        if not isinstance(json_body.get('filter', {}), dict):
             raise InvalidParameterException(msg='Invalid parameter filter.')
-        return self.database.query_document(json_body['collection'], json_body)
+
+        if not isinstance(json_body.get('options', {}), dict):
+            raise InvalidParameterException(msg='Invalid parameter options.')
+
+        return self.database.query_document(json_body['collection'],
+                                            json_body.get('filter', {}),
+                                            json_body.get('options', {}))

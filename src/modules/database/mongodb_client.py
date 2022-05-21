@@ -71,20 +71,46 @@ class MongodbCollection:
             "inserted_id": str(result.inserted_id)  # ObjectId -> str
         }
 
-    def update_one(self, filter_, update, contains_extra=True, **kwargs):
+    def insert_many(self, docs, contains_extra=True, **kwargs):
         if contains_extra:
-            now_timestamp = int(datetime.utcnow().timestamp())
-            if '$setOnInsert' in update:
-                update["$setOnInsert"]['created'] = now_timestamp
-            else:
-                update["$setOnInsert"] = {"created": now_timestamp}
-            if "$set" in update:
-                update["$set"]["modified"] = now_timestamp
+            for doc in docs:
+                doc['created'] = doc['modified'] = int(datetime.utcnow().timestamp())
 
         # kwargs are the options
+        options = {k: v for k, v in kwargs.items() if k in ["ordered", "bypass_document_validation"]}
+
+        result = self.col.insert_many(self.convert_oid(docs), **options)
+        if len(result.inserted_ids) < len(docs):
+            raise BadRequestException(msg=f'Failed to insert the docs: {str(docs)}.')
+
+        return {
+            "acknowledged": result.acknowledged,
+            "inserted_ids": [str(oid) for oid in result.inserted_ids]  # ObjectId -> str
+        }
+
+    def update_one(self, filter_, update, contains_extra=True, **kwargs):
+        return self.update_many(filter_, update, contains_extra=contains_extra, only_one=True, **kwargs)
+
+    def update_many(self, filter_, update, contains_extra=True, only_one=False, **kwargs):
+        if contains_extra:
+            now_timestamp = int(datetime.utcnow().timestamp())
+
+            # for normal update
+            if "$set" in update and 'modified' in update['$set']:
+                update["$set"]["modified"] = now_timestamp
+
+            # for insert if not exists
+            if "$setOnInsert" in update:
+                update["$setOnInsert"]["created"] = now_timestamp
+                update["$setOnInsert"]["modified"] = now_timestamp
+
+        # kwargs are the options, and filter them
         options = {k: v for k, v in kwargs.items() if k in ("upsert", "bypass_document_validation")}
 
-        result = self.col.update_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **options)
+        if only_one:
+            result = self.col.update_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **options)
+        else:
+            result = self.col.update_many(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **options)
         return {
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,
@@ -103,10 +129,15 @@ class MongodbCollection:
         }
 
     def find_one(self, filter_: dict, **kwargs) -> dict:
-        # kwargs are the options
-        return self.col.find_one(self.convert_oid(filter_) if filter_ else None, **kwargs)
+        """ Note: the result document contains ObjectId or other types
+        which can not directly take as response body. """
+        result = self.find_many(filter_, only_one=True, **kwargs)
+        return result[0] if result else None
 
-    def find_many(self, filter_: dict, **kwargs) -> list:
+    def find_many(self, filter_: dict, only_one=False, **kwargs) -> list:
+        """ Note: the result documents contain ObjectId or other types
+                which can not directly take as response body. """
+
         # kwargs are the options
         options = {k: v for k, v in kwargs.items() if k in ("projection",
                                                             "skip",
@@ -124,6 +155,10 @@ class MongodbCollection:
                 options['sort'] = [(k, v) for k, v in options['sort'].items()]
 
         # BUGBUG: Getting all documents out maybe not well.
+        if only_one:
+            result = self.col.find_one(self.convert_oid(filter_) if filter_ else None, **kwargs)
+            return [] if result is None else [result]
+
         return list(self.col.find(self.convert_oid(filter_) if filter_ else None, **options))
 
     def count(self, filter_, **kwargs):
@@ -132,14 +167,13 @@ class MongodbCollection:
         return self.col.count_documents(self.convert_oid(filter_) if filter_ else None, **options)
 
     def delete_one(self, filter_):
-        result = self.col.delete_one(self.convert_oid(filter_) if filter_ else None)
-        return {
-            "acknowledged": result.acknowledged,
-            "deleted_count": result.deleted_count
-        }
+        return self.delete_many(filter_, only_one=True)
 
-    def delete_many(self, filter_):
-        result = self.col.delete_many(self.convert_oid(filter_) if filter_ else None)
+    def delete_many(self, filter_, only_one=False):
+        if only_one:
+            result = self.col.delete_one(self.convert_oid(filter_) if filter_ else None)
+        else:
+            result = self.col.delete_many(self.convert_oid(filter_) if filter_ else None)
         return {
             "acknowledged": result.acknowledged,
             "deleted_count": result.deleted_count

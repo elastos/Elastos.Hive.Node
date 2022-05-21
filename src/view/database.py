@@ -6,7 +6,7 @@ The view of database module.
 from flask_restful import Resource
 from src.modules.database.database import Database
 from src.utils.http_exception import InvalidParameterException
-from src.utils.http_request import params, rqargs
+from src.utils.http_request import RV
 
 
 class CreateCollection(Resource):
@@ -106,9 +106,11 @@ class InsertOrCount(Resource):
         self.database = Database()
 
     def post(self, collection_name):
-        """ Insert or count the documents. Insert the documents if no URL parameters.
+        """ Insert or count the documents.
 
         .. :quickref: 03 Database; Insert&count the documents
+
+        Insert the documents if no URL parameters.
 
         **Request**:
 
@@ -125,7 +127,7 @@ class InsertOrCount(Resource):
                         "title": "Eve for Dummies2"
                      }
                  ],
-                "options": {
+                "options": {  # optional
                     "bypass_document_validation": false,
                     "ordered": true,
                     # Default true. If true, new fields [created, modified: int(timestamp)] will be added to each document.
@@ -167,7 +169,7 @@ class InsertOrCount(Resource):
 
             HTTP/1.1 404 Not Found
 
-        Count the documents if the URL parameter is **op = count**
+        Count the documents if the URL parameter is **op=count**
 
         **Request**:
 
@@ -215,24 +217,25 @@ class InsertOrCount(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        json_body, msg = params.get_root()
-        if msg or not json_body:
-            raise InvalidParameterException(msg=f'Invalid request body.')
 
-        op, _ = rqargs.get_str('op')
-        if op == 'count':
-            # INFO：use post because 'GET' can not take the 'filter' in the request body.
-            if 'filter' not in json_body or type(json_body.get('filter')) is not dict:
-                raise InvalidParameterException()
-            return self.database.count_document(collection_name, json_body)
+        op = RV.get_args().get_opt('op', str)
+        options = RV.get_body().get_opt('options')
 
-        if 'document' not in json_body or type(json_body.get('document')) != list:
-            raise InvalidParameterException('Invalid type of the field document.')
+        if op is None:
+            documents = RV.get_body().get('document', list)
+            for doc in documents:
+                if not isinstance(doc, dict):
+                    raise InvalidParameterException('The element of "document" MUST "dict"')
 
-        if 'options' in json_body and type(json_body.get('options')) != dict:
-            raise InvalidParameterException('Invalid type of the field options.')
+            return self.database.insert_document(collection_name, documents, options)
 
-        return self.database.insert_document(collection_name, json_body)
+        elif op == 'count':
+            filter_ = RV.get_body().get('filter')
+
+            return self.database.count_document(collection_name, filter_, options)
+
+        else:
+            raise InvalidParameterException('Invalid parameter "op"')
 
 
 class Update(Resource):
@@ -259,11 +262,13 @@ class Update(Resource):
                     "author": "john doe1",
                 },
                 # This will update modified field if exists.
-                "update": {"$set": {
-                    "author": "john doe1_1",
-                    "title": "Eve for Dummies1_1"
-                }},
-                "options": {
+                "update": {
+                    "$set": {  # optional
+                        "author": "john doe1_1",
+                        "title": "Eve for Dummies1_1"
+                    }
+                },
+                "options": {  # optional
                     "upsert": true,
                     "bypass_document_validation": false,
                     # Default true. If true, the field modified (if exists) will be updated to any matched documents.
@@ -305,19 +310,14 @@ class Update(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        is_update_one, msg = rqargs.get_bool('updateone')
-        if msg:
-            raise InvalidParameterException(msg=msg)
-        json_body, msg = params.get_root()
-        if msg or not json_body:
-            raise InvalidParameterException(msg=f'Invalid request body.')
-        if 'filter' in json_body and type(json_body.get('filter')) is not dict:
-            raise InvalidParameterException(msg='Invalid parameter filter.')
-        if 'update' not in json_body or type(json_body.get('update')) is not dict:
-            raise InvalidParameterException(msg='Invalid parameter update.')
-        if '$set' in json_body.get('update') and type(json_body.get('update').get('$set')) is not dict:
-            raise InvalidParameterException(msg='Invalid parameter $set in update.')
-        return self.database.update_document(collection_name, json_body, is_update_one)
+
+        is_update_one = RV.get_args().get_opt('updateone', bool, False)
+        filter_ = RV.get_body().get('filter')
+        update = RV.get_body().get('update')
+        RV.get_body().get('update').validate_opt('$set')
+        options = RV.get_body().get_opt('options')
+
+        return self.database.update_document(collection_name, filter_, update, options, is_update_one)
 
 
 class Delete(Resource):
@@ -370,13 +370,11 @@ class Delete(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        is_delete_one, msg = rqargs.get_bool('deleteone')
-        if msg:
-            raise InvalidParameterException(msg=msg)
-        col_filter, msg = params.get_dict('filter')
-        if msg:
-            raise InvalidParameterException(msg=msg)
-        return self.database.delete_document(collection_name, col_filter, is_delete_one)
+
+        is_delete_one = RV.get_args().get_opt('deleteone', bool, False)
+        filter_ = RV.get_body().get('filter')
+
+        return self.database.delete_document(collection_name, filter_, is_delete_one)
 
 
 class Find(Resource):
@@ -392,9 +390,9 @@ class Find(Resource):
 
         .. sourcecode:: http
 
-            filter (json str) : the filter doc need to be encoded by url
-            skip (int):
-            limit (int):
+            filter: (json str)  # the filter doc need to be encoded by url
+            skip: (int)         # optional
+            limit: (int)        # optional
 
         **Request**:
 
@@ -442,13 +440,12 @@ class Find(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        col_filter, msg = rqargs.get_dict('filter')
-        if msg:
-            raise InvalidParameterException(msg=msg)
-        skip, limit = rqargs.get_int('skip')[0], rqargs.get_int('limit')[0]
-        if skip < 0 or limit < 0:
-            raise InvalidParameterException(msg='Invalid parameter skip or limit.')
-        return self.database.find_document(collection_name, col_filter, skip, limit)
+
+        filter_ = RV.get_args().get('filter')
+        skip = RV.get_args().get_opt('skip', int, None)
+        limit = RV.get_args().get_opt('limit', int, None)
+
+        return self.database.find_document(collection_name, filter_, skip, limit)
 
 
 class Query(Resource):
@@ -469,7 +466,7 @@ class Query(Resource):
                 "filter": {
                     "author": "john doe1_1",
                 },
-                "options": {
+                "options": {  # optional
                     "skip": 0,
                     "limit": 3,
                     "projection": {
@@ -533,17 +530,9 @@ class Query(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        json_body, msg = params.get_root()
-        if msg:
-            raise InvalidParameterException(msg=msg)
 
-        if 'collection' not in json_body or not json_body['collection']:
-            raise InvalidParameterException(msg='No collection name in the request body.')
+        collection_name = RV.get_body().get('collection', str)
+        filter_ = RV.get_body().get('filter')
+        options = RV.get_body().get_opt('options')
 
-        if not isinstance(json_body.get('filter', {}), dict):
-            raise InvalidParameterException(msg='Invalid parameter filter.')
-
-        if not isinstance(json_body.get('options', {}), dict):
-            raise InvalidParameterException(msg='Invalid parameter options.')
-
-        return self.database.query_document(json_body['collection'], json_body)
+        return self.database.query_document(collection_name, filter_, options)

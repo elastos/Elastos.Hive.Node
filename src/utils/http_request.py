@@ -4,9 +4,12 @@
 Request utils.
 """
 import json
+import typing
 
-from flask import request
+from flask import request, g
 from werkzeug.routing import BaseConverter
+
+from src.utils.http_exception import InvalidParameterException, NotImplementedException
 
 
 class RegexConverter(BaseConverter):
@@ -14,6 +17,9 @@ class RegexConverter(BaseConverter):
     def __init__(self, url_map, *items):
         super().__init__(url_map)
         self.regex = items[0]
+
+
+# @deprecated start
 
 
 class BaseParams:
@@ -136,5 +142,197 @@ class RequestArgs(BaseParams):
             return {}, f'Invalid parameter {key}, not json format.'
 
 
-params = RequestParams()
-rqargs = RequestArgs()
+params = RequestBodyParams()
+rqargs = RequestArgsParams()
+
+
+# @deprecated end
+
+
+def get_dict(json_data: typing.Any, parent_name: str = None):
+    """ parent name is "a.b.c", then return dict json_data["a"]["b"]["c"] """
+
+    # value MUST be dict
+    if not json_data or not isinstance(json_data, dict):
+        raise InvalidParameterException(msg=f'Invalid "dict" value: "{json_data}"')
+
+    # parent_name is like 'a.b.c'
+    if parent_name:
+        parts = parent_name.split('.')
+        if (length := len(parts)) > 0:
+            key = parts[0]
+            if key not in json_data:
+                raise InvalidParameterException(msg=f'Not found key "{key}" in "{json_data}"')
+
+            return get_dict(json_data[key], parent_name='.'.join(parts[1:]) if length > 1 else None)
+        else:
+            # if parent_name is '.'
+            return json_data
+
+    return json_data
+
+
+class RequestData(dict):
+    """ request.body or other dict from it """
+
+    def __init__(self, *args, optional=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.optional = optional
+
+    def get(self, key, type_=dict):
+        """ get the value with type 'value_type' """
+        if self.optional:
+            raise InvalidParameterException(msg=f'Can not get optional "{key}" in "{self}".')
+
+        if key not in self:
+            raise InvalidParameterException(msg=f'Not found key "{key}" in "{self}."')
+
+        if type(self[key]) != type_:
+            raise InvalidParameterException(msg=f'Value "{key}" is not the type "{type_}" in "{self}."')
+
+        return RequestData(**get_dict(self[key])) if type_ == dict else self[key]
+
+    def get_opt(self, key, type_=dict, def_value=None):
+        """ get the optional value with type 'value_type' and default value 'def_value'
+
+        Note: the member of optional dict is also optional.
+
+        :return: RequestData() if value_type=dict else None
+        """
+        if key not in self:
+            return RequestData(optional=True) if type_ == dict else def_value
+
+        if type(self[key]) != type_:
+            raise InvalidParameterException(msg=f'Value "{key}" is not the type "{type_}" in "{self}."')
+
+        return RequestData(optional=True, **get_dict(self[key])) if type_ == dict else self[key]
+
+    def validate(self, key, type_=dict):
+        if self.optional:
+            raise InvalidParameterException(msg=f'Can not get optional "{key}" in "{self}".')
+
+        if key not in self:
+            raise InvalidParameterException(msg=f'Not found key "{key}" in "{self}."')
+
+        if type(self[key]) != type_:
+            raise InvalidParameterException(msg=f'Value "{key}" is not the type "{type_}" in "{self}."')
+
+    def validate_opt(self, key, value_type=dict):
+        if key in self and type(self[key]) != value_type:
+            raise InvalidParameterException(msg=f'Value "{key}" is not the type "{value_type}" in "{self}."')
+
+
+class RequestArgs(dict):
+    """ request.args
+
+    The different is that the 'dict' member is string.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _convert_value(self, key, value_str, type_, optional=False):
+        # all values from args are strings.
+        if not value_str:
+            raise InvalidParameterException(msg=f'Not found args "{key}" in "{self}."')
+
+        if type_ == dict:
+            try:
+                value = json.loads(value_str)
+                if not isinstance(value, dict):
+                    raise InvalidParameterException(msg=f'Invalid args "{key}", MUST dict.')
+            except Exception as e:
+                raise InvalidParameterException(msg=f'Invalid args "{key}", MUST JSON.')
+            return RequestData(optional=optional, **value)
+        elif type_ == int:
+            try:
+                value = int(value_str)
+            except Exception as e:
+                raise InvalidParameterException(msg=f'Invalid args "{key}", MUST int.')
+            return value
+        elif type_ == bool:
+            if value_str not in ['true', 'false']:  # JSON specification
+                raise InvalidParameterException(msg=f'Invalid args "{key}", MUST bool (true, false).')
+            return value_str == 'true'
+        return value_str
+
+    def get(self, key, type_=dict):
+        """ get the value with type 'value_type' """
+        if key not in self:
+            raise InvalidParameterException(msg=f'Not found args "{key}" in "{self}."')
+
+        return self._convert_value(key, self[key], type_)
+
+    def get_opt(self, key, type_=dict, def_value=None):
+        if key not in self:
+            return RequestData(optional=True) if type_ == dict else def_value
+
+        return self._convert_value(key, self[key], type_, optional=True)
+
+    def validate(self, key, type_=dict):
+        self.get(key, type_)
+
+    def validate_opt(self, key, type_=dict):
+        self.get_opt(key, type_)
+
+
+class RV:
+    """ RequestValidator
+
+    Validate the request args (url) and body, or get the value from them.
+    It will be convenient to validate the data from http request.
+
+    The following is the examples:
+
+        RV.get_args()  # request args
+        RV.get_body()  # request body
+        RV.get_body(parent_name="executable.body")
+
+        # get
+        value = RV.get_body().get('executable')
+        value = RV.get_body().get('collection_name', str)
+        value = RV.get_body().get('allowAnonymousUser', bool)
+        value = RV.get_body().get('executable').get('body')
+        value = RV.get_body().get('executable').get('type', str)
+        value = RV.get_body().get('executable').get('output', bool)
+
+        # get optional
+        value = RV.get_body().get_opt('executable')
+        value = RV.get_body().get_opt('collection_name', str)
+        value = RV.get_body().get_opt('allowAnonymousUser', bool)
+        value = RV.get_body().get_opt('executable').get_opt('body')
+        value = RV.get_body().get_opt('executable').get_opt('type', str, '')
+        value = RV.get_body().get_opt('executable').get_opt('output', bool, True)
+
+        # validate
+        RV.get_body().validate('executable')
+        RV.get_body().validate('collection_name', str)
+        RV.get_body().validate('allowAnonymousUser', bool)
+        RV.get_body().get('executable').validate('body')
+        RV.get_body().get('executable').validate('type', str)
+        RV.get_body().get('executable').validate('output', bool)
+
+        # validate optional
+        RV.get_body().validate_opt('executable')
+        RV.get_body().validate_opt('collection_name', str)
+        RV.get_body().validate_opt('allowAnonymousUser', bool)
+        RV.get_body().get('executable').validate_opt('body')
+        RV.get_body().get('executable').validate_opt('type', str)
+        RV.get_body().get('executable').validate_opt('output', bool)
+
+    """
+
+    @staticmethod
+    def get_body(parent_name: str = None):
+        if not hasattr(g, 'body'):
+            body = request.get_json(force=True, silent=True)
+            if not isinstance(body, dict):
+                raise InvalidParameterException(msg='Invalid request body.')
+            g.body = RequestData(**body)
+        return RequestData(**get_dict(g.body, parent_name))
+
+    @staticmethod
+    def get_args():
+        if not hasattr(g, 'args'):
+            g.args = RequestArgs(**request.args)
+        return g.args

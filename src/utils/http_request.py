@@ -53,7 +53,7 @@ class BaseParams:
         return val, None
 
 
-class RequestParams(BaseParams):
+class RequestBodyParams(BaseParams):
     def __init__(self):
         """ request body args """
         super().__init__()
@@ -104,7 +104,7 @@ class RequestParams(BaseParams):
         return val, None
 
 
-class RequestArgs(BaseParams):
+class RequestArgsParams(BaseParams):
     def __init__(self):
         """ url args """
         super().__init__()

@@ -10,6 +10,7 @@ import pymongo
 
 from tests.utils.http_client import HttpClient
 from tests import init_test
+from tests.utils.resp_asserter import RA, DictAsserter
 
 
 class DatabaseTestCase(unittest.TestCase):
@@ -27,120 +28,97 @@ class DatabaseTestCase(unittest.TestCase):
 
     def test01_create_collection(self):
         response = self.cli.put(f'/db/collections/{self.collection_name}')
-        self.assertTrue(response.status_code in [200, 455])
+        RA(response).assert_status(200, 455)
         if response.status_code == 200:
-            self.assertEqual(response.json().get('name'), self.collection_name)
+            RA(response).body().assert_equal('name', self.collection_name)
 
-    def test02_insert_document(self):
+    def __create_doc(self, index):
+        return {'author': 'Alice',
+                'title': f'The Metrix {index}',
+                'words_count': 10000 * index}
+
+    def test02_insert(self):
         response = self.cli.post(f'/db/collection/{self.collection_name}', body={
-            "document": [{
-                    "author": "john doe1",
-                    "title": "Eve for Dummies1",
-                    "words_count": 10000
-                }, {
-                    "author": "john doe1",
-                    "title": "Eve for Dummies1",
-                    "words_count": 1000
-                }, {
-                    "author": "john doe2",
-                    "title": "Eve for Dummies2",
-                    "words_count": 10000
-                }, {
-                    "author": "john doe2",
-                    "title": "Eve for Dummies2",
-                    "words_count": 1000
-                }
-            ],
-            "options": {
-                "bypass_document_validation": False,
-                "ordered": True
-            }})
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(len(response.json().get('inserted_ids')), 4)
+            'document': [self.__create_doc(i+1) for i in range(2)]
+        })
 
-    def test02_insert_document_timestamp(self):
+        RA(response).assert_status(201)
+        self.assertEqual(len(RA(response).body().get('inserted_ids', list)), 2)
+
+    def test02_insert_with_options(self):
+        response = self.cli.post(f'/db/collection/{self.collection_name}', body={
+            'document': [self.__create_doc(i+3) for i in range(3)],
+            "options": {"bypass_document_validation": False, "ordered": True}
+        })
+
+        RA(response).assert_status(201)
+        self.assertEqual(len(RA(response).body().get('inserted_ids', list)), 3)
+
+    def test02_insert_with_timestamp(self):
         # insert a new document with timestamp=True
         response = self.cli.post(f'/db/collection/{self.collection_name}', body={
-            "document": [{
-                    "author": "timestamp_default",
-                    "title": "Eve for Dummies1",
-                    "words_count": 10000
-                }
-            ],
-            "options": {
-                "bypass_document_validation": False,
-                "ordered": True
-            }})
-        self.assertEqual(response.status_code, 201)
+            "document": [{"author": "timestamp_default", "title": "Eve for Dummies1", "words_count": 10000}]
+        })
+        RA(response).assert_status(201)
         # check if the inserted document contains two new fields: created, modified.
         response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"timestamp_default"}&skip=0')
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue('items' in response.json())
-        self.assertTrue('created' in response.json()['items'][0])
-        self.assertTrue('modified' in response.json()['items'][0])
+        RA(response).assert_status(200)
+        items = RA(response).body().get('items', list)
+        self.assertEqual(len(items), 1)
+        DictAsserter(**items[0]).assert_true('created', int)
+        DictAsserter(**items[0]).assert_true('modified', int)
 
         # insert a new document with timestamp=False
         response = self.cli.post(f'/db/collection/{self.collection_name}', body={
-            "document": [{
-                    "author": "timestamp_false",
-                    "title": "Eve for Dummies1",
-                    "words_count": 10000
-                }
-            ],
-            "options": {
-                "bypass_document_validation": False,
-                "ordered": True,
-                "timestamp": False
-            }})
-        self.assertEqual(response.status_code, 201)
+            "document": [{"author": "timestamp_false", "title": "Eve for Dummies1", "words_count": 10000}],
+            "options": {"timestamp": False}
+        })
+        RA(response).assert_status(201)
         # check if the inserted document contains two new fields: created, modified.
-        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"timestamp_false"}&skip=0')
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue('items' in response.json())
-        self.assertTrue('created' not in response.json()['items'][0])
-        self.assertTrue('modified' not in response.json()['items'][0])
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"timestamp_false"}')
+        RA(response).assert_status(200)
+        items = RA(response).body().get('items', list)
+        self.assertEqual(len(items), 1)
+        self.assertTrue('created' not in items[0])
+        self.assertTrue('modified' not in items[0])
 
-    def test02_insert_document_invalid_parameter(self):
+    def test02_insert_with_invalid_parameter(self):
         response = self.cli.post(f'/db/collection/{self.collection_name}')
-        self.assertEqual(response.status_code, 400)
+        RA(response).assert_status(400)
 
-    def test03_update_document(self):
+    def test03_update(self):
         response = self.cli.patch(f'/db/collection/{self.collection_name}', body={
-            "filter": {
-                "author": "john doe1",
-            },
-            "update": {"$set": {
-                "author": "john doe1_1",
-                "title": "Eve for Dummies1_1"
-            }},
-            "options": {
-                "upsert": True,
-                "bypass_document_validation": False
-            }})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('matched_count'), 2)
+            "filter": {"author": "timestamp_default"},
+            "update": {"$set": {"title": "Eve for Dummies1_1"}},
+        })
+        RA(response).assert_status(200)
+        RA(response).body().assert_equal('matched_count', 1)
 
-    def test03_update_document_invalid_parameter(self):
+    def test03_update_with_options(self):
+        response = self.cli.patch(f'/db/collection/{self.collection_name}', body={
+            "filter": {"author": "timestamp_false"},
+            "update": {"$set": {"title": "Eve for Dummies1_1"}},
+            "options": {"upsert": False, "bypass_document_validation": False}
+        })
+        RA(response).assert_status(200)
+        RA(response).body().assert_equal('matched_count', 1)
+
+    def test03_update_with_invalid_parameter(self):
         response = self.cli.patch(f'/db/collection/{self.collection_name}')
-        self.assertEqual(response.status_code, 400)
+        RA(response).assert_status(400)
 
-    def test03_update_one_document(self):
-        response = self.cli.patch(f'/db/collection/{self.collection_name}?updateone=true', body={
-            "filter": {
-                "author": "john doe1_1",
-            },
-            "update": {"$set": {
-                "author": "john doe1_2",
-                "title": "Eve for Dummies1_2"
-            }},
-            "options": {
-                "upsert": True,
-                "bypass_document_validation": False
-            }})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('matched_count'), 1)
+    def test03_update_with_updateone(self):
+        def update(count):
+            response = self.cli.patch(f'/db/collection/{self.collection_name}?updateone=true', body={
+                "filter": {"author": "Alice", "title": "The Metrix 2"},
+                "update": {"$set": {"words_count": count}}
+            })
+            RA(response).assert_status(200)
+            RA(response).body().assert_equal('matched_count', 1)
+        update(20200)  # update
+        update(20000)  # update back
 
-    def test03_update_insert_if_not_exists(self):
+    def test03_update_with_insert_if_not_exists(self):
         """
         Only use $setOnInsert to insert the document if not exists. The inserted document:
             {
@@ -153,76 +131,100 @@ class DatabaseTestCase(unittest.TestCase):
         second result: '{"acknowledged": true, "matched_count": 1, "modified_count": 0, "upserted_id": null}'
         """
         response = self.cli.patch(f'/db/collection/{self.collection_name}', body={
-            "filter": {
-                "author": "john doe4",
-            },
-            "update": {"$setOnInsert": {
-                "title": "Eve for Dummies4"
-            }},
-            "options": {
-                "upsert": True,
-                "bypass_document_validation": True,
-                "timestamp": True
-            }})
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json().get('matched_count') in [0, 1])
+            "filter": {"author": "insert_if_not_exists",},
+            "update": {"$setOnInsert": {"title": "Eve for Dummies4"}},
+            "options": {"upsert": True, "bypass_document_validation": True}
+        })
+        RA(response).assert_status(200)
+        RA(response).body().assert_equal('modified_count', 0)
+        RA(response).body().assert_true('upserted_id', str)
 
-        # check if the inserted document contains two new fields: created, modified.
-        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"john doe4"}&skip=0')
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue('items' in response.json())
-        self.assertTrue('created' in response.json()['items'][0])
-        self.assertTrue('modified' in response.json()['items'][0])
+        # check if the inserted document exists
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"insert_if_not_exists"}')
+        RA(response).assert_status(200)
+        self.assertEqual(len(RA(response).body().get('items', list)), 1)
 
-    def test04_count_document(self):
+    def test04_count(self):
         response = self.cli.post(f'/db/collection/{self.collection_name}?op=count', body={
-            "filter": {
-                "author": "john doe2",
-            },
+            "filter": {"author": "Alice"}
+        })
+        RA(response).assert_status(201)
+        RA(response).body().assert_equal('count', 5)
+
+    def test04_count_with_options(self):
+        response = self.cli.post(f'/db/collection/{self.collection_name}?op=count', body={
+            "filter": {"author": "Alice"},
+            "options": {"skip": 0, "limit": 3, "maxTimeMS": 1000000000}
+        })
+        RA(response).assert_status(201)
+        RA(response).body().assert_equal('count', 3)
+
+    def test04_count_with_invalid_parameter(self):
+        response = self.cli.post(f'/db/collection/{self.collection_name}?op=count')
+        RA(response).assert_status(400)
+
+    def test05_find(self):
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"Alice"}')
+        RA(response).assert_status(200)
+        self.assertEqual(len(RA(response).body().get('items', list)), 5)
+
+    def test05_find_with_options(self):
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"Alice"}&skip=0&limit=3')
+        RA(response).assert_status(200)
+        self.assertEqual(len(RA(response).body().get('items', list)), 3)
+
+    def test05_find_with_invalid_parameter(self):
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter=&skip=')
+        RA(response).assert_status(400)
+
+    def test06_query(self):
+        response = self.cli.post(f'/db/query', body={
+            "collection": self.collection_name,
+            "filter": {"author": "Alice"}
+        })
+        RA(response).assert_status(201)
+        self.assertEqual(len(RA(response).body().get('items', list)), 5)
+
+    def test06_query_with_gt_lt(self):
+        response = self.cli.post(f'/db/query', body={
+            "collection": self.collection_name,
+            "filter": {"author": "Alice", "words_count": {"$gt": 0, "$lt": 50000}}
+        })
+        RA(response).assert_status(201)
+        self.assertEqual(len(RA(response).body().get('items', list)), 4)
+
+    def test06_query_with_options(self):
+        response = self.cli.post(f'/db/query', body={
+            "collection": self.collection_name,
+            "filter": {"author": "Alice"},
             "options": {
                 "skip": 0,
-                "limit": 10,
-                "maxTimeMS": 1000000000
-            }})
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.json().get('count'), 2)
+                "limit": 3,
+                "projection": {
+                    "modified": False
+                },
+                'sort': [('_id', pymongo.ASCENDING)],  # sort with mongodb style.
+                "allow_partial_results": False,
+                "return_key": False,
+                "show_record_id": False,
+                "batch_size": 0
+            }
+        })
+        RA(response).assert_status(201)
+        self.assertEqual(len(RA(response).body().get('items', list)), 3)
 
-    def test04_count_document_invalid_parameter(self):
-        response = self.cli.post(f'/db/collection/{self.collection_name}?op=count')
-        self.assertEqual(response.status_code, 400)
-
-    def test05_find_document(self):
-        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"john doe2"}&skip=0')
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue('items' in response.json())
-
-    def test05_find_document_invalid_parameter(self):
-        response = self.cli.get(f'/db/{self.collection_name}' + '?filter=&skip=')
-        self.assertEqual(response.status_code, 400)
-
-    def test06_query_document(self):
+    def test06_query_with_sort(self):
         def query_with_sort(order: int):
             response = self.cli.post(f'/db/query', body={
                 "collection": self.collection_name,
                 "filter": {
-                    "author": "john doe2",
-                    "words_count": {"$gt": 0, "$lt": 500000}
+                    "author": "Alice"
                 },
                 "options": {
-                    "skip": 0,
-                    "limit": 3,
-                    "projection": {
-                        "modified": False
-                    },
-                    'sort': [('_id', order)],  # sort with mongodb style.
-                    "allow_partial_results": False,
-                    "return_key": False,
-                    "show_record_id": False,
-                    "batch_size": 0
+                    'sort': [('_id', order)]  # sort with mongodb style.
                 }})
-            self.assertEqual(response.status_code, 201)
-            self.assertTrue('items' in response.json())
-            return response.json()['items']
+            RA(response).assert_status(201)
+            return RA(response).body().get('items', list)
 
         # query with sort: pymongo.ASCENDING
         items = query_with_sort(pymongo.ASCENDING)
@@ -234,35 +236,44 @@ class DatabaseTestCase(unittest.TestCase):
         ids = list(map(lambda i: str(i['_id']), items))
         self.assertTrue(all(ids[i] >= ids[i + 1] for i in range(len(ids) - 1)))
 
-    def test06_query_document_invalid_parameter(self):
+    def test06_query_with_invalid_parameter(self):
         response = self.cli.post(f'/db/query')
-        self.assertEqual(response.status_code, 400)
+        RA(response).assert_status(400)
 
-    def test07_delete_one_document(self):
+    def test07_delete(self):
+        # delete one
         response = self.cli.delete(f'/db/collection/{self.collection_name}?deleteone=true', body={
-            "filter": {
-                "author": "john doe1_2",
-            }}, is_json=True)
-        self.assertEqual(response.status_code, 204)
+            "filter": {"author": "Alice"}
+        }, is_json=True)
+        RA(response).assert_status(204)
 
-    def test07_delete_one_document_invalid_parameter(self):
-        response = self.cli.delete(f'/db/collection/{self.collection_name}?deleteone=true')
-        self.assertEqual(response.status_code, 400)
+        # Remain 4
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"Alice"}')
+        RA(response).assert_status(200)
+        self.assertEqual(len(RA(response).body().get('items', list)), 4)
 
-    def test07_delete_document(self):
+        # delete many
         response = self.cli.delete(f'/db/collection/{self.collection_name}', body={
-            "filter": {
-                "author": "john doe2",
-            }}, is_json=True)
-        self.assertEqual(response.status_code, 204)
+            "filter": {"author": "Alice"}
+        }, is_json=True)
+        RA(response).assert_status(204)
 
-    def test08_delete_collection_not_found(self):
+        # Remain 0
+        response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"Alice"}')
+        RA(response).assert_status(200)
+        self.assertEqual(len(RA(response).body().get('items', list)), 0)
+
+    def test07_delete_with_invalid_parameter(self):
+        response = self.cli.delete(f'/db/collection/{self.collection_name}')
+        RA(response).assert_status(400)
+
+    def test08_delete_collection_with_not_found(self):
         response = self.cli.delete(f'/db/{self.name_not_exist}')
-        self.assertEqual(response.status_code, 404)
+        RA(response).assert_status(404)
 
     def test08_delete_collection(self):
         response = self.cli.delete(f'/db/{self.collection_name}')
-        self.assertTrue(response.status_code in [204, 404])
+        RA(response).assert_status(204)
 
 
 if __name__ == '__main__':

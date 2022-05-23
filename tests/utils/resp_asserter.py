@@ -4,6 +4,7 @@ import unittest
 class DictAsserter(unittest.TestCase, dict):
     def __init__(self, **kwargs):
         dict.__init__(self, **kwargs)
+        unittest.TestCase.__init__(self)
 
     def get(self, key, t=dict):
         self.assertIn(key, self)
@@ -24,9 +25,14 @@ class DictAsserter(unittest.TestCase, dict):
         self.assertEqual(self[key], dst_value)
 
     def assert_true(self, key, t=dict):
-        self.assertIn(key, self)
-        self.assertIsInstance(self[key], t)
+        self.assert_type(key, t)
         self.assertTrue(self[key])
+
+    def __repr__(self):
+        return dict.__repr__(self)
+
+    def __str__(self):
+        return dict.__str__(self)
 
 
 class RA(unittest.TestCase):

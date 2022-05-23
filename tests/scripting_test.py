@@ -86,7 +86,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 'target_app_did': self.target_app_did,
             }
         response = self.cli2.patch(f'/scripting/{script_name}', body, need_token=need_token)
-        RA(response).assert_status(200)
+        RA(response).assert_status(except_error)
         return RA(response).body() if except_error == 200 else None
 
     def call_and_execute_transaction(self, script_name, executable_name,

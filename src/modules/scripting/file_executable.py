@@ -77,7 +77,7 @@ class FilePropertiesExecutable(FileExecutable):
             "type": "file" if doc[COL_IPFS_FILES_IS_FILE] else "folder",
             "name": path,
             "size": doc[SIZE],
-            "last_modify": doc['modified']
+            "last_modify": int(doc['modified'])
         })
 
 

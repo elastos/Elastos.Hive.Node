@@ -9,8 +9,8 @@ import typing as t
 import urllib.parse
 
 from tests import init_test, is_valid_object_id
-from tests.utils.dict_asserter import DictAsserter
 from tests.utils.http_client import HttpClient
+from tests.utils.resp_asserter import RA
 from tests.utils_v1.hive_auth_test_v1 import AppDID
 
 
@@ -68,11 +68,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
         :return: the response body (dict) of registering.
         """
         response = self.cli.put(f'/scripting/{script_name}', body)
-        self.assertEqual(response.status_code, 200)
+        RA(response).assert_status(200)
+        body = RA(response).body()
         # check update existing one or insert a new one
-        body = DictAsserter(response.json())
-        self.assertTrue(body.get_int('modified_count') == 1 or body.get_str('upserted_id'))
-        return body.data
+        self.assertTrue(body.get('modified_count', int) == 1 or body.get('upserted_id', str))
+        return body
 
     def __call_script(self, script_name, body=None, except_error=200, need_token=True, need_context=True):
         """ Call script successfully
@@ -86,8 +86,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 'target_app_did': self.target_app_did,
             }
         response = self.cli2.patch(f'/scripting/{script_name}', body, need_token=need_token)
-        self.assertEqual(response.status_code, except_error)
-        return DictAsserter(response.json()).data if except_error == 200 else None
+        RA(response).assert_status(200)
+        return RA(response).body() if except_error == 200 else None
 
     def call_and_execute_transaction(self, script_name, executable_name,
                                      path: t.Optional[str] = None, is_download=True, download_content=None):
@@ -101,7 +101,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         """
         # call the script for uploading or downloading
         body = self.__call_script(script_name, {"params": {"path": path if path else self.file_name}})
-        self.assertTrue(DictAsserter(body).check_dict(executable_name).get_str('transaction_id'))
+        body.get(executable_name).assert_true('transaction_id', str)
 
         # call relating transaction
         if is_download:
@@ -109,11 +109,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
         else:
             response = self.cli2.put(f'/scripting/stream/{body[executable_name]["transaction_id"]}',
                                      self.file_content.encode(), is_json=False)
-        self.assertEqual(response.status_code, 200)
+        RA(response).assert_status(200)
 
         # check the result
         if is_download:
-            self.assertEqual(response.text, download_content if download_content else self.file_content)
+            RA(response).text_equal(download_content if download_content else self.file_content)
         else:
             # nothing returned
             pass
@@ -127,7 +127,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         :param expect_status: for error checking, such as 404
         """
         response = self.cli.delete(f'/scripting/{script_name}')
-        self.assertEqual(response.status_code, expect_status)
+        RA(response).assert_status(expect_status)
 
     def test01_insert(self):
         """ test insert and insert """
@@ -157,7 +157,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
                     "words_count": words_count
                 }
             })
-            self.assertTrue(DictAsserter(body).check_dict(executable_name).get_str('inserted_id'))
+            body.get(executable_name).assert_true('inserted_id', str)
 
         insert_document('message1', 10000)
         insert_document('message3', 30000)
@@ -185,9 +185,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
         }})
 
         body = self.__call_script(script_name, {"params": {"author": "John"}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('total'), 9)
-        items = executable.get_list('items')
+        body.get(executable_name).assert_equal('total', 9)
+        items = body.get(executable_name).get('items', list)
+
+        # assert items.
         self.assertEqual(len(items), 9)
         self.assertTrue(all([a['author'] == 'John' for a in items]))
         self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
@@ -219,9 +220,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
         # check with 'is_out' = True
         register_with_is_out(True)
         body = self.__call_script(script_name, {"params": {"author": "John"}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('total'), 9)
-        items = executable.get_list('items')
+        body.get(executable_name).assert_equal('total', 9)
+        items = body.get(executable_name).get('items', list)
+
+        # assert items
         self.assertEqual(len(items), 9)
         self.assertTrue(all([a['author'] == 'John' for a in items]))
         self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
@@ -237,7 +239,6 @@ class IpfsScriptingTestCase(unittest.TestCase):
         # check with 'is_out' = False
         register_with_is_out(False)
         body = self.__call_script(script_name, {"params": {"author": "John"}})
-        self.assertIsInstance(body, dict)
         self.assertFalse(body)
 
         self.delete_script(script_name)
@@ -265,9 +266,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
             if extra_params:
                 request_body['params'].update(extra_params)
             body = self.__call_script(script_name, request_body)
-            executable = DictAsserter(body).check_dict(executable_name)
-            self.assertEqual(executable.get_int('total'), 9)
-            items = executable.get_list('items')
+            body.get(executable_name).assert_equal('total', 9)
+            items = body.get(executable_name).get('items', list)
+
+            # assert items
             self.assertEqual(len(items), items_count)
             self.assertEqual(items[0]['content'], first_content)
 
@@ -312,10 +314,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
         # calling by url.
         url_params = f'/{self.target_did}@{self.target_app_did}/' + urllib.parse.quote_plus('{"author":"John","content":"message1"}')
         response = self.cli2.get(f'/scripting/{script_name}{url_params}')
-        self.assertEqual(response.status_code, 200)
-        executable = DictAsserter(response.json()).check_dict(executable_name)
-        self.assertEqual(executable.get_int('total'), 1)
-        items = executable.get_list('items')
+        RA(response).assert_status(200)
+        RA(response).body().get(executable_name).assert_equal('total', 1)
+        items = RA(response).body().get(executable_name).get('items', list)
+
+        # assert items
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]['author'], 'John')
         self.assertEqual(items[0]['content'], 'message1')
@@ -336,9 +339,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
         }})
 
         body = self.__call_script(script_name, {"params": {"author": "John", "start": 5000, "end": 15000}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('total'), 1)
-        items = executable.get_list('items')
+        body.get(executable_name).assert_equal('total', 1)
+        items = body.get(executable_name).get('items', list)
+
+        # assert items
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]['author'], 'John')
         self.assertEqual(items[0]['content'], 'message1')
@@ -370,9 +374,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         # match checking
         body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('total'), 1)
-        items = executable.get_list('items')
+        body.get(executable_name).assert_equal('total', 1)
+        items = body.get(executable_name).get('items', list)
+
+        # assert items
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]['author'], 'John')
         self.assertEqual(items[0]['content'], 'message1')
@@ -408,9 +413,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         # match checking
         body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('total'), 1)
-        items = executable.get_list('items')
+        body.get(executable_name).assert_equal('total', 1)
+        items = body.get(executable_name).get('items', list)
+
+        # assert items
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]['author'], 'John')
         self.assertEqual(items[0]['content'], 'message1')
@@ -433,18 +439,18 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         # sort with pymongo.ASCENDING on mongo style.
         body = self.__call_script(script_name, {"params": {"author": "John", 'sort': [['words_count', pymongo.ASCENDING]]}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('total'), 9)
+        body.get(executable_name).assert_equal('total', 9)
+        items = body.get(executable_name).get('items', list)
         # check the order is pymongo.ASCENDING
-        counts = list(map(lambda i: i['words_count'], executable.get_list('items')))
+        counts = list(map(lambda i: i['words_count'], items))
         self.assertTrue(all(counts[i] < counts[i + 1] for i in range(len(counts) - 1)))
 
         # sort with pymongo.ASCENDING on hive style.
         body = self.__call_script(script_name, {"params": {"author": "John", 'sort': {'words_count': pymongo.DESCENDING}}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('total'), 9)
+        body.get(executable_name).assert_equal('total', 9)
+        items = body.get(executable_name).get('items', list)
         # check the order is pymongo.DESCENDING
-        counts = list(map(lambda i: i['words_count'], executable.get_list('items')))
+        counts = list(map(lambda i: i['words_count'], items))
         self.assertTrue(all(counts[i] > counts[i + 1] for i in range(len(counts) - 1)))
 
         self.delete_script(script_name)
@@ -475,9 +481,9 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.__call_script(script_name, {"params": {"condition_author": "Andersen", "content": "message1"}}, need_token=True, except_error=400)
 
         def validate_body(b):
-            executable = DictAsserter(b).check_dict(executable_name)
-            self.assertEqual(executable.get_int('total'), 1)
-            items = executable.get_list('items')
+            b.get(executable_name).assert_equal('total', 1)
+            items = b.get(executable_name).get('items', list)
+            # assert items
             self.assertEqual(len(items), 1)
             self.assertEqual(items[0]['author'], 'John')
             self.assertEqual(items[0]['content'], 'message1')
@@ -515,12 +521,12 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         params = {'content' + str(i): 'message' + str(i) for i in range(1, executable_count + 1)}
         body = self.__call_script(script_name, {"params": params})
-        executables = DictAsserter(body)
+        # executables = ADictAsserter(body)
 
         def assert_executable(index: str):
-            executable = executables.check_dict(executable_name + index)
-            self.assertEqual(executable.get_int('total'), 1)
-            items = executable.get_list('items')
+            body.get(executable_name + index).assert_equal('total', 1)
+            items = body.get(executable_name + index).get('items', list)
+            # assert items
             self.assertEqual(len(items), 1)
             self.assertEqual(items[0]['author'], 'John')
             self.assertEqual(items[0]['content'], f'message{index}')
@@ -548,12 +554,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
         }})
 
         body = self.__call_script(script_name, {"params": {"content": "message9", "words_count": 100000}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('modified_count'), 1)
+        body.get(executable_name).assert_equal('modified_count', 1)
 
         body = self.__call_script(script_name, {"params": {"content": "message9", "words_count": 90000}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('modified_count'), 1)
+        body.get(executable_name).assert_equal('modified_count', 1)
 
         self.delete_script(script_name)
 
@@ -575,8 +579,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         }})
 
         body = self.__call_script(script_name, {"params": {"author": "Alex", "content": "message10", "words_count": 100000}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertTrue(is_valid_object_id(executable.get_str('upserted_id')))
+        self.assertTrue(is_valid_object_id(body.get(executable_name).get('upserted_id', str)))
 
         self.delete_script(script_name)
 
@@ -593,8 +596,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         })
 
         body = self.__call_script(script_name, {"params": {"content": "message9"}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('deleted_count'), 1)
+        body.get(executable_name).assert_equal('deleted_count', 1)
 
         self.delete_script(script_name)
 
@@ -640,11 +642,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
         })
 
         body = self.__call_script(script_name, {'params': {'path': self.file_name}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_int('size'), len(self.file_content))
-        self.assertEqual(executable.get_str('name'), self.file_name)
-        self.assertIn('type', executable.data)
-        self.assertIn('last_modify', executable.data)
+        body.get(executable_name).assert_equal('size', len(self.file_content))
+        body.get(executable_name).assert_equal('name', self.file_name)
+        body.get(executable_name).assert_equal('type', 'file')
+        body.get(executable_name).assert_true('last_modify', int)
 
         self.delete_script(script_name)
 
@@ -660,8 +661,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         })
 
         body = self.__call_script(script_name, {'params': {'path': self.file_name}})
-        executable = DictAsserter(body).check_dict(executable_name)
-        self.assertEqual(executable.get_str('SHA256'), self.file_sha256)
+        body.get(executable_name).assert_equal('SHA256', self.file_sha256)
 
         self.delete_script(script_name)
 
@@ -679,8 +679,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         def validate_call(path_value: str):
             body = self.__call_script(script_name, {'params': {'path': path_value}})
-            executable = DictAsserter(body).check_dict(executable_name)
-            self.assertEqual(executable.get_str('SHA256'), self.file_sha256)
+            body.get(executable_name).assert_equal('SHA256', self.file_sha256)
 
         # 'ipfs-scripting/test.txt'
         register_hash('ipfs-scripting/$params.path')

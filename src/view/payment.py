@@ -7,7 +7,7 @@ from flask_restful import Resource
 
 from src.modules.payment.payment import Payment
 from src.utils.http_exception import InvalidParameterException
-from src.utils.http_request import params, rqargs
+from src.utils.http_request import RV
 
 
 class Version(Resource):
@@ -48,6 +48,7 @@ class Version(Resource):
             HTTP/1.1 403 Forbidden
 
         """
+
         return self.payment.get_version()
 
 
@@ -80,7 +81,14 @@ class PlaceOrder(Resource):
         .. code-block:: json
 
             {
-               "proof": "<jwt string>"
+                "subscription": "vault",
+                "pricing_plan": "rookie",
+                "paying_did": "did:elastos:iWFAUYhTa35c1f3335iCJvihZHx6q******",
+                "payment_amount": 15,  // ELA
+                "create_time": 1600073834,
+                "expiration_time": 1755161834,
+                "receiving_address": "0x60Dcc0f996963644102fC266b39F1116e5******",
+                "proof": "<jwt string>"
             }
 
         the decoded content of proof is like this:
@@ -132,13 +140,8 @@ class PlaceOrder(Resource):
 
         """
 
-        subscription, msg = params.get_str('subscription')
-        if msg or subscription not in ['vault', 'backup']:
-            raise InvalidParameterException(msg='Invalid parameter "subscription"')
-
-        pricing_name, msg = params.get_str('pricing_name')
-        if msg:
-            raise InvalidParameterException(msg=msg)
+        subscription = RV.get_body().get('subscription')
+        pricing_name = RV.get_body().get('pricing_name')
 
         return self.payment.place_order(subscription, pricing_name)
 
@@ -169,7 +172,15 @@ class SettleOrder(Resource):
         .. code-block:: json
 
             {
-               "receipt_proof": "<jwt str>"
+                "receipt_id": “<ObjectId str>”,
+                "order_id": 1234,
+                "subscription": "vault",
+                "pricing_plan": "Rookie",
+                "payment_amount": "5",  // ELA
+                "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEH******”,
+                "create_time": 1600073834,
+                "receiving_address": "912ec803b2ce49e4a541068d49******",
+                "receipt_proof": "<jwt str>"
             }
 
         the decoded content of receipt_proof is like this:
@@ -221,10 +232,16 @@ class SettleOrder(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        if not order_id or not isinstance(order_id, str) or not order_id.isnumeric():
-            raise InvalidParameterException('order_id must be number.')
 
-        return self.payment.pay_order(int(order_id))
+        if not order_id or not isinstance(order_id, str):
+            raise InvalidParameterException('Invalid parameter order_id')
+
+        try:
+            order_id_int = int(order_id)
+        except Exception:
+            raise InvalidParameterException('Invalid parameter order_id: MUST be integer')
+
+        return self.payment.pay_order(order_id_int)
 
 
 class Orders(Resource):
@@ -240,8 +257,8 @@ class Orders(Resource):
 
         .. sourcecode:: http
 
-            subscription: <vault | backup | all>
-            order_id: <order_id>
+            subscription: <vault | backup | all>    # optional
+            order_id: <order_id>                    # optional
 
         **Response OK**:
 
@@ -256,6 +273,7 @@ class Orders(Resource):
                     "order_id": 1234,
                     "subscription": "vault",
                     "pricing_plan": "Rookie",
+                    "paying_did": "did:elastos:iWFAUYhTa35c1f3335iCJvihZHx6q******",
                     "payment_amount": "5",  // ELA
                     "create_time": 1600073834,
                     "expiration_time": 1755161834,
@@ -283,13 +301,14 @@ class Orders(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        subscription, msg = rqargs.get_str('subscription', None)
-        if subscription is not None and subscription not in ['vault', 'backup']:
-            raise InvalidParameterException(msg='Invalid parameter "subscription"')
 
-        order_id, msg = rqargs.get_int('order_id', None)
+        subscription = RV.get_args().get_opt('subscription', str)
+        contract_order_id = RV.get_args().get_opt('order_id', int)
 
-        return self.payment.get_orders(subscription, order_id)
+        if subscription and subscription not in ['vault', 'backup']:
+            raise InvalidParameterException(msg='Invalid parameter subscription: Can only be "vault" or "backup"')
+
+        return self.payment.get_orders(subscription, contract_order_id)
 
 
 class Receipts(Resource):
@@ -305,7 +324,7 @@ class Receipts(Resource):
 
         .. sourcecode:: http
 
-            order_id: <order_id>
+            order_id: <order_id>  # optional
 
         **Response OK**:
 
@@ -325,7 +344,7 @@ class Receipts(Resource):
                     "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEH******”,
                     "create_time": 1600073834,
                     "receiving_address": "912ec803b2ce49e4a541068d49******",
-                    "proof": "<jwt str>"
+                    "receipt_proof": "<jwt str>"
                 }]
             }
 
@@ -348,8 +367,7 @@ class Receipts(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        order_id, msg = rqargs.get_int('order_id', None)
-        if msg:
-            raise InvalidParameterException(msg=msg)
 
-        return self.payment.get_receipts(order_id)
+        contract_order_id = RV.get_args().get_opt('order_id', int)
+
+        return self.payment.get_receipts(contract_order_id)

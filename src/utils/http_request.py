@@ -154,7 +154,7 @@ def get_dict(json_data: typing.Any, parent_name: str = None):
 
     # value MUST be dict
     if not json_data or not isinstance(json_data, dict):
-        raise InvalidParameterException(msg=f'Invalid "dict" value: "{json_data}"')
+        raise InvalidParameterException(msg=f'Invalid Parameter: "{json_data}" MUST be dictionary')
 
     # parent_name is like 'a.b.c'
     if parent_name:
@@ -162,7 +162,7 @@ def get_dict(json_data: typing.Any, parent_name: str = None):
         if (length := len(parts)) > 0:
             key = parts[0]
             if key not in json_data:
-                raise InvalidParameterException(msg=f'Not found key "{key}" in "{json_data}"')
+                raise InvalidParameterException(msg=f'Invalid Parameter: Not found key "{key}"')
 
             return get_dict(json_data[key], parent_name='.'.join(parts[1:]) if length > 1 else None)
         else:
@@ -179,20 +179,20 @@ class RequestData(dict):
         super().__init__(*args, **kwargs)
         self.optional = optional
 
-    def get(self, key, type_=dict):
+    def get(self, key, t=dict):
         """ get the value with type 'value_type' """
         if self.optional:
-            raise InvalidParameterException(msg=f'Can not get optional "{key}" in "{self}".')
+            raise InvalidParameterException(msg=f'Invalid parameter: Can not get optional key "{key}"')
 
         if key not in self:
-            raise InvalidParameterException(msg=f'Not found key "{key}" in "{self}."')
+            raise InvalidParameterException(msg=f'Invalid parameter: Not found key "{key}"')
 
-        if type(self[key]) != type_:
-            raise InvalidParameterException(msg=f'Value "{key}" is not the type "{type_}" in "{self}."')
+        if type(self[key]) != t:
+            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{t}"')
 
-        return RequestData(**get_dict(self[key])) if type_ == dict else self[key]
+        return RequestData(**get_dict(self[key])) if t == dict else self[key]
 
-    def get_opt(self, key, type_=dict, def_value=None):
+    def get_opt(self, key, t=dict, def_value=None):
         """ get the optional value with type 'value_type' and default value 'def_value'
 
         Note: the member of optional dict is also optional.
@@ -200,26 +200,26 @@ class RequestData(dict):
         :return: RequestData() if value_type=dict else None
         """
         if key not in self:
-            return RequestData(optional=True) if type_ == dict else def_value
+            return RequestData(optional=True) if t == dict else def_value
 
-        if type(self[key]) != type_:
-            raise InvalidParameterException(msg=f'Value "{key}" is not the type "{type_}" in "{self}."')
+        if type(self[key]) != t:
+            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{t}"')
 
-        return RequestData(optional=True, **get_dict(self[key])) if type_ == dict else self[key]
+        return RequestData(optional=True, **get_dict(self[key])) if t == dict else self[key]
 
-    def validate(self, key, type_=dict):
+    def validate(self, key, t=dict):
         if self.optional:
-            raise InvalidParameterException(msg=f'Can not get optional "{key}" in "{self}".')
+            raise InvalidParameterException(msg=f'Invalid parameter: Can not get optional key "{key}"')
 
         if key not in self:
-            raise InvalidParameterException(msg=f'Not found key "{key}" in "{self}."')
+            raise InvalidParameterException(msg=f'Invalid parameter: Not found key "{key}"')
 
-        if type(self[key]) != type_:
-            raise InvalidParameterException(msg=f'Value "{key}" is not the type "{type_}" in "{self}."')
+        if type(self[key]) != t:
+            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{t}"')
 
-    def validate_opt(self, key, value_type=dict):
-        if key in self and type(self[key]) != value_type:
-            raise InvalidParameterException(msg=f'Value "{key}" is not the type "{value_type}" in "{self}."')
+    def validate_opt(self, key, t=dict):
+        if key in self and type(self[key]) != t:
+            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{t}"')
 
 
 class RequestArgs(dict):
@@ -234,32 +234,32 @@ class RequestArgs(dict):
     def _convert_value(self, key, value_str, type_, optional=False):
         # all values from args are strings.
         if not value_str:
-            raise InvalidParameterException(msg=f'Not found args "{key}" in "{self}."')
+            raise InvalidParameterException(msg=f'Invalid parameter: Not found args "{key}"')
 
         if type_ == dict:
             try:
                 value = json.loads(value_str)
                 if not isinstance(value, dict):
-                    raise InvalidParameterException(msg=f'Invalid args "{key}", MUST dict.')
+                    raise InvalidParameterException(msg=f'Invalid parameter: The args "{key}" MUST be dictionary')
             except Exception as e:
-                raise InvalidParameterException(msg=f'Invalid args "{key}", MUST JSON.')
+                raise InvalidParameterException(msg=f'Invalid parameter: The args "{key}" MUST be JSON')
             return RequestData(optional=optional, **value)
         elif type_ == int:
             try:
                 value = int(value_str)
             except Exception as e:
-                raise InvalidParameterException(msg=f'Invalid args "{key}", MUST int.')
+                raise InvalidParameterException(msg=f'Invalid parameter: The args "{key}" MUST be integer')
             return value
         elif type_ == bool:
             if value_str not in ['true', 'false']:  # JSON specification
-                raise InvalidParameterException(msg=f'Invalid args "{key}", MUST bool (true, false).')
+                raise InvalidParameterException(msg=f'Invalid parameter: The args "{key}" MUST be bool ("true", "false")')
             return value_str == 'true'
         return value_str
 
     def get(self, key, type_=dict):
         """ get the value with type 'value_type' """
         if key not in self:
-            raise InvalidParameterException(msg=f'Not found args "{key}" in "{self}."')
+            raise InvalidParameterException(msg=f'Invalid parameter: Not found args "{key}"')
 
         return self._convert_value(key, self[key], type_)
 
@@ -327,7 +327,7 @@ class RV:
         if not hasattr(g, 'body'):
             body = request.get_json(force=True, silent=True)
             if not isinstance(body, dict):
-                raise InvalidParameterException(msg='Invalid request body.')
+                raise InvalidParameterException(msg='Invalid request body: MUST be dictionary')
             g.body = RequestData(**body)
         return RequestData(**get_dict(g.body, parent_name))
 

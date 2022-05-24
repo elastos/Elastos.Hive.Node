@@ -64,9 +64,7 @@ class Payment(metaclass=Singleton):
         proof = self.auth.create_proof_for_order(g.usr_did, order.get_proof_details(), order.get_expire_time())
         self.order_manager.update_proof(order, proof)
 
-        return {
-            'proof': proof
-        }
+        return order.to_place_order()
 
     def pay_order(self, contract_order_id: int):
         """ :v2 API: """
@@ -96,9 +94,7 @@ class Payment(metaclass=Singleton):
         # Update contract order id.
         self.order_manager.update_contract_order_id(order, contract_order_id)
 
-        return {
-            'receipt_proof': receipt_proof
-        }
+        return receipt.to_settle_order()
 
     def __verify_contract_order(self, contract_order):
         if contract_order['to'] != self.ela_address:

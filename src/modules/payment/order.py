@@ -21,7 +21,11 @@ class Receipt:
     def get_id(self) -> t.Optional[ObjectId]:
         return self.doc['_id']
 
+    def to_settle_order(self):
+        return self.to_get_receipts()
+
     def to_get_receipts(self):
+        """ for the response of API """
         return {
             "receipt_id": str(self.get_id()),
             "order_id": self.doc[COL_ORDERS_CONTRACT_ORDER_ID],
@@ -31,7 +35,7 @@ class Receipt:
             "paid_did": self.doc[COL_RECEIPTS_PAID_DID],
             "create_time": self.doc['created'],
             "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS],
-            "proof": self.doc[COL_ORDERS_PROOF]
+            "receipt_proof": self.doc[COL_ORDERS_PROOF]
         }
 
 
@@ -102,17 +106,24 @@ class Order:
             "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS]
         }
 
-    def to_get_orders(self):
+    def to_place_order(self):
+        """ for the response of API """
         return {
-            "order_id": self.doc[COL_ORDERS_CONTRACT_ORDER_ID],
             "subscription": self.doc[COL_ORDERS_SUBSCRIPTION],
             "pricing_plan": self.doc[COL_ORDERS_PRICING_NAME],
+            "paying_did": self.doc[USR_DID],
             "payment_amount": self.doc[COL_ORDERS_ELA_AMOUNT],
             "create_time": self.doc['created'],
             "expiration_time": self.doc[COL_ORDERS_EXPIRE_TIME],
             "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS],
             "proof": self.doc[COL_ORDERS_PROOF]
         }
+
+    def to_get_orders(self):
+        """ for the response of API """
+        doc = self.to_place_order()
+        doc['order_id'] = self.doc[COL_ORDERS_CONTRACT_ORDER_ID]
+        return doc
 
 
 class OrderManager:

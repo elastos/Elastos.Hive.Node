@@ -75,7 +75,7 @@ class Order:
         return self.doc[COL_ORDERS_SUBSCRIPTION] == Order.SUBSCRIPTION_VAULT
 
     def is_amount_enough(self, amount):
-        return amount - self.doc[COL_ORDERS_ELA_AMOUNT] > -0.01
+        return amount - self.doc[COL_ORDERS_ELA_AMOUNT] > -self.doc[COL_ORDERS_ELA_AMOUNT] * 0.01
 
     def belongs(self, user_did):
         return user_did == self.doc[USR_DID]

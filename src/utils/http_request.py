@@ -179,7 +179,7 @@ class RequestData(dict):
         super().__init__(*args, **kwargs)
         self.optional = optional
 
-    def get(self, key, t=dict):
+    def get(self, key, type_=dict):
         """ get the value with type 'value_type' """
         if self.optional:
             raise InvalidParameterException(msg=f'Invalid parameter: Can not get optional key "{key}"')
@@ -187,12 +187,12 @@ class RequestData(dict):
         if key not in self:
             raise InvalidParameterException(msg=f'Invalid parameter: Not found key "{key}"')
 
-        if type(self[key]) != t:
-            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{t}"')
+        if type(self[key]) != type_:
+            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{type_}"')
 
-        return RequestData(**get_dict(self[key])) if t == dict else self[key]
+        return RequestData(**get_dict(self[key])) if type_ == dict else self[key]
 
-    def get_opt(self, key, t=dict, def_value=None):
+    def get_opt(self, key, type_, def_value):
         """ get the optional value with type 'value_type' and default value 'def_value'
 
         Note: the member of optional dict is also optional.
@@ -200,26 +200,26 @@ class RequestData(dict):
         :return: RequestData() if value_type=dict else None
         """
         if key not in self:
-            return RequestData(optional=True) if t == dict else def_value
+            return RequestData(optional=True) if type_ == dict else def_value
 
-        if type(self[key]) != t:
-            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{t}"')
+        if type(self[key]) != type_:
+            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{type_}"')
 
-        return RequestData(optional=True, **get_dict(self[key])) if t == dict else self[key]
+        return RequestData(optional=True, **get_dict(self[key])) if type_ == dict else self[key]
 
-    def validate(self, key, t=dict):
+    def validate(self, key, type_=dict):
         if self.optional:
             raise InvalidParameterException(msg=f'Invalid parameter: Can not get optional key "{key}"')
 
         if key not in self:
             raise InvalidParameterException(msg=f'Invalid parameter: Not found key "{key}"')
 
-        if type(self[key]) != t:
-            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{t}"')
+        if type(self[key]) != type_:
+            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{type_}"')
 
-    def validate_opt(self, key, t=dict):
-        if key in self and type(self[key]) != t:
-            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{t}"')
+    def validate_opt(self, key, type_=dict):
+        if key in self and type(self[key]) != type_:
+            raise InvalidParameterException(msg=f'Invalid parameter: The value of the key "{key}" MUST be the type "{type_}"')
 
 
 class RequestArgs(dict):
@@ -231,7 +231,9 @@ class RequestArgs(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _convert_value(self, key, value_str, type_, optional=False):
+    @staticmethod
+    def convert_value(key, value_str, type_, optional=False):
+        """ convert string value to specific type one, key is for error message. """
         # all values from args are strings.
         if not value_str:
             raise InvalidParameterException(msg=f'Invalid parameter: Not found args "{key}"')
@@ -261,19 +263,19 @@ class RequestArgs(dict):
         if key not in self:
             raise InvalidParameterException(msg=f'Invalid parameter: Not found args "{key}"')
 
-        return self._convert_value(key, self[key], type_)
+        return self.convert_value(key, self[key], type_)
 
-    def get_opt(self, key, type_=dict, def_value=None):
+    def get_opt(self, key, type_, def_value):
         if key not in self:
             return RequestData(optional=True) if type_ == dict else def_value
 
-        return self._convert_value(key, self[key], type_, optional=True)
+        return self.convert_value(key, self[key], type_, optional=True)
 
     def validate(self, key, type_=dict):
         self.get(key, type_)
 
     def validate_opt(self, key, type_=dict):
-        self.get_opt(key, type_)
+        self.get_opt(key, type_, None)
 
 
 class RV:
@@ -336,3 +338,9 @@ class RV:
         if not hasattr(g, 'args'):
             g.args = RequestArgs(**request.args)
         return g.args
+
+    @staticmethod
+    def get_value(key, value, type_):
+        """ This is for endpoint function parameters """
+        return RequestArgs.convert_value(key, value, type_)
+

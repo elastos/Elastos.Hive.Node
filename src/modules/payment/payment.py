@@ -56,7 +56,7 @@ class Payment(metaclass=Singleton):
             plan = PaymentConfig.get_backup_plan(pricing_name)
 
         # plan must exist and not free
-        if not plan or plan['amount'] <= 0.01:
+        if not plan or plan['amount'] <= 0.00000001:
             raise InvalidParameterException(msg=f'Invalid pricing_name {pricing_name} or the related plan is free.')
 
         # create order with proof
@@ -66,7 +66,7 @@ class Payment(metaclass=Singleton):
 
         return order.to_place_order()
 
-    def pay_order(self, contract_order_id: int):
+    def settle_order(self, contract_order_id: int):
         """ :v2 API: """
         # first step is to get the contract order information
         try:

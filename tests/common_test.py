@@ -75,7 +75,7 @@ class RequestValidatorTestCase(unittest.TestCase):
         self.assertEqual(body.get('executable').get('body').get('collection', str), 'messages')
 
         # get optional
-        self.assertFalse(body.get_opt('condition').get_opt('filter'))
+        self.assertFalse(body.get_opt('condition', dict, {}).get_opt('filter'))
         self.assertTrue(body.get('executable').get('body').get_opt('options').get_opt('limit', int), 100)
 
         # validate and validate_opt

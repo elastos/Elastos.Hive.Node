@@ -140,8 +140,8 @@ class PlaceOrder(Resource):
 
         """
 
-        subscription = RV.get_body().get('subscription')
-        pricing_name = RV.get_body().get('pricing_name')
+        subscription = RV.get_body().get('subscription', str)
+        pricing_name = RV.get_body().get('pricing_name', str)
 
         return self.payment.place_order(subscription, pricing_name)
 
@@ -233,15 +233,9 @@ class SettleOrder(Resource):
 
         """
 
-        if not order_id or not isinstance(order_id, str):
-            raise InvalidParameterException('Invalid parameter order_id')
+        contract_order_id = RV.get_value('order_id', order_id, str)
 
-        try:
-            order_id_int = int(order_id)
-        except Exception:
-            raise InvalidParameterException('Invalid parameter order_id: MUST be integer')
-
-        return self.payment.pay_order(order_id_int)
+        return self.payment.settle_order(contract_order_id)
 
 
 class Orders(Resource):
@@ -302,8 +296,8 @@ class Orders(Resource):
 
         """
 
-        subscription = RV.get_args().get_opt('subscription', str)
-        contract_order_id = RV.get_args().get_opt('order_id', int)
+        subscription = RV.get_args().get_opt('subscription', str, None)
+        contract_order_id = RV.get_args().get_opt('order_id', int, None)
 
         if subscription and subscription not in ['vault', 'backup']:
             raise InvalidParameterException(msg='Invalid parameter subscription: Can only be "vault" or "backup"')
@@ -368,6 +362,6 @@ class Receipts(Resource):
 
         """
 
-        contract_order_id = RV.get_args().get_opt('order_id', int)
+        contract_order_id = RV.get_args().get_opt('order_id', int, None)
 
         return self.payment.get_receipts(contract_order_id)

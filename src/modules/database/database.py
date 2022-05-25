@@ -44,7 +44,6 @@ class Database:
     def __is_timestamp(options):
         RequestData(options, optional=True).validate_opt('timestamp', bool)
         return options.pop('timestamp', True)
-        # return RequestData(options, optional=True).get_opt('timestamp', bool, True)
 
     def insert_document(self, collection_name, documents, options):
         """ :v2 API: """

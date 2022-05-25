@@ -55,6 +55,9 @@ class CreateCollection(Resource):
             HTTP/1.1 455 Already Exists
 
         """
+
+        collection_name = RV.get_value('collection_name', collection_name, str)
+
         return self.database.create_collection(collection_name)
 
 
@@ -98,6 +101,9 @@ class DeleteCollection(Resource):
             HTTP/1.1 404 Not Found
 
         """
+
+        collection_name = RV.get_value('collection_name', collection_name, str)
+
         return self.database.delete_collection(collection_name)
 
 
@@ -218,8 +224,8 @@ class InsertOrCount(Resource):
 
         """
 
-        op = RV.get_args().get_opt('op', str)
-        options = RV.get_body().get_opt('options')
+        op = RV.get_args().get_opt('op', str, None)
+        options = RV.get_body().get_opt('options', dict, {})
 
         if op is None:
             documents = RV.get_body().get('document', list)
@@ -315,7 +321,7 @@ class Update(Resource):
         filter_ = RV.get_body().get('filter')
         update = RV.get_body().get('update')
         RV.get_body().get('update').validate_opt('$set')
-        options = RV.get_body().get_opt('options')
+        options = RV.get_body().get_opt('options', dict, {})
 
         return self.database.update_document(collection_name, filter_, update, options, is_update_one)
 
@@ -533,6 +539,6 @@ class Query(Resource):
 
         collection_name = RV.get_body().get('collection', str)
         filter_ = RV.get_body().get('filter')
-        options = RV.get_body().get_opt('options')
+        options = RV.get_body().get_opt('options', dict, {})
 
         return self.database.query_document(collection_name, filter_, options)

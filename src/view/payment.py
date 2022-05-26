@@ -233,7 +233,7 @@ class SettleOrder(Resource):
 
         """
 
-        contract_order_id = RV.get_value('order_id', order_id, str)
+        contract_order_id = RV.get_value('order_id', order_id, int)
 
         return self.payment.settle_order(contract_order_id)
 

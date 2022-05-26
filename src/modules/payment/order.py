@@ -21,6 +21,9 @@ class Receipt:
     def get_id(self) -> t.Optional[ObjectId]:
         return self.doc['_id']
 
+    def set_proof(self, proof):
+        self.doc[COL_ORDERS_PROOF] = proof
+
     def to_settle_order(self):
         return self.to_get_receipts()
 
@@ -83,6 +86,9 @@ class Order:
     def is_settled(self):
         return self.doc[COL_ORDERS_CONTRACT_ORDER_ID] is not None
 
+    def set_proof(self, proof):
+        self.doc[COL_ORDERS_PROOF] = proof
+
     def get_proof_details(self):
         return {
             "interim_orderid": str(self.doc['_id']),
@@ -133,11 +139,11 @@ class OrderManager:
         self.vault_manager = VaultManager()
         self.backup_manager = BackupManager()
 
-    def get_orders(self, subscription: t.Optional[str], contract_order_id: t.Optional[int]):
+    def get_orders(self, user_did, subscription: t.Optional[str], contract_order_id: t.Optional[int]):
         """ get orders by conditional options: subscription, contract_order_id """
         col = self.mcli.get_management_collection(COL_ORDERS)
 
-        filter_ = {}
+        filter_ = {USR_DID: user_did}
         if subscription is not None:
             filter_[COL_ORDERS_SUBSCRIPTION] = subscription
         if contract_order_id is not None:
@@ -146,27 +152,32 @@ class OrderManager:
         docs = col.find_many(filter_)
         return [Order(doc) for doc in docs]
 
-    def get_order(self, order_id):
+    def get_order(self, user_did, order_id):
         """ get by internal id """
         col = self.mcli.get_management_collection(COL_ORDERS)
-        doc = col.find_one({'_id': ObjectId(order_id)})
+        doc = col.find_one({'_id': ObjectId(order_id), USR_DID: user_did})
         if not doc:
             raise OrderNotFoundException()
         return Order(doc)
 
-    def get_order_by_proof(self, proof: str):
+    def get_order_by_proof(self, user_did, proof: str):
         """ get by internal id """
         col = self.mcli.get_management_collection(COL_ORDERS)
-        doc = col.find_one({COL_ORDERS_PROOF: proof})
+        doc = col.find_one({COL_ORDERS_PROOF: proof, USR_DID: user_did})
         if not doc:
             raise OrderNotFoundException()
         return Order(doc)
 
-    def get_receipts(self, contract_order_id: t.Optional[int] = None):
-        """ get receipt by conditional options: contract_order_id """
+    def get_receipts(self, user_did=None, contract_order_id: t.Optional[int] = None):
+        """ get receipt by conditional options: contract_order_id
+
+        Maybe for the provider service.
+        """
         col = self.mcli.get_management_collection(COL_RECEIPTS)
 
         filter_ = {}
+        if user_did is not None:
+            filter_[USR_DID] = user_did
         if contract_order_id is not None:
             filter_[COL_ORDERS_CONTRACT_ORDER_ID] = contract_order_id
 
@@ -194,6 +205,7 @@ class OrderManager:
     def update_proof(self, order: Order, proof: str):
         col = self.mcli.get_management_collection(COL_ORDERS)
         col.update_one({'_id': order.get_id()}, {'$set': {COL_ORDERS_PROOF: proof}})
+        order.set_proof(proof)
 
     def update_contract_order_id(self, order: Order, contract_order_id: int):
         col = self.mcli.get_management_collection(COL_ORDERS)
@@ -223,6 +235,7 @@ class OrderManager:
     def update_receipt_proof(self, receipt: Receipt, receipt_proof: str):
         col = self.mcli.get_management_collection(COL_RECEIPTS)
         col.update_one({'_id': receipt.get_id()}, {'$set': {COL_ORDERS_PROOF: receipt_proof}})
+        receipt.set_proof(receipt_proof)
 
     def upgrade_vault_or_backup(self, user_did, order: Order):
         plan = order.get_plan()

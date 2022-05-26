@@ -68,7 +68,7 @@ class Payment(metaclass=Singleton):
 
     def settle_order(self, contract_order_id: int):
         """ :v2 API: """
-        # first step is to get the contract order information
+        # first step is to get the order information from contract
         try:
             order_info = self.order_contract.get_order(contract_order_id)
         except Exception as e:
@@ -101,7 +101,7 @@ class Payment(metaclass=Singleton):
             raise BadRequestException(msg=f'The oder from order_id is not for this hive node.')
 
         # Make sure the proof is in this node.
-        order = self.order_manager.get_order_by_proof(contract_order['memo'])
+        order = self.order_manager.get_order_by_proof(g.usr_did, contract_order['memo'])
         if order.is_settled():
             raise BadRequestException(msg=f'The proof {contract_order["memo"]} invalid: the order has been settled.')
 
@@ -120,7 +120,7 @@ class Payment(metaclass=Singleton):
 
     def get_orders(self, subscription: typing.Optional[str], contract_order_id: typing.Optional[int]):
         """ :v2 API: """
-        orders = self.order_manager.get_orders(subscription, contract_order_id)
+        orders = self.order_manager.get_orders(g.usr_did, subscription, contract_order_id)
         if not orders:
             raise OrderNotFoundException()
         return {
@@ -129,7 +129,7 @@ class Payment(metaclass=Singleton):
 
     def get_receipts(self, contract_order_id: typing.Optional[int]):
         """ :v2 API: """
-        receipts = self.order_manager.get_receipts(contract_order_id)
+        receipts = self.order_manager.get_receipts(g.usr_did, contract_order_id)
         if not receipts:
             raise ReceiptNotFoundException()
         return {

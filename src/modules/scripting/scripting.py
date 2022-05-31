@@ -11,7 +11,7 @@ from bson import ObjectId
 
 from src import hive_setting
 from src.utils_v1.constants import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException
+from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.modules.subscription.vault import VaultManager, AppSpaceDetector
@@ -346,6 +346,8 @@ class Scripting:
         col_filter = {"_id": ObjectId(row_id)}
         col = self.mcli.get_user_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, create_on_absence=True)
         trans = col.find_one({"_id": ObjectId(row_id)})
+        if not trans:
+            raise InvalidParameterException('Invalid transaction id: can not found transaction')
 
         # Do anonymous checking, it's same as 'Script.execute'
         anonymous_access = trans.get('anonymous', False)

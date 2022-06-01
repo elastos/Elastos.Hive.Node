@@ -34,6 +34,10 @@ api = HiveApi(app, prefix='/api/v2')
 
 @app.before_request
 def before_request():
+    # CORS request, skip
+    if request.method.upper() == "OPTIONS":
+        return
+
     # Sets the "wsgi.input_terminated" environment flag, thus enabling
     # Werkzeug to pass chunked requests as streams; this makes the API
     # compliant with the HTTP/1.1 standard.  The gunicorn server should set

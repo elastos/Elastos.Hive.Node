@@ -98,7 +98,7 @@ class JWTBuilder:
         lib.JWTBuilder_SetAudience(self.builder, audience_did_str.encode())
         lib.JWTBuilder_SetIssuedAt(self.builder, ticks)
         if expire is not None:
-            lib.JWTBuilder_SetExpiration(self.builder, ticks + expire)
+            lib.JWTBuilder_SetExpiration(self.builder, expire)
         lib.JWTBuilder_SetNotBefore(self.builder, ticks)
         if claim_json:
             lib.JWTBuilder_SetClaimWithJson(self.builder, claim_key.encode(), claim_value.encode())

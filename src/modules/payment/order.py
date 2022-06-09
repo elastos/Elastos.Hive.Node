@@ -109,7 +109,7 @@ class Order:
             "pricing_plan": self.doc[COL_ORDERS_PRICING_NAME],
             "paid_did": self.doc[USR_DID],
             "payment_amount": self.doc[COL_ORDERS_ELA_AMOUNT],
-            "create_time": int(datetime.utcnow().timestamp()),
+            "create_time": int(datetime.now().timestamp()),
             "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS]
         }
 
@@ -187,7 +187,7 @@ class OrderManager:
         return [Receipt(doc) for doc in docs]
 
     def insert_order(self, user_did, subscription: str, plan: dict):
-        exp = int(datetime.utcnow().timestamp()) + 7 * 24 * 3600
+        exp = int(datetime.now().timestamp()) + 7 * 24 * 3600
         doc = {
             USR_DID: user_did,
             VERSION: PaymentConfig.get_all_package_info().get('version', '1.0'),

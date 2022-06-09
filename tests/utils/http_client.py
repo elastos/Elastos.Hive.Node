@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import datetime
 import os
 from pathlib import Path
 
@@ -8,6 +9,7 @@ import requests
 from src.utils.singleton import Singleton
 from src.utils.did.did_wrapper import JWT
 from tests import test_log
+from tests.utils.resp_asserter import RA
 from tests.utils_v1.hive_auth_test_v1 import AppDID, UserDID
 
 
@@ -35,11 +37,21 @@ class TokenCache:
     def get_token(did: str):
         if not TokenCache.enabled:
             return ''
+
+        # try load token
         token_file = TokenCache.get_token_cache_file_path(did)
         if not Path(token_file).exists():
             return ''
         with open(token_file, 'r') as f:
-            return f.read()
+            token = f.read()
+
+        # remove if expired
+        jwt = JWT.parse(token)
+        if jwt.get_expiration() < int(datetime.datetime.now().timestamp()):
+            os.unlink(token_file)
+            return ''
+
+        return token
 
     # the node did of the connected hive node.
 
@@ -140,26 +152,31 @@ class RemoteResolver:
     def sign_in(self):
         doc = json.loads(self.app_did.doc.to_json())
         response = self.http_client.post('/api/v2/did/signin', {"id": doc}, need_token=False, is_skip_prefix=True)
-        assert response.status_code == 201
-        return response.json()["challenge"]
+        RA(response).assert_status(201)
+        return RA(response).body().get('challenge', str)
 
     def _get_auth_token_by_challenge(self, challenge, did: UserDID):
         jwt = JWT.parse(challenge)
         assert jwt.get_audience() == self.app_did.get_did_string()
         nonce = jwt.get_claim('nonce')
+        assert abs(jwt.get_expiration() - int(datetime.datetime.now().timestamp()) - 3 * 60) < 5 * 60, 'Invalid expire time setting for challenge'
         hive_did = self._get_issuer_by_challenge(jwt)
 
         # auth
         vc = did.issue_auth(self.app_did)
         vp_json = self.app_did.create_presentation_str(vc, nonce, hive_did)
-        return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
+        expire = int(datetime.datetime.now().timestamp()) + 24 * 3600
+        return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, expire)
 
     def auth(self, challenge, did: UserDID):
         challenge_response = self._get_auth_token_by_challenge(challenge, did)
         response = self.http_client.post('/api/v2/did/auth', {"challenge_response": challenge_response},
                                          need_token=False, is_skip_prefix=True)
-        assert response.status_code == 201
-        return response.json()["token"]
+        RA(response).assert_status(201)
+        token = RA(response).body().get('token', str)
+        jwt = JWT.parse(token)
+        assert abs(jwt.get_expiration() - int(datetime.datetime.now().timestamp()) - 7 * 24 * 3600) < 5 * 60, 'Invalid expire time setting for token'
+        return token
 
     def get_backup_credential(self, backup_node_did):
         """ INFO: current url to backup url and node did. """

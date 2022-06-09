@@ -57,7 +57,7 @@ class MongodbCollection:
 
     def insert_one(self, doc, contains_extra=True, **kwargs):
         if contains_extra:
-            doc['created'] = doc['modified'] = int(datetime.utcnow().timestamp())
+            doc['created'] = doc['modified'] = int(datetime.now().timestamp())
 
         # kwargs are the options
         options = {k: v for k, v in kwargs.items() if k in ["bypass_document_validation"]}
@@ -74,7 +74,7 @@ class MongodbCollection:
     def insert_many(self, docs, contains_extra=True, **kwargs):
         if contains_extra:
             for doc in docs:
-                doc['created'] = doc['modified'] = int(datetime.utcnow().timestamp())
+                doc['created'] = doc['modified'] = int(datetime.now().timestamp())
 
         # kwargs are the options
         options = {k: v for k, v in kwargs.items() if k in ["ordered", "bypass_document_validation"]}
@@ -93,7 +93,7 @@ class MongodbCollection:
 
     def update_many(self, filter_, update, contains_extra=True, only_one=False, **kwargs):
         if contains_extra:
-            now_timestamp = int(datetime.utcnow().timestamp())
+            now_timestamp = int(datetime.now().timestamp())
 
             # for normal update
             if "$set" in update and 'modified' in update['$set']:

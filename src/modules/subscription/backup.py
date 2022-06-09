@@ -21,7 +21,7 @@ class Backup:
         return self.doc[VAULT_BACKUP_SERVICE_USING]
 
     def is_expired(self):
-        return 0 < self.get_end_time() < datetime.utcnow().timestamp()
+        return 0 < self.get_end_time() < datetime.now().timestamp()
 
     def get_end_time(self):
         return self.doc[VAULT_BACKUP_SERVICE_END_TIME]

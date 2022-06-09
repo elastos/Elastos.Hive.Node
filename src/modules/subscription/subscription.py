@@ -40,7 +40,7 @@ class VaultSubscription(metaclass=Singleton):
         return self.__get_vault_info(self.create_vault(g.usr_did, self.get_price_plan('vault', 'Free')))
 
     def create_vault(self, user_did, price_plan, is_upgraded=False):
-        now = datetime.utcnow().timestamp()  # seconds in UTC
+        now = datetime.now().timestamp()  # seconds in UTC
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
         doc = {VAULT_SERVICE_DID: user_did,
                VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,  # unit: byte (MB on v1, checked by 1024 * 1024)

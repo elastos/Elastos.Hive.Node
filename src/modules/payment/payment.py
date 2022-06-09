@@ -112,7 +112,7 @@ class Payment(metaclass=Singleton):
             raise BadRequestException(msg=f'The proof {contract_order["memo"]} invalid: payment amount is not enough.')
 
         # Also needs to verify the proof.
-        details, now = self.auth.get_proof_info(contract_order['memo'], g.usr_did), int(datetime.utcnow().timestamp())
+        details, now = self.auth.get_proof_info(contract_order['memo'], g.usr_did), int(datetime.now().timestamp())
         if now > details['expiration_time']:
             raise BadRequestException(msg=f'The proof {contract_order["memo"]} expired.')
 

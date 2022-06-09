@@ -189,7 +189,7 @@ class FileManager:
             etag = RangeRequest.make_etag(f)
         return RangeRequest(open(path.as_posix(), 'rb'),
                             etag=etag,
-                            last_modified=datetime.utcnow(),
+                            last_modified=datetime.now(),
                             size=size).make_response()
 
     def ipfs_download_file_to_path(self, cid, path: Path, is_proxy=False, sha256=None, size=None):

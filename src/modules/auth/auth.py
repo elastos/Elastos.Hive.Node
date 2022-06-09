@@ -31,10 +31,11 @@ class Auth(Entity, metaclass=Singleton):
     def sign_in(self, doc: dict):
         app_instance_did = self._get_app_instance_did(doc)
         return {
-            "challenge": self._create_challenge(app_instance_did, *self._save_nonce_to_db(app_instance_did))
+            "challenge": self.__create_challenge(app_instance_did, *self._save_nonce_to_db(app_instance_did))
         }
 
     def _get_app_instance_did(self, app_instance_doc: dict) -> DID:
+        """ save did to cache and return DID object """
         doc_str = json.dumps(app_instance_doc)
         doc = DIDDocument.from_json(doc_str)
         if not doc.is_valid():
@@ -53,6 +54,7 @@ class Auth(Entity, metaclass=Singleton):
         return did
 
     def _save_nonce_to_db(self, app_instance_did):
+        """ return nonce and 3 minutes expire time """
         nonce, expire_time = create_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
         did_str = str(app_instance_did)
         try:
@@ -65,10 +67,8 @@ class Auth(Entity, metaclass=Singleton):
             raise BadRequestException(msg='Failed to generate nonce.')
         return nonce, expire_time
 
-    def _create_challenge(self, app_instance_did: DID, nonce: str, expire_time):
-        """
-        Create challenge for sign in response.
-        """
+    def __create_challenge(self, app_instance_did: DID, nonce: str, expire_time):
+        """ Create challenge for sign in response with 3 minutes expire time. """
         return super().create_jwt_token('DIDAuthChallenge', str(app_instance_did), expire_time, 'nonce', nonce, claim_json=False)
 
     def auth(self, challenge_response):
@@ -92,11 +92,15 @@ class Auth(Entity, metaclass=Singleton):
 
     def _get_auth_info_from_challenge_response(self, challenge_response, props=None):
         presentation_json, nonce, nonce_info = self._get_values_from_challenge_response(challenge_response)
+
+        # nonce_info comes from database.
         if nonce_info[DID_INFO_NONCE_EXPIRED] < int(datetime.now().timestamp()):
             raise BadRequestException(msg='The nonce expired.')
+
         credential_info = self._get_presentation_credential_info(presentation_json, props)
         if credential_info["id"] != nonce_info[APP_INSTANCE_DID]:
             raise BadRequestException(msg='The app instance did of the credential does not match.')
+
         credential_info["nonce"] = nonce
         return credential_info
 
@@ -152,6 +156,7 @@ class Auth(Entity, metaclass=Singleton):
         return credential_info
 
     def _get_presentation_credential_expire_time(self, vcs_json):
+        """ 7 days or credential expire time """
         vc = Credential.from_json(json.dumps(vcs_json[0]))
         if not vc.is_valid():
             raise BadRequestException(msg='The presentation credential is invalid.')

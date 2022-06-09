@@ -42,12 +42,12 @@ class UpgradeChecker(unittest.TestCase):
         self.assertEqual(pricing_plan, 'Rookie')
         self.assertEqual(storage_quota, 2000 * 1024 * 1024)
         self.assertEqual(storage_used, self.last_storage_used)
-        self.assertLess(abs(end_time - self.last_end_time - 30 * 24 * 3600), 12 * 3600)
+        self.assertLess(abs(end_time - self.last_end_time - 30 * 24 * 3600), 5 * 60)
 
 
 class PaymentTestCase(unittest.TestCase):
     # TODO: change this to verify vault or backup
-    IS_BACKUP_NODE = True
+    IS_BACKUP_NODE = False
 
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
@@ -89,7 +89,7 @@ class PaymentTestCase(unittest.TestCase):
         jwt = JWT.parse(RA(response).body().get('proof', str))
         self.assertEqual(jwt.get_issuer(), self.cli.remote_resolver.get_node_did())
         self.assertEqual(jwt.get_audience(), self.user_did)
-        self.assertTrue(jwt.get_expiration() > datetime.utcnow().timestamp())
+        self.assertTrue(jwt.get_expiration() > datetime.now().timestamp())
         assert_info(DictAsserter(**json.loads(jwt.get_claim_as_json('order'))))
 
     @unittest.skip
@@ -102,7 +102,7 @@ class PaymentTestCase(unittest.TestCase):
 
     @unittest.skip
     def test04_settle_order(self):
-        contract_order_id = 2  # TODO:
+        contract_order_id = 1  # TODO:
 
         def assert_info(info):
             info.assert_true('receipt_id', str)

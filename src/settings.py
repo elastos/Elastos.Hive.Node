@@ -148,7 +148,7 @@ class HiveSetting:
 
     @property
     def ACCESS_TOKEN_EXPIRED(self):
-        return 30 * 24 * 60 * 60
+        return 7 * 24 * 60 * 60
 
     @property
     def BACKUP_IS_SYNC(self):

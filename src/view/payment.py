@@ -81,8 +81,9 @@ class PlaceOrder(Resource):
         .. code-block:: json
 
             {
+                "interim_orderid": "<ObjectId str>",  // internal order id on hive node
                 "subscription": "vault",
-                "pricing_plan": "rookie",
+                "pricing_plan": "Rookie",
                 "paying_did": "did:elastos:iWFAUYhTa35c1f3335iCJvihZHx6q******",
                 "payment_amount": 15,  // ELA
                 "create_time": 1600073834,
@@ -111,6 +112,7 @@ class PlaceOrder(Resource):
                         "interim_orderid": "<ObjectId str>",  // internal order id on hive node
                         "subscription": "vault/backup",
                         "pricing_plan": "rookie/advanced",
+                        "paying_did": "did:elastos:iWFAUYhTa35c1f3335iCJvihZHx6q******",
                         "payment_amount": 14,  // ELA
                         "create_time": 1600073834,
                         "expiration_time": 1755161834,
@@ -203,8 +205,8 @@ class SettleOrder(Resource):
                         "receipt_id": "<ObjectId str>",
                         "order_id": 445,
                         "subscription": "vault",
-                        "pricingPlan": "rookie",
-                        "paying_did": "did:elastos:iWFAUYhTa35c1f3335iCJvihZHx6******",  // the did who paid for the order.
+                        "pricing_plan": "Rookie",
+                        "paid_did": "did:elastos:iWFAUYhTa35c1f3335iCJvihZHx6******",  // the did who paid for the order.
                         "payment_amount": 15,  // ELA
                         "create_time": 1600073834,
                         "receiving_address": "0x60Dcc0f996963644102fC266b39F1116******"

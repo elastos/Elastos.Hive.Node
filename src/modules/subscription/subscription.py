@@ -59,6 +59,7 @@ class VaultSubscription(metaclass=Singleton):
         return doc
 
     def __get_vault_info(self, doc):
+        # bytes, compatible with v1 (unit MB)
         storage_quota = int(doc[VAULT_SERVICE_MAX_STORAGE] * 1024 * 1024) \
                         if int(doc[VAULT_SERVICE_MAX_STORAGE]) < 1024 * 1024 \
                         else int(doc[VAULT_SERVICE_MAX_STORAGE])

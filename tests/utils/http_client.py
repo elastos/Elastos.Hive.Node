@@ -68,9 +68,13 @@ class TokenCache:
 
 class TestConfig(metaclass=Singleton):
     def __init__(self):
-        hive_port = os.environ.get('HIVE_PORT', 5000)
-        test_log(f'HIVE_PORT={hive_port}')
-        self.url_vault = f'http://localhost:{hive_port}'
+        self.net_work = 'local'  # TODO: 'local', 'testnet'
+        if self.net_work == 'local':
+            hive_port = os.environ.get('HIVE_PORT', 5000)
+            test_log(f'HIVE_PORT={hive_port}')
+            self.url_vault = f'http://localhost:{hive_port}'
+        elif self.net_work == 'testnet':
+            self.url_vault = f'https://hive-testnet1.trinity-tech.io'
         self.url_backup = self.url_vault
 
     @property
@@ -167,9 +171,10 @@ class RemoteResolver:
 
 def _log_http_request(func):
     def wrapper(self, *args, **kwargs):
-        test_log(f'REQUEST:{func.__name__},{args},{kwargs}')
+        method, full_url = func.__name__.upper(), self.get_full_url(args[0], kwargs.get("is_skip_prefix", False))
+        test_log(f'\nREQUEST: {method}, {full_url}, kwargs={kwargs}')
         response = func(self, *args, **kwargs)
-        test_log(f'RESPONSE:{func.__name__},{response.status_code},{response.text}')
+        test_log(f'RESPONSE: {method}, {full_url}, STATUS={response.status_code}, BODY={response.text}')
         return response
     return wrapper
 
@@ -183,7 +188,8 @@ class HttpClient:
         self.remote_resolver = RemoteResolver(self, is_did2, is_owner)
         test_log(f'HttpClient.base_url: {self.base_url}')
 
-    def __get_url(self, relative_url, is_skip_prefix=False):
+    def get_full_url(self, relative_url, is_skip_prefix=False):
+        """ 'public' is for decorator '_log_http_request' """
         if is_skip_prefix:
             return self.base_url + relative_url
         return self.base_url + self.prefix_url + relative_url
@@ -197,7 +203,7 @@ class HttpClient:
         test_log(f'HEADER: {headers}')
         return headers
 
-    def get_current_did(self):
+    def get_current_did(self) -> str:
         return self.remote_resolver.get_current_user_did_str()
 
     @staticmethod
@@ -211,31 +217,31 @@ class HttpClient:
     @_log_http_request
     def get(self, relative_url, body=None, is_json=False, need_token=True):
         if not is_json:
-            return requests.get(self.__get_url(relative_url),
+            return requests.get(self.get_full_url(relative_url),
                                 headers=self.__get_headers(is_json=False, need_token=need_token), data=body)
-        return requests.get(self.__get_url(relative_url),
+        return requests.get(self.get_full_url(relative_url),
                             headers=self.__get_headers(need_token=need_token), json=body)
 
     @_log_http_request
     def post(self, relative_url, body=None, need_token=True, is_json=True, is_skip_prefix=False):
         if not is_json:
-            return requests.post(self.__get_url(relative_url, is_skip_prefix),
+            return requests.post(self.get_full_url(relative_url, is_skip_prefix),
                                  headers=self.__get_headers(need_token=need_token, is_json=False), data=body)
-        return requests.post(self.__get_url(relative_url, is_skip_prefix),
+        return requests.post(self.get_full_url(relative_url, is_skip_prefix),
                              headers=self.__get_headers(need_token=need_token), json=body)
 
     @_log_http_request
     def put(self, relative_url, body=None, is_json=True):
         if not is_json:
-            return requests.put(self.__get_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
-        return requests.put(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
+            return requests.put(self.get_full_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
+        return requests.put(self.get_full_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request
     def patch(self, relative_url, body=None, need_token=True):
-        return requests.patch(self.__get_url(relative_url), headers=self.__get_headers(need_token=need_token), json=body)
+        return requests.patch(self.get_full_url(relative_url), headers=self.__get_headers(need_token=need_token), json=body)
 
     @_log_http_request
     def delete(self, relative_url, body=None, is_json=False):
         if not is_json:
-            return requests.delete(self.__get_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
-        return requests.delete(self.__get_url(relative_url), headers=self.__get_headers(), json=body)
+            return requests.delete(self.get_full_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
+        return requests.delete(self.get_full_url(relative_url), headers=self.__get_headers(), json=body)

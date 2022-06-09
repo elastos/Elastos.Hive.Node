@@ -94,9 +94,10 @@ class Order:
             "interim_orderid": str(self.doc['_id']),
             "subscription": self.doc[COL_ORDERS_SUBSCRIPTION],
             "pricing_plan": self.doc[COL_ORDERS_PRICING_NAME],
+            "paying_did": self.doc[USR_DID],
             "payment_amount": self.doc[COL_ORDERS_ELA_AMOUNT],
-            "create_time": self.doc['created'],
-            "expiration_time": self.doc[COL_ORDERS_EXPIRE_TIME],
+            "create_time": int(self.doc['created']),
+            "expiration_time": int(self.doc[COL_ORDERS_EXPIRE_TIME]),
             "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS]
         }
 
@@ -106,7 +107,7 @@ class Order:
             "order_id": self.doc[COL_ORDERS_CONTRACT_ORDER_ID],
             "subscription": self.doc[COL_ORDERS_SUBSCRIPTION],
             "pricing_plan": self.doc[COL_ORDERS_PRICING_NAME],
-            "paying_did": self.doc[USR_DID],
+            "paid_did": self.doc[USR_DID],
             "payment_amount": self.doc[COL_ORDERS_ELA_AMOUNT],
             "create_time": int(datetime.utcnow().timestamp()),
             "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS]
@@ -115,12 +116,13 @@ class Order:
     def to_place_order(self):
         """ for the response of API """
         return {
+            "interim_orderid": str(self.doc['_id']),
             "subscription": self.doc[COL_ORDERS_SUBSCRIPTION],
             "pricing_plan": self.doc[COL_ORDERS_PRICING_NAME],
             "paying_did": self.doc[USR_DID],
             "payment_amount": self.doc[COL_ORDERS_ELA_AMOUNT],
-            "create_time": self.doc['created'],
-            "expiration_time": self.doc[COL_ORDERS_EXPIRE_TIME],
+            "create_time": int(self.doc['created']),
+            "expiration_time": int(self.doc[COL_ORDERS_EXPIRE_TIME]),
             "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS],
             "proof": self.doc[COL_ORDERS_PROOF]
         }

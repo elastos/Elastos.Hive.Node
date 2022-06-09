@@ -35,7 +35,7 @@ class Vault(Dotdict):
         return self.pricing_using
 
     def is_expired(self):
-        return 0 < self.end_time < datetime.utcnow().timestamp()
+        return 0 < self.end_time < datetime.now().timestamp()
 
     def get_end_time(self):
         return self.end_time
@@ -134,7 +134,7 @@ class VaultManager:
         filter_ = {VAULT_SERVICE_DID: user_did}
         update = {
             VAULT_SERVICE_DB_USE_STORAGE: int(new_size),
-            VAULT_SERVICE_MODIFY_TIME: int(datetime.utcnow().timestamp())
+            VAULT_SERVICE_MODIFY_TIME: int(datetime.now().timestamp())
         }
 
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)

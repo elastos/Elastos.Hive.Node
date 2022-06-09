@@ -19,7 +19,7 @@ def setup_vault_backup_service(did, max_storage, service_days, backup_name=VAULT
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     if service_days == -1:
         end_time = -1
     else:
@@ -45,7 +45,7 @@ def update_vault_backup_service(did, max_storage, service_days, backup_name):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     if service_days == -1:
         end_time = -1
     else:
@@ -103,7 +103,7 @@ def proc_expire_vault_backup_job():
     col = db[VAULT_BACKUP_SERVICE_COL]
     query = {VAULT_BACKUP_SERVICE_USING: {"$ne": VAULT_BACKUP_SERVICE_FREE_STATE}}
     info_list = col.find(query)
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     for service in info_list:
         if service[VAULT_BACKUP_SERVICE_END_TIME] == -1:
             continue
@@ -161,7 +161,7 @@ def count_vault_backup_storage_job():
     info_list = col.find()
     for service in info_list:
         use_size = count_vault_backup_storage_size(service[VAULT_BACKUP_SERVICE_DID])
-        now = datetime.utcnow().timestamp()
+        now = datetime.now().timestamp()
         query_id = {"_id": service["_id"]}
         value = {"$set": {VAULT_BACKUP_SERVICE_USE_STORAGE: use_size,
                           VAULT_BACKUP_SERVICE_MODIFY_TIME: now
@@ -171,7 +171,7 @@ def count_vault_backup_storage_job():
 
 def get_backup_used_storage(did):
     use_size = count_vault_backup_storage_size(did)
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_BACKUP_SERVICE_COL]
@@ -202,7 +202,7 @@ def inc_backup_use_storage_byte(did, size):
     query = {VAULT_BACKUP_SERVICE_DID: did}
     info = col.find_one(query)
     info[VAULT_BACKUP_SERVICE_USE_STORAGE] = info[VAULT_BACKUP_SERVICE_USE_STORAGE] + size
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     info[VAULT_BACKUP_SERVICE_MODIFY_TIME] = now
     query = {VAULT_BACKUP_SERVICE_DID: did}
     value = {"$set": info}

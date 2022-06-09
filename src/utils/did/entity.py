@@ -99,7 +99,7 @@ class Entity:
     def create_presentation_str(self, vc: Credential, nonce: str, realm: str) -> str:
         return self.did_store.create_presentation(self.did, 'jwtvp', nonce, realm, vc).to_json()
 
-    def create_vp_token(self, vp_json, subject, hive_did: str, expire) -> str:
+    def create_vp_token(self, vp_json, subject, hive_did: str, expire: typing.Optional[int]) -> str:
         return self.create_jwt_token(subject, hive_did, expire, 'presentation', vp_json)
 
     def create_jwt_token(self, subject: str, audience_did_str: str, expire: typing.Optional[int], claim_key: str, claim_value: any, claim_json: bool = True) -> str:

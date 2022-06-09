@@ -22,7 +22,7 @@ def setup_vault_service(did, max_storage, service_days, pricing_name=VAULT_SERVI
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     if service_days == -1:
         end_time = -1
     else:
@@ -50,7 +50,7 @@ def update_vault_service(did, max_storage, service_days, pricing_name):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     if service_days == -1:
         end_time = -1
     else:
@@ -91,7 +91,7 @@ def update_vault_service_state(did, state):
     connection = create_db_client()
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
 
     dic = {VAULT_SERVICE_DID: did,
            VAULT_SERVICE_MODIFY_TIME: now,
@@ -139,7 +139,7 @@ def proc_expire_vault_job():
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_PRICING_USING: {"$ne": VAULT_SERVICE_FREE}}
     info_list = col.find(query)
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     for service in info_list:
         if service[VAULT_SERVICE_END_TIME] == -1:
             continue
@@ -179,7 +179,7 @@ def delete_db_storage(did):
 def get_vault_used_storage(did):
     file_size = count_file_system_storage_size(did)
     db_size = count_db_storage_size(did)
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     connection = create_db_client()
 
     db = connection[DID_INFO_DB_NAME]
@@ -218,7 +218,7 @@ def update_used_storage_for_files_data(user_did, varying_size, is_reset=False):
     query = {VAULT_SERVICE_DID: user_did}
     info = col.find_one(query)
     info[VAULT_SERVICE_FILE_USE_STORAGE] = varying_size if is_reset else (info[VAULT_SERVICE_FILE_USE_STORAGE] + varying_size)
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     info[VAULT_SERVICE_MODIFY_TIME] = now
     query = {VAULT_SERVICE_DID: user_did}
     value = {"$set": info}
@@ -236,7 +236,7 @@ def update_used_storage_for_mongodb_data(user_did, varying_size):
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
     query = {VAULT_SERVICE_DID: user_did}
-    now = datetime.utcnow().timestamp()
+    now = datetime.now().timestamp()
     dic = {
         VAULT_SERVICE_DB_USE_STORAGE: varying_size,
         VAULT_SERVICE_MODIFY_TIME: now

@@ -150,7 +150,7 @@ class IpfsBackupServer:
         raise NotImplementedException()
 
     def _create_backup(self, user_did, price_plan):
-        now = int(datetime.utcnow().timestamp())
+        now = int(datetime.now().timestamp())
         end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
         doc = {USR_DID: user_did,
                VAULT_BACKUP_SERVICE_USING: price_plan['name'],

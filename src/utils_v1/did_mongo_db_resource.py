@@ -71,8 +71,8 @@ def query_insert_one(col, content, options, created=False):
         if created:
             content["document"]["created"] = datetime.strptime(content["document"]["created"], DATETIME_FORMAT)
         else:
-            content["document"]["created"] = datetime.utcnow()
-        content["document"]["modified"] = datetime.utcnow()
+            content["document"]["created"] = datetime.now()
+        content["document"]["modified"] = datetime.now()
         ret = col.insert_one(convert_oid(content["document"]), **options)
 
         data = {
@@ -93,13 +93,13 @@ def query_update_one(col, content, options):
     try:
         update_set_on_insert = content.get('update').get('$setOnInsert', None)
         if update_set_on_insert:
-            content["update"]["$setOnInsert"]['created'] = datetime.utcnow()
+            content["update"]["$setOnInsert"]['created'] = datetime.now()
         else:
             content["update"]["$setOnInsert"] = {
-                "created": datetime.utcnow()
+                "created": datetime.now()
             }
         if "$set" in content["update"]:
-            content["update"]["$set"]["modified"] = datetime.utcnow()
+            content["update"]["$set"]["modified"] = datetime.now()
         ret = col.update_one(convert_oid(content["filter"]), convert_oid(content["update"], update=True), **options)
         data = {
             "acknowledged": ret.acknowledged,

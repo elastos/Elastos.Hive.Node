@@ -124,7 +124,7 @@ class VaultInfo(Resource):
             {
                  “service_did”: “did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"”,
                  “pricing_plan”: “Rookie”,
-                 “storage_quota: 500，
+                 “storage_quota: 524288000,
                  “storage_used”: 20,
                  "start_time": <the epoch time>,
                  "end_time": <the epoch time>,

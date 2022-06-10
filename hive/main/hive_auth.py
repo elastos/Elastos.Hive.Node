@@ -459,7 +459,8 @@ class HiveAuth(V1Entity):
 
         #auth_token
         vp_json = self.create_presentation_str(Credential(vc), nonce, hive_did)
-        auth_token = self.create_vp_token(vp_json, subject, hive_did, hive_setting.AUTH_CHALLENGE_EXPIRED)
+        expire = int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
+        auth_token = self.create_vp_token(vp_json, subject, hive_did, expire)
         if auth_token is None:
             return None, None, "create_vp_token error."
         return auth_token, hive_did, None

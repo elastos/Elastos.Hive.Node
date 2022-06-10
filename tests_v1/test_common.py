@@ -1,5 +1,6 @@
 import json
 import shutil
+from datetime import datetime
 from io import BytesIO
 
 from src.utils.did.eladid import ffi, lib
@@ -92,7 +93,8 @@ def test_auth_common(self, user_did, app_did):
     # auth
     vc = user_did.issue_auth(app_did)
     vp_json = app_did.create_presentation_str(vc, nonce, hive_did)
-    auth_token = app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
+    expire = int(datetime.now().timestamp()) + 60
+    auth_token = app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, expire)
     # print(auth_token)
     test_log(f"test_auth_common: \nauth_token: {auth_token}")
 

@@ -165,7 +165,7 @@ class RemoteResolver:
         # auth
         vc = did.issue_auth(self.app_did)
         vp_json = self.app_did.create_presentation_str(vc, nonce, hive_did)
-        expire = int(datetime.datetime.now().timestamp()) + 24 * 3600
+        expire = int(datetime.datetime.now().timestamp()) + 60
         return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, expire)
 
     def auth(self, challenge, did: UserDID):

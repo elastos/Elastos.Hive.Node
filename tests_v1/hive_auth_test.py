@@ -1,3 +1,4 @@
+import datetime
 import json
 import unittest
 import flask_unittest
@@ -108,7 +109,8 @@ class HiveAuthTestCase(flask_unittest.ClientTestCase):
         # auth
         vc = didapp.issue_auth(testapp)
         vp_json = testapp.create_presentation_str(vc, nonce, hive_did)
-        auth_token = testapp.create_vp_token(vp_json, "DIDAuthResponse", hive_did, 60)
+        expire = int(datetime.datetime.now().timestamp()) + 60
+        auth_token = testapp.create_vp_token(vp_json, "DIDAuthResponse", hive_did, expire)
         # print(auth_token)
         test_log(f"HiveAuthTestCase: \nauth_token: {auth_token}")
 

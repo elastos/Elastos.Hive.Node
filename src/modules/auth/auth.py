@@ -198,7 +198,8 @@ class Auth(Entity, metaclass=Singleton):
 
         nonce, issuer = jwt.get_claim('nonce'), jwt.get_issuer()
         vp_json = self.create_presentation_str(vc, nonce, issuer)
-        challenge_response = self.create_vp_token(vp_json, subject, issuer, hive_setting.AUTH_CHALLENGE_EXPIRED)
+        expire = int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
+        challenge_response = self.create_vp_token(vp_json, subject, issuer, expire)
         if challenge_response is None:
             raise InvalidParameterException(msg=f'backup_sign_in: failed to create the challenge response.')
         return challenge_response, issuer

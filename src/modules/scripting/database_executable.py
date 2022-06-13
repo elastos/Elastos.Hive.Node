@@ -49,6 +49,19 @@ class FindExecutable(DatabaseExecutable):
         return self.get_result_data({'total': total, 'items': json.loads(json_util.dumps(items))})
 
 
+class CountExecutable(DatabaseExecutable):
+    def __init__(self, script, executable_data):
+        super().__init__(script, executable_data)
+
+    def execute(self):
+        self.vault_manager.get_vault(self.get_target_did())
+
+        filter_, options = self.get_populated_filter(), self.get_populated_options()
+        col = self.get_target_user_collection()
+
+        return self.get_result_data({'count': col.count(filter_)})
+
+
 class InsertExecutable(DatabaseExecutable):
     def __init__(self, script, executable_data):
         super().__init__(script, executable_data)

@@ -248,9 +248,9 @@ class HttpClient:
                              headers=self.__get_headers(need_token=need_token), json=body)
 
     @_log_http_request
-    def put(self, relative_url, body=None, is_json=True):
+    def put(self, relative_url, body=None, is_json=True, need_token=True):
         if not is_json:
-            return requests.put(self.get_full_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
+            return requests.put(self.get_full_url(relative_url), headers=self.__get_headers(is_json=False, need_token=need_token), data=body)
         return requests.put(self.get_full_url(relative_url), headers=self.__get_headers(), json=body)
 
     @_log_http_request

@@ -90,7 +90,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         return RA(response).body() if except_error == 200 else None
 
     def call_and_execute_transaction(self, script_name, executable_name,
-                                     path: t.Optional[str] = None, is_download=True, download_content=None):
+                                     path: t.Optional[str] = None, is_download=True, download_content=None, need_token=True):
         """ Call uploading or downloading script and run relating transaction.
 
         Also, for files service testing.
@@ -100,15 +100,15 @@ class IpfsScriptingTestCase(unittest.TestCase):
         :download_content: for files service.
         """
         # call the script for uploading or downloading
-        body = self.__call_script(script_name, {"params": {"path": path if path else self.file_name}})
+        body = self.__call_script(script_name, {"params": {"path": path if path else self.file_name}}, need_token=need_token)
         body.get(executable_name).assert_true('transaction_id', str)
 
         # call relating transaction
         if is_download:
-            response = self.cli2.get(f'/scripting/stream/{body[executable_name]["transaction_id"]}')
+            response = self.cli2.get(f'/scripting/stream/{body[executable_name]["transaction_id"]}', need_token=need_token)
         else:
             response = self.cli2.put(f'/scripting/stream/{body[executable_name]["transaction_id"]}',
-                                     self.file_content.encode(), is_json=False)
+                                     self.file_content.encode(), is_json=False, need_token=need_token)
         RA(response).assert_status(200)
 
         # check the result
@@ -170,6 +170,40 @@ class IpfsScriptingTestCase(unittest.TestCase):
         insert_document('message8', 80000)
 
         # remove script
+        self.delete_script(script_name)
+
+    def test02_count(self):
+        script_name, executable_name = 'ipfs_database_count', 'database_count'
+
+        self.__register_script(script_name, {'executable': {
+            'name': executable_name,
+            'type': 'count',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author'}
+            }
+        }})
+
+        body = self.__call_script(script_name, {"params": {"author": "John"}})
+        body.get(executable_name).assert_equal('count', 9)
+
+        self.delete_script(script_name)
+
+    def test02_count_with_anonymous(self):
+        script_name, executable_name = 'ipfs_database_count', 'database_count'
+
+        self.__register_script(script_name, {'executable': {
+            'name': executable_name,
+            'type': 'count',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author'}
+            }
+        }, 'allowAnonymousUser': True, 'allowAnonymousApp': True})
+
+        body = self.__call_script(script_name, {"params": {"author": "John"}}, need_token=False)
+        body.get(executable_name).assert_equal('count', 9)
+
         self.delete_script(script_name)
 
     def test02_find(self):
@@ -627,6 +661,20 @@ class IpfsScriptingTestCase(unittest.TestCase):
         })
 
         self.call_and_execute_transaction(script_name, executable_name)
+
+        self.delete_script(script_name)
+
+    def test07_file_download_with_anonymous(self):
+        script_name, executable_name = 'ipfs_file_download', 'file_download'
+
+        self.__register_script(script_name, {"executable": {
+            "name": executable_name,
+            "type": "fileDownload",
+            "body": {
+                "path": "$params.path"
+            }},  'allowAnonymousUser': True, 'allowAnonymousApp': True})
+
+        self.call_and_execute_transaction(script_name, executable_name, need_token=False)
 
         self.delete_script(script_name)
 

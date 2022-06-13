@@ -1,7 +1,7 @@
 from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_EXECUTABLE_TYPE_INSERT, \
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_CALLER_DID, \
-    SCRIPTING_EXECUTABLE_CALLER_APP_DID, SCRIPTING_EXECUTABLE_PARAMS
+    SCRIPTING_EXECUTABLE_CALLER_APP_DID, SCRIPTING_EXECUTABLE_PARAMS, SCRIPTING_EXECUTABLE_TYPE_COUNT
 from src.utils.http_exception import BadRequestException, NotImplementedException
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.ipfs_files import IpfsFiles
@@ -133,6 +133,7 @@ class Executable:
 
         # validate 'type'
         types = [SCRIPTING_EXECUTABLE_TYPE_FIND,
+                 SCRIPTING_EXECUTABLE_TYPE_COUNT,
                  SCRIPTING_EXECUTABLE_TYPE_INSERT,
                  SCRIPTING_EXECUTABLE_TYPE_UPDATE,
                  SCRIPTING_EXECUTABLE_TYPE_DELETE,
@@ -156,6 +157,7 @@ class Executable:
                 Executable.validate_data(item, can_aggregated=False)
 
         if json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FIND,
+                                 SCRIPTING_EXECUTABLE_TYPE_COUNT,
                                  SCRIPTING_EXECUTABLE_TYPE_INSERT,
                                  SCRIPTING_EXECUTABLE_TYPE_UPDATE,
                                  SCRIPTING_EXECUTABLE_TYPE_DELETE]:
@@ -163,9 +165,11 @@ class Executable:
 
             if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_INSERT:
                 validate_exists(json_data['body'], ['document'])
-
-            if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
+            elif json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
                 validate_exists(json_data['body'], ['update'])
+
+            if 'filter' in json_data['body'] and not isinstance(json_data['body']['filter'], dict):
+                raise BadRequestException(msg=f'The "filter" MUST be dictionary.')
 
             if 'options' in json_data['body'] and not isinstance(json_data['body']['options'], dict):
                 raise BadRequestException(msg=f'The "options" MUST be dictionary.')
@@ -188,7 +192,7 @@ class Executable:
 
     @staticmethod
     def __create(result, script, executable_data):
-        from src.modules.scripting.database_executable import FindExecutable, InsertExecutable, UpdateExecutable, DeleteExecutable
+        from src.modules.scripting.database_executable import FindExecutable, InsertExecutable, UpdateExecutable, DeleteExecutable, CountExecutable
         from src.modules.scripting.file_executable import FileUploadExecutable, FileDownloadExecutable, FilePropertiesExecutable, FileHashExecutable
 
         executable_type = executable_data['type']
@@ -198,6 +202,8 @@ class Executable:
                 Executable.__create(result, script, data)
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
             result.append(FindExecutable(script, executable_data))
+        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_COUNT:
+            result.append(CountExecutable(script, executable_data))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
             result.append(InsertExecutable(script, executable_data))
         elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:

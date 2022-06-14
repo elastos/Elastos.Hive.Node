@@ -71,8 +71,8 @@ def query_insert_one(col, content, options, created=False):
         if created:
             content["document"]["created"] = datetime.strptime(content["document"]["created"], DATETIME_FORMAT)
         else:
-            content["document"]["created"] = datetime.now()
-        content["document"]["modified"] = datetime.now()
+            content["document"]["created"] = int(datetime.now().timestamp())
+        content["document"]["modified"] = int(datetime.now().timestamp())
         ret = col.insert_one(convert_oid(content["document"]), **options)
 
         data = {
@@ -92,14 +92,15 @@ def populate_options_update_one(content):
 def query_update_one(col, content, options):
     try:
         update_set_on_insert = content.get('update').get('$setOnInsert', None)
+        now = int(datetime.now().timestamp())
         if update_set_on_insert:
-            content["update"]["$setOnInsert"]['created'] = datetime.now()
+            content["update"]["$setOnInsert"]['created'] = now
         else:
             content["update"]["$setOnInsert"] = {
-                "created": datetime.now()
+                "created": now
             }
         if "$set" in content["update"]:
-            content["update"]["$set"]["modified"] = datetime.now()
+            content["update"]["$set"]["modified"] = now
         ret = col.update_one(convert_oid(content["filter"]), convert_oid(content["update"], update=True), **options)
         data = {
             "acknowledged": ret.acknowledged,

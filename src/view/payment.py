@@ -89,6 +89,7 @@ class PlaceOrder(Resource):
                 "create_time": 1600073834,
                 "expiration_time": 1755161834,
                 "receiving_address": "0x60Dcc0f996963644102fC266b39F1116e5******",
+                "state": "normal",
                 "proof": "<jwt string>"
             }
 
@@ -116,7 +117,8 @@ class PlaceOrder(Resource):
                         "payment_amount": 14,  // ELA
                         "create_time": 1600073834,
                         "expiration_time": 1755161834,
-                        "receiving_address": "0x60Dcc0f996963644102fC266b39F1116e*******"
+                        "receiving_address": "0x60Dcc0f996963644102fC266b39F1116e*******",
+                        "state": "normal",
                     }
                },
                "signature": "rW6lGLpsGQJ7kojql78rX7p-MnBMBGEcBXYHkw_heisv7eEic574qL-0Immh0f0qFygNHY7RwhL47P*******"
@@ -274,6 +276,7 @@ class Orders(Resource):
                     "create_time": 1600073834,
                     "expiration_time": 1755161834,
                     "receiving_address": "912ec803b2ce49e4a541068d49******",
+                    "state": "paid",
                     "proof": "<jwt str>"
                 }]
             }

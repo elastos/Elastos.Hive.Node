@@ -81,6 +81,7 @@ class PaymentTestCase(unittest.TestCase):
             info.assert_greater('create_time', 0)
             info.assert_greater('expiration_time', 0)
             info.assert_true('receiving_address', str)
+            info.assert_equal('state', 'normal')
 
         response = self.cli.put('/order', body={'subscription': subscription, 'pricing_name': 'Rookie'})
         RA(response).assert_status(200)
@@ -143,6 +144,7 @@ class PaymentTestCase(unittest.TestCase):
         info.assert_greater('create_time', 0)
         info.assert_greater('expiration_time', 0)
         info.assert_true('receiving_address', str)
+        info.assert_in('state', ['normal', 'expired', 'paid', 'archive'])
         info.assert_true('proof', str)
 
     @unittest.skip

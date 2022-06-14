@@ -44,6 +44,7 @@ COL_ORDERS_PROOF = 'proof'
 COL_ORDERS_STATUS = 'status'
 
 COL_ORDERS_STATUS_NORMAL = 'normal'
+COL_ORDERS_STATUS_EXPIRED = 'expired'  # not paid
 COL_ORDERS_STATUS_PAID = 'paid'
 COL_ORDERS_STATUS_ARCHIVE = 'archive'
 

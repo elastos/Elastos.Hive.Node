@@ -6,7 +6,7 @@ from bson import ObjectId
 from src import hive_setting
 from src.utils.consts import COL_ORDERS, COL_ORDERS_ELA_AMOUNT, COL_ORDERS_PROOF, USR_DID, COL_ORDERS_CONTRACT_ORDER_ID, COL_ORDERS_SUBSCRIPTION, VERSION, \
     COL_ORDERS_PRICING_NAME, COL_ORDERS_ELA_ADDRESS, COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_RECEIPTS_ORDER_ID, \
-    COL_RECEIPTS_PAID_DID, COL_RECEIPTS, COL_ORDERS_EXPIRE_TIME, COL_ORDERS_STATUS_PAID, COL_ORDERS_STATUS_ARCHIVE
+    COL_RECEIPTS_PAID_DID, COL_RECEIPTS, COL_ORDERS_EXPIRE_TIME, COL_ORDERS_STATUS_PAID, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_EXPIRED
 from src.utils.http_exception import OrderNotFoundException
 from src.utils_v1.payment.payment_config import PaymentConfig
 from src.modules.database.mongodb_client import MongodbClient
@@ -98,7 +98,8 @@ class Order:
             "payment_amount": self.doc[COL_ORDERS_ELA_AMOUNT],
             "create_time": int(self.doc['created']),
             "expiration_time": int(self.doc[COL_ORDERS_EXPIRE_TIME]),
-            "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS]
+            "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS],
+            "state": self.doc[COL_ORDERS_STATUS],
         }
 
     def get_receipt_proof_details(self, receipt: Receipt):
@@ -124,6 +125,7 @@ class Order:
             "create_time": int(self.doc['created']),
             "expiration_time": int(self.doc[COL_ORDERS_EXPIRE_TIME]),
             "receiving_address": self.doc[COL_ORDERS_ELA_ADDRESS],
+            "state": self.doc[COL_ORDERS_STATUS],
             "proof": self.doc[COL_ORDERS_PROOF]
         }
 
@@ -131,6 +133,8 @@ class Order:
         """ for the response of API """
         doc = self.to_place_order()
         doc['order_id'] = self.doc[COL_ORDERS_CONTRACT_ORDER_ID]
+        if not doc['order_id'] and doc['expiration_time'] < int(datetime.now().timestamp()):
+            doc['state'] = COL_ORDERS_STATUS_EXPIRED
         return doc
 
 

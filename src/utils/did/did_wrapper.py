@@ -90,6 +90,13 @@ class JWTBuilder:
     def __init__(self, store, builder):
         self.store, self.builder = store, builder
 
+    @staticmethod
+    def set_allowed_clock_skew(seconds: int):
+        """ Set the amount of clock skew in seconds to tolerate when verifying the
+        local time against the 'exp' and 'nbf' claims.
+        """
+        lib.JWTParser_SetAllowedClockSkewSeconds(seconds)
+
     def create_token(self, subject: str, audience_did_str: str, expire: typing.Optional[int], claim_key: str, claim_value: any, claim_json: bool = True) -> str:
         ticks, sign_key = int(datetime.now().timestamp()), ffi.NULL
         lib.JWTBuilder_SetHeader(self.builder, "type".encode(), "JWT".encode())

@@ -4,7 +4,7 @@ from src.utils.did.eladid import ffi, lib
 
 from src.settings import hive_setting
 from src.utils.http_exception import ElaDIDException
-from src.utils.did.did_wrapper import ElaError, DID, DIDDocument
+from src.utils.did.did_wrapper import ElaError, DID, DIDDocument, JWTBuilder
 
 
 @ffi.def_extern()
@@ -35,6 +35,8 @@ def init_did_backend() -> None:
 
     os.makedirs(dids_path, exist_ok=True)
     lib.DIDBackend_SetLocalResolveHandle(lib.MyDIDLocalResovleHandle)
+
+    JWTBuilder.set_allowed_clock_skew(300)
 
 
 if __name__ == '__main__':

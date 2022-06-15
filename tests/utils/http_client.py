@@ -120,7 +120,7 @@ class RemoteResolver:
         user_did = self.get_current_user_did()
         token = TokenCache.get_token(user_did.get_did_string())
         if not token:
-            token = self._get_remote_token(user_did)
+            token = self.__get_access_token_from_remote(user_did)
             TokenCache.save_token(user_did.get_did_string(), token)
         return token
 
@@ -133,7 +133,7 @@ class RemoteResolver:
     def get_user_did_str(self):
         return self.user_did.get_did_string()
 
-    def _get_remote_token(self, did: UserDID):
+    def __get_access_token_from_remote(self, did: UserDID):
         return self.auth(self.sign_in(), did)
 
     def get_node_did(self) -> str:
@@ -142,9 +142,9 @@ class RemoteResolver:
             return node_did
 
         challenge = self.sign_in()
-        return self._get_issuer_by_challenge(JWT.parse(challenge))
+        return self.__get_issuer_by_challenge(JWT.parse(challenge))
 
-    def _get_issuer_by_challenge(self, jwt: JWT):
+    def __get_issuer_by_challenge(self, jwt: JWT):
         node_did = str(jwt.get_issuer())
         TokenCache.save_node_did(node_did)
         return node_did
@@ -155,12 +155,12 @@ class RemoteResolver:
         RA(response).assert_status(201)
         return RA(response).body().get('challenge', str)
 
-    def _get_auth_token_by_challenge(self, challenge, did: UserDID):
+    def __get_challenge_response(self, challenge, did: UserDID) -> str:
         jwt = JWT.parse(challenge)
         assert jwt.get_audience() == self.app_did.get_did_string()
         nonce = jwt.get_claim('nonce')
         assert abs(jwt.get_expiration() - int(datetime.datetime.now().timestamp()) - 3 * 60) < 5 * 60, 'Invalid expire time setting for challenge'
-        hive_did = self._get_issuer_by_challenge(jwt)
+        hive_did = self.__get_issuer_by_challenge(jwt)
 
         # auth
         vc = did.issue_auth(self.app_did)
@@ -169,7 +169,7 @@ class RemoteResolver:
         return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, expire)
 
     def auth(self, challenge, did: UserDID):
-        challenge_response = self._get_auth_token_by_challenge(challenge, did)
+        challenge_response = self.__get_challenge_response(challenge, did)
         response = self.http_client.post('/api/v2/did/auth', {"challenge_response": challenge_response},
                                          need_token=False, is_skip_prefix=True)
         RA(response).assert_status(201)

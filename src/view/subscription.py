@@ -343,12 +343,14 @@ class BackupInfo(Resource):
         .. code-block:: json
 
             {
-                 “service_did”: “did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"”,
+                 “service_did”: “did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
+                 "pricing_plan": "Rookie",
                  “storage_quota: 500，
                  “storage_used”: 20,
-                 “created”: 1602236316,   // epoch time.
-                 “updated”: 1604914928,
-                 “pricing_plan”: “rookie”
+                 “start_time”: 1602236316, // epoch time.
+                 “end_time”: 1602236316,
+                 “created”: 1602236316,
+                 “updated”: 1604914928
             }
 
         **Response Error**:
@@ -390,12 +392,14 @@ class BackupSubscribe(Resource):
         .. code-block:: json
 
             {
-                “pricing_plan”: “<the using pricing plan>
-                “service_did”: <hive node service did>
-                “storage_quota”: 50000000, # the max space of the storage for the vault service.
-                “storage_used”: 0,
-                “created”: <the epoch time>
-                “updated”: <the epoch time>
+                 “service_did”: “did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
+                 "pricing_plan": "Rookie",
+                 “storage_quota: 500，
+                 “storage_used”: 20,
+                 “start_time”: 1602236316, // epoch time.
+                 “end_time”: 1602236316,
+                 “created”: 1602236316,
+                 “updated”: 1604914928
             }
 
         **Response Error**:

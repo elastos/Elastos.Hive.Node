@@ -113,16 +113,23 @@ class IpfsFiles:
         }
 
     def list_folder_with_path(self, user_did, app_did, path):
-        """ 'public' for v1 """
+        """ list files by folder with path, empty string means root path
+
+        'public' for v1
+        """
         col_filter = {USR_DID: user_did, APP_DID: app_did}
         if path:
+            # if specify the path, it will find the files start with folder name
             folder_path = path if path[len(path) - 1] == '/' else f'{path}/'
             col_filter[COL_IPFS_FILES_PATH] = {
                 '$regex': f'^{folder_path}'
             }
-        docs = cli.find_many(user_did, app_did, COL_IPFS_FILES, col_filter)
+
+        docs = cli.find_many(user_did, app_did, COL_IPFS_FILES, col_filter, throw_exception=False)
         if not docs and path:
+            # root path always exists
             raise FileNotFoundException(f'The directory {path} does not exist.')
+
         return docs
 
     def get_properties(self, path):

@@ -35,7 +35,8 @@ api = HiveApi(app, prefix='/api/v2')
 @app.before_request
 def before_request():
     # CORS request, skip
-    if request.method.upper() == "OPTIONS":
+    if request.method == "OPTIONS":
+        # return None to let CORS handle OPTIONS
         return
 
     # Sets the "wsgi.input_terminated" environment flag, thus enabling

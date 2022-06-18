@@ -17,7 +17,7 @@ The wrapper for eladid.so
 
 class ElaError:
     @staticmethod
-    def get(prompt=None):
+    def get(prompt=None) -> str:
         """ helper method to get error message from did.so """
         error_msg, c_msg = 'UNKNOWN ERROR', lib.DIDError_GetLastErrorMessage()
         if c_msg:
@@ -25,7 +25,7 @@ class ElaError:
         return error_msg if not prompt else f'{prompt}: {error_msg}'
 
     @staticmethod
-    def get_from_method(prompt=None):
+    def get_from_method(prompt=None, error_print=False):
         """
         Only used for class normal method, not static method.
         """
@@ -34,7 +34,12 @@ class ElaError:
         self = frame.frame.f_locals['self']
         cls_name = self.__class__.__name__
         mtd_name = frame[3]
-        return ElaError.get(f'{cls_name}.{mtd_name}{ppt}')
+        msg = ElaError.get(f'{cls_name}.{mtd_name}{ppt}')
+        if error_print:
+            with open('output.txt', 'w') as f:
+                c_f = ffi.cast("FILE *", f)
+                lib.DIDError_Print(c_f)
+        return msg
 
 
 class JWT:
@@ -192,7 +197,10 @@ class Presentation:
         return ffi.string(ffi.gc(vp_json, lib.Mnemonic_Free)).decode()
 
     def is_valid(self) -> bool:
-        return lib.Presentation_IsValid(self.vp) == 1
+        result = lib.Presentation_IsValid(self.vp)
+        if result == -1:
+            raise ElaDIDException(ElaError.get_from_method())
+        return result == 1
 
     def get_credential_count(self):
         count = lib.Presentation_GetCredentialCount(self.vp)

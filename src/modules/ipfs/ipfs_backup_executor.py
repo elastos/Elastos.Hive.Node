@@ -8,6 +8,7 @@ import traceback
 from datetime import datetime
 
 from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID
 from src.utils.file_manager import fm
 from src.utils.http_exception import HiveException
@@ -22,6 +23,7 @@ class ExecutorBase(threading.Thread):
         self.action = kwargs.get('action', 'backup')
         self.start_delay = kwargs.get('start_delay', 0)
         self.is_force = kwargs.get('is_force', False)
+        self.vault_manager = VaultManager()
 
     def run(self):
         try:
@@ -64,7 +66,7 @@ class ExecutorBase(threading.Thread):
                        'size': d['size'],
                        'count': d['count']} for d in files_cids],
             USR_DID: self.user_did,
-            "vault_size": fm.get_vault_storage_size(self.user_did),
+            "vault_size": self.vault_manager.get_vault(self.user_did).get_storage_usage(),
             "backup_size": sum([d['size'] for d in database_cids]) + total_file_size,
             "create_time": datetime.now().timestamp(),
         }
@@ -88,8 +90,9 @@ class ExecutorBase(threading.Thread):
     @staticmethod
     def update_vault_usage_by_metadata(user_did, request_metadata):
         files_size, dbs_size = ExecutorBase.get_vault_usage_by_metadata(request_metadata)
-        fm.update_vault_files_usage(user_did, files_size)
-        fm.update_vault_dbs_usage(user_did, dbs_size)
+        vault_manager = VaultManager()
+        vault_manager.update_user_files_size(user_did, files_size, is_reset=True)
+        vault_manager.update_user_databases_size(user_did, files_size, is_reset=True)
 
     @staticmethod
     def pin_cids_to_local_ipfs(request_metadata,

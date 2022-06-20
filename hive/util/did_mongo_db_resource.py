@@ -192,46 +192,55 @@ def delete_mongo_database(did, app_id):
     connection.drop_database(db_name)
 
 
-def count_file_metadata_size_by_col(col, user_did, app_did):
-    col_filter = {"user_did": user_did, "app_did": app_did}
-    total = 0.0
-    for file in col.find(col_filter):
-        total += file["size"]
-    return total
-
-
-def count_file_app_storage_size(user_did, app_did):
+def count_app_files_total_size(user_did, app_did):
+    """ only for batch 'count_vault_storage_job' """
     if hive_setting.MONGO_URI:
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(hive_setting.MONGODB_URI)
 
-    col_file_name = 'ipfs_files'
+    # get user's database
     db_name = gene_mongo_db_name(user_did, app_did)
     if db_name not in connection.list_database_names():
+        # user's database not exists
         return 0.0
     db = connection[db_name]
+
+    # get user's collection 'ipfs_files'
+    col_file_name = 'ipfs_files'
     if col_file_name not in db.list_collection_names():
+        # user's 'ipfs_files' not exists
         return 0.0
     col = db[col_file_name]
 
-    return count_file_metadata_size_by_col(col, user_did, app_did)
+    # get total size of all user's application files
+    return sum(map(lambda o: o["size"], col.find({"user_did": user_did, "app_did": app_did})))
 
 
-def get_mongo_database_size(did, app_id):
+def get_user_database_size(user_did, app_did):
+    """ only for batch 'count_vault_storage_job' """
     if hive_setting.MONGO_URI:
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
         connection = MongoClient(hive_setting.MONGODB_URI)
 
-    db_name = gene_mongo_db_name(did, app_id)
+    # get user's database
+    db_name = gene_mongo_db_name(user_did, app_did)
+    if db_name not in connection.list_database_names():
+        # user's database not exists
+        return 0.0
     db = connection[db_name]
+
+    # count by state
     status = db.command("dbstats")
-    storage_size = status["storageSize"]
-    index_size = status["indexSize"]
-    return storage_size + index_size
+    return status["storageSize"] + status["indexSize"]
+
+
+def get_mongo_database_size(user_did, app_did):
+    """ for database usage size updating """
+    return get_user_database_size(user_did, app_did)
 
 
 def get_save_mongo_db_path(did):

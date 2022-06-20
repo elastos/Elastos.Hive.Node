@@ -1,11 +1,14 @@
+import shutil
 from datetime import datetime
 
+from src import hive_setting
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient, Dotdict
 from src.utils.db_client import VAULT_SERVICE_STATE_RUNNING
 from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException
 from src.utils_v1.constants import VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
-    VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE
+    VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, \
+    VAULT_SERVICE_FILE_USE_STORAGE
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 
@@ -15,11 +18,18 @@ class Vault(Dotdict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def get_storage_quota(self):
+        # bytes, compatible with v1 (unit MB), v2 (unit Byte)
+        return int(self.max_storage * 1024 * 1024 if self.max_storage < 1024 * 1024 else self.max_storage)
+
     def get_database_usage(self):
         return self.db_use_storage
 
     def get_storage_gap(self):
         return int(self.max_storage - (self.file_use_storage + self.db_use_storage))
+
+    def get_storage_usage(self):
+        return int(self.file_use_storage + self.db_use_storage)
 
     def is_storage_full(self):
         return self.get_storage_gap() <= 0
@@ -57,7 +67,7 @@ class AppSpaceDetector:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         dbsize_after = self.vault_manager.get_user_database_size(self.user_did, self.app_did)
-        self.vault_manager.update_user_database_size(self.user_did, dbsize_after - self.dbsize_before)
+        self.vault_manager.update_user_databases_size(self.user_did, dbsize_after - self.dbsize_before)
 
 
 class VaultManager:
@@ -74,8 +84,10 @@ class VaultManager:
         """
         vault = self.__only_get_vault(user_did)
 
-        # try to revert to free package plan
-        return self.__try_to_downgrade_to_free(user_did, vault)
+        # TODO: uncomment this when the size full bug fixed
+        # # try to revert to free package plan
+        # return self.__try_to_downgrade_to_free(user_did, vault)
+        return vault
 
     def __only_get_vault(self, user_did):
         """ common method to all other method in this class """
@@ -117,25 +129,57 @@ class VaultManager:
         self.upgrade(user_did, PaymentConfig.get_free_vault_plan(), vault=vault)
         return self.__only_get_vault(user_did)
 
-    def update_database_size(self, user_did: str):
-        """ Get all databases of user DID and sum the sizes. """
+    def recalculate_user_databases_size(self, user_did: str):
+        """ Update all databases used size in vault """
         # Get all application DIDs of user DID, then get their sizes.
         app_dids = self.user_manager.get_all_app_dids(user_did)
         size = sum(list(map(lambda d: self.mcli.get_user_database_size(user_did, d), app_dids)))
 
-        self.update_user_database_size(user_did, size)
+        self.update_user_databases_size(user_did, size)
 
     def get_user_database_size(self, user_did, app_did):
         return self.mcli.get_user_database_size(user_did, app_did)
 
-    def update_user_database_size(self, user_did, size: int, delta_size: bool = False):
-        new_size = self.get_vault(user_did).get_database_usage() + size if delta_size else size
+    def update_user_databases_size(self, user_did, size: int, is_reset=False):
+        self.__update_storage_size(user_did, size, False, is_reset=is_reset)
+
+    def update_user_files_size(self, user_did, size: int, is_reset=False):
+        self.__update_storage_size(user_did, size, True, is_reset=is_reset)
+
+    def __update_storage_size(self, user_did, size, is_files: bool, is_reset=False):
+        """ update files or databases usage of the vault
+
+        :param user_did user DID
+        :param size files&databases total size or increased size
+        :param is_files files or databases storage usage
+        :param is_reset: True means reset by size, else increase with size
+        """
+
+        key = VAULT_SERVICE_FILE_USE_STORAGE if is_files else VAULT_SERVICE_DB_USE_STORAGE
 
         filter_ = {VAULT_SERVICE_DID: user_did}
-        update = {
-            VAULT_SERVICE_DB_USE_STORAGE: int(new_size),
-            VAULT_SERVICE_MODIFY_TIME: int(datetime.now().timestamp())
-        }
+
+        now = int(datetime.now().timestamp())
+        if is_reset:
+            update = {'$set': {key: size, VAULT_SERVICE_MODIFY_TIME: now}}
+        else:
+            update = {
+                '$inc': {key: size},
+                '$set': {VAULT_SERVICE_MODIFY_TIME: now}
+            }
 
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
-        col.update_one(filter_, {'$set': update}, contains_extra=False)
+        col.update_one(filter_, update, contains_extra=False)
+
+    def drop_vault_data(self, user_did):
+        """ drop all data belong to user, include files and databases """
+
+        # remove local user's vault folder
+        path = hive_setting.get_user_vault_path(user_did)
+        if path.exists():
+            shutil.rmtree(path)
+
+        # remove all databases belong to user's vault
+        app_dids = self.user_manager.get_all_app_dids(user_did)
+        for app_did in app_dids:
+            self.mcli.drop_user_database(user_did, app_did)

@@ -7,15 +7,6 @@ from src.utils_v1.common import did_tail_part, create_full_path_dir
 from src.utils_v1.error_code import INTERNAL_SERVER_ERROR, NOT_FOUND
 
 
-def get_vault_path(did):
-    path = Path(hive_setting.VAULTS_BASE_DIR)
-    if path.is_absolute():
-        path = path / did_tail_part(did)
-    else:
-        path = path.resolve() / did_tail_part(did)
-    return path.resolve()
-
-
 def get_save_files_path(did, app_did):
     """ get files root path """
     return get_user_did_path(did) / app_did / 'files'

@@ -53,6 +53,10 @@ class HiveSetting:
     def VAULTS_BASE_DIR(self):
         return self.DATA_STORE_PATH + '/vaults'
 
+    def get_user_vault_path(self, user_did: str) -> Path:
+        """ get the user's vault local path which contains cache files etc. """
+        return Path(self.VAULTS_BASE_DIR) / user_did.split(":")[2]
+
     @property
     def BACKUP_VAULTS_BASE_DIR(self):
         return self.DATA_STORE_PATH + '/backup_vaults'

@@ -8,7 +8,7 @@ from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_BACKUP_SERVICE_COL, V
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
     VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_BACKUP_SERVICE_MODIFY_TIME
 
-from src.utils_v1.did_file_info import get_dir_size, get_vault_path
+from src.utils_v1.did_file_info import get_dir_size
 from src.utils_v1.did_mongo_db_resource import create_db_client
 from src.utils_v1.payment.payment_config import PaymentConfig
 
@@ -136,15 +136,6 @@ def delete_user_backup(did):
     path = get_vault_backup_path(did)
     if path.exists():
         shutil.rmtree(path)
-
-
-def copy_local_backup_to_vault(did):
-    src_path = get_vault_backup_path(did)
-    if not src_path.exists():
-        return False
-    dst_path = get_vault_path(did)
-    shutil.copytree(src_path.as_posix(), dst_path.as_posix())
-    return True
 
 
 def count_vault_backup_storage_size(did):

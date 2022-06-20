@@ -10,17 +10,16 @@ import typing as t
 
 from flask import g
 
+from src import hive_setting
 from src.modules.auth.auth import Auth
 from src.modules.payment.order import OrderManager
-from src.modules.subscription.vault import VaultManager
+from src.modules.subscription.vault import VaultManager, Vault
 from src.utils.consts import IS_UPGRADED
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
     VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, APP_ID, USER_DID
 from src.utils.did.did_wrapper import DID, DIDDocument
-from src.utils_v1.did_file_info import get_vault_path
 from src.utils_v1.payment.payment_config import PaymentConfig
-from src.utils_v1.payment.vault_service_manage import delete_user_vault_data
 from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
@@ -54,21 +53,17 @@ class VaultSubscription(metaclass=Singleton):
                VAULT_SERVICE_PRICING_USING: price_plan['name']}
         cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, doc, create_on_absence=True, is_extra=False)
         # INFO: user database will create with first collection creation.
-        if not fm.create_dir(get_vault_path(user_did)):
+        if not fm.create_dir(hive_setting.get_user_vault_path(user_did)):
             raise BadRequestException(msg='Failed to create folder for the user.')
         return doc
 
     def __get_vault_info(self, doc):
-        # bytes, compatible with v1 (unit MB)
-        storage_quota = int(doc[VAULT_SERVICE_MAX_STORAGE] * 1024 * 1024) \
-                        if int(doc[VAULT_SERVICE_MAX_STORAGE]) < 1024 * 1024 \
-                        else int(doc[VAULT_SERVICE_MAX_STORAGE])
-        storage_used = int(doc[VAULT_SERVICE_FILE_USE_STORAGE] + doc[VAULT_SERVICE_DB_USE_STORAGE])
+        vault = Vault(**doc)
         return {
             'service_did': self.auth.get_did_string(),
             'pricing_plan': doc[VAULT_SERVICE_PRICING_USING],
-            'storage_quota': storage_quota,
-            'storage_used': storage_used,
+            'storage_quota': vault.get_storage_quota(),
+            'storage_used': vault.get_storage_usage(),
             'start_time': int(doc[VAULT_SERVICE_START_TIME]),
             'end_time': int(doc[VAULT_SERVICE_END_TIME]),
             'created': cli.timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),
@@ -78,11 +73,11 @@ class VaultSubscription(metaclass=Singleton):
     def unsubscribe(self):
         """ :v2 API: """
         doc = self.get_checked_vault(g.usr_did)
+
         logging.debug(f'start remove the vault of the user {g.usr_did}, _id, {str(doc["_id"])}')
-        delete_user_vault_data(g.usr_did)
-        apps = cli.get_all_user_apps(user_did=g.usr_did)
-        for app in apps:
-            cli.remove_database(g.usr_did, app[APP_ID])
+
+        self.vault_manager.drop_vault_data(g.usr_did)
+
         self.order_manager.archive_orders_receipts(g.usr_did)
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: g.usr_did}, is_check_exist=False)
 

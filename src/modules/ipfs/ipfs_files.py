@@ -13,7 +13,6 @@ from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_I
     COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, USR_DID
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
 from src.utils_v1.common import gene_temp_file_name
-from src.utils_v1.payment.vault_service_manage import update_used_storage_for_files_data
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
 from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
@@ -82,7 +81,7 @@ class IpfsFiles:
             cache_file.unlink()
 
         self.delete_file_metadata(user_did, app_did, path, doc[COL_IPFS_FILES_IPFS_CID])
-        update_used_storage_for_files_data(user_did, 0 - doc[SIZE])
+        self.vault_manager.update_user_files_size(user_did, 0 - doc[SIZE])
 
     def move_file(self, src_path, dst_path):
         """ :v2 API: """
@@ -213,7 +212,7 @@ class IpfsFiles:
             increased_size = new_size - doc[SIZE]
 
         if increased_size and not only_import:
-            update_used_storage_for_files_data(user_did, increased_size)
+            self.vault_manager.update_user_files_size(user_did, increased_size)
 
         # cache the uploaded file.
         cache_file = fm.ipfs_get_cache_root(user_did) / cid
@@ -314,7 +313,7 @@ class IpfsFiles:
             }
             IpfsCidRef(src_doc[COL_IPFS_FILES_IPFS_CID]).increase()
             cli.insert_one(user_did, app_did, COL_IPFS_FILES, metadata)
-            update_used_storage_for_files_data(user_did, src_doc[SIZE])
+            self.vault_manager.update_user_files_size(user_did, src_doc[SIZE])
         else:
             cli.update_one(user_did, app_did, COL_IPFS_FILES, src_filter,
                            {'$set': {COL_IPFS_FILES_PATH: dst_path}}, is_extra=True)

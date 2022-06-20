@@ -25,8 +25,7 @@ from hive.util.did_scripting import check_json_param, run_executable_find, run_c
     run_executable_file_hash, run_executable_file_upload, massage_keys_with_dollar_signs, \
     unmassage_keys_with_dollar_signs, get_script_content
 from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SUCCESS
-from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte, \
-    inc_vault_file_use_storage_byte
+from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
 from hive.util.server_response import ServerResponse
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from hive.util.v2_adapter import v2_wrapper

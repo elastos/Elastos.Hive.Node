@@ -287,6 +287,11 @@ class MongodbClient:
         else:
             database.drop_collection(col_name)
 
+    def drop_user_database(self, user_did, app_did):
+        name = MongodbClient.__get_user_database_name(user_did, app_did)
+        if self.exists_database(name):
+            self.__get_connection().drop_database(name)
+
     def get_user_database_size(self, user_did, app_did) -> int:
         """ Get the size of the user database, if not exist, return 0 """
         name = self.__get_user_database_name(user_did, app_did)

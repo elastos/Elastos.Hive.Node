@@ -13,7 +13,7 @@ from hive.util.error_code import INTERNAL_SERVER_ERROR, UNAUTHORIZED, NOT_FOUND,
 from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL, CHUNK_SIZE
-from hive.util.payment.vault_service_manage import can_access_vault, inc_vault_file_use_storage_byte
+from hive.util.payment.vault_service_manage import can_access_vault
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, COL_IPFS_FILES_PATH, SIZE, COL_IPFS_FILES_SHA256
 from hive.util.v2_adapter import v2_wrapper

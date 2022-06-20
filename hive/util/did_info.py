@@ -109,6 +109,29 @@ def get_all_did_info_by_did(did):
     return infos
 
 
+def get_all_app_dids(user_did: str) -> list[str]:
+    """ only for batch 'count_vault_storage_job'
+
+    Same as v2: UserManager.get_all_app_dids()
+    """
+    if hive_setting.MONGO_URI:
+        uri = hive_setting.MONGO_URI
+        connection = MongoClient(uri)
+    else:
+        connection = MongoClient(hive_setting.MONGODB_URI)
+    db = connection[DID_INFO_DB_NAME]
+    col = db[DID_INFO_REGISTER_COL]
+
+    # INFO: Must check the existence of some fields
+    filter_ = {
+        APP_ID: {'$exists': True},
+        '$and': [{DID: {'$exists': True}}, {DID: user_did}]
+    }
+
+    docs = col.find_many(filter_)
+    return list(set(map(lambda d: d[APP_ID], docs)))
+
+
 def get_did_info_by_nonce(nonce):
     if hive_setting.MONGO_URI:
         uri = hive_setting.MONGO_URI

@@ -1,7 +1,9 @@
 import logging
+import traceback
 from datetime import datetime
 
 from flask_apscheduler import APScheduler
+from sentry_sdk import capture_exception
 
 from hive.util.payment.vault_order import check_pay_order_timeout_job, check_wait_order_tx_job
 from hive.util.payment.vault_service_manage import proc_expire_vault_job, count_vault_storage_job
@@ -31,7 +33,14 @@ def scheduler_pause():
 @scheduler.task(trigger='interval', id='daily_routine_job', days=1)
 def daily_routine_job():
     logging.getLogger("Hive scheduler").debug(f" daily_routine_job start: {str(datetime.utcnow())}")
-    count_vault_storage_job()
+
+    try:
+        count_vault_storage_job()
+    except Exception as e:
+        msg = f'count_vault_storage_job(): {str(e)}, {traceback.format_exc()}'
+        logging.getLogger('daily_routine_job()').error(msg)
+        capture_exception(error=Exception(f'daily_routine_job() UNEXPECTED: {msg}'))
+
     logging.getLogger("Hive scheduler").debug(f"daily_routine_job end: {str(datetime.utcnow())}")
 
 

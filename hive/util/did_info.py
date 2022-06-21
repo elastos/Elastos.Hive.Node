@@ -128,7 +128,7 @@ def get_all_app_dids(user_did: str) -> list[str]:
         '$and': [{DID: {'$exists': True}}, {DID: user_did}]
     }
 
-    docs = col.find_many(filter_)
+    docs = col.find(filter_)
     return list(set(map(lambda d: d[APP_ID], docs)))
 
 

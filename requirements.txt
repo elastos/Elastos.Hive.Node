@@ -23,3 +23,4 @@ Flask-Testing===0.8.1
 flask-cors==3.0.10
 flask-unittest==0.1.2
 web3==5.29.0
+click==8.1.2

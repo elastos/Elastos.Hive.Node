@@ -235,7 +235,7 @@ class MongodbClient:
         return name in self.__get_connection().list_database_names()
 
     @staticmethod
-    def __get_user_database_name(user_did, app_did):
+    def get_user_database_name(user_did, app_did):
         # The length of database name is limited to 38 on Atlas Mongodb.
         # https://www.mongodb.com/docs/atlas/reference/free-shared-limitations/ @ key: Namespaces and Database Names
         prefix = 'hive_user_db_' if not hive_setting.ATLAS_ENABLED else 'hu_'
@@ -262,7 +262,7 @@ class MongodbClient:
 
         :raise: CollectionNotFoundException
         """
-        database = self.__get_database(MongodbClient.__get_user_database_name(user_did, app_did))
+        database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
         if col_name not in database.list_collection_names():
             if create_on_absence:
                 database.create_collection(col_name)
@@ -271,7 +271,7 @@ class MongodbClient:
         return MongodbCollection(database[col_name], is_management=False)
 
     def create_user_collection(self, user_did, app_did, col_name) -> MongodbCollection:
-        database_name = MongodbClient.__get_user_database_name(user_did, app_did)
+        database_name = MongodbClient.get_user_database_name(user_did, app_did)
         database = self.__get_database(database_name)
         try:
             return MongodbCollection(database.create_collection(col_name), is_management=False)
@@ -280,7 +280,7 @@ class MongodbClient:
             raise AlreadyExistsException()
 
     def delete_user_collection(self, user_did, app_did, col_name, check_exist=False):
-        database = self.__get_database(MongodbClient.__get_user_database_name(user_did, app_did))
+        database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
         if col_name not in database.list_collection_names():
             if check_exist:
                 raise CollectionNotFoundException()
@@ -288,13 +288,13 @@ class MongodbClient:
             database.drop_collection(col_name)
 
     def drop_user_database(self, user_did, app_did):
-        name = MongodbClient.__get_user_database_name(user_did, app_did)
+        name = MongodbClient.get_user_database_name(user_did, app_did)
         if self.exists_database(name):
             self.__get_connection().drop_database(name)
 
     def get_user_database_size(self, user_did, app_did) -> int:
         """ Get the size of the user database, if not exist, return 0 """
-        name = self.__get_user_database_name(user_did, app_did)
+        name = self.get_user_database_name(user_did, app_did)
         if not self.exists_database(name):
             return 0
 

@@ -164,8 +164,8 @@ class RemoteResolver:
     def get_user_did_str(self):
         return self.user_did.get_did_string()
 
-    def __get_access_token_from_remote(self, did: UserDID):
-        return self.auth(self.sign_in(), did)
+    def __get_access_token_from_remote(self, user_did: UserDID):
+        return self.auth(self.sign_in(), user_did)
 
     def get_node_did(self) -> str:
         node_did = TokenCache.get_node_did()
@@ -182,11 +182,11 @@ class RemoteResolver:
 
     def sign_in(self):
         doc = json.loads(self.app_did.doc.to_json())
-        response = self.http_client.post('/api/v2/did/signin', {"id": doc}, need_token=False, is_skip_prefix=True)
+        response = self.http_client.post('/api/v2/did/signin', body={"id": doc}, need_token=False, is_skip_prefix=True)
         RA(response).assert_status(201)
         return RA(response).body().get('challenge', str)
 
-    def __get_challenge_response(self, challenge, did: UserDID) -> str:
+    def __get_challenge_response(self, challenge, user_did: UserDID) -> str:
         jwt = JWT.parse(challenge)
         assert jwt.get_audience() == self.app_did.get_did_string()
         nonce = jwt.get_claim('nonce')
@@ -194,14 +194,14 @@ class RemoteResolver:
         hive_did = self.__get_issuer_by_challenge(jwt)
 
         # auth
-        vc = did.issue_auth(self.app_did)
+        vc = user_did.issue_auth(self.app_did)
         vp_json = self.app_did.create_presentation_str(vc, nonce, hive_did)
         expire = int(datetime.datetime.now().timestamp()) + 60
         return self.app_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, expire)
 
-    def auth(self, challenge, did: UserDID):
-        challenge_response = self.__get_challenge_response(challenge, did)
-        response = self.http_client.post('/api/v2/did/auth', {"challenge_response": challenge_response},
+    def auth(self, challenge, user_did: UserDID):
+        challenge_response = self.__get_challenge_response(challenge, user_did)
+        response = self.http_client.post('/api/v2/did/auth', body={"challenge_response": challenge_response},
                                          need_token=False, is_skip_prefix=True)
         RA(response).assert_status(201)
         token = RA(response).body().get('token', str)
@@ -234,7 +234,7 @@ class HttpClient:
         self.base_url = test_config.host_url if not is_backup_node else test_config.backup_url
         self.prefix_url = prefix_url if prefix_url else ''
         self.remote_resolver = RemoteResolver(self, is_did2, is_owner)
-        test_log(f'HttpClient.base_url: {self.base_url}')
+        test_log(f'HttpClient.base_url: {self.base_url}, user_did={self.get_current_did()}, app_did={AppDID.app_did}')
 
     def get_full_url(self, relative_url, is_skip_prefix=False):
         """ 'public' is for decorator '_log_http_request' """

@@ -23,7 +23,10 @@ class Vault(Dotdict):
         return int(self.max_storage * 1024 * 1024 if self.max_storage < 1024 * 1024 else self.max_storage)
 
     def get_database_usage(self):
-        return self.db_use_storage
+        return int(self.db_use_storage)
+
+    def get_files_usage(self):
+        return int(self.file_use_storage)
 
     def get_storage_gap(self):
         return int(self.max_storage - (self.file_use_storage + self.db_use_storage))
@@ -155,6 +158,9 @@ class VaultManager:
         :param is_files files or databases storage usage
         :param is_reset: True means reset by size, else increase with size
         """
+
+        if not is_reset and size == 0:
+            return
 
         key = VAULT_SERVICE_FILE_USE_STORAGE if is_files else VAULT_SERVICE_DB_USE_STORAGE
 

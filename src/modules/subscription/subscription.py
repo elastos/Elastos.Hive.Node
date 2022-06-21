@@ -57,9 +57,9 @@ class VaultSubscription(metaclass=Singleton):
             raise BadRequestException(msg='Failed to create folder for the user.')
         return doc
 
-    def __get_vault_info(self, doc):
+    def __get_vault_info(self, doc, files_used: bool):
         vault = Vault(**doc)
-        return {
+        info = {
             'service_did': self.auth.get_did_string(),
             'pricing_plan': doc[VAULT_SERVICE_PRICING_USING],
             'storage_quota': vault.get_storage_quota(),
@@ -69,6 +69,12 @@ class VaultSubscription(metaclass=Singleton):
             'created': cli.timestamp_to_epoch(doc[VAULT_SERVICE_START_TIME]),
             'updated': cli.timestamp_to_epoch(doc[VAULT_SERVICE_MODIFY_TIME]),
         }
+
+        if files_used:
+            info['files_used'] = vault.get_files_usage()
+
+        return info
+
 
     def unsubscribe(self):
         """ :v2 API: """
@@ -87,10 +93,10 @@ class VaultSubscription(metaclass=Singleton):
     def deactivate(self):
         raise NotImplementedException()
 
-    def get_info(self):
+    def get_info(self, files_used: bool):
         """ :v2 API: """
         vault = self.vault_manager.get_vault(g.usr_did)
-        return self.__get_vault_info(vault)
+        return self.__get_vault_info(vault, files_used)
 
     def get_app_stats(self):
         """ :v2 API: """

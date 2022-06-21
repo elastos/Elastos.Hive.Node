@@ -11,8 +11,31 @@ from src.utils.http_client import HttpClient as Http
 
 from tests import init_test
 from tests.utils.http_client import HttpClient
+from tests.utils.resp_asserter import RA
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+
+
+class VaultFilesUsageChecker(unittest.TestCase):
+    """ Only check the file size changed in vault """
+
+    def __init__(self, increase_size, method_name='runTest'):
+        super().__init__(method_name)
+        self.cli = HttpClient(f'/api/v2')
+        self.increase_size = increase_size
+        self.file_size_before = self.__get_vault_file_usage_size()
+
+    def __get_vault_file_usage_size(self):
+        response = self.cli.get('/subscription/vault?files_used=true')
+        RA(response).assert_status(200)
+        return RA(response).body().get('files_used', int)
+
+    def __enter__(self):
+        ...
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        file_size_after = self.__get_vault_file_usage_size()
+        self.assertEqual(self.increase_size, file_size_after - self.file_size_before)
 
 
 class IpfsFilesTestCase(unittest.TestCase):
@@ -20,14 +43,26 @@ class IpfsFilesTestCase(unittest.TestCase):
         super().__init__(method_name)
         init_test()
         self.cli = HttpClient(f'/api/v2/vault')
+
         self.folder_name = 'ipfs_children'
-        self.src_file_content = 'File Content: 12345678'
+
+        # for uploading, and copying back
+        self.src_file_name = 'ipfs_src_file.node.txt'
+        self.src_file_content = 'File Content: 12345678' + ('9' * 200)
+
+        # just for uploading, from local file
+        self.src_file_name2 = rf'{self.folder_name}/ipfs_src_file2.node.txt'
+        self.src_file_cache2 = f'{BASE_DIR}/cache/test.txt'
+
+        # for moving
+        self.dst_file_name = 'ipfs_dst_file.node.txt'
         self.dst_file_content = self.src_file_content
-        self.src_file_name = 'ipfs_src_file.txt'
-        self.src_public_name = 'ipfs_public_file.txt'
-        self.src_file_cache = f'{BASE_DIR}/cache/test.txt'
-        self.src_file_name2 = r'ipfs_children/ipfs_src_file2.txt'
-        self.dst_file_name = 'ipfs_dst_file.txt'
+
+        # for public sharing
+        self.src_public_name = 'ipfs_public_file.node.txt'
+        self.src_public_content = self.src_file_content
+
+        # for not existing check
         self.name_not_exist = 'name_not_exist'
 
     @classmethod
@@ -35,24 +70,38 @@ class IpfsFilesTestCase(unittest.TestCase):
         # subscribe
         HttpClient(f'/api/v2').put('/subscription/vault')
 
-    def test01_upload_file(self):
-        with open(self.src_file_cache, 'rb') as f:
-            response = self.cli.put(f'/files/{self.src_file_name}', f.read(), is_json=False)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('name'), self.src_file_name)
-        self.__check_remote_file_exist(self.src_file_name)
+    def __get_remote_file_size(self, file_name):
+        """ if not exists, return 0 """
+        response = self.cli.get(f'/files/{file_name}?comp=metadata')
+        RA(response).assert_status(200, 404)
+        if response.status_code == 404:
+            return 0
 
-    def test01_upload_file2(self):
-        response = self.cli.put(f'/files/{self.src_file_name2}',
-                                self.src_file_content.encode(), is_json=False)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('name'), self.src_file_name2)
-        self.__check_remote_file_exist(self.src_file_name2)
+        return RA(response).body().get('size', int)
+
+    def test01_upload_file(self):
+        def upload_file(name, content):
+            src_size, dst_size = self.__get_remote_file_size(file_name), len(file_content)
+            with VaultFilesUsageChecker(dst_size - src_size) as _:
+                response = self.cli.put(f'/files/{name}', content, is_json=False)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json().get('name'), name)
+                self.__check_remote_file_exist(name)
+
+        # upload self.src_file_name
+        file_name, file_content = self.src_file_name, self.src_file_content.encode()
+        upload_file(file_name, file_content)
+
+        # upload self.src_file_name2
+        file_name = self.src_file_name2
+        with open(self.src_file_cache2, 'rb') as f:
+            file_content = f.read()
+        upload_file(file_name, file_content)
 
     def test01_upload_public_file(self):
         script_name = self.src_public_name.split(".")[0]
         response = self.cli.put(f'/files/{self.src_public_name}?public=true&script_name={script_name}',
-                                self.src_file_content.encode(), is_json=False)
+                                self.src_public_content.encode(), is_json=False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_public_name)
         self.assertTrue(bool(response.json().get('cid')))
@@ -61,12 +110,12 @@ class IpfsFilesTestCase(unittest.TestCase):
         # check cid
         response = Http().post(f'{hive_setting.IPFS_NODE_URL}/api/v0/cat?arg={response.json().get("cid")}', None, None, is_body=False, success_code=200)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.text, self.src_file_content)
+        self.assertEqual(response.text, self.src_public_content)
 
         # check fileDownload script
         from tests.scripting_test import IpfsScriptingTestCase
         scripting_test = IpfsScriptingTestCase()
-        scripting_test.call_and_execute_transaction(script_name, script_name, download_content=self.src_file_content)
+        scripting_test.call_and_execute_transaction(script_name, script_name, download_content=self.src_public_content)
 
         # clean the script and the file.
         scripting_test.delete_script(script_name)
@@ -86,21 +135,23 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test03_move_file(self):
-        response = self.cli.patch(f'/files/{self.src_file_name}?to={self.dst_file_name}')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('name'), self.dst_file_name)
-        self.__check_remote_file_exist(self.dst_file_name)
+        with VaultFilesUsageChecker(0) as _:
+            response = self.cli.patch(f'/files/{self.src_file_name}?to={self.dst_file_name}')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json().get('name'), self.dst_file_name)
+            self.__check_remote_file_exist(self.dst_file_name)
 
     def test03_move_file_invalid_parameter(self):
         response = self.cli.patch(f'/files/{self.src_file_name}?to=')
         self.assertEqual(response.status_code, 400)
 
     def test04_copy_file(self):
-        response = self.cli.put(f'/files/{self.dst_file_name}?dest={self.src_file_name}')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('name'), self.src_file_name)
-        self.__check_remote_file_exist(self.dst_file_name)
-        self.__check_remote_file_exist(self.src_file_name)
+        with VaultFilesUsageChecker(len(self.src_file_content)) as _:
+            response = self.cli.put(f'/files/{self.dst_file_name}?dest={self.src_file_name}')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json().get('name'), self.src_file_name)
+            self.__check_remote_file_exist(self.dst_file_name)
+            self.__check_remote_file_exist(self.src_file_name)
 
     def test04_copy_file_invalid_parameter(self):
         response = self.cli.put(f'/files/{self.dst_file_name}?dest={self.dst_file_name}')
@@ -108,11 +159,11 @@ class IpfsFilesTestCase(unittest.TestCase):
 
     def test05_list_folder(self):
         response = self.cli.get(f'/files/{self.folder_name}?comp=children')
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue('value' in response.json())
-        self.assertEqual(type(response.json()['value']), list)
-        self.assertEqual(len(response.json()['value']), 1)
-        self.assertEqual(response.json()['value'][0]['name'], self.src_file_name2)
+        RA(response).assert_status(200)
+        files = RA(response).body().get('value', list)
+        self.assertEqual(len(files), 1)
+        file = files[0]
+        self.assertEqual(file['name'], self.src_file_name2)
 
     def test06_get_properties(self):
         self.__check_remote_file_exist(self.src_file_name)
@@ -131,7 +182,9 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test08_delete_file(self):
-        self.__delete_file(self.src_file_name)
+        with VaultFilesUsageChecker(-len(self.src_file_content)) as _:
+            self.__delete_file(self.src_file_name)
+
         self.__delete_file(self.src_file_name2)
         self.__delete_file(self.dst_file_name)
 

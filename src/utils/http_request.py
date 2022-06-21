@@ -326,6 +326,7 @@ class RV:
 
     @staticmethod
     def get_body(parent_name: str = None):
+        """ get body args in dict """
         if not hasattr(g, 'body'):
             body = request.get_json(force=True, silent=True)
             if not isinstance(body, dict):
@@ -335,6 +336,7 @@ class RV:
 
     @staticmethod
     def get_args():
+        """ get url args in dict """
         if not hasattr(g, 'args'):
             g.args = RequestArgs(**request.args)
         return g.args

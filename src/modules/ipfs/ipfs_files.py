@@ -139,9 +139,9 @@ class IpfsFiles:
         return {
             'name': metadata[COL_IPFS_FILES_PATH],
             'is_file': metadata[COL_IPFS_FILES_IS_FILE],
-            'size': metadata[SIZE],
-            'created': metadata['created'],
-            'updated': metadata['modified'],
+            'size': int(metadata[SIZE]),
+            'created': int(metadata['created']),
+            'updated': int(metadata['modified']),
         }
 
     def get_hash(self, path):

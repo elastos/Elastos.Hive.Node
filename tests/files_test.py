@@ -30,13 +30,10 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.dst_file_name = 'ipfs_dst_file.txt'
         self.name_not_exist = 'name_not_exist'
 
-    @staticmethod
-    def _subscribe():
-        HttpClient(f'/api/v2').put('/subscription/vault')
-
     @classmethod
     def setUpClass(cls):
-        cls._subscribe()
+        # subscribe
+        HttpClient(f'/api/v2').put('/subscription/vault')
 
     def test01_upload_file(self):
         with open(self.src_file_cache, 'rb') as f:

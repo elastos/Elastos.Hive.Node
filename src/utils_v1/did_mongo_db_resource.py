@@ -194,16 +194,6 @@ def delete_mongo_database(did, app_did):
     connection.drop_database(db_name)
 
 
-def get_mongo_database_size(did, app_did):
-    connection = create_db_client()
-    db_name = gene_mongo_db_name(did, app_did)
-    db = connection[db_name]
-    status = db.command("dbstats")
-    storage_size = status["storageSize"]
-    index_size = status["indexSize"]
-    return storage_size + index_size
-
-
 def get_save_mongo_db_path(did):
     path = Path(hive_setting.VAULTS_BASE_DIR)
     if path.is_absolute():

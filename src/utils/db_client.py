@@ -53,7 +53,7 @@ class DatabaseClient:
     def get_database_size(self, db_name):
         if not self.is_database_exists(db_name):
             return 0
-        return self.__get_connection()[db_name].command("dbstats")["dataSize"]
+        return self.__get_connection()[db_name].command("dbstats")["totalSize"]
 
     def get_origin_collection(self, db_name, collection_name, create_on_absence=False):
         db = self.__get_connection()[db_name]

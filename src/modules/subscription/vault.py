@@ -67,7 +67,8 @@ class AppSpaceDetector:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         dbsize_after = self.vault_manager.get_user_database_size(self.user_did, self.app_did)
-        self.vault_manager.update_user_databases_size(self.user_did, dbsize_after - self.dbsize_before)
+        if dbsize_after != self.dbsize_before:
+            self.vault_manager.update_user_databases_size(self.user_did, dbsize_after - self.dbsize_before)
 
 
 class VaultManager:

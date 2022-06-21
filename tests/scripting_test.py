@@ -9,9 +9,8 @@ import typing as t
 import urllib.parse
 
 from tests import init_test, is_valid_object_id
-from tests.utils.http_client import HttpClient
+from tests.utils.http_client import HttpClient, AppDID
 from tests.utils.resp_asserter import RA
-from tests.utils_v1.hive_auth_test_v1 import AppDID
 
 
 class IpfsScriptingTestCase(unittest.TestCase):

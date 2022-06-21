@@ -8,6 +8,7 @@ from flask_restful import Resource
 
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.modules.subscription.subscription import VaultSubscription
+from src.utils.http_request import RV
 
 
 class VaultPricePlan(Resource):
@@ -143,7 +144,11 @@ class VaultInfo(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        return self.vault_subscription.get_info()
+
+        # for testing
+        files_used = RV.get_args().get_opt('files_used', bool, False)
+
+        return self.vault_subscription.get_info(files_used)
 
 
 class VaultAppStates(Resource):

@@ -140,7 +140,7 @@ class DatabaseClient:
             raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
 
         if is_extra:
-            now_timestamp = datetime.now().timestamp()
+            now_timestamp = int(datetime.now().timestamp())
             document['created'] = now_timestamp if not kwargs.get('created') else kwargs.get('created')
             document['modified'] = now_timestamp if not kwargs.get('modified') else kwargs.get('modified')
 

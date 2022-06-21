@@ -244,8 +244,8 @@ def count_vault_storage_job():
     db = connection[DID_INFO_DB_NAME]
     col = db[VAULT_SERVICE_COL]
 
-    info_list = col.find({VAULT_SERVICE_DID: {'$exists': True}})  # cursor
-    for service in info_list:
+    vault_services = col.find({VAULT_SERVICE_DID: {'$exists': True}})  # cursor
+    for service in vault_services:
         user_did = service[VAULT_SERVICE_DID]
 
         # get files and databases total size

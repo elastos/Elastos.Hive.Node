@@ -233,9 +233,8 @@ def get_user_database_size(user_did, app_did):
         return 0.0
     db = connection[db_name]
 
-    # count by state
-    status = db.command("dbstats")
-    return status["storageSize"] + status["indexSize"]
+    # count by state: https://www.mongodb.com/docs/v4.4/reference/command/dbStats/
+    return int(db.command('dbstats')['totalSize'])
 
 
 def get_mongo_database_size(user_did, app_did):

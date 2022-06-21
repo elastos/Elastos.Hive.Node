@@ -9,6 +9,7 @@ import typing as t
 import urllib.parse
 
 from tests import init_test, is_valid_object_id
+from tests.files_test import VaultFilesUsageChecker
 from tests.utils.http_client import HttpClient, AppDID
 from tests.utils.resp_asserter import RA
 
@@ -26,9 +27,13 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     """
     collection_name = 'script_database'
-    file_name = 'ipfs-scripting/test.txt'
+
+    # for files scripts
+    file_name = 'ipfs-scripting/test.node.txt'
     file_content = 'File Content: 1234567890'
-    file_sha256 = '161d165c6b49616cc82846814ccb2bbaa0928b8570bac7f6ba642c65d6006cfe'
+    file_content_sha256 = '161d165c6b49616cc82846814ccb2bbaa0928b8570bac7f6ba642c65d6006cfe'
+
+    # not existing script name
     name_not_exist = 'name_not_exist'
 
     def __init__(self, method_name='runTest'):
@@ -644,7 +649,9 @@ class IpfsScriptingTestCase(unittest.TestCase):
             }}
         })
 
-        self.call_and_execute_transaction(script_name, executable_name, is_download=False)
+        # remote relating file not existing
+        with VaultFilesUsageChecker(len(IpfsScriptingTestCase.file_content)) as _:
+            self.call_and_execute_transaction(script_name, executable_name, is_download=False)
 
         self.delete_script(script_name)
 
@@ -708,7 +715,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         })
 
         body = self.__call_script(script_name, {'params': {'path': self.file_name}})
-        body.get(executable_name).assert_equal('SHA256', self.file_sha256)
+        body.get(executable_name).assert_equal('SHA256', self.file_content_sha256)
 
         self.delete_script(script_name)
 
@@ -726,7 +733,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         def validate_call(path_value: str):
             body = self.__call_script(script_name, {'params': {'path': path_value}})
-            body.get(executable_name).assert_equal('SHA256', self.file_sha256)
+            body.get(executable_name).assert_equal('SHA256', self.file_content_sha256)
 
         # 'ipfs-scripting/test.txt'
         register_hash('ipfs-scripting/$params.path')

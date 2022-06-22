@@ -173,9 +173,12 @@ def get_dict(json_data: typing.Any, parent_name: str = None):
 
 
 class RequestData(dict):
-    """ request.body or other dict from it """
+    """ request.body or other dict needs to get data """
 
     def __init__(self, *args, optional=False, **kwargs):
+        """
+        :param optional this dict is an optional dict from its parent
+        """
         super().__init__(*args, **kwargs)
         self.optional = optional
 

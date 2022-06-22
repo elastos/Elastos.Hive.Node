@@ -4,8 +4,9 @@ from datetime import datetime
 from src import hive_setting
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient, Dotdict
+from src.utils.consts import COL_IPFS_FILES
 from src.utils.db_client import VAULT_SERVICE_STATE_RUNNING
-from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException
+from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException, CollectionNotFoundException
 from src.utils_v1.constants import VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, \
     VAULT_SERVICE_FILE_USE_STORAGE
@@ -136,7 +137,7 @@ class VaultManager:
     def recalculate_user_databases_size(self, user_did: str):
         """ Update all databases used size in vault """
         # Get all application DIDs of user DID, then get their sizes.
-        app_dids = self.user_manager.get_all_app_dids(user_did)
+        app_dids = self.user_manager.get_apps(user_did)
         size = sum(list(map(lambda d: self.mcli.get_user_database_size(user_did, d), app_dids)))
 
         self.update_user_databases_size(user_did, size)
@@ -187,6 +188,19 @@ class VaultManager:
             shutil.rmtree(path)
 
         # remove all databases belong to user's vault
-        app_dids = self.user_manager.get_all_app_dids(user_did)
+        app_dids = self.user_manager.get_apps(user_did)
         for app_did in app_dids:
             self.mcli.drop_user_database(user_did, app_did)
+
+    def count_app_files_total_size(self, user_did, app_did) -> int:
+        """ only for batch 'count_vault_storage_job' """
+        if not self.mcli.exists_user_database(user_did, app_did):
+            return 0
+
+        try:
+            col = self.mcli.get_user_collection(user_did, app_did, COL_IPFS_FILES)
+            files = col.find_many({"user_did": user_did, "app_did": app_did})
+            # get total size of all user's application files
+            return int(sum(map(lambda o: o["size"], files)))
+        except CollectionNotFoundException as e:
+            return 0

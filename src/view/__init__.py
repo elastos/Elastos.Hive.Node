@@ -10,11 +10,11 @@ from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.utils.consts import URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, URL_SERVER_INTERNAL_STATE
 from src.utils.db_client import cli
-from src.utils.scheduler import scheduler_init
+from src.utils.scheduler import scheduler_init, count_vault_storage_job, sync_app_dids
 from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider
 
 
-class RetryIpfsBackupThread(threading.Thread):
+class V2StartUpThread(threading.Thread):
     def __init__(self):
         super().__init__()
         self.backup_client = IpfsBackupClient()
@@ -38,6 +38,10 @@ class RetryIpfsBackupThread(threading.Thread):
             logging.info(f'[RetryIpfsBackupThread] leave')
         except Exception as e:
             logging.error(f'[RetryIpfsBackupThread] error {str(e)}')
+
+        # try to prepare user_did's app_dids when starting
+        sync_app_dids()
+        count_vault_storage_job()
 
 
 def init_app(app: Flask, api: Api):
@@ -105,6 +109,6 @@ def init_app(app: Flask, api: Api):
         api.add_resource(payment.Orders, '/payment/order', endpoint='payment.orders')
         api.add_resource(payment.Receipts, '/payment/receipt', endpoint='payment.receipts')
 
-    RetryIpfsBackupThread().start()
     scheduler_init(app)
+    V2StartUpThread().start()
     logging.getLogger('v2_init').info('leave init_app')

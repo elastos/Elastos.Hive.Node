@@ -5,6 +5,7 @@ from datetime import datetime
 from flask import request, g
 
 from src import UnauthorizedException
+from src.modules.auth.user import UserManager
 from src.utils.consts import URL_V2, URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_STATE, URL_SERVER_INTERNAL_RESTORE
 from src.utils_v1.constants import USER_DID, APP_ID, APP_INSTANCE_DID
 from src.modules.auth.auth import Auth
@@ -85,6 +86,7 @@ class TokenParser:
         the implementation of all APIs can directly use this two global variables.
         """
         g.usr_did, g.app_did, g.app_ins_did = None, None, None
+        self.user_manager = UserManager()
 
     def __no_need_auth(self):
         return any(map(lambda url: request.full_path.startswith(url), self.EXCEPT_URLS))
@@ -106,6 +108,13 @@ class TokenParser:
 
         return False
 
+    def record_user_did_and_app_did(self, user_did, app_did):
+        """ Just for cached token in app side to
+
+        @deprecated this will be commented many days later
+        """
+        self.user_manager.add_app_if_not_exists(user_did, app_did)
+
     def parse(self):
         """ Only handle the access token of v2 APIs.
         The token for v1 APIs will be checked on related request handler.
@@ -124,6 +133,7 @@ class TokenParser:
                 return
 
             g.usr_did, g.app_ins_did, g.app_did = info[USER_DID], info[APP_INSTANCE_DID], info[APP_ID]
+            self.record_user_did_and_app_did(g.usr_did, g.app_did)
             return
 
         # Access token has two types: normal from user, internal (for backup) from other hive nodes.
@@ -134,3 +144,4 @@ class TokenParser:
 
         # Only normal token contains application DID.
         g.usr_did, g.app_ins_did, g.app_did = info[USER_DID], info[APP_INSTANCE_DID], info.get(APP_ID)
+        self.record_user_did_and_app_did(g.usr_did, g.app_did)

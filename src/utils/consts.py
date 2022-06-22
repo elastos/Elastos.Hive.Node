@@ -32,6 +32,15 @@ CID = 'cid'
 COUNT = 'count'
 VERSION = 'version'
 
+# for user did and app did relations
+COL_APPLICATION = 'application'
+COL_APPLICATION_USR_DID = USR_DID
+COL_APPLICATION_APP_DID = APP_DID
+COL_APPLICATION_STATE = STATE
+# extra: 'created' and 'modified'
+COL_APPLICATION_STATE_NORMAL = 'normal'
+# COL_APPLICATION_STATE_REMOVED = 'removed'
+
 # for the order collection
 COL_ORDERS = 'vault_order'
 COL_ORDERS_SUBSCRIPTION = 'subscription'

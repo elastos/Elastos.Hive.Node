@@ -1,4 +1,5 @@
 from src.modules.database.mongodb_client import MongodbClient
+from src.utils.consts import COL_APPLICATION_USR_DID, COL_APPLICATION_APP_DID, COL_APPLICATION_STATE, COL_APPLICATION_STATE_NORMAL, COL_APPLICATION
 from src.utils_v1.constants import APP_ID, USER_DID, DID_INFO_REGISTER_COL
 
 
@@ -7,7 +8,10 @@ class UserManager:
         self.mcli = MongodbClient()
 
     def get_all_app_dids(self, user_did):
-        """ Get all applications DIDs belonged to user DID """
+        """ Get all applications DIDs belonged to user DID
+
+        @deprecated Only for transfer app_dids to COL_APPLICATION from DID_INFO_REGISTER_COL
+        """
         col = self.mcli.get_management_collection(DID_INFO_REGISTER_COL)
         # INFO: Must check the existence of some fields
         filter_ = {
@@ -16,3 +20,46 @@ class UserManager:
         }
         docs = col.find_many(filter_)
         return list(set(map(lambda d: d[APP_ID], docs)))
+
+    def get_apps(self, user_did):
+        """ get all application of the user did """
+
+        if not user_did:
+            return []
+
+        filter_ = {
+            COL_APPLICATION_USR_DID: user_did,
+        }
+
+        col = self.mcli.get_management_collection(COL_APPLICATION)
+        docs = col.find_many(filter_)
+        return list(map(lambda d: d[COL_APPLICATION_APP_DID], docs))
+
+    def add_app(self, user_did, app_did):
+        """ add the relation of user did and app did to collection
+
+        :param user_did can not be None
+        :param app_did application did
+        """
+
+        doc = {
+            COL_APPLICATION_USR_DID: user_did,
+            COL_APPLICATION_APP_DID: app_did,
+            COL_APPLICATION_STATE: COL_APPLICATION_STATE_NORMAL
+        }
+
+        col = self.mcli.get_management_collection(COL_APPLICATION)
+        col.insert_one(doc)
+
+    def remove_user(self, user_did):
+        """ remove all applications of the user did """
+
+        if not user_did:
+            return
+
+        filter_ = {
+            COL_APPLICATION_USR_DID: user_did,
+        }
+
+        col = self.mcli.get_management_collection(COL_APPLICATION)
+        col.delete_many(filter_)

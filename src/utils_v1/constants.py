@@ -2,6 +2,7 @@
 DID_INFO_DB_NAME = "hive_manage_info"
 
 # for auth collection, must compatible with v1
+# this collection is treated as the temporary one for signin/auth, do not dependent on it for long usage.
 DID_INFO_REGISTER_COL = "auth_register"
 USER_DID = "userDid"  # added when /auth
 APP_ID = "appDid"  # added when /auth
@@ -10,7 +11,7 @@ DID_INFO_NONCE = "nonce"
 DID_INFO_TOKEN = "token"
 DID_INFO_NONCE_EXPIRED = "nonce_expired"
 DID_INFO_TOKEN_EXPIRED = "token_expired"
-# auth end
+# auth_register end
 
 DID_SYNC_INFO_COL = "did_sync_info"
 DID_SYNC_INFO_STATE = "state"

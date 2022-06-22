@@ -143,6 +143,12 @@ class Credential:
             raise ElaDIDException(ElaError.get_from_method())
         return ret_val == 1
 
+    def get_issuer(self) -> 'DID':
+        issuer = lib.Credential_GetIssuer(self.vc)
+        if not issuer:
+            raise ElaDIDException(ElaError.get_from_method())
+        return DID(issuer)
+
     def get_expiration_date(self) -> int:
         expire_date = lib.Credential_GetExpirationDate(self.vc)
         if expire_date <= 0:
@@ -201,6 +207,12 @@ class Presentation:
         if result == -1:
             raise ElaDIDException(ElaError.get_from_method())
         return result == 1
+
+    def get_holder(self) -> 'DID':
+        holder = lib.Presentation_GetHolder(self.vp)
+        if not holder:
+            raise ElaDIDException(ElaError.get_from_method())
+        return DID(holder)
 
     def get_credential_count(self):
         count = lib.Presentation_GetCredentialCount(self.vp)

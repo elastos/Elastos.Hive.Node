@@ -5,6 +5,7 @@ from datetime import datetime
 from flask import g
 
 from src.modules.auth.auth import Auth
+from src.modules.auth.user import UserManager
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.subscription.subscription import VaultSubscription
@@ -26,6 +27,7 @@ class IpfsBackupServer:
         self.vault = VaultSubscription()
         self.client = IpfsBackupClient()
         self.auth = Auth()
+        self.user_manager = UserManager()
 
     def promotion(self):
         """ This processing is just like restore the vault:
@@ -126,6 +128,8 @@ class IpfsBackupServer:
         doc = self.find_backup_request(g.usr_did, throw_exception=True)
         if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
             raise BadRequestException(msg='the backup & restore is in process.')
+
+        self.user_manager.remove_user(g.usr_did)
         self.remove_backup_by_did(g.usr_did, doc)
 
     def remove_backup_by_did(self, user_did, doc):

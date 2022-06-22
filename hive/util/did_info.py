@@ -20,18 +20,6 @@ def add_did_nonce_to_db(app_instance_did, nonce, expired):
     i = col.insert_one(did_dic)
     return i
 
-# def add_did_info_to_db(did, app_id, nonce, token, expire):
-#     if hive_setting.MONGO_USER:
-#         uri = f'mongodb://{hive_setting.MONGO_USER}:{hive_setting.MONGO_PASSWORD}@{hive_setting.MONGO_HOST}:{hive_setting.MONGO_PORT}/'
-#         connection = MongoClient(uri)
-#     else:
-#         connection = MongoClient(host=hive_setting.MONGO_HOST, port=hive_setting.MONGO_PORT)
-#     db = connection[DID_INFO_DB_NAME]
-#     col = db[DID_INFO_REGISTER_COL]
-#     did_dic = {DID: did, APP_ID: app_id, DID_INFO_NONCE: nonce, DID_INFO_TOKEN: token, DID_INFO_NONCE_EXPIRED: expire}
-#     i = col.insert_one(did_dic)
-#     return i
-
 def update_nonce_of_did_info(app_instance_did, nonce, expired):
     if hive_setting.MONGO_URI:
         uri = hive_setting.MONGO_URI
@@ -107,29 +95,6 @@ def get_all_did_info_by_did(did):
     query = {DID: did}
     infos = col.find(query)
     return infos
-
-
-def get_all_app_dids(user_did: str) -> list[str]:
-    """ only for batch 'count_vault_storage_job'
-
-    Same as v2: UserManager.get_all_app_dids()
-    """
-    if hive_setting.MONGO_URI:
-        uri = hive_setting.MONGO_URI
-        connection = MongoClient(uri)
-    else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
-    db = connection[DID_INFO_DB_NAME]
-    col = db[DID_INFO_REGISTER_COL]
-
-    # INFO: Must check the existence of some fields
-    filter_ = {
-        APP_ID: {'$exists': True},
-        '$and': [{DID: {'$exists': True}}, {DID: user_did}]
-    }
-
-    docs = col.find(filter_)
-    return list(set(map(lambda d: d[APP_ID], docs)))
 
 
 def get_did_info_by_nonce(nonce):

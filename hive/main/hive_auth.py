@@ -8,6 +8,7 @@ import os
 
 from src.utils.did.eladid import ffi, lib
 from src.utils.did.did_wrapper import Credential
+from src.modules.auth.user import UserManager
 
 from hive.util.did.v1_entity import V1Entity
 from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, \
@@ -16,7 +17,7 @@ from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_b
 from hive.util.error_code import UNAUTHORIZED, INTERNAL_SERVER_ERROR, BAD_REQUEST, SUCCESS
 from hive.util.server_response import ServerResponse
 from hive.settings import hive_setting
-from hive.util.constants import DID_INFO_NONCE_EXPIRED, APP_INSTANCE_DID
+from hive.util.constants import DID_INFO_NONCE_EXPIRED, APP_INSTANCE_DID, DID, APP_ID
 
 ACCESS_AUTH_COL = "did_auth"
 ACCESS_TOKEN = "access_token"
@@ -28,6 +29,7 @@ class HiveAuth(V1Entity):
     def __init__(self):
         self.app = None
         self.response = ServerResponse("HiveSync")
+        self.user_manager = UserManager()
 
     def init_app(self, app):
         self.app = app
@@ -108,6 +110,9 @@ class HiveAuth(V1Entity):
         # save to db
         if not self.__save_auth_info_to_db(auth_info, access_token):
             return self.response.response_err(UNAUTHORIZED, "save to db fail!")
+
+        # auth_register is just a temporary collection, need keep relation here
+        self.user_manager.add_app_if_not_exists(auth_info["userDid"], auth_info["appDid"])
 
         # response token
         data = {
@@ -287,7 +292,16 @@ class HiveAuth(V1Entity):
         if access_token == "":
             return None, "The token is None!"
 
-        return self.get_info_from_token(access_token)
+        info, err_msg = self.get_info_from_token(access_token)
+        if err_msg is not None:
+            return None, err_msg
+
+        # @deprecated save the relationship between user did and app did
+        # backup module not used in v1, so here is from user
+        if info.get(DID, None) and info.get(APP_ID, None):
+            UserManager().add_app_if_not_exists(info[DID], info[APP_ID])
+
+        return info, None
 
     def get_info_from_token(self, token):
         if token is None:

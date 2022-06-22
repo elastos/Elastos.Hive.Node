@@ -96,13 +96,17 @@ class MongodbCollection:
             now_timestamp = int(datetime.now().timestamp())
 
             # for normal update
-            if "$set" in update and 'modified' in update['$set']:
+            if "$set" in update:
                 update["$set"]["modified"] = now_timestamp
+            else:
+                update["$set"] = {"modified": now_timestamp}
 
             # for insert if not exists
-            if "$setOnInsert" in update:
-                update["$setOnInsert"]["created"] = now_timestamp
-                update["$setOnInsert"]["modified"] = now_timestamp
+            if kwargs.get('upsert', False):
+                if "$setOnInsert" in update:
+                    update["$setOnInsert"]["created"] = now_timestamp
+                else:
+                    update["$setOnInsert"] = {"created": now_timestamp}
 
         # kwargs are the options, and filter them
         options = {k: v for k, v in kwargs.items() if k in ("upsert", "bypass_document_validation")}
@@ -233,6 +237,16 @@ class MongodbClient:
 
     def exists_database(self, name):
         return name in self.__get_connection().list_database_names()
+
+    def exists_user_database(self, user_did, app_did):
+        return self.exists_database(MongodbClient.get_user_database_name(user_did, app_did))
+
+    def exists_user_collection(self, user_did, app_did, col_name):
+        database_name = MongodbClient.get_user_database_name(user_did, app_did)
+        if not self.exists_database(database_name):
+            return False
+
+        return col_name not in self.__get_database(database_name).list_collection_names()
 
     @staticmethod
     def get_user_database_name(user_did, app_did):

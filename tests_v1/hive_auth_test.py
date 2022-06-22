@@ -147,6 +147,7 @@ class HiveAuthTestCase(flask_unittest.ClientTestCase):
         didapp = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
         testapp = DApp("testapp", test_common.app_id,
                        "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+        test_log(f'user_did={didapp.get_did_string()}, app_did={test_common.app_id}, app_ins_did={testapp.get_did_string()}')
         self.__test_auth_common(client, didapp, testapp)
 
     def test_c_auth(self, client):

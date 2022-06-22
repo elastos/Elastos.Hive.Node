@@ -12,6 +12,7 @@ from flask import g
 
 from src import hive_setting
 from src.modules.auth.auth import Auth
+from src.modules.auth.user import UserManager
 from src.modules.payment.order import OrderManager
 from src.modules.subscription.vault import VaultManager, Vault
 from src.utils.consts import IS_UPGRADED
@@ -30,6 +31,7 @@ from src.utils.singleton import Singleton
 class VaultSubscription(metaclass=Singleton):
     def __init__(self):
         self.auth = Auth()
+        self.user_manager = UserManager()
         self.order_manager = OrderManager()
         self.vault_manager = VaultManager()
 
@@ -75,7 +77,6 @@ class VaultSubscription(metaclass=Singleton):
 
         return info
 
-
     def unsubscribe(self):
         """ :v2 API: """
         doc = self.get_checked_vault(g.usr_did)
@@ -83,8 +84,9 @@ class VaultSubscription(metaclass=Singleton):
         logging.debug(f'start remove the vault of the user {g.usr_did}, _id, {str(doc["_id"])}')
 
         self.vault_manager.drop_vault_data(g.usr_did)
-
         self.order_manager.archive_orders_receipts(g.usr_did)
+        self.user_manager.remove_user(g.usr_did)
+
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: g.usr_did}, is_check_exist=False)
 
     def activate(self):

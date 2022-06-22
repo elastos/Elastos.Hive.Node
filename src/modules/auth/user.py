@@ -7,10 +7,10 @@ class UserManager:
     def __init__(self):
         self.mcli = MongodbClient()
 
-    def get_all_app_dids(self, user_did):
-        """ Get all applications DIDs belonged to user DID
+    def get_temp_app_dids(self, user_did):
+        """ Get all applications DIDs belonged to user DID in the 'auth_register' collection
 
-        @deprecated Only for transfer app_dids to COL_APPLICATION from DID_INFO_REGISTER_COL
+        @deprecated Only for syncing app_dids from DID_INFO_REGISTER_COL to COL_APPLICATION
         """
         col = self.mcli.get_management_collection(DID_INFO_REGISTER_COL)
         # INFO: Must check the existence of some fields
@@ -35,21 +35,26 @@ class UserManager:
         docs = col.find_many(filter_)
         return list(map(lambda d: d[COL_APPLICATION_APP_DID], docs))
 
-    def add_app(self, user_did, app_did):
+    def add_app_if_not_exists(self, user_did, app_did):
         """ add the relation of user did and app did to collection
 
         :param user_did can not be None
         :param app_did application did
         """
 
-        doc = {
-            COL_APPLICATION_USR_DID: user_did,
-            COL_APPLICATION_APP_DID: app_did,
-            COL_APPLICATION_STATE: COL_APPLICATION_STATE_NORMAL
+        if not user_did:
+            return
+
+        filter_ = {
+            COL_APPLICATION_USR_DID: user_did
         }
 
+        update = {'$set': {
+                COL_APPLICATION_APP_DID: app_did,
+                COL_APPLICATION_STATE: COL_APPLICATION_STATE_NORMAL}}
+
         col = self.mcli.get_management_collection(COL_APPLICATION)
-        col.insert_one(doc)
+        col.update_one(filter_, update, contains_extra=True, upsert=True)
 
     def remove_user(self, user_did):
         """ remove all applications of the user did """

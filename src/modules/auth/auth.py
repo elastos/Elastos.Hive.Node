@@ -91,7 +91,8 @@ class Auth(Entity, metaclass=Singleton):
             # update to temporary auth collection, so failed can skip
             logging.info(f'Update access token to auth collection failed: {e}')
 
-        self.user_manager.add_app(info["userDid"], info["appDid"])
+        # @deprecated auth_register is just a temporary collection, need keep relation here
+        self.user_manager.add_app_if_not_exists(info["userDid"], info["appDid"])
 
         return {
             "token": access_token,

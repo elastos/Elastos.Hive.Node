@@ -16,7 +16,7 @@ from src.utils_v1.common import gene_temp_file_name
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
 from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
-from src.modules.subscription.vault import VaultManager, AppSpaceDetector
+from src.modules.subscription.vault import VaultManager
 
 
 class IpfsFiles:
@@ -33,17 +33,16 @@ class IpfsFiles:
 
     def upload_file(self, path, is_public: bool, script_name: str):
         """ :v2 API: """
-        with AppSpaceDetector(g.usr_did, g.app_did) as vault:
-            vault.check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_storage()
 
-            cid = self.upload_file_with_path(g.usr_did, g.app_did, path, is_public=is_public)
-            if is_public:
-                from src.modules.scripting.scripting import Scripting
-                Scripting().set_script_for_anonymous_file(script_name, path)
-            return {
-                'name': path,
-                'cid': cid if is_public else ''
-            }
+        cid = self.upload_file_with_path(g.usr_did, g.app_did, path, is_public=is_public)
+        if is_public:
+            from src.modules.scripting.scripting import Scripting
+            Scripting().set_script_for_anonymous_file(script_name, path)
+        return {
+            'name': path,
+            'cid': cid if is_public else ''
+        }
 
     def download_file(self, path):
         """ :v2 API: """
@@ -61,8 +60,7 @@ class IpfsFiles:
 
         :v2 API:
         """
-        with AppSpaceDetector(g.usr_did, g.app_did) as _:
-            self.delete_file_with_path(g.usr_did, g.app_did, path, check_exist=True)
+        self.delete_file_with_path(g.usr_did, g.app_did, path, check_exist=True)
 
     def delete_file_with_path(self, user_did, app_did, path, check_exist=False):
         """ 'public' for v1 """
@@ -91,10 +89,9 @@ class IpfsFiles:
 
     def copy_file(self, src_path, dst_path):
         """ :v2 API: """
-        with AppSpaceDetector(g.usr_did, g.app_did) as vault:
-            vault.check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_storage()
 
-            return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path, is_copy=True)
+        return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path, is_copy=True)
 
     def list_folder(self, path):
         """

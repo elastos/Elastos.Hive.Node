@@ -14,7 +14,7 @@ from src.utils_v1.constants import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.ipfs_files import IpfsFiles
-from src.modules.subscription.vault import VaultManager, AppSpaceDetector
+from src.modules.subscription.vault import VaultManager
 from src.modules.scripting.executable import Executable, get_populated_value_with_params, validate_exists
 
 _DOLLAR_REPLACE = '%%'
@@ -273,13 +273,12 @@ class Scripting:
 
     def set_script(self, script_name):
         """ :v2 API: """
-        with AppSpaceDetector(g.usr_did, g.app_did) as vault:
-            vault.check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_storage()
 
-            json_data = request.get_json(force=True, silent=True)
-            Script.validate_script_data(json_data)
+        json_data = request.get_json(force=True, silent=True)
+        Script.validate_script_data(json_data)
 
-            return self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
+        return self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
 
     def set_script_for_anonymous_file(self, script_name: str, file_path: str):
         """ set script for uploading public file on files service
@@ -309,12 +308,11 @@ class Scripting:
 
     def delete_script(self, script_name):
         """ :v2 API: """
-        with AppSpaceDetector(g.usr_did, g.app_did) as _:
-            col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
-            result = col.delete_one({'name': script_name})
+        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        result = col.delete_one({'name': script_name})
 
-            if result['deleted_count'] <= 0:
-                raise ScriptNotFoundException(f'The script {script_name} does not exist.')
+        if result['deleted_count'] <= 0:
+            raise ScriptNotFoundException(f'The script {script_name} does not exist.')
 
     def run_script(self, script_name):
         """ :v2 API: """
@@ -354,22 +352,21 @@ class Scripting:
         if not anonymous_access and g.token_error is not None:
             raise UnauthorizedException(msg=f'Parse access token for running script error: {g.token_error}')
 
-        with AppSpaceDetector(target_did, target_app_did) as vault:
-            # executing uploading or downloading
-            data = None
-            logging.info(f'handle transaction by id: is_download={is_download}, file_name={trans["document"]["file_name"]}')
-            if is_download:
-                data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
-            else:
-                # Place here because not want to change the logic for v1.
-                vault.check_storage()
-                self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
+        # executing uploading or downloading
+        data = None
+        logging.info(f'handle transaction by id: is_download={is_download}, file_name={trans["document"]["file_name"]}')
+        if is_download:
+            data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
+        else:
+            # Place here because not want to change the logic for v1.
+            self.vault_manager.get_vault(target_did).check_storage()
+            self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
 
-            # transaction can be used only once.
-            col.delete_one(col_filter)
+        # transaction can be used only once.
+        col.delete_one(col_filter)
 
-            # return the content of the file if download else nothing.
-            return data
+        # return the content of the file if download else nothing.
+        return data
 
     def download_file(self, transaction_id):
         """ :v2 API: """

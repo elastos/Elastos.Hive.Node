@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
 import os
+
 import yaml
 import traceback
 import logging.config
 
 from flask import Flask, request, g
 from flask_cors import CORS
-from flask_executor import Executor
 
 from sentry_sdk import capture_exception
 
 from src.settings import hive_setting
+from src.utils.executor import init_executor, update_vault_databases_usage_task, retry_backup_when_reboot_task, sync_app_dids_task, count_vault_storage_task
 from src.utils.http_exception import HiveException, InternalServerErrorException, UnauthorizedException
 from src.utils.http_request import RegexConverter
 from src.utils.http_response import HiveApi
+from src.utils.scheduler import scheduler_init
 from src.utils.sentry_error import init_sentry_hook
 from src.utils.auth_token import TokenParser
 from src.utils.did.did_init import init_did_backend
-from src.utils_v1.constants import HIVE_MODE_PROD
+from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_TEST
 from src.utils_v1.payment.payment_config import PaymentConfig
 from src import view
 
@@ -31,7 +33,6 @@ CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')
 app = Flask('Hive Node V2')
 app.url_map.converters['regex'] = RegexConverter
 api = HiveApi(app, prefix='/api/v2')
-executor = Executor(app)
 
 
 @app.before_request
@@ -60,15 +61,9 @@ def before_request():
         return UnauthorizedException(msg=f'TokenParser error: {e.msg}').get_error_response()
     except Exception as e:
         msg = f'Invalid v2 token: {str(e)}, {traceback.format_exc()}'
-        logging.getLogger('before_request').error(msg)
+        logging.getLogger('BEFORE REQUEST').error(msg)
         capture_exception(error=Exception(f'V2T UNEXPECTED: {msg}'))
         return UnauthorizedException(msg=msg).get_error_response()
-
-
-@executor.job
-def update_vault_databases_usage(user_did):
-    from src.modules.subscription.vault import VaultManager
-    VaultManager().recalculate_user_databases_size(user_did)
 
 
 @app.after_request
@@ -78,8 +73,9 @@ def after_request(response):
     data_str = data_str[:500] if data_str else ''
     logging.getLogger('AFTER REQUEST').info(f'leave {request.full_path}, {request.method}, status={response.status_code}, data={data_str}')
 
-    # if hasattr(g, 'usr_did') and g.usr_did:
-    #     update_vault_databases_usage(g.usr_did)
+    # update vault database usage
+    if hasattr(g, 'usr_did') and g.usr_did:
+        update_vault_databases_usage_task.submit(g.usr_did, request.full_path)
 
     return response
 
@@ -111,16 +107,23 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     # init v1 APIs
     hive.main.init_app(app, mode)
 
-    if mode == HIVE_MODE_PROD:
+    if mode != HIVE_MODE_TEST:
         # init v2 APIs
-        view.init_app(app, api)
+        view.init_app(api)
 
-    logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
-    logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
-    if hive_setting.SENTRY_ENABLED and hive_setting.SENTRY_DSN != "":
-        init_sentry_hook(hive_setting.SENTRY_DSN)
-    if hive_setting.ENABLE_CORS:
-        CORS(app, supports_credentials=True)
+        logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
+        logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
+        if hive_setting.SENTRY_ENABLED and hive_setting.SENTRY_DSN != "":
+            init_sentry_hook(hive_setting.SENTRY_DSN)
+        if hive_setting.ENABLE_CORS:
+            CORS(app, supports_credentials=True)
+
+        scheduler_init(app)
+        init_executor(app)
+
+        retry_backup_when_reboot_task.submit()
+        sync_app_dids_task.submit()
+        count_vault_storage_task.submit()
 
     return app
 
@@ -134,5 +137,5 @@ def get_docs_app(first=False):
     """
     if first:
         init_did_backend()
-        view.init_app(app, api)
+        view.init_app(api)
     return app

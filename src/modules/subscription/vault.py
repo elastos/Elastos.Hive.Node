@@ -39,8 +39,10 @@ class Vault(Dotdict):
         return self.get_storage_gap() <= 0
 
     def check_storage(self):
-        if self.is_storage_full():
-            raise InsufficientStorageException()
+        """ if storage is full, raise InsufficientStorageException """
+        # TODO: temporary comment these because an issue vault full
+        # if self.is_storage_full():
+        #     raise InsufficientStorageException()
 
     def get_plan(self):
         return PaymentConfig.get_pricing_plan(self.pricing_using)
@@ -89,10 +91,8 @@ class VaultManager:
         """
         vault = self.__only_get_vault(user_did)
 
-        # TODO: uncomment this when the size full bug fixed
-        # # try to revert to free package plan
-        # return self.__try_to_downgrade_to_free(user_did, vault)
-        return vault
+        # try to revert to free package plan
+        return self.__try_to_downgrade_to_free(user_did, vault)
 
     def __only_get_vault(self, user_did):
         """ common method to all other method in this class """
@@ -140,7 +140,7 @@ class VaultManager:
         app_dids = self.user_manager.get_apps(user_did)
         size = sum(list(map(lambda d: self.mcli.get_user_database_size(user_did, d), app_dids)))
 
-        self.update_user_databases_size(user_did, size)
+        self.update_user_databases_size(user_did, size, is_reset=True)
 
     def get_user_database_size(self, user_did, app_did):
         return self.mcli.get_user_database_size(user_did, app_did)

@@ -33,12 +33,13 @@ class HiveFileTestCase(flask_unittest.ClientTestCase):
         self.content_type = ("Content-Type", "application/json")
         self.upload_file_content_type = ("Content-Type", "multipart/form-data")
         self.json_header = [self.content_type, ]
+
         initialize_access_tokens(self, client)
         self.init_auth()
         self.did = test_common.get_auth_did()
         self.app_id = test_common.get_auth_app_did()
-        test_common.setup_test_vault(self.did)
-        # self.clear_all_test_files()
+
+        test_common.create_vault_if_not_exist(self, client)
 
     def init_auth(self):
         token = test_common.get_auth_token()

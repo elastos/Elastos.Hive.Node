@@ -185,9 +185,10 @@ class HivePayment:
         else:
             del info["_id"]
             data = dict()
-            info[VAULT_SERVICE_MAX_STORAGE] = float(info[VAULT_SERVICE_MAX_STORAGE]) \
+            # compatible with v2 (unit Byte), but v1 (unit MB)
+            info[VAULT_SERVICE_MAX_STORAGE] = int(info[VAULT_SERVICE_MAX_STORAGE]) \
                 if info[VAULT_SERVICE_MAX_STORAGE] < 1024 * 1024 \
-                else info[VAULT_SERVICE_MAX_STORAGE] / (1024 * 1024)
+                else int(info[VAULT_SERVICE_MAX_STORAGE] / (1024 * 1024))
             info[VAULT_SERVICE_FILE_USE_STORAGE] = info[VAULT_SERVICE_FILE_USE_STORAGE] / (1024 * 1024)
             info[VAULT_SERVICE_DB_USE_STORAGE] = info[VAULT_SERVICE_DB_USE_STORAGE] / (1024 * 1024)
             data["vault_service_info"] = info

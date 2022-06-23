@@ -125,9 +125,10 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 DID_AUTH_SUBJECT = "didauth"
 DID_AUTH_REALM = "elastos_hive_node"
 
-HIVE_MODE_DEV = "dev"
-HIVE_MODE_PROD = "prod"
-HIVE_MODE_TEST = "test"
+# @deprecated compatible with v1
+# HIVE_MODE_DEV = "dev"
+HIVE_MODE_PROD = "prod"  # for normal run
+HIVE_MODE_TEST = "test"  # run on v1 test cases
 
 INTER_BACKUP_SERVICE_URL = '/api/v1/inter/backup/service'
 INTER_BACKUP_SAVE_FINISH_URL = '/api/v1/inter/backup/save_finish'

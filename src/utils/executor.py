@@ -1,6 +1,6 @@
-import typing
 import logging
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 
 from flask_executor import Executor
 from sentry_sdk import capture_exception
@@ -15,15 +15,9 @@ from src.utils.db_client import cli
 from src.utils.scheduler import count_vault_storage_really
 from src.utils_v1.constants import VAULT_SERVICE_COL, VAULT_SERVICE_DID
 
-executor: typing.Optional[Executor] = None
-
-
-def init_executor(app):
-    """ executor for executing thread tasks """
-    global executor
-    executor = Executor(app)
-    app.config['EXECUTOR_TYPE'] = 'thread'
-    app.config['EXECUTOR_MAX_WORKERS'] = 10
+executor = Executor()
+# DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+pool = ThreadPoolExecutor(1)
 
 
 @executor.job
@@ -55,7 +49,6 @@ def update_vault_databases_usage_task(user_did: str, full_url: str):
         capture_exception(error=Exception(f'AFTER REQUEST UNEXPECTED: {msg}'))
 
 
-@executor.job
 @hive_job('retry_backup_when_reboot', 'executor')
 def retry_backup_when_reboot_task():
     """ retry maybe because interrupt by reboot
@@ -74,7 +67,6 @@ def retry_backup_when_reboot_task():
         server.retry_backup_request(user_did)
 
 
-@executor.job
 @hive_job('sync_app_dids', tag='executor')
 def sync_app_dids_task():
     """ Used for syncing exist user_did's app_dids to the 'application' collection
@@ -95,7 +87,17 @@ def sync_app_dids_task():
             user_manager.add_app_if_not_exists(user_did, app_did)
 
 
-@executor.job
 @hive_job('count_vault_storage_executor', tag='executor')
 def count_vault_storage_task():
     count_vault_storage_really()
+
+
+def init_executor(app):
+    """ executor for executing thread tasks """
+    executor.init_app(app)
+    app.config['EXECUTOR_TYPE'] = 'thread'
+    app.config['EXECUTOR_MAX_WORKERS'] = 5
+
+    pool.submit(retry_backup_when_reboot_task)
+    pool.submit(sync_app_dids_task)
+    pool.submit(count_vault_storage_task)

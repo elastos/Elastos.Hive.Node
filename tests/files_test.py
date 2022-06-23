@@ -70,7 +70,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         # subscribe
         HttpClient(f'/api/v2').put('/subscription/vault')
 
-    def __get_remote_file_size(self, file_name):
+    def get_remote_file_size(self, file_name):
         """ if not exists, return 0 """
         response = self.cli.get(f'/files/{file_name}?comp=metadata')
         RA(response).assert_status(200, 404)
@@ -81,7 +81,7 @@ class IpfsFilesTestCase(unittest.TestCase):
 
     def test01_upload_file(self):
         def upload_file(name, content):
-            src_size, dst_size = self.__get_remote_file_size(file_name), len(file_content)
+            src_size, dst_size = self.get_remote_file_size(file_name), len(file_content)
             with VaultFilesUsageChecker(dst_size - src_size) as _:
                 response = self.cli.put(f'/files/{name}', content, is_json=False)
                 self.assertEqual(response.status_code, 200)

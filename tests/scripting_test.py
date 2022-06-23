@@ -9,9 +9,9 @@ import typing as t
 import urllib.parse
 
 from tests import init_test, is_valid_object_id
-from tests.files_test import VaultFilesUsageChecker
 from tests.utils.http_client import HttpClient, AppDID
 from tests.utils.resp_asserter import RA
+from tests.files_test import VaultFilesUsageChecker, IpfsFilesTestCase
 
 
 class IpfsScriptingTestCase(unittest.TestCase):
@@ -29,7 +29,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
     collection_name = 'script_database'
 
     # for files scripts
-    file_name = 'ipfs-scripting/test.node.txt'
+    file_name = 'ipfs_scripting/test.node.txt'
     file_content = 'File Content: 1234567890'
     file_content_sha256 = '161d165c6b49616cc82846814ccb2bbaa0928b8570bac7f6ba642c65d6006cfe'
 
@@ -39,6 +39,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
+        self.files_test = IpfsFilesTestCase()
 
         # owner client.
         self.cli = HttpClient(f'/api/v2/vault')
@@ -649,8 +650,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
             }}
         })
 
-        # remote relating file not existing
-        with VaultFilesUsageChecker(len(IpfsScriptingTestCase.file_content)) as _:
+        size_before, size_after = self.files_test.get_remote_file_size(self.file_name), len(IpfsScriptingTestCase.file_content)
+        with VaultFilesUsageChecker(size_after - size_before) as _:
             self.call_and_execute_transaction(script_name, executable_name, is_download=False)
 
         self.delete_script(script_name)
@@ -735,15 +736,17 @@ class IpfsScriptingTestCase(unittest.TestCase):
             body = self.__call_script(script_name, {'params': {'path': path_value}})
             body.get(executable_name).assert_equal('SHA256', self.file_content_sha256)
 
-        # 'ipfs-scripting/test.txt'
-        register_hash('ipfs-scripting/$params.path')
-        validate_call('test.txt')
+        folder_name, file_name = self.file_name.split("/")
 
-        register_hash('$params.path/test.txt')
-        validate_call('ipfs-scripting')
+        register_hash(f'{folder_name}/$params.path')
+        validate_call(file_name)
 
-        register_hash('ipfs-scripting/${params.path}.txt')
-        validate_call('test')
+        register_hash(f'$params.path/{file_name}')
+        validate_call(folder_name)
+
+        split_index = 5
+        register_hash('ipfs_scripting/${params.path}' + file_name[split_index:])
+        validate_call(file_name[:split_index])
 
         self.delete_script(script_name)
 

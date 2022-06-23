@@ -10,7 +10,7 @@ from flask import g
 
 from src.utils.http_request import RequestData
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.subscription.vault import VaultManager, AppSpaceDetector
+from src.modules.subscription.vault import VaultManager
 
 
 class Database:
@@ -23,19 +23,17 @@ class Database:
 
         :v2 API:
         """
-        with AppSpaceDetector(g.usr_did, g.app_did) as vault:
-            vault.check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_storage()
 
-            self.mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
-            return {'name': collection_name}
+        self.mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
+        return {'name': collection_name}
 
     def delete_collection(self, collection_name):
         """ Delete collection by name
 
         :v2 API:
         """
-        with AppSpaceDetector(g.usr_did, g.app_did) as _:
-            self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
+        self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
 
     def __get_collection(self, collection_name):
         return self.mcli.get_user_collection(g.usr_did, g.app_did, collection_name)
@@ -47,25 +45,22 @@ class Database:
 
     def insert_document(self, collection_name, documents, options):
         """ :v2 API: """
-        with AppSpaceDetector(g.usr_did, g.app_did) as vault:
-            vault.check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_storage()
 
-            col = self.__get_collection(collection_name)
-            return col.insert_many(documents, contains_extra=self.__is_timestamp(options), **options)
+        col = self.__get_collection(collection_name)
+        return col.insert_many(documents, contains_extra=self.__is_timestamp(options), **options)
 
     def update_document(self, collection_name, filter_, update, options, is_update_one):
         """ :v2 API: """
-        with AppSpaceDetector(g.usr_did, g.app_did) as vault:
-            vault.check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_storage()
 
-            col = self.__get_collection(collection_name)
-            return col.update_many(filter_, update, contains_extra=self.__is_timestamp(options), only_one=is_update_one, **options)
+        col = self.__get_collection(collection_name)
+        return col.update_many(filter_, update, contains_extra=self.__is_timestamp(options), only_one=is_update_one, **options)
 
     def delete_document(self, collection_name, col_filter, is_delete_one):
         """ :v2 API: """
-        with AppSpaceDetector(g.usr_did, g.app_did) as _:
-            col = self.__get_collection(collection_name)
-            col.delete_many(col_filter, only_one=is_delete_one)
+        col = self.__get_collection(collection_name)
+        col.delete_many(col_filter, only_one=is_delete_one)
 
     def count_document(self, collection_name, filter_, options):
         """ :v2 API: """

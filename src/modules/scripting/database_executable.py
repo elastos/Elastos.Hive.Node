@@ -2,7 +2,6 @@ import json
 
 from bson import json_util
 
-from src.modules.subscription.vault import AppSpaceDetector
 from src.modules.scripting.executable import Executable, get_populated_value_with_params
 from src.modules.scripting.scripting import Script
 
@@ -67,17 +66,16 @@ class InsertExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        with AppSpaceDetector(self.get_target_did(), self.get_target_app_did()) as vault:
-            vault.check_storage()
+        self.vault_manager.get_vault(self.get_target_did()).check_storage()
 
-            options = self.get_options()
+        options = self.get_options()
 
-            # timestamp = True, to add extra 'created' and 'modified' fields.
-            is_timestamp = options.pop('timestamp', False) is True
+        # timestamp = True, to add extra 'created' and 'modified' fields.
+        is_timestamp = options.pop('timestamp', False) is True
 
-            col = self.get_target_user_collection()
-            result = col.insert_one(self.get_populated_document(), contains_extra=is_timestamp, **options)
-            return self.get_result_data(result)
+        col = self.get_target_user_collection()
+        result = col.insert_one(self.get_populated_document(), contains_extra=is_timestamp, **options)
+        return self.get_result_data(result)
 
 
 class UpdateExecutable(DatabaseExecutable):
@@ -85,17 +83,16 @@ class UpdateExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        with AppSpaceDetector(self.get_target_did(), self.get_target_app_did()) as vault:
-            vault.check_storage()
+        self.vault_manager.get_vault(self.get_target_did()).check_storage()
 
-            options = self.get_options()
+        options = self.get_options()
 
-            # timestamp = True, to update extra 'modified' fields.
-            is_timestamp = options.pop('timestamp', False) is True
+        # timestamp = True, to update extra 'modified' fields.
+        is_timestamp = options.pop('timestamp', False) is True
 
-            col = self.get_target_user_collection()
-            result = col.update_one(self.get_populated_filter(), self.get_populated_update(), contains_extra=is_timestamp, **options)
-            return self.get_result_data(result)
+        col = self.get_target_user_collection()
+        result = col.update_one(self.get_populated_filter(), self.get_populated_update(), contains_extra=is_timestamp, **options)
+        return self.get_result_data(result)
 
 
 class DeleteExecutable(DatabaseExecutable):
@@ -103,6 +100,5 @@ class DeleteExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        with AppSpaceDetector(self.get_target_did(), self.get_target_app_did()) as _:
-            col = self.get_target_user_collection()
-            return self.get_result_data(col.delete_one(self.get_populated_filter()))
+        col = self.get_target_user_collection()
+        return self.get_result_data(col.delete_one(self.get_populated_filter()))

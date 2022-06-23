@@ -5,6 +5,7 @@ This file is mainly for v2 APIs,
 other constant variables, for compatible, comes from v1 which defines in file 'src/utils_v1/constants.py'
 """
 
+URL_V1 = '/api/v1'
 URL_V2 = '/api/v2'
 URL_SIGN_IN = '/did/signin'
 URL_AUTH = '/did/auth'

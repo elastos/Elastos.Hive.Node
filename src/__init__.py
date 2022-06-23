@@ -11,11 +11,10 @@ from flask_cors import CORS
 from sentry_sdk import capture_exception
 
 from src.settings import hive_setting
-from src.utils.executor import init_executor, update_vault_databases_usage_task, retry_backup_when_reboot_task, sync_app_dids_task, count_vault_storage_task
+from src.utils.executor import init_executor, update_vault_databases_usage_task
 from src.utils.http_exception import HiveException, InternalServerErrorException, UnauthorizedException
 from src.utils.http_request import RegexConverter
 from src.utils.http_response import HiveApi
-from src.utils.scheduler import scheduler_init
 from src.utils.sentry_error import init_sentry_hook
 from src.utils.auth_token import TokenParser
 from src.utils.did.did_init import init_did_backend
@@ -75,6 +74,7 @@ def after_request(response):
 
     # update vault database usage
     if hasattr(g, 'usr_did') and g.usr_did:
+        from src.utils.executor import update_vault_databases_usage_task
         update_vault_databases_usage_task.submit(g.usr_did, request.full_path)
 
     return response
@@ -118,12 +118,10 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
         if hive_setting.ENABLE_CORS:
             CORS(app, supports_credentials=True)
 
+        from src.utils.scheduler import scheduler_init
+        from src.utils.executor import init_executor
         scheduler_init(app)
         init_executor(app)
-
-        retry_backup_when_reboot_task.submit()
-        sync_app_dids_task.submit()
-        count_vault_storage_task.submit()
 
     return app
 

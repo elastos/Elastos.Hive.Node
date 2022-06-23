@@ -4,21 +4,60 @@ from datetime import datetime
 from io import BytesIO
 
 from src.utils.did.eladid import ffi, lib
+from src.utils.did.did_wrapper import Credential, DID
 
 from hive.util.constants import DID_INFO_TOKEN
+from hive.util.did.v1_entity import V1Entity
 from hive.util.did_info import get_did_info_by_did_appid
-
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_path
 from hive.util.payment.vault_service_manage import setup_vault_service, remove_vault_service, get_vault_path
+
 from tests import test_log
+from tests.utils.http_client import TokenCache
 
 did = "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN"
 app_id = "appid"
-did2 = "did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP"
+# did2 = "did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP"
 app_id2 = "appid2"
-# nonce = "c4211de6-e297-11ea-9bab-acde48001122"
+
+# Tokens change to cache, please run 'hive_auth_test.py' to get new ones
+# did with app_id
 token = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraWQiOiAiZGlkOmVsYXN0b3M6aXBVR0JQdUFnRXg2TGU5OWY0VHlEZk5adFhWVDJOS1hQUiNwcmltYXJ5In0.eyJpc3MiOiJkaWQ6ZWxhc3RvczppcFVHQlB1QWdFeDZMZTk5ZjRUeURmTlp0WFZUMk5LWFBSIiwic3ViIjoiQWNjZXNzVG9rZW4iLCJhdWQiOiJkaWQ6ZWxhc3Rvczppb0xGaTIyZm9kbUZVQUZLaWE2dVRWMlc4Sno5dkVjUXlQIiwiZXhwIjoxNjUxOTE3MzgzLCJwcm9wcyI6IntcImFwcERpZFwiOiBcImFwcGlkXCIsIFwidXNlckRpZFwiOiBcImRpZDplbGFzdG9zOmlqOGtyQVZSSml0WktKbWNDdWZvTEhRanE3TWVmM1pqVE5cIiwgXCJub25jZVwiOiBcImY2YThjOWJjLWI2NTgtMTFlYy04MmYxLWFjZGU0ODAwMTEyMlwifSJ9.oojoHi9aXFs5MqtP4RViqHB4lsNMIPBj89pOJRwIvqxYhdSzrRmd0WbphnVfO8MaKPCfjbhn_f8Hx5mVZhR4ZA"
+# did with app_id2
 token2 = "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJ2ZXJzaW9uIjogIjEuMCIsICJraWQiOiAiZGlkOmVsYXN0b3M6aXBVR0JQdUFnRXg2TGU5OWY0VHlEZk5adFhWVDJOS1hQUiNwcmltYXJ5In0.eyJpc3MiOiJkaWQ6ZWxhc3RvczppcFVHQlB1QWdFeDZMZTk5ZjRUeURmTlp0WFZUMk5LWFBSIiwic3ViIjoiQWNjZXNzVG9rZW4iLCJhdWQiOiJkaWQ6ZWxhc3Rvczppb0xGaTIyZm9kbUZVQUZLaWE2dVRWMlc4Sno5dkVjUXlQIiwiZXhwIjoxNjUxOTI1MDI5LCJwcm9wcyI6IntcImFwcERpZFwiOiBcImFwcGlkMlwiLCBcInVzZXJEaWRcIjogXCJkaWQ6ZWxhc3RvczppajhrckFWUkppdFpLSm1jQ3Vmb0xIUWpxN01lZjNaalROXCIsIFwibm9uY2VcIjogXCJiOWE5MmQzOC1iNjZhLTExZWMtYjQ5Ny1hY2RlNDgwMDExMjJcIn0ifQ.SRWdFUC7ZpFS1oZloD4fjcT1VPH6ueUEZElLMgcLabgomxJwm6KS5Cb6j-IMHEbJ9AxraqrT3Q7hi_11I1j_Xg"
+
+
+class DIDApp(V1Entity):
+    """ User DID """
+
+    def __init__(self, name, mnemonic=None, passphrase=None):
+        V1Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase)
+
+    def issue_auth(self, app) -> Credential:
+        props = {'appDid': app.appId}
+        return super().create_credential('AppIdCredential', props, owner_did=DID(app.get_did()))
+
+    def issue_backup_auth(self, hive1_did, host, hive2_did):
+        props = {'sourceDID': hive1_did, 'targetHost': host, 'targetDID': hive2_did}
+        return super().create_credential('BackupCredential', props, owner_did=DID.from_string(hive1_did)).vc
+
+
+class DApp(V1Entity):
+    """ Application Instance DID """
+
+    access_token = "123"
+    appId = app_id
+
+    def __init__(self, name, appId=None, mnemonic=None, passphrase=None):
+        if (appId is not None):
+            self.appId = appId
+        V1Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase, need_resolve=False)
+
+    def access_api_by_token(self):
+        return self.access_token
+
+    def set_access_token(self, token_):
+        self.access_token = token_
 
 
 def setup_test_auth_token():
@@ -35,8 +74,86 @@ def setup_test_auth_token():
     return
 
 
+def __test_auth_common(self, client, user_did, app_ins_did):
+    # sign_in
+    doc = lib.DIDStore_LoadDID(app_ins_did.get_did_store(), app_ins_did.get_did())
+    doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
+    test_log(f"HiveAuthTestCase: \ndoc_str: {doc_str}")
+    doc = json.loads(doc_str)
+    rt, s = self.parse_response(
+        client.post('/api/v1/did/sign_in', data=json.dumps({"document": doc,}), headers=self.json_header)
+    )
+    self.assert200(s)
+    self.assertEqual(rt["_status"], "OK")
+    jwt = rt["challenge"]
+    # print(jwt)
+    jws = lib.DefaultJWSParser_Parse(jwt.encode())
+    if not jws:
+        assert False, ffi.string(lib.DIDError_GetLastErrorMessage()).decode()
+    aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
+    self.assertEqual(aud, app_ins_did.get_did_string())
+    nonce = ffi.string(lib.JWT_GetClaim(jws, "nonce".encode())).decode()
+    hive_did = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+    lib.JWT_Destroy(jws)
+
+    # auth
+    vc = user_did.issue_auth(app_ins_did)  # set app_did here
+    vp_json = app_ins_did.create_presentation_str(vc, nonce, hive_did)
+    expire = int(datetime.now().timestamp()) + 60
+    auth_token = app_ins_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, expire)
+    # print(auth_token)
+    test_log(f"HiveAuthTestCase: \nauth_token: {auth_token}")
+
+    rt, s = self.parse_response(
+        client.post('/api/v1/did/auth', data=json.dumps({"jwt": auth_token,}), headers=self.json_header)
+    )
+    self.assert200(s)
+    self.assertEqual(rt["_status"], "OK")
+
+    token_ = rt["access_token"]
+    jws = lib.DefaultJWSParser_Parse(token_.encode())
+    aud = ffi.string(lib.JWT_GetAudience(jws)).decode()
+    self.assertEqual(aud, app_ins_did.get_did_string())
+    issuer = ffi.string(lib.JWT_GetIssuer(jws)).decode()
+    lib.JWT_Destroy(jws)
+    # print(token)
+    test_log(f"HiveAuthTestCase: \ntoken: {token_}")
+    app_ins_did.set_access_token(token_)
+
+    # auth_check
+    # token = test_common.get_auth_token()
+    self.json_header = [
+        ("Authorization", "token " + token_),
+        self.content_type,
+    ]
+    rt, s = self.parse_response(client.post('/api/v1/did/check_token', headers=self.json_header))
+    self.assert200(s)
+    self.assertEqual(rt["_status"], "OK")
+    return token_, hive_did
+
+
+def get_tokens(self, client):
+    user_did = DIDApp("didapp", "clever bless future fuel obvious black subject cake art pyramid member clump")
+    app_ins_did = DApp("testapp", app_id, "chimney limit involve fine absent topic catch chalk goat era suit leisure")
+    app_ins_did2 = DApp("testapp2", app_id2, "chimney limit involve fine absent topic catch chalk goat era suit leisure", "")
+    token_, node_did = __test_auth_common(self, client, user_did, app_ins_did)
+    token2_, node_did = __test_auth_common(self, client, user_did, app_ins_did2)
+    TokenCache.save_token(user_did.get_did_string(), app_id, token_)
+    TokenCache.save_token(user_did.get_did_string(), app_id2, token2_)
+
+
+def initialize_access_tokens(self, client):
+    """ Cache version to align with v2 tests """
+    token_, token2_ = TokenCache.load_token(did, app_id), TokenCache.load_token(did, app_id2)
+    if not token_ or not token2_:
+        get_tokens(self, client)
+        token_, token2_ = TokenCache.load_token(did, app_id), TokenCache.load_token(did, app_id2)
+    global token, token2
+    token, token2 = token_, token2_
+    test_log(f'user_did={did}, app_did={app_id}, app_did2={app_id2}')
+
+
 def delete_test_auth_token():
-    # delete_did_info(did, app_id)
     pass
 
 
@@ -64,7 +181,9 @@ def remove_test_vault(did):
     remove_vault_service(did)
 
 
-def test_auth_common(self, user_did, app_did):
+def test_auth_common(self, user_did: DIDApp, app_did: DApp):
+    """ used in tests_v1 unused modules, skip this. """
+
     # sign_in
     doc = lib.DIDStore_LoadDID(app_did.get_did_store(), app_did.get_did())
     doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
@@ -183,7 +302,7 @@ def upsert_collection(self, col_name, doc):
 
 
 def prepare_vault_data(self):
-    """ skip this. """
+    """ used in tests_v1 unused modules, skip this. """
     doc = dict()
     for i in range(1, 10):
         doc["work" + str(i)] = "work_content" + str(i)

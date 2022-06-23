@@ -53,26 +53,33 @@ class TokenCache:
     # tokens cache for every user did.
 
     @staticmethod
-    def get_token_cache_file_path(did: str):
-        return os.path.join(BASE_DIR, f'../../data/{did.split(":")[2]}')
+    def __get_token_cache_file_path(user_did: str, app_did: str):
+        user_part = user_did.split(":")[2]
+        parts = app_did.split(':')
+        app_part = app_did if len(parts) < 3 else app_did.split(":")[2]
+
+        file_name = f'{user_part}-{app_part}'
+
+        return os.path.join(BASE_DIR, f'../../data/{file_name}')
 
     @staticmethod
-    def save_token(did: str, token):
+    def save_token(user_did: str, app_did: str, token):
         if not TokenCache.enabled:
             return
-        with open(TokenCache.get_token_cache_file_path(did), 'w') as f:
+
+        with open(TokenCache.__get_token_cache_file_path(user_did, app_did), 'w') as f:
             f.write(token)
             f.flush()
 
     @staticmethod
-    def get_token(did: str):
+    def load_token(user_did: str, app_did: str):
         if not TokenCache.enabled:
-            return ''
+            return None
 
         # try load token
-        token_file = TokenCache.get_token_cache_file_path(did)
+        token_file = TokenCache.__get_token_cache_file_path(user_did, app_did)
         if not Path(token_file).exists():
-            return ''
+            return None
         with open(token_file, 'r') as f:
             token = f.read()
 
@@ -80,7 +87,7 @@ class TokenCache:
         jwt = JWT.parse(token)
         if jwt.get_expiration() < int(datetime.datetime.now().timestamp()):
             os.unlink(token_file)
-            return ''
+            return None
 
         return token
 
@@ -149,10 +156,10 @@ class RemoteResolver:
 
     def get_token(self):
         user_did = self.get_current_user_did()
-        token = TokenCache.get_token(user_did.get_did_string())
+        token = TokenCache.load_token(user_did.get_did_string(), self.app_did.get_did_string())
         if not token:
             token = self.__get_access_token_from_remote(user_did)
-            TokenCache.save_token(user_did.get_did_string(), token)
+            TokenCache.save_token(user_did.get_did_string(), self.app_did.get_did_string(), token)
         return token
 
     def get_current_user_did(self):

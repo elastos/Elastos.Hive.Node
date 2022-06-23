@@ -3,6 +3,7 @@ from hive.main import view
 
 
 def did_auth():
+    """ If getting the error from token, please try to use token with v2 API or direct parse """
     info, err = view.h_auth.get_token_info()
     if info:
         if APP_ID in info:

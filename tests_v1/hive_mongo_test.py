@@ -6,6 +6,7 @@ from tests import test_log
 from tests_v1 import test_common
 from hive.util.constants import HIVE_MODE_TEST
 from src import create_app
+from tests_v1.test_common import initialize_access_tokens
 
 
 class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
@@ -24,7 +25,7 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
         self.app.config['TESTING'] = True
         self.content_type = ("Content-Type", "application/json")
         self.json_header = [self.content_type, ]
-        test_common.setup_test_auth_token()
+        initialize_access_tokens(self, client)
         self.init_auth()
         self.did = test_common.get_auth_did()
         self.app_id = test_common.get_auth_app_did()

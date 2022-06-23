@@ -155,6 +155,7 @@ function start_direct () {
 function test_only() {
     # Run tests_v1
     pytest --disable-pytest-warnings -xs tests_v1/hive_auth_test.py
+    pytest --disable-pytest-warnings -xs tests_v1/hive_subscription_test.py
     pytest --disable-pytest-warnings -xs tests_v1/hive_mongo_test.py
     pytest --disable-pytest-warnings -xs tests_v1/hive_file_test.py
     pytest --disable-pytest-warnings -xs tests_v1/hive_scripting_test.py

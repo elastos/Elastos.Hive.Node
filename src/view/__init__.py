@@ -46,10 +46,12 @@ class V2StartUpThread(threading.Thread):
 
 def init_app(app: Flask, api: Api):
     logging.getLogger('v2_init').info('enter init_app')
+
     # auth service
     api.add_resource(auth.SignIn, URL_SIGN_IN, endpoint='v2_auth.sign_in')
     api.add_resource(auth.Auth, URL_AUTH, endpoint='v2_auth.auth')
     api.add_resource(auth.BackupAuth, URL_BACKUP_AUTH, endpoint='v2_auth.backup_auth')
+
     # subscription service
     api.add_resource(subscription.VaultInfo, '/subscription/vault', endpoint='subscription.vault_info')
     api.add_resource(subscription.VaultAppStates, '/subscription/vault/app_stats', endpoint='subscription.vault_app_states')
@@ -61,6 +63,7 @@ def init_app(app: Flask, api: Api):
     api.add_resource(subscription.BackupActivateDeactivate, '/subscription/backup', endpoint='subscription.backup_activate_deactivate')
     api.add_resource(subscription.BackupSubscribe, '/subscription/backup', endpoint='subscription.backup_subscribe')
     api.add_resource(subscription.BackupUnsubscribe, '/subscription/backup', endpoint='subscription.backup_unsubscribe')
+
     # database service
     api.add_resource(database.CreateCollection, '/vault/db/collections/<collection_name>', endpoint='database.create_collection')
     api.add_resource(database.DeleteCollection, '/vault/db/<collection_name>', endpoint='database.delete_collection')
@@ -69,11 +72,13 @@ def init_app(app: Flask, api: Api):
     api.add_resource(database.Delete, '/vault/db/collection/<collection_name>', endpoint='database.delete')
     api.add_resource(database.Find, '/vault/db/<collection_name>', endpoint='database.find')
     api.add_resource(database.Query, '/vault/db/query', endpoint='database.query')
+
     # files service
     api.add_resource(files.ReadingOperation, '/vault/files/<regex("(|[0-9a-zA-Z_/.]*)"):path>', endpoint='files.reading_operation')
     api.add_resource(files.WritingOperation, '/vault/files/<path:path>', endpoint='files.writing_operation')
     api.add_resource(files.MoveFile, '/vault/files/<path:path>', endpoint='files.move_file')
     api.add_resource(files.DeleteFile, '/vault/files/<path:path>', endpoint='files.delete_file')
+
     # scripting service
     api.add_resource(scripting.RegisterScript, '/vault/scripting/<script_name>', endpoint='scripting.register_script')
     api.add_resource(scripting.CallScript, '/vault/scripting/<script_name>', endpoint='scripting.call_script')
@@ -81,6 +86,7 @@ def init_app(app: Flask, api: Api):
     api.add_resource(scripting.UploadFile, '/vault/scripting/stream/<transaction_id>', endpoint='scripting.upload_file')
     api.add_resource(scripting.DownloadFile, '/vault/scripting/stream/<transaction_id>', endpoint='scripting.download_file')
     api.add_resource(scripting.DeleteScript, '/vault/scripting/<script_name>', endpoint='scripting.delete_script')
+
     # backup service
     api.add_resource(backup.State, '/vault/content', endpoint='backup.state')
     api.add_resource(backup.BackupRestore, '/vault/content', endpoint='backup.backup_restore')
@@ -88,13 +94,14 @@ def init_app(app: Flask, api: Api):
     api.add_resource(backup.ServerInternalBackup, URL_SERVER_INTERNAL_BACKUP, endpoint='backup.server_internal_backup')
     api.add_resource(backup.ServerInternalState, URL_SERVER_INTERNAL_STATE, endpoint='backup.server_internal_state')
     api.add_resource(backup.ServerInternalRestore, URL_SERVER_INTERNAL_RESTORE, endpoint='backup.server_internal_restore')
+
     # provider service
     api.add_resource(provider.Vaults, '/provider/vaults', endpoint='provider.vaults')
     api.add_resource(provider.Backups, '/provider/backups', endpoint='provider.backups')
     api.add_resource(provider.FilledOrders, '/provider/filled_orders', endpoint='provider.filled_orders')
 
     # about service
-    # INFO: one class with two lines for the documentation to hide '/about'.
+    # INFO: one class with two lines for the documentation to hide '/about', so don't combine them.
     api.add_resource(about.Version, '/node/version', endpoint='node.version')
     api.add_resource(about.Version, '/about/version', endpoint='about.version')
     api.add_resource(about.CommitId, '/node/commit_id', endpoint='node.commit_id')
@@ -111,4 +118,5 @@ def init_app(app: Flask, api: Api):
 
     scheduler_init(app)
     V2StartUpThread().start()
+
     logging.getLogger('v2_init').info('leave init_app')

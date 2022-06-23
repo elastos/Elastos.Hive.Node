@@ -173,12 +173,20 @@ def get_auth_token2():
     return token2
 
 
-def setup_test_vault(did):
-    setup_vault_service(did, 100, -1)
+def setup_test_vault(user_did):
+    setup_vault_service(user_did, 100, -1)
 
 
-def remove_test_vault(did):
-    remove_vault_service(did)
+def create_vault_if_not_exist(self, client):
+    response = client.post('/api/v1/service/vault/create', headers=self.auth)
+    self.assertEqual(response.status_code, 200)
+    body = json.loads(response.get_data())
+    self.assertEqual(body["_status"], "OK")
+
+
+def remove_test_vault(user_did):
+    """ used in tests_v1 unused modules, skip this. """
+    remove_vault_service(user_did)
 
 
 def test_auth_common(self, user_did: DIDApp, app_did: DApp):

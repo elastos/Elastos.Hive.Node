@@ -25,11 +25,13 @@ class HiveMongoScriptingTestCase(flask_unittest.ClientTestCase):
         self.app.config['TESTING'] = True
         self.content_type = ("Content-Type", "application/json")
         self.json_header = [self.content_type, ]
+
         initialize_access_tokens(self, client)
         self.init_auth()
         self.did = test_common.get_auth_did()
         self.app_id = test_common.get_auth_app_did()
-        test_common.setup_test_vault(self.did)
+
+        test_common.create_vault_if_not_exist(self, client)
         self.init_collection_for_test(client)
 
     def init_auth(self):

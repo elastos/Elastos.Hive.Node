@@ -17,6 +17,7 @@ install:
   - docker ps
 script:
   - pytest --disable-pytest-warnings -xs tests_v1/hive_auth_test.py
+  - pytest --disable-pytest-warnings -xs tests_v1/hive_subscription_test.py
   - pytest --disable-pytest-warnings -xs tests_v1/hive_mongo_test.py
   - pytest --disable-pytest-warnings -xs tests_v1/hive_file_test.py
   - pytest --disable-pytest-warnings -xs tests_v1/hive_scripting_test.py

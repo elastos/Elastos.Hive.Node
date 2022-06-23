@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-import logging.config
-import traceback
-
-import yaml
-from flask_cors import CORS
-from flask import Flask, request, g
 import os
+import yaml
+import traceback
+import logging.config
+
+from flask import Flask, request, g
+from flask_cors import CORS
+from flask_executor import Executor
 
 from sentry_sdk import capture_exception
 
@@ -16,12 +17,12 @@ from src.utils.http_response import HiveApi
 from src.utils.sentry_error import init_sentry_hook
 from src.utils.auth_token import TokenParser
 from src.utils.did.did_init import init_did_backend
-from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_DEV
+from src.utils_v1.constants import HIVE_MODE_PROD
+from src.utils_v1.payment.payment_config import PaymentConfig
 from src import view
 
 import hive.settings
 import hive.main
-from src.utils_v1.payment.payment_config import PaymentConfig
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')
@@ -30,6 +31,7 @@ CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')
 app = Flask('Hive Node V2')
 app.url_map.converters['regex'] = RegexConverter
 api = HiveApi(app, prefix='/api/v2')
+executor = Executor(app)
 
 
 @app.before_request
@@ -63,11 +65,22 @@ def before_request():
         return UnauthorizedException(msg=msg).get_error_response()
 
 
+@executor.job
+def update_vault_databases_usage(user_did):
+    from src.modules.subscription.vault import VaultManager
+    VaultManager().recalculate_user_databases_size(user_did)
+
+
 @app.after_request
 def after_request(response):
+    # log response details
     data_str = str(response.json)
     data_str = data_str[:500] if data_str else ''
     logging.getLogger('AFTER REQUEST').info(f'leave {request.full_path}, {request.method}, status={response.status_code}, data={data_str}')
+
+    # if hasattr(g, 'usr_did') and g.usr_did:
+    #     update_vault_databases_usage(g.usr_did)
+
     return response
 
 
@@ -84,6 +97,7 @@ def init_log():
 def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     # init v1 configure items
     hive.settings.hive_setting.init_config(hive_config)
+
     # init v2 configure items
     hive_setting.init_config(hive_config)
     PaymentConfig.init_config()
@@ -96,8 +110,10 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
 
     # init v1 APIs
     hive.main.init_app(app, mode)
-    # init v2 APIs
-    view.init_app(app, api)
+
+    if mode == HIVE_MODE_PROD:
+        # init v2 APIs
+        view.init_app(app, api)
 
     logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
     logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
@@ -105,6 +121,7 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
         init_sentry_hook(hive_setting.SENTRY_DSN)
     if hive_setting.ENABLE_CORS:
         CORS(app, supports_credentials=True)
+
     return app
 
 

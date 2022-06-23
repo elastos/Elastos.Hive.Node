@@ -1,3 +1,5 @@
+import logging
+
 from src.modules.database.mongodb_client import MongodbClient
 from src.utils.consts import COL_APPLICATION_USR_DID, COL_APPLICATION_APP_DID, COL_APPLICATION_STATE, COL_APPLICATION_STATE_NORMAL, COL_APPLICATION
 from src.utils_v1.constants import APP_ID, USER_DID, DID_INFO_REGISTER_COL
@@ -42,16 +44,16 @@ class UserManager:
         :param app_did application did
         """
 
-        if not user_did:
+        if not user_did or not app_did:
+            logging.getLogger('UserManager').error(f'Skip adding invalid user_did({user_did}) or app_did({app_did})')
             return
 
         filter_ = {
-            COL_APPLICATION_USR_DID: user_did
+            COL_APPLICATION_USR_DID: user_did,
+            COL_APPLICATION_APP_DID: app_did,
         }
 
-        update = {'$set': {
-                COL_APPLICATION_APP_DID: app_did,
-                COL_APPLICATION_STATE: COL_APPLICATION_STATE_NORMAL}}
+        update = {'$set': {COL_APPLICATION_STATE: COL_APPLICATION_STATE_NORMAL}}
 
         col = self.mcli.get_management_collection(COL_APPLICATION)
         col.update_one(filter_, update, contains_extra=True, upsert=True)

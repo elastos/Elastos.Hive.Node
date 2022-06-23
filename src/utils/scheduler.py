@@ -5,16 +5,14 @@ Scheduler tasks for the hive node.
 """
 import logging
 import time
-import traceback
-import typing
 from datetime import datetime
 
 from flask_apscheduler import APScheduler
-from sentry_sdk import capture_exception
 
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.subscription.vault import VaultManager
+from src.utils import hive_job
 from src.utils.file_manager import fm
 from src.utils_v1.common import get_temp_path
 from src.utils_v1.constants import VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_MODIFY_TIME
@@ -28,56 +26,7 @@ def scheduler_init(app):
         scheduler.start()
 
 
-def hive_job(name):
-    """ A decorator for any scheduler jobs
-
-    example:
-
-        @scheduler.task(trigger='interval', id='daily_routine_job', days=1)
-        @hive_job('count_vault_storage_job')
-        def count_vault_storage_job():
-            ...
-    """
-
-    def job_decorator(f: typing.Callable[..., None]) -> typing.Callable[..., None]:
-        def wrapper(*args, **kwargs):
-            logging.getLogger("scheduler").debug(f"{name} start: {str(datetime.now())}")
-
-            try:
-                f(*args, **kwargs)
-            except Exception as e:
-                msg = f'{name}: {str(e)}, {traceback.format_exc()}'
-                logging.getLogger('scheduler').error(msg)
-                capture_exception(error=Exception(f'scheduler UNEXPECTED: {msg}'))
-
-            logging.getLogger("scheduler").debug(f"{name} end: {str(datetime.now())}")
-        return wrapper
-    return job_decorator
-
-
-@hive_job('sync_app_dids')
-def sync_app_dids():
-    """ Used for syncing exist user_did's app_dids to the 'application' collection
-
-    @deprecated Only used when hive node starting, it will be removed later.
-    """
-
-    mcli, user_manager, vault_manager = MongodbClient(), UserManager(), VaultManager()
-
-    col = mcli.get_management_collection(VAULT_SERVICE_COL)
-    vault_services = col.find_many({VAULT_SERVICE_DID: {'$exists': True}})  # cursor
-
-    for service in vault_services:
-        user_did = service[VAULT_SERVICE_DID]
-
-        src_app_dids = user_manager.get_temp_app_dids(user_did)
-        for app_did in src_app_dids:
-            user_manager.add_app_if_not_exists(user_did, app_did)
-
-
-@scheduler.task(trigger='interval', id='daily_routine_job', days=1)
-@hive_job('count_vault_storage_job')
-def count_vault_storage_job():
+def count_vault_storage_really():
     mcli, user_manager, vault_manager = MongodbClient(), UserManager(), VaultManager()
     now = int(datetime.now().timestamp())
 
@@ -99,6 +48,12 @@ def count_vault_storage_job():
             VAULT_SERVICE_DB_USE_STORAGE: dbs_size,
             VAULT_SERVICE_MODIFY_TIME: now}}
         col.update_one(filter_, update, contains_extra=False)
+
+
+@scheduler.task(trigger='interval', id='daily_routine_job', days=1)
+@hive_job('count_vault_storage_job')
+def count_vault_storage_job():
+    count_vault_storage_really()
 
 
 @scheduler.task('interval', id='task_clean_temp_files', hours=6)

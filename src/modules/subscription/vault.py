@@ -61,6 +61,8 @@ class AppSpaceDetector:
     """ can only detect the database space size changes
 
     Files storage size changing can be checked by file size accurately.
+
+    @deprecated
     """
 
     def __init__(self, user_did, app_did):

@@ -67,19 +67,6 @@ class DatabaseClient:
     def get_all_database_names(self):
         return self.__get_connection().list_database_names()
 
-    def get_all_user_database_names(self, user_did=None):
-        """ TODO: remove this after refine backup module. """
-        names = [name for name in self.get_all_database_names() if name.startswith(get_user_database_prefix())]
-        if not user_did:
-            return names
-        user_apps = self.get_all_user_apps()
-        result = []
-        for app in user_apps:
-            db_name = self.get_user_database_name(app[USER_DID], app[APP_ID])
-            if db_name in names:
-                result.append(db_name)
-        return result
-
     def get_vault_service(self, user_did):
         return self.__get_connection()[DID_INFO_DB_NAME][VAULT_SERVICE_COL].find_one({VAULT_SERVICE_DID: user_did})
 
@@ -240,31 +227,6 @@ class DatabaseClient:
         t = datetime.fromtimestamp(timestamp)
         s = datetime(1970, 1, 1, 0, 0, 0)
         return int((t - s).total_seconds())
-
-    def get_all_user_apps(self, user_did=None, current_item=None) -> list:
-        """ TODO: remove this after refine backup module """
-
-        # INFO: Need consider the adaptation of the old user information.
-        query = {APP_INSTANCE_DID: {'$exists': True}, APP_ID: {'$exists': True}, USER_DID: {'$exists': True}}
-        if user_did:
-            query['$and'] = [{USER_DID: {'$exists': True}}, {USER_DID: user_did}]
-        else:
-            query[USER_DID] = {'$exists': True}
-        docs = self.find_many_origin(DID_INFO_DB_NAME,
-                                     DID_INFO_REGISTER_COL, query, create_on_absence=False, throw_exception=False)
-        if not docs:
-            return [current_item, ] if current_item else []
-
-        # INFO: appending current app info is just compatible for old data.
-        items = [{USER_DID: d[USER_DID], APP_ID: d[APP_ID]} for d in docs]
-        if current_item:
-            items.append(current_item)
-        return get_unique_dict_item_from_list(items)
-
-    def get_all_user_dids(self):
-        """ TODO: remove this after refine retry_backup_when_reboot_task """
-        user_apps = self.get_all_user_apps()
-        return list(set([d[USER_DID] for d in user_apps]))
 
 
 cli = DatabaseClient()

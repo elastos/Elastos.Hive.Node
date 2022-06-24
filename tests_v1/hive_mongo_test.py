@@ -2,6 +2,7 @@ import json
 import unittest
 import flask_unittest
 
+from src.utils.executor import executor
 from tests import test_log
 from tests_v1 import test_common
 from hive.util.constants import HIVE_MODE_TEST
@@ -18,6 +19,8 @@ class HiveMongoDbTestCase(flask_unittest.ClientTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # wait flask-executor to finish
+        executor.shutdown()
         test_log("HiveMongoDbTestCase: \n\nShutting down HiveMongoDbTestCase")
 
     def setUp(self, client):

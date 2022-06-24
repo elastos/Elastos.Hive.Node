@@ -4,6 +4,7 @@ import flask_unittest
 
 from src import create_app
 from hive.util.constants import HIVE_MODE_TEST
+from src.utils.executor import executor
 from tests import test_log
 from tests_v1 import test_common
 
@@ -17,6 +18,8 @@ class HiveAuthTestCase(flask_unittest.ClientTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # wait flask-executor to finish
+        executor.shutdown()
         test_log("HiveAuthTestCase: \n\nShutting down HiveAuthTestCase")
 
     def setUp(self, client):

@@ -408,6 +408,23 @@ This common collection is for sign-in and auth.
         "token_expired": <int>
     }
 
+application
+-----------
+
+The applications belong to user DID
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "user_did": <str>,
+        "app_did": <str>,
+        "database_name": <str>,
+        "state": "normal",
+        "created": <timestamp: int, seconds>,
+        "modified": <timestamp: int, seconds>
+    }
+
 vault_service
 -------------
 

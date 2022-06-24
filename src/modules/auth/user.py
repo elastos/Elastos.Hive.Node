@@ -23,8 +23,8 @@ class UserManager:
         docs = col.find_many(filter_)
         return list(set(map(lambda d: d[APP_ID], docs)))
 
-    def get_apps(self, user_did):
-        """ get all application of the user did """
+    def get_apps(self, user_did) -> list:
+        """ get all application DIDs of the user did """
 
         if not user_did:
             return []

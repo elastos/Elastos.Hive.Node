@@ -17,20 +17,15 @@ class IpfsBackupTestCase(unittest.TestCase):
         self.backup_cli = HttpClient(f'/api/v2', is_backup_node=True)
 
     @staticmethod
-    def _subscribe_vault():
-        HttpClient(f'/api/v2').put('/subscription/vault')
-
-    @staticmethod
     def _unsubscribe_vault_on_backup_node():
         HttpClient(f'/api/v2', is_backup_node=True).delete('/subscription/vault')
 
     @classmethod
     def setUpClass(cls):
-        cls._subscribe_vault()
+        HttpClient(f'/api/v2').put('/subscription/vault')
 
     def test01_subscribe(self):
         response = self.backup_cli.put('/subscription/backup')
-        self.assertTrue(response.status_code in [200, 455])
 
     def test02_get_info(self):
         response = self.backup_cli.get('/subscription/backup')

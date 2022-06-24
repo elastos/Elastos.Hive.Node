@@ -85,7 +85,7 @@ def init_log(mode):
     with open(CONFIG_FILE) as f:
         logging.config.dictConfig(yaml.load(f, Loader=yaml.FullLoader))
 
-    if mode == HIVE_MODE_TEST and os.environ.get('TEST_DEBUG') != 'True':
+    if os.environ.get('TRAVIS') == 'True' or (mode == HIVE_MODE_TEST and os.environ.get('TEST_DEBUG') != 'True'):
         # for run all v1 test cases, single test case still needs logs
         logging.disable(logging.CRITICAL)
     else:

@@ -19,7 +19,7 @@ class SubscriptionTestCase(unittest.TestCase):
 
     def test01_vault_subscribe(self):
         response = self.cli.put('/subscription/vault')
-        self.assertTrue(response.status_code in [200, 455])
+        self.assertIn(response.status_code, [200, 455])
 
     @unittest.skip
     def test02_vault_activate(self):
@@ -55,7 +55,7 @@ class SubscriptionTestCase(unittest.TestCase):
 
     def test08_backup_subscribe(self):
         response = self.backup_cli.put('/subscription/backup')
-        self.assertTrue(response.status_code in [200, 455])
+        self.assertIn(response.status_code, [200, 455])
 
     def test09_backup_get_info(self):
         response = self.backup_cli.get('/subscription/backup')

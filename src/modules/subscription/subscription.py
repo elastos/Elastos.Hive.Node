@@ -59,7 +59,7 @@ class VaultSubscription(metaclass=Singleton):
             raise BadRequestException(msg='Failed to create folder for the user.')
         return doc
 
-    def __get_vault_info(self, doc, files_used: bool):
+    def __get_vault_info(self, doc, files_used=False):
         vault = Vault(**doc)
         info = {
             'service_did': self.auth.get_did_string(),
@@ -96,32 +96,35 @@ class VaultSubscription(metaclass=Singleton):
         raise NotImplementedException()
 
     def get_info(self, files_used: bool):
-        """ :v2 API: """
+        """ :v2 API:
+
+        :param files_used for files usage testing
+        """
         vault = self.vault_manager.get_vault(g.usr_did)
         return self.__get_vault_info(vault, files_used)
 
     def get_app_stats(self):
         """ :v2 API: """
-        apps = cli.get_all_user_apps(user_did=g.usr_did, current_item={USER_DID: g.usr_did, APP_ID: g.app_did})
-        results = list(filter(lambda b: b is not None, map(lambda a: self.get_app_detail(a), apps)))
+        app_dids = self.user_manager.get_apps(g.usr_did)
+        results = list(filter(lambda b: b is not None, map(lambda app_did: self.get_app_detail(g.usr_did, app_did), app_dids)))
         if not results:
             raise ApplicationNotFoundException()
         return {"apps": results}
 
-    def get_app_detail(self, app):
+    def get_app_detail(self, user_did, app_did):
         info = {}
         try:
-            info = self._get_appdid_info_by_did(app[APP_ID])
+            info = self._get_appdid_info_by_did(app_did)
         except Exception as e:
-            logging.error(f'get the info of the app did {app[APP_ID]} failed: {str(e)}')
-        name = cli.get_user_database_name(app[USER_DID], app[APP_ID])
+            logging.error(f'get the info of the app did {app_did} failed: {str(e)}')
+        name = cli.get_user_database_name(user_did, app_did)
         return {
             "name": info.get('name', ''),
             "developer_did": info.get('developer', ''),
             "icon_url": info.get('icon_url', ''),
             "redirect_url": info.get('redirect_url', ''),
-            "user_did": app[USER_DID],
-            "app_did": app[APP_ID],
+            "user_did": user_did,
+            "app_did": app_did,
             "used_storage_size": int(fm.ipfs_get_app_file_usage(name) + cli.get_database_size(name))
         }
 

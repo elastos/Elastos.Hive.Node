@@ -68,6 +68,7 @@ class DatabaseClient:
         return self.__get_connection().list_database_names()
 
     def get_all_user_database_names(self, user_did=None):
+        """ TODO: remove this after refine backup module. """
         names = [name for name in self.get_all_database_names() if name.startswith(get_user_database_prefix())]
         if not user_did:
             return names
@@ -241,6 +242,8 @@ class DatabaseClient:
         return int((t - s).total_seconds())
 
     def get_all_user_apps(self, user_did=None, current_item=None) -> list:
+        """ TODO: remove this after refine backup module """
+
         # INFO: Need consider the adaptation of the old user information.
         query = {APP_INSTANCE_DID: {'$exists': True}, APP_ID: {'$exists': True}, USER_DID: {'$exists': True}}
         if user_did:
@@ -259,6 +262,7 @@ class DatabaseClient:
         return get_unique_dict_item_from_list(items)
 
     def get_all_user_dids(self):
+        """ TODO: remove this after refine retry_backup_when_reboot_task """
         user_apps = self.get_all_user_apps()
         return list(set([d[USER_DID] for d in user_apps]))
 

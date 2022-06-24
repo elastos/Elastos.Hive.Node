@@ -3,6 +3,8 @@ from pathlib import Path
 from decouple import config, Config, RepositoryEnv
 import logging
 
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+
 
 class HiveSetting:
     def __init__(self):
@@ -40,7 +42,10 @@ class HiveSetting:
 
     @property
     def DATA_STORE_PATH(self):
-        return self.env_config('DATA_STORE_PATH', default='./data', cast=str)
+        value = self.env_config('DATA_STORE_PATH', default='./data', cast=str)
+        if value.startswith('/'):
+            return value
+        return os.path.join(BASE_DIR, value)
 
     @property
     def VAULTS_BASE_DIR(self):
@@ -68,7 +73,10 @@ class HiveSetting:
 
     @property
     def PAYMENT_PATH(self):
-        return self.env_config('PAYMENT_PATH', default='./payment_config.json', cast=str)
+        path = self.env_config('PAYMENT_PATH', default='./payment_config.json', cast=str)
+        if path.startswith('/'):
+            return path
+        return os.path.join(BASE_DIR, path)
 
     @property
     def PAYMENT_ADDRESS(self):

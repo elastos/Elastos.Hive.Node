@@ -13,7 +13,7 @@ from src.modules.subscription.vault import VaultManager
 from src.utils import hive_job
 from src.utils.db_client import cli
 from src.utils.scheduler import count_vault_storage_really
-from src.utils_v1.constants import VAULT_SERVICE_COL, VAULT_SERVICE_DID
+from src.utils_v1.constants import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST
 
 executor = Executor()
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
@@ -92,12 +92,14 @@ def count_vault_storage_task():
     count_vault_storage_really()
 
 
-def init_executor(app):
+def init_executor(app, mode):
     """ executor for executing thread tasks """
     executor.init_app(app)
-    app.config['EXECUTOR_TYPE'] = 'thread'
-    app.config['EXECUTOR_MAX_WORKERS'] = 5
 
-    pool.submit(retry_backup_when_reboot_task)
-    pool.submit(sync_app_dids_task)
-    pool.submit(count_vault_storage_task)
+    if mode != HIVE_MODE_TEST:
+        app.config['EXECUTOR_TYPE'] = 'thread'
+        app.config['EXECUTOR_MAX_WORKERS'] = 5
+
+        pool.submit(retry_backup_when_reboot_task)
+        pool.submit(sync_app_dids_task)
+        pool.submit(count_vault_storage_task)

@@ -3,15 +3,16 @@ import unittest
 from src import create_app
 from hive.util.payment.vault_order import *
 from hive.util.payment.vault_service_manage import *
+from src.utils.executor import executor
 from tests import test_log
 from tests_v1 import test_common
 
 
-class HivePaymentTestCase(unittest.TestCase):
+class SubscriptionTestCase(unittest.TestCase):
     app = create_app(mode=HIVE_MODE_TEST)
 
     def __init__(self, methodName='runTest'):
-        super(HivePaymentTestCase, self).__init__(methodName)
+        super(SubscriptionTestCase, self).__init__(methodName)
 
     def setUp(self):
         self.app.config['TESTING'] = True
@@ -23,6 +24,11 @@ class HivePaymentTestCase(unittest.TestCase):
             ("Content-Type", "application/json"),
         ]
         self.did = test_common.get_auth_did()
+
+    @classmethod
+    def tearDownClass(cls):
+        # wait flask-executor to finish
+        executor.shutdown()
 
     def test01_create_vault(self):
         test_log("\nRunning test01_create_vault")
@@ -37,7 +43,7 @@ class HivePaymentTestCase(unittest.TestCase):
     def test02_get_vault_info(self):
         test_log("\nRunning test02_get_vault_info")
 
-        response = self.test_client.post('/api/v1/service/vault', headers=self.auth)
+        response = self.test_client.get('/api/v1/service/vault', headers=self.auth)
         self.assertEqual(response.status_code, 200)
         body = json.loads(response.get_data())
         self.assertEqual(body["_status"], "OK")

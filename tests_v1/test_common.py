@@ -78,7 +78,6 @@ def __test_auth_common(self, client, user_did, app_ins_did):
     # sign_in
     doc = lib.DIDStore_LoadDID(app_ins_did.get_did_store(), app_ins_did.get_did())
     doc_str = ffi.string(lib.DIDDocument_ToJson(doc, True)).decode()
-    test_log(f"HiveAuthTestCase: \ndoc_str: {doc_str}")
     doc = json.loads(doc_str)
     rt, s = self.parse_response(
         client.post('/api/v1/did/sign_in', data=json.dumps({"document": doc,}), headers=self.json_header)
@@ -102,7 +101,7 @@ def __test_auth_common(self, client, user_did, app_ins_did):
     expire = int(datetime.now().timestamp()) + 60
     auth_token = app_ins_did.create_vp_token(vp_json, "DIDAuthResponse", hive_did, expire)
     # print(auth_token)
-    test_log(f"HiveAuthTestCase: \nauth_token: {auth_token}")
+    test_log(f"HiveAuthTestCase: \nchallenge: {auth_token}")
 
     rt, s = self.parse_response(
         client.post('/api/v1/did/auth', data=json.dumps({"jwt": auth_token,}), headers=self.json_header)

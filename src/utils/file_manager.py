@@ -15,6 +15,7 @@ from pathlib import Path
 from flask import request
 from flask_rangerequest import RangeRequest
 
+from src.modules.auth.user import UserManager
 from src.settings import hive_setting
 from src.utils.consts import COL_IPFS_FILES, COL_IPFS_FILES_IPFS_CID, DID, SIZE, COL_IPFS_FILES_SHA256, \
     COL_IPFS_FILES_PATH, USR_DID, APP_DID
@@ -31,6 +32,7 @@ class FileManager:
         self._http = None
         self.ipfs_url = hive_setting.IPFS_NODE_URL
         self.ipfs_gateway_url = hive_setting.IPFS_GATEWAY_URL
+        self.user_manager = UserManager()
 
     @property
     def http(self):
@@ -223,10 +225,11 @@ class FileManager:
         return total_size, list(cids)
 
     def get_file_cid_metadatas(self, user_did):
-        databases = cli.get_all_user_database_names(user_did)
+        """ get all cid infos from user's vault """
+        database_names = self.user_manager.get_database_names(user_did)
         total_size, cids = 0, list()
-        for d in databases:
-            docs = cli.find_many_origin(d, COL_IPFS_FILES, {USR_DID: user_did},
+        for database_name in database_names:
+            docs = cli.find_many_origin(database_name, COL_IPFS_FILES, {USR_DID: user_did},
                                         create_on_absence=False, throw_exception=False)
             for doc in docs:
                 mt = self._get_cid_metadata_from_list(cids, doc)

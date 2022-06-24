@@ -28,6 +28,8 @@ import logging
 from flask import g
 
 from src.modules.auth.auth import Auth
+from src.modules.auth.user import UserManager
+from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.ipfs_backup_executor import BackupExecutor, RestoreExecutor
 from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
@@ -49,6 +51,8 @@ class IpfsBackupClient:
     def __init__(self):
         self.auth = Auth()
         self.http = HttpClient()
+        self.mcli = MongodbClient()
+        self.user_manager = UserManager()
         self.vault_manager = VaultManager()
 
     def get_state(self):
@@ -207,7 +211,7 @@ class IpfsBackupClient:
         - dump the specific database to a snapshot file;
         - upload this snapshot file into IPFS node
         """
-        names = cli.get_all_user_database_names(user_did)
+        names = self.user_manager.get_database_names(user_did)
         metadata_list = list()
         for name in names:
             d = {
@@ -228,7 +232,7 @@ class IpfsBackupClient:
 
     def get_files_data_as_backup_cids(self, user_did):
         """
-        All files data have been uploaded to IPFS node and save with array of cids.
+        All files data of the vault have been uploaded to IPFS node and save with array of cids.
         The method here is to get array of cids to save it as json document then.
         """
         return fm.get_file_cid_metadatas(user_did)
@@ -279,14 +283,24 @@ class IpfsBackupClient:
             temp_file.unlink()
             logging.info(f'[IpfsBackupClient] Success to restore the dump file for database {d["name"]}.')
 
-    def retry_backup_request(self, user_did):
-        req = self.__get_request(user_did)
-        if not req or req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
-            return
-        logging.info(f"[IpfsBackupClient] Found uncompleted request({req.get(USR_DID)}), retry.")
-        if req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_BACKUP:
-            BackupExecutor(user_did, self, req, start_delay=30).start()
-        elif req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_RESTORE:
-            RestoreExecutor(user_did, self, start_delay=30).start()
-        else:
-            logging.error(f'[IpfsBackupClient] Unknown action({req.get(BACKUP_REQUEST_ACTION)}), skip.')
+    def retry_backup_request(self):
+        """ retry unfinished backup&restore action when node rebooted """
+
+        col = self.mcli.get_management_collection(COL_IPFS_BACKUP_CLIENT)
+        requests = col.find_many({})
+
+        for req in requests:
+            if req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
+                continue
+
+            # only handle the state BACKUP_REQUEST_STATE_INPROGRESS
+
+            user_did = req[USR_DID]
+            logging.info(f"[IpfsBackupClient] Found unfinished request({user_did}), retry.")
+
+            if req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_BACKUP:
+                BackupExecutor(user_did, self, req, start_delay=30).start()
+            elif req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_RESTORE:
+                RestoreExecutor(user_did, self, start_delay=30).start()
+            else:
+                logging.error(f'[IpfsBackupClient] Unknown action({req.get(BACKUP_REQUEST_ACTION)}), skip.')

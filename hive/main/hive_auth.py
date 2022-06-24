@@ -56,11 +56,10 @@ class HiveAuth(V1Entity):
 
         spec_did_str = ffi.string(lib.DID_GetMethodSpecificId(did)).decode()
         try:
-            with open(hive_setting.DID_DATA_LOCAL_DIDS+ os.sep + spec_did_str, "w") as f:
+            with open(hive_setting.DID_DATA_LOCAL_DIDS + os.sep + spec_did_str, "w") as f:
                 f.write(doc_str)
         except Exception as e:
-            logging.getLogger("HiveAuth").error(
-                f"Exception in sign_in:{str(e)}")
+            logging.getLogger("HiveAuth").error(f"Exception in sign_in:{str(e)}")
 
         did_str = "did:" + ffi.string(lib.DID_GetMethod(did)).decode() + ":" + spec_did_str
 

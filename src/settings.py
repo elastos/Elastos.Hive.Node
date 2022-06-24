@@ -44,10 +44,10 @@ class HiveSetting:
 
     @property
     def DATA_STORE_PATH(self):
-        value = self.env_config('DATA_STORE_PATH', default='./data', cast=str)
-        if value.startswith('/'):
-            return value
-        return os.path.join(BASE_DIR, value)
+        path = self.env_config('DATA_STORE_PATH', default='./data', cast=str)
+        if path.startswith('/'):
+            return path
+        return os.path.join(BASE_DIR, path)
 
     @property
     def VAULTS_BASE_DIR(self):
@@ -91,8 +91,10 @@ class HiveSetting:
 
     @property
     def PAYMENT_PATH(self):
-        name = self.env_config('PAYMENT_PATH', default='./payment_config.json', cast=str)
-        return os.path.join(BASE_DIR, name)
+        path = self.env_config('PAYMENT_PATH', default='./payment_config.json', cast=str)
+        if path.startswith('/'):
+            return path
+        return os.path.join(BASE_DIR, path)
 
     @property
     def PAYMENT_CONTRACT_URL(self):

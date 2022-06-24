@@ -4,6 +4,7 @@ import flask_unittest
 
 from hive.util.constants import HIVE_MODE_TEST
 from src import create_app
+from src.utils.executor import executor
 from tests import test_log
 from tests_v1 import test_common
 from tests_v1.test_common import create_upload_file, initialize_access_tokens
@@ -18,6 +19,8 @@ class HiveFileTestCase(flask_unittest.ClientTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # wait flask-executor to finish
+        executor.shutdown()
         test_log("HiveAuthTestCase: \n\nShutting down HiveFileTestCase")
 
     def clear_all_test_files(self, client):

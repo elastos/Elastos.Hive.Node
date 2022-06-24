@@ -74,35 +74,40 @@ def after_request(response):
 
     # update vault database usage
     if hasattr(g, 'usr_did') and g.usr_did:
-        from src.utils.executor import update_vault_databases_usage_task
         update_vault_databases_usage_task.submit(g.usr_did, request.full_path)
 
     return response
 
 
-def init_log():
+def init_log(mode):
     print("init log")
+
     with open(CONFIG_FILE) as f:
         logging.config.dictConfig(yaml.load(f, Loader=yaml.FullLoader))
-    logging.getLogger('file').info("Log in file")
-    logging.getLogger('console').info("log in console")
-    logging.getLogger('src_init').info("log in console and file")
-    logging.info("log in console and file with root Logger")
+
+    if mode == HIVE_MODE_TEST and os.environ.get('TEST_DEBUG') != 'True':
+        # for run all v1 test cases, single test case still needs logs
+        logging.disable(logging.CRITICAL)
+    else:
+        logging.getLogger('file').info("Log in file")
+        logging.getLogger('console').info("log in console")
+        logging.getLogger('src_init').info("log in console and file")
+        logging.info("log in console and file with root Logger")
 
 
 def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
+    init_log(mode)
+    logging.getLogger("src_init").info("##############################")
+    logging.getLogger("src_init").info("HIVE NODE IS STARTING")
+    logging.getLogger("src_init").info("##############################")
+    init_did_backend()
+
     # init v1 configure items
     hive.settings.hive_setting.init_config(hive_config)
 
     # init v2 configure items
     hive_setting.init_config(hive_config)
     PaymentConfig.init_config()
-
-    init_log()
-    logging.getLogger("src_init").info("##############################")
-    logging.getLogger("src_init").info("HIVE NODE IS STARTING")
-    logging.getLogger("src_init").info("##############################")
-    init_did_backend()
 
     # init v1 APIs
     hive.main.init_app(app, mode)
@@ -119,9 +124,9 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
             CORS(app, supports_credentials=True)
 
         from src.utils.scheduler import scheduler_init
-        from src.utils.executor import init_executor
         scheduler_init(app)
-        init_executor(app)
+
+    init_executor(app, mode)
 
     return app
 

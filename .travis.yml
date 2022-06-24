@@ -12,7 +12,7 @@ before_install:
   - docker run -d --name ipfs-node -v ${PWD}/.ipfs-data/ipfs-docker-staging:/export -v ${PWD}/.ipfs-data/ipfs-docker-data:/data/ipfs -p 8080:8080 -p 4001:4001 -p 127.0.0.1:5001:5001 ipfs/go-ipfs:latest
   - cp config/.env.travis .env
   - pip install -r requirements.txt
-  - LD_LIBRARY_PATH="$PWD/src/util/did/" python manage.py runserver &
+  - LD_LIBRARY_PATH="$PWD/src/util/did/" TRAVIS=True python manage.py runserver &
 install:
   - docker ps
 script:

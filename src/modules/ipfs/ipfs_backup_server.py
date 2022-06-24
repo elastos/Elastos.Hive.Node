@@ -6,6 +6,7 @@ from flask import g
 
 from src.modules.auth.auth import Auth
 from src.modules.auth.user import UserManager
+from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.subscription.subscription import VaultSubscription
@@ -27,6 +28,7 @@ class IpfsBackupServer:
         self.vault = VaultSubscription()
         self.client = IpfsBackupClient()
         self.auth = Auth()
+        self.mcli = MongodbClient()
         self.user_manager = UserManager()
 
     def promotion(self):
@@ -195,9 +197,16 @@ class IpfsBackupServer:
             raise BackupNotFoundException()
         return doc
 
-    def retry_backup_request(self, user_did):
-        req = self.find_backup_request(user_did, throw_exception=False)
-        if not req or req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
-            return
-        logging.info(f"[IpfsBackupServer] Found uncompleted request({req.get(USR_DID)}), retry.")
-        BackupServerExecutor(user_did, self, req, start_delay=30).start()
+    def retry_backup_request(self):
+        """ retry unfinished backup&restore action when node rebooted """
+        col = self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER)
+        requests = col.find_many({})
+
+        for req in requests:
+            if req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
+                return
+
+            # only handle BACKUP_REQUEST_STATE_INPROGRESS ones.
+            user_did = req[USR_DID]
+            logging.info(f"[IpfsBackupServer] Found uncompleted request({user_did}), retry.")
+            BackupServerExecutor(user_did, self, req, start_delay=30).start()

@@ -55,16 +55,10 @@ def retry_backup_when_reboot_task():
 
     1. handle all backup request in the vault node.
     2. handle all backup request in the backup node.
-
     """
-
     client, server = IpfsBackupClient(), IpfsBackupServer()
-    # TODO: get backup requests separately from COL_IPFS_BACKUP_CLIENT and COL_IPFS_BACKUP_SERVER
-    user_dids = cli.get_all_user_dids()
-    logging.info(f'[retry_ipfs_backup] get {len(user_dids)} users')
-    for user_did in user_dids:
-        client.retry_backup_request(user_did)
-        server.retry_backup_request(user_did)
+    client.retry_backup_request()
+    server.retry_backup_request()
 
 
 @hive_job('sync_app_dids', tag='executor')

@@ -24,8 +24,8 @@ class UserManager:
         docs = col.find_many(filter_)
         return list(set(map(lambda d: d[APP_ID], docs)))
 
-    def get_apps(self, user_did) -> list:
-        """ get all application DIDs of the user did """
+    def get_app_docs(self, user_did) -> list:
+        """ get all application information by user did"""
 
         if not user_did:
             return []
@@ -35,8 +35,15 @@ class UserManager:
         }
 
         col = self.mcli.get_management_collection(COL_APPLICATION)
-        docs = col.find_many(filter_)
-        return list(map(lambda d: d[COL_APPLICATION_APP_DID], docs))
+        return col.find_many(filter_)
+
+    def get_apps(self, user_did) -> list:
+        """ get all application DIDs of the user did """
+        return list(map(lambda d: d[COL_APPLICATION_APP_DID], self.get_app_docs(user_did)))
+
+    def get_database_names(self, user_did) -> list:
+        """ get all database names of the user did """
+        return list(map(lambda d: d[COL_APPLICATION_DATABASE_NAME], self.get_app_docs(user_did)))
 
     def add_app_if_not_exists(self, user_did, app_did):
         """ add the relation of user did and app did to collection

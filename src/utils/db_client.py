@@ -11,14 +11,9 @@ from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from src.settings import hive_setting
-from src.utils.consts import get_unique_dict_item_from_list
-from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name, convert_oid, get_user_database_prefix
-from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, USER_DID, APP_ID, DID_INFO_REGISTER_COL, APP_INSTANCE_DID
-from src.utils.http_exception import BadRequestException, AlreadyExistsException, VaultNotFoundException, CollectionNotFoundException
-
-VAULT_SERVICE_FREE = "Free"
-VAULT_SERVICE_STATE_RUNNING = "running"
-VAULT_SERVICE_STATE_FREEZE = "freeze"
+from src.utils_v1.did_mongo_db_resource import gene_mongo_db_name, convert_oid
+from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID
+from src.utils.http_exception import BadRequestException, AlreadyExistsException, CollectionNotFoundException
 
 
 class DatabaseClient:

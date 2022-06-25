@@ -10,7 +10,6 @@ from pymongo import MongoClient
 
 from src.settings import hive_setting
 from src.utils.http_exception import BadRequestException
-from src.utils_v1.constants import DATETIME_FORMAT
 from src.utils_v1.common import did_tail_part
 
 
@@ -64,24 +63,6 @@ def gene_sort(sorts_src):
 def populate_options_insert_one(content):
     options = options_filter(content, ("bypass_document_validation",))
     return options
-
-
-def query_insert_one(col, content, options, created=False):
-    try:
-        if created:
-            content["document"]["created"] = datetime.strptime(content["document"]["created"], DATETIME_FORMAT)
-        else:
-            content["document"]["created"] = int(datetime.now().timestamp())
-        content["document"]["modified"] = int(datetime.now().timestamp())
-        ret = col.insert_one(convert_oid(content["document"]), **options)
-
-        data = {
-            "acknowledged": ret.acknowledged,
-            "inserted_id": str(ret.inserted_id)
-        }
-        return data, None
-    except Exception as e:
-        return None, f"Exception: method: 'query_insert_one', Err: {str(e)}"
 
 
 def populate_options_update_one(content):

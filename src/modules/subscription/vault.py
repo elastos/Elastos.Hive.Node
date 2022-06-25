@@ -5,11 +5,10 @@ from src import hive_setting
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient, Dotdict
 from src.utils.consts import COL_IPFS_FILES
-from src.utils.db_client import VAULT_SERVICE_STATE_RUNNING
-from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException, CollectionNotFoundException
+from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException, CollectionNotFoundException, VaultFrozenException
 from src.utils_v1.constants import VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
-    VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, \
-    VAULT_SERVICE_FILE_USE_STORAGE
+    VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, \
+    VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 
@@ -43,6 +42,13 @@ class Vault(Dotdict):
         # TODO: temporary comment these because an issue vault full
         # if self.is_storage_full():
         #     raise InsufficientStorageException()
+        return self
+
+    def check_write_permission(self):
+        """ if vault is freeze, raise VaultFrozenException """
+        if self.state == VAULT_SERVICE_STATE_FREEZE:
+            raise VaultFrozenException('The vault can not be writen')
+        return self
 
     def get_plan(self):
         return PaymentConfig.get_pricing_plan(self.pricing_using)
@@ -90,7 +96,13 @@ class VaultManager:
         """ Get the vault for user or raise not-found exception.
 
         This method is also used to check the existence of the vault
+
+        example:
+
+            vault_manager.get_vault(user_did).check_storage().check_write_permission()
+
         """
+
         vault = self.__only_get_vault(user_did)
 
         # try to revert to free package plan
@@ -106,6 +118,8 @@ class VaultManager:
         return Vault(**doc)
 
     def upgrade(self, user_did, plan: dict, vault: Vault = None):
+        """ upgrade the vault to specific pricing plan """
+
         # Support vault = None to avoid recursive calling with 'get_vault()'
         if not vault:
             vault = self.__only_get_vault(user_did)
@@ -118,8 +132,7 @@ class VaultManager:
             VAULT_SERVICE_MAX_STORAGE: int(plan["maxStorage"]) * 1024 * 1024,
             VAULT_SERVICE_START_TIME: start,
             VAULT_SERVICE_END_TIME: end,  # -1 means endless
-            VAULT_SERVICE_MODIFY_TIME: start,
-            VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING
+            VAULT_SERVICE_MODIFY_TIME: start
         }
 
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)

@@ -23,7 +23,6 @@ from src.utils.db_client import cli
 from src.utils_v1.common import deal_dir, get_file_md5_info, create_full_path_dir, gene_temp_file_name
 from src.utils_v1.constants import CHUNK_SIZE, DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_MAX_STORAGE
 from src.utils_v1.did_file_info import get_save_files_path, get_user_did_path, get_directory_size
-from src.utils_v1.payment.vault_backup_service_manage import get_vault_backup_path
 from src.utils.http_exception import BadRequestException, VaultNotFoundException
 
 
@@ -121,9 +120,6 @@ class FileManager:
     def delete_file(self, file_path: Path):
         if file_path.exists() and file_path.is_file():
             file_path.unlink()
-
-    def delete_vault_file(self, user_did, name):
-        self.delete_file((get_vault_backup_path(user_did) / name).resolve())
 
     def ipfs_gen_cache_file_name(self, path: str):
         return path.replace('/', '_').replace('\\', '_')

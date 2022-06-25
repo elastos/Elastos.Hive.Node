@@ -102,8 +102,15 @@ class UnauthorizedException(HiveException):
 
 
 class ForbiddenException(HiveException):
-    def __init__(self, msg='Forbidden.'):
-        super().__init__(403, super().NO_INTERNAL_CODE, msg)
+    VAULT_FROZEN = 1
+
+    def __init__(self, msg='Forbidden.', internal_code=HiveException.NO_INTERNAL_CODE):
+        super().__init__(403, internal_code, msg)
+
+
+class VaultFrozenException(ForbiddenException):
+    def __init__(self, msg='The vault is frozen and can not be writen'):
+        super().__init__(msg, super().VAULT_FROZEN)
 
 
 # NotFoundException

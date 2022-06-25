@@ -3,12 +3,12 @@
 """
 The view of subscription module.
 """
-from flask import request
 from flask_restful import Resource
 
+from src.utils.http_exception import BadRequestException
+from src.utils.http_request import RV
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.modules.subscription.subscription import VaultSubscription
-from src.utils.http_request import RV
 
 
 class VaultPricePlan(Resource):
@@ -93,7 +93,10 @@ class VaultPricePlan(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        subscription, name = request.args.get("subscription"), request.args.get("name")
+
+        subscription = RV.get_args().get_opt('subscription', str, 'all')
+        name = RV.get_args().get_opt('name', str, None)
+
         return self.vault_subscription.get_price_plans(subscription, name)
 
 
@@ -270,11 +273,13 @@ class VaultActivateDeactivate(Resource):
         self.vault_subscription = VaultSubscription()
 
     def post(self):
-        op = request.args.get('op')
+        op = RV.get_args().get('op', str)
         if op == 'activation':
             return self.vault_subscription.activate()
         elif op == 'deactivation':
             return self.vault_subscription.deactivate()
+        else:
+            raise BadRequestException(msg=f'Unsupported parameter "op" value {op}')
 
 
 class VaultUnsubscribe(Resource):
@@ -426,11 +431,13 @@ class BackupActivateDeactivate(Resource):
         self.backup_server = IpfsBackupServer()
 
     def post(self):
-        op = None
+        op = RV.get_args().get('op', str)
         if op == 'activation':
             return self.backup_server.activate()
         elif op == 'deactivation':
             return self.backup_server.deactivate()
+        else:
+            raise BadRequestException(msg=f'Unsupported parameter "op" value {op}')
 
 
 class BackupUnsubscribe(Resource):

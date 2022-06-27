@@ -8,7 +8,7 @@ from src.utils.consts import COL_IPFS_FILES
 from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException, CollectionNotFoundException, VaultFrozenException
 from src.utils_v1.constants import VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, \
-    VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE
+    VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 
@@ -37,7 +37,7 @@ class Vault(Dotdict):
     def is_storage_full(self):
         return self.get_storage_gap() <= 0
 
-    def check_storage(self):
+    def check_storage_full(self):
         """ if storage is full, raise InsufficientStorageException """
         # TODO: temporary comment these because an issue vault full
         # if self.is_storage_full():
@@ -99,7 +99,7 @@ class VaultManager:
 
         example:
 
-            vault_manager.get_vault(user_did).check_storage().check_write_permission()
+            vault_manager.get_vault(user_did).check_storage_full().check_write_permission()
 
         """
 
@@ -190,6 +190,17 @@ class VaultManager:
                 '$inc': {key: size},
                 '$set': {VAULT_SERVICE_MODIFY_TIME: now}
             }
+
+        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
+        col.update_one(filter_, update, contains_extra=False)
+
+    def active_vault(self, user_did, is_active: bool):
+        """ active or deactivate the vault without checking the existence of the vault """
+
+        filter_ = {VAULT_SERVICE_DID: user_did}
+        update = {'$set': {
+            VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING if is_active else VAULT_SERVICE_STATE_FREEZE,
+            VAULT_SERVICE_MODIFY_TIME: int(datetime.now().timestamp())}}
 
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
         col.update_one(filter_, update, contains_extra=False)

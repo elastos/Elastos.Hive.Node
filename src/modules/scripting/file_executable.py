@@ -22,8 +22,9 @@ class FileExecutable(Executable):
 
     def _create_transaction(self, action_type):
         """ Here just create a transaction for later uploading and downloading. """
+        vault = self.vault_manager.get_vault(self.get_target_did())
         if action_type == 'upload':
-            self.vault_manager.get_vault(self.get_target_did()).check_storage()
+            vault.check_write_permission().check_storage_full()
 
         # The created transaction record can only be use once. So do not consider run script twice.
         # If the user not call this transaction later, the transaction record will keep forever.

@@ -58,6 +58,7 @@ class IpfsBackupClient:
     def get_state(self):
         """ :v2 API: """
         self.vault_manager.get_vault(g.usr_did)
+
         return self.__get_remote_backup_state(g.usr_did)
 
     def backup(self, credential, is_force):
@@ -74,6 +75,7 @@ class IpfsBackupClient:
         :v2 API:
         """
         self.vault_manager.get_vault(g.usr_did)
+
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
             self.__check_remote_backup_in_progress(g.usr_did)
@@ -93,6 +95,7 @@ class IpfsBackupClient:
         :v2 API:
         """
         self.vault_manager.get_vault(g.usr_did)
+
         credential_info = self.auth.get_backup_credential_info(credential)
         if not is_force:
             self.__check_remote_backup_in_progress(g.usr_did)

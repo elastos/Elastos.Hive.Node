@@ -91,6 +91,14 @@ class RegisterScript(Resource):
 
             HTTP/1.1 400 Bad Request
 
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
+        .. sourcecode:: http
+
+            HTTP/1.1 507 Insufficient Storage
+
         **Condition**
 
         There are three types of conditions: 'and', 'or', 'queryHasResult'. The 'and' and the 'or' are for merging
@@ -203,6 +211,10 @@ class DeleteScript(Resource):
 
         .. sourcecode:: http
 
+            HTTP/1.1 403 Forbidden
+
+        .. sourcecode:: http
+
             HTTP/1.1 404 Not Found
 
         """
@@ -270,6 +282,10 @@ class CallScript(Resource):
 
             HTTP/1.1 404 Not Found
 
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
         """
         return self.scripting.run_script(script_name)
 
@@ -324,6 +340,10 @@ class CallScriptUrl(Resource):
 
             HTTP/1.1 404 Not Found
 
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
         """
         target_did, target_app_did = None, None
         parts = context_str.split('@')
@@ -366,6 +386,14 @@ class UploadFile(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 404 Not Found
+
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
+        .. sourcecode:: http
+
+            HTTP/1.1 507 Insufficient Storage
 
         """
         return self.scripting.upload_file(transaction_id)

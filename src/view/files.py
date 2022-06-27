@@ -50,10 +50,6 @@ class ReadingOperation(Resource):
 
         .. sourcecode:: http
 
-            HTTP/1.1 403 Forbidden
-
-        .. sourcecode:: http
-
             HTTP/1.1 404 Not Found
 
         List the files of the directory by the path if the URL parameter is 'comp=children'.
@@ -95,10 +91,6 @@ class ReadingOperation(Resource):
 
         .. sourcecode:: http
 
-            HTTP/1.1 403 Forbidden
-
-        .. sourcecode:: http
-
             HTTP/1.1 404 Not Found
 
         Get the properties of the file by the path if the URL parameter is 'comp=metadata'.
@@ -137,10 +129,6 @@ class ReadingOperation(Resource):
 
         .. sourcecode:: http
 
-            HTTP/1.1 403 Forbidden
-
-        .. sourcecode:: http
-
             HTTP/1.1 404 Not Found
 
         Get the hash of the file by the path if the URL parameter is 'comp=hash'.
@@ -175,10 +163,6 @@ class ReadingOperation(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 401 Unauthorized
-
-        .. sourcecode:: http
-
-            HTTP/1.1 403 Forbidden
 
         .. sourcecode:: http
 
@@ -254,6 +238,10 @@ class WritingOperation(Resource):
 
             HTTP/1.1 455 Already Exists
 
+        .. sourcecode:: http
+
+            HTTP/1.1 507 Insufficient Storage
+
         Upload the content of the file by path if no URL parameter.
 
         **Request**:
@@ -296,6 +284,10 @@ class WritingOperation(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 404 Not Found
+
+        .. sourcecode:: http
+
+            HTTP/1.1 507 Insufficient Storage
 
         """
 

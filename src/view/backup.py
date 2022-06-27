@@ -46,10 +46,6 @@ class State(Resource):
 
             HTTP/1.1 401 Unauthorized
 
-        .. sourcecode:: http
-
-            HTTP/1.1 403 Forbidden
-
         """
         return self.backup_client.get_state()
 
@@ -92,6 +88,10 @@ class BackupRestore(Resource):
 
             HTTP/1.1 403 Forbidden
 
+        .. sourcecode:: http
+
+            HTTP/1.1 507 Insufficient Storage
+
         Restore the data from the other hive node if the URL parameter is **from=hive_node**.
 
         **Request**:
@@ -121,6 +121,10 @@ class BackupRestore(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 403 Forbidden
+
+        .. sourcecode:: http
+
+            HTTP/1.1 507 Insufficient Storage
 
         """
         to, fr, is_force = rqargs.get_str('to')[0], rqargs.get_str('from')[0], rqargs.get_bool('is_force')[0]
@@ -166,10 +170,6 @@ class ServerPromotion(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 401 Unauthorized
-
-        .. sourcecode:: http
-
-            HTTP/1.1 403 Forbidden
 
         .. sourcecode:: http
 

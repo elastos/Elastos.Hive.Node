@@ -273,7 +273,7 @@ class Scripting:
 
     def set_script(self, script_name):
         """ :v2 API: """
-        self.vault_manager.get_vault(g.usr_did).check_storage_full()
+        self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         json_data = request.get_json(force=True, silent=True)
         Script.validate_script_data(json_data)
@@ -308,6 +308,8 @@ class Scripting:
 
     def delete_script(self, script_name):
         """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did).check_write_permission()
+
         col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
         result = col.delete_one({'name': script_name})
 
@@ -341,6 +343,7 @@ class Scripting:
         """ Do real uploading or downloading for caller """
         # check by transaction id from request body
         row_id, target_did, target_app_did = Scripting.__parse_transaction_id(transaction_id)
+
         col_filter = {"_id": ObjectId(row_id)}
         col = self.mcli.get_user_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, create_on_absence=True)
         trans = col.find_one({"_id": ObjectId(row_id)})
@@ -351,6 +354,11 @@ class Scripting:
         anonymous_access = trans.get('anonymous', False)
         if not anonymous_access and g.token_error is not None:
             raise UnauthorizedException(msg=f'Parse access token for running script error: {g.token_error}')
+
+        # check vault
+        vault = self.vault_manager.get_vault(target_did)
+        if not is_download:
+            vault.check_write_permission().check_storage_full()
 
         # executing uploading or downloading
         data = None

@@ -18,10 +18,10 @@ from src.modules.subscription.vault import VaultManager, Vault
 from src.utils.consts import IS_UPGRADED
 from src.utils_v1.constants import DID_INFO_DB_NAME, VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_MAX_STORAGE, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, \
-    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, APP_ID, USER_DID
+    VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_STATE, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_STATE_RUNNING
 from src.utils.did.did_wrapper import DID, DIDDocument
 from src.utils_v1.payment.payment_config import PaymentConfig
-from src.utils.db_client import cli, VAULT_SERVICE_STATE_RUNNING
+from src.utils.db_client import cli
 from src.utils.file_manager import fm
 from src.utils.http_exception import AlreadyExistsException, NotImplementedException, VaultNotFoundException, \
     PricePlanNotFoundException, BadRequestException, ApplicationNotFoundException
@@ -90,10 +90,10 @@ class VaultSubscription(metaclass=Singleton):
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: g.usr_did}, is_check_exist=False)
 
     def activate(self):
-        raise NotImplementedException()
+        self.vault_manager.active_vault(g.usr_did, is_active=True)
 
     def deactivate(self):
-        raise NotImplementedException()
+        self.vault_manager.active_vault(g.usr_did, is_active=True)
 
     def get_info(self, files_used: bool):
         """ :v2 API:

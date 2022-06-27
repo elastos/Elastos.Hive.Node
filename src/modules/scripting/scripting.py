@@ -273,7 +273,7 @@ class Scripting:
 
     def set_script(self, script_name):
         """ :v2 API: """
-        self.vault_manager.get_vault(g.usr_did).check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_storage_full()
 
         json_data = request.get_json(force=True, silent=True)
         Script.validate_script_data(json_data)
@@ -359,7 +359,7 @@ class Scripting:
             data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
         else:
             # Place here because not want to change the logic for v1.
-            self.vault_manager.get_vault(target_did).check_storage()
+            self.vault_manager.get_vault(target_did).check_storage_full()
             self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
 
         # transaction can be used only once.

@@ -33,7 +33,7 @@ class IpfsFiles:
 
     def upload_file(self, path, is_public: bool, script_name: str):
         """ :v2 API: """
-        self.vault_manager.get_vault(g.usr_did).check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         cid = self.upload_file_with_path(g.usr_did, g.app_did, path, is_public=is_public)
         if is_public:
@@ -60,6 +60,8 @@ class IpfsFiles:
 
         :v2 API:
         """
+        self.vault_manager.get_vault(g.usr_did).check_write_permission()
+
         self.delete_file_with_path(g.usr_did, g.app_did, path, check_exist=True)
 
     def delete_file_with_path(self, user_did, app_did, path, check_exist=False):
@@ -83,13 +85,13 @@ class IpfsFiles:
 
     def move_file(self, src_path, dst_path):
         """ :v2 API: """
-        self.vault_manager.get_vault(g.usr_did)
+        self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
         return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path)
 
     def copy_file(self, src_path, dst_path):
         """ :v2 API: """
-        self.vault_manager.get_vault(g.usr_did).check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path, is_copy=True)
 

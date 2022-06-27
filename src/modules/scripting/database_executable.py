@@ -66,7 +66,7 @@ class InsertExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        self.vault_manager.get_vault(self.get_target_did()).check_storage()
+        self.vault_manager.get_vault(self.get_target_did()).check_write_permission().check_storage_full()
 
         options = self.get_options()
 
@@ -83,7 +83,7 @@ class UpdateExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        self.vault_manager.get_vault(self.get_target_did()).check_storage()
+        self.vault_manager.get_vault(self.get_target_did()).check_write_permission().check_storage_full()
 
         options = self.get_options()
 
@@ -100,5 +100,7 @@ class DeleteExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
+        self.vault_manager.get_vault(self.get_target_did()).check_write_permission()
+
         col = self.get_target_user_collection()
         return self.get_result_data(col.delete_one(self.get_populated_filter()))

@@ -23,7 +23,7 @@ class Database:
 
         :v2 API:
         """
-        self.vault_manager.get_vault(g.usr_did).check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         self.mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
         return {'name': collection_name}
@@ -33,6 +33,8 @@ class Database:
 
         :v2 API:
         """
+        self.vault_manager.get_vault(g.usr_did).check_write_permission()
+
         self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
 
     def __get_collection(self, collection_name):
@@ -45,20 +47,22 @@ class Database:
 
     def insert_document(self, collection_name, documents, options):
         """ :v2 API: """
-        self.vault_manager.get_vault(g.usr_did).check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         col = self.__get_collection(collection_name)
         return col.insert_many(documents, contains_extra=self.__is_timestamp(options), **options)
 
     def update_document(self, collection_name, filter_, update, options, is_update_one):
         """ :v2 API: """
-        self.vault_manager.get_vault(g.usr_did).check_storage()
+        self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         col = self.__get_collection(collection_name)
         return col.update_many(filter_, update, contains_extra=self.__is_timestamp(options), only_one=is_update_one, **options)
 
     def delete_document(self, collection_name, col_filter, is_delete_one):
         """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did).check_write_permission()
+
         col = self.__get_collection(collection_name)
         col.delete_many(col_filter, only_one=is_delete_one)
 

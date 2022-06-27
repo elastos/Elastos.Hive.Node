@@ -90,10 +90,14 @@ class VaultSubscription(metaclass=Singleton):
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: g.usr_did}, is_check_exist=False)
 
     def activate(self):
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did)
         self.vault_manager.activate_vault(g.usr_did, is_activate=True)
 
     def deactivate(self):
-        self.vault_manager.activate_vault(g.usr_did, is_activate=True)
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did)
+        self.vault_manager.activate_vault(g.usr_did, is_activate=False)
 
     def get_info(self, files_used: bool):
         """ :v2 API:

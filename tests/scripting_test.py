@@ -3,14 +3,18 @@
 """
 Testing file for the ipfs-scripting module.
 """
+import typing
+
 import pymongo
 import unittest
 import typing as t
 import urllib.parse
 
-from tests import init_test, is_valid_object_id, VaultFilesUsageChecker
+from tests import init_test, is_valid_object_id, VaultFilesUsageChecker, VaultFreezer
 from tests.utils.http_client import HttpClient, AppDID
-from tests.utils.resp_asserter import RA
+from tests.utils.resp_asserter import RA, DictAsserter
+from tests.utils.tester_http import HttpCode
+from tests.subscription_test import SubscriptionTestCase
 from tests.files_test import IpfsFilesTestCase
 
 
@@ -36,15 +40,19 @@ class IpfsScriptingTestCase(unittest.TestCase):
     # not existing script name
     name_not_exist = 'name_not_exist'
 
+    subscription_test = SubscriptionTestCase()
+    # subscription_test2 = SubscriptionTestCase(is_did2=True)
+    files_test = IpfsFilesTestCase()
+
     def __init__(self, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.files_test = IpfsFilesTestCase()
 
         # owner client.
         self.cli = HttpClient(f'/api/v2/vault')
 
-        # caller client.
+        # caller client
+        # call http method without token if anonymous
         self.cli2 = HttpClient(f'/api/v2/vault', is_did2=True)
 
         # Owner's did and application did.
@@ -52,7 +60,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         self.target_app_did = AppDID.app_did
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         # subscribe for user_did
         HttpClient(f'/api/v2').put('/subscription/vault')
         # unsubscribe for caller_did whose vault is not necessary.
@@ -68,34 +76,82 @@ class IpfsScriptingTestCase(unittest.TestCase):
         # clean the testing file.
         response = HttpClient(f'/api/v2/vault').delete(f'/files/{cls.file_name}')
 
-    def __register_script(self, script_name, body):
+    def __register_script(self, script_name, script_body: dict, expect_status=200, anonymous=False):
         """
         :return: the response body (dict) of registering.
         """
-        response = self.cli.put(f'/scripting/{script_name}', body)
-        RA(response).assert_status(200)
-        body = RA(response).body()
-        # check update existing one or insert a new one
-        self.assertTrue(body.get('modified_count', int) == 1 or body.get('upserted_id', str))
-        return body
+        body = script_body.copy()
+        if anonymous:
+            body['allowAnonymousUser'] = anonymous
+            body['allowAnonymousApp'] = anonymous
 
-    def __call_script(self, script_name, body=None, except_error=200, need_token=True, need_context=True):
+        response = self.cli.put(f'/scripting/{script_name}', body)
+        RA(response).assert_status(expect_status)
+        if expect_status == 200:
+            body = RA(response).body()
+            # check update existing one or insert a new one
+            self.assertTrue(body.get('modified_count', int) == 1 or body.get('upserted_id', str))
+            return body
+
+    def __call_script(self, script_name, body=typing.Optional[dict], expect_status=200, need_context=True, anonymous=False):
         """ Call script successfully
 
+        :param need_context call caller's script if False
         :return: the response body (dict) of calling.
         """
-        body = body if body else {}
+        body = body.copy() if body else {}
         if need_context:
             body['context'] = {
                 'target_did': self.target_did,
                 'target_app_did': self.target_app_did,
             }
-        response = self.cli2.patch(f'/scripting/{script_name}', body, need_token=need_token)
-        RA(response).assert_status(except_error)
-        return RA(response).body() if except_error == 200 else None
+        response = self.cli2.patch(f'/scripting/{script_name}', body, need_token=not anonymous)
+        RA(response).assert_status(expect_status)
+        return RA(response).body() if expect_status == 200 else None
+
+    def __register_call_delete_script(self, script_name, script_body, call_body, call_response_checker: typing.Callable[[any, any], None],
+                                      expect_status=HttpCode.OK):
+        """ register and call, for vault-freeze&vault-unfreeze, anonymous&non-anonymous
+
+        example: test06_file_upload()
+
+            all other test cases need align with upload test case
+
+        :param call_response_checker it will be called twice for anonymous and non-anonymous
+        :return body of calling response if no error, else None
+        """
+
+        def normal_check(anonymous):
+            with VaultFreezer() as _:
+                self.__register_script(script_name, script_body, expect_status=HttpCode.FORBIDDEN, anonymous=anonymous)
+
+            self.__register_script(script_name, script_body, expect_status=expect_status, anonymous=anonymous)
+
+            with VaultFreezer() as _:
+                self.__call_script(script_name, call_body, expect_status=HttpCode.FORBIDDEN, anonymous=anonymous)
+
+            # no context: not found script if non-anonymous else can not find target_did and target_app_did
+            #   all return BAD_REQUEST
+            self.__call_script(script_name, call_body, expect_status=HttpCode.BAD_REQUEST, anonymous=anonymous, need_context=False)
+
+            # do anonymous call when non-anonymous
+            if not anonymous:
+                self.__call_script(script_name, call_body, expect_status=HttpCode.UNAUTHORIZED, anonymous=True)
+
+            body = self.__call_script(script_name, call_body, expect_status=expect_status, anonymous=anonymous)
+            if expect_status == HttpCode.OK and call_response_checker:
+                call_response_checker(body, anonymous)
+
+            with VaultFreezer() as _:
+                self.delete_script(script_name, expect_status=HttpCode.FORBIDDEN)
+
+            self.delete_script(script_name)
+
+        normal_check(anonymous=False)
+        normal_check(anonymous=True)
 
     def call_and_execute_transaction(self, script_name, executable_name,
-                                     path: t.Optional[str] = None, is_download=True, download_content=None, need_token=True):
+                                     path: t.Optional[str] = None, is_download=True, download_content=None, anonymous=False):
         """ Call uploading or downloading script and run relating transaction.
 
         Also, for files service testing.
@@ -105,15 +161,15 @@ class IpfsScriptingTestCase(unittest.TestCase):
         :download_content: for files service.
         """
         # call the script for uploading or downloading
-        body = self.__call_script(script_name, {"params": {"path": path if path else self.file_name}}, need_token=need_token)
+        body = self.__call_script(script_name, {"params": {"path": path if path else self.file_name}}, anonymous=anonymous)
         body.get(executable_name).assert_true('transaction_id', str)
 
         # call relating transaction
         if is_download:
-            response = self.cli2.get(f'/scripting/stream/{body[executable_name]["transaction_id"]}', need_token=need_token)
+            response = self.cli2.get(f'/scripting/stream/{body[executable_name]["transaction_id"]}', need_token=not anonymous)
         else:
             response = self.cli2.put(f'/scripting/stream/{body[executable_name]["transaction_id"]}',
-                                     self.file_content.encode(), is_json=False, need_token=need_token)
+                                     self.file_content.encode(), is_json=False, need_token=not anonymous)
         RA(response).assert_status(200)
 
         # check the result
@@ -137,7 +193,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
     def test01_insert(self):
         """ test insert and insert """
         script_name, executable_name = 'ipfs_database_insert', 'database_insert'
-        self.__register_script(script_name, {"executable": {
+        script_body = {"executable": {
             "name": executable_name,
             "type": "insert",
             "body": {
@@ -150,103 +206,86 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 "options": {
                     "bypass_document_validation": False
                 }
-            }
-        }})
+            }}}
 
-        # insert multiple documents for further testing
-        def insert_document(content: str, words_count: int):
-            body = self.__call_script(script_name, body={
+        def get_call_body(content, words_count):
+            return {
                 "params": {
                     "author": "John",
                     "content": content,
                     "words_count": words_count
                 }
-            })
+            }
+
+        def call_response_checker(body: DictAsserter, anonymous):
             body.get(executable_name).assert_true('inserted_id', str)
 
-        insert_document('message1', 10000)
-        insert_document('message3', 30000)
-        insert_document('message5', 50000)
-        insert_document('message7', 70000)
-        insert_document('message9', 90000)
-        insert_document('message2', 20000)
-        insert_document('message4', 40000)
-        insert_document('message6', 60000)
-        insert_document('message8', 80000)
+        def execute_once(content, words_count):
+            self.__register_call_delete_script(script_name, script_body, get_call_body(content, words_count), call_response_checker)
 
-        # remove script
-        self.delete_script(script_name)
+        execute_once('message1', 10000)
+        execute_once('message3', 30000)
+        execute_once('message5', 50000)
+        execute_once('message7', 70000)
+        execute_once('message9', 90000)
+        execute_once('message2', 20000)
+        execute_once('message4', 40000)
+        execute_once('message6', 60000)
+        execute_once('message8', 80000)
 
     def test02_count(self):
         script_name, executable_name = 'ipfs_database_count', 'database_count'
-
-        self.__register_script(script_name, {'executable': {
+        script_body = {'executable': {
             'name': executable_name,
             'type': 'count',
             'body': {
                 'collection': self.collection_name,
                 'filter': {'author': '$params.author'}
             }
-        }})
+        }}
+        call_body = {"params": {"author": "John"}}
 
-        body = self.__call_script(script_name, {"params": {"author": "John"}})
-        body.get(executable_name).assert_equal('count', 9)
+        def call_response_checker(body: DictAsserter, anonymous):
+            body.get(executable_name).assert_equal('count', 9)
 
-        self.delete_script(script_name)
-
-    def test02_count_with_anonymous(self):
-        script_name, executable_name = 'ipfs_database_count', 'database_count'
-
-        self.__register_script(script_name, {'executable': {
-            'name': executable_name,
-            'type': 'count',
-            'body': {
-                'collection': self.collection_name,
-                'filter': {'author': '$params.author'}
-            }
-        }, 'allowAnonymousUser': True, 'allowAnonymousApp': True})
-
-        body = self.__call_script(script_name, {"params": {"author": "John"}}, need_token=False)
-        body.get(executable_name).assert_equal('count', 9)
-
-        self.delete_script(script_name)
+        self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
     def test02_find(self):
         script_name, executable_name = 'ipfs_database_find', 'database_find'
-
-        self.__register_script(script_name, {'executable': {
+        script_body = {'executable': {
             'name': executable_name,
             'type': 'find',
             'body': {
                 'collection': self.collection_name,
                 'filter': {'author': '$params.author'}
             }
-        }})
+        }}
+        call_body = {"params": {"author": "John"}}
 
-        body = self.__call_script(script_name, {"params": {"author": "John"}})
-        body.get(executable_name).assert_equal('total', 9)
-        items = body.get(executable_name).get('items', list)
+        def call_response_checker(body: DictAsserter, anonymous):
+            body.get(executable_name).assert_equal('total', 9)
+            items = body.get(executable_name).get('items', list)
 
-        # assert items.
-        self.assertEqual(len(items), 9)
-        self.assertTrue(all([a['author'] == 'John' for a in items]))
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 1)
+            # check asserted items.
+            self.assertEqual(len(items), 9)
+            self.assertTrue(all([a['author'] == 'John' for a in items]))
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 1)
 
-        self.delete_script(script_name)
+        self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
     def test03_find_with_output(self):
         script_name, executable_name = 'ipfs_database_find_with_output', 'database_find'
 
-        def register_with_is_out(output):
-            self.__register_script(script_name, {'executable': {
+        def get_script_body(output: bool):
+            return {'executable': {
                 'name': executable_name,
                 'type': 'find',
                 'output': output,
@@ -254,39 +293,38 @@ class IpfsScriptingTestCase(unittest.TestCase):
                     'collection': self.collection_name,
                     'filter': {'author': '$params.author'}
                 }
-            }})
+            }}
+        call_body = {"params": {"author": "John"}}
 
-        # check with 'is_out' = True
-        register_with_is_out(True)
-        body = self.__call_script(script_name, {"params": {"author": "John"}})
-        body.get(executable_name).assert_equal('total', 9)
-        items = body.get(executable_name).get('items', list)
+        def call_response_checker(body: DictAsserter, anonymous):
+            body.get(executable_name).assert_equal('total', 9)
+            items = body.get(executable_name).get('items', list)
 
-        # assert items
-        self.assertEqual(len(items), 9)
-        self.assertTrue(all([a['author'] == 'John' for a in items]))
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 1)
-        self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 1)
+            # check asserted items.
+            self.assertEqual(len(items), 9)
+            self.assertTrue(all([a['author'] == 'John' for a in items]))
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 1)
 
-        # check with 'is_out' = False
-        register_with_is_out(False)
-        body = self.__call_script(script_name, {"params": {"author": "John"}})
-        self.assertFalse(body)
+        self.__register_call_delete_script(script_name, get_script_body(True), call_body, call_response_checker)
 
-        self.delete_script(script_name)
+        def call_response_checker(body: DictAsserter, anonymous):
+            self.assertFalse(body)
+
+        self.__register_call_delete_script(script_name, get_script_body(False), call_body, call_response_checker)
 
     def test03_find_with_limit_skip(self):
         script_name, executable_name = 'ipfs_database_find_with_limit_skip', 'database_find'
 
-        def register(limit, skip):
-            self.__register_script(script_name, {'executable': {
+        def get_script_body(limit, skip):
+            return {'executable': {
                 'name': executable_name,
                 'type': 'find',
                 'body': {
@@ -298,45 +336,30 @@ class IpfsScriptingTestCase(unittest.TestCase):
                         'sort': [['words_count', pymongo.ASCENDING]]
                     }
                 }
-            }})
+            }}
+        call_body = {"params": {"author": "John"}}
 
-        def check_result(items_count, first_content, extra_params=None):
-            request_body = {"params": {"author": "John"}}
+        def execute_once(limit, skip, response_items_count, response_first_content, extra_params=None):
             if extra_params:
-                request_body['params'].update(extra_params)
-            body = self.__call_script(script_name, request_body)
-            body.get(executable_name).assert_equal('total', 9)
-            items = body.get(executable_name).get('items', list)
+                call_body['params'].update(extra_params)
 
-            # assert items
-            self.assertEqual(len(items), items_count)
-            self.assertEqual(items[0]['content'], first_content)
+            def call_response_checker(body: DictAsserter, anonymous):
+                body.get(executable_name).assert_equal('total', 9)
+                items = body.get(executable_name).get('items', list)
+
+                # assert items
+                self.assertEqual(len(items), response_items_count)
+                self.assertEqual(items[0]['content'], response_first_content)
+
+            self.__register_call_delete_script(script_name, get_script_body(limit, skip), call_body, call_response_checker)
 
         # total 9
-        register(3, 0), check_result(3, 'message1')
-        register(5, 3), check_result(5, 'message4')
-        register(7, 5), check_result(4, 'message6')
+        execute_once(3, 0, 3, 'message1')
+        execute_once(5, 3, 5, 'message4')
+        execute_once(7, 5, 4, 'message6')
 
         # options also support $params
-        register('$params.limit', '$params.skip'), check_result(2, 'message3', extra_params={'limit': 2, 'skip': 2})
-
-        self.delete_script(script_name)
-
-    def test03_find_without_context(self):
-        script_name, executable_name = 'ipfs_database_find_without_context', 'database_find'
-
-        self.__register_script(script_name, {'executable': {
-            'name': executable_name,
-            'type': 'find',
-            'body': {
-                'collection': self.collection_name,
-                'filter': {'author': '$params.author'}
-            }
-        }})
-
-        self.__call_script(script_name, {"params": {"author": "John"}}, need_context=False, except_error=400)
-
-        self.delete_script(script_name)
+        execute_once('$params.limit', '$params.skip', 2, 'message3', extra_params={'limit': 2, 'skip': 2})
 
     def test03_find_with_only_url(self):
         script_name, executable_name = 'ipfs_database_find_with_only_url', 'database_find'
@@ -367,39 +390,39 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     def test03_find_with_gt_lt(self):
         script_name, executable_name = 'ipfs_database_find_with_gt_lt', 'database_find'
-
-        self.__register_script(script_name, {'executable': {
+        script_body = {'executable': {
             'name': executable_name,
             'type': 'find',
             'body': {
                 'collection': self.collection_name,
                 'filter': {'author': '$params.author', "words_count": {"$gt": "$params.start", "$lt": "$params.end"}}
             }
-        }})
+        }}
+        call_body = {"params": {"author": "John", "start": 5000, "end": 15000}}
 
-        body = self.__call_script(script_name, {"params": {"author": "John", "start": 5000, "end": 15000}})
-        body.get(executable_name).assert_equal('total', 1)
-        items = body.get(executable_name).get('items', list)
+        def call_response_checker(body: DictAsserter, anonymous):
+            body.get(executable_name).assert_equal('total', 1)
+            items = body.get(executable_name).get('items', list)
 
-        # assert items
-        self.assertEqual(len(items), 1)
-        self.assertEqual(items[0]['author'], 'John')
-        self.assertEqual(items[0]['content'], 'message1')
-        self.assertEqual(items[0]['words_count'], 10000)
+            # assert items
+            self.assertEqual(len(items), 1)
+            self.assertEqual(items[0]['author'], 'John')
+            self.assertEqual(items[0]['content'], 'message1')
+            self.assertEqual(items[0]['words_count'], 10000)
 
-        self.delete_script(script_name)
+        self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
     def test03_find_with_condition(self):
         script_name, executable_name = 'ipfs_database_find_with_condition', 'database_find'
 
         self.__register_script(script_name, {'condition': {
-                'name': 'verify_user_permission',
-                'type': 'queryHasResults',
-                'body': {
-                    'collection': self.collection_name,
-                    'filter': {'author': '$params.condition_author'}
-                }
-            }, 'executable': {
+            'name': 'verify_user_permission',
+            'type': 'queryHasResults',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.condition_author'}
+            }
+        }, 'executable': {
             'name': executable_name,
             'type': 'find',
             'body': {
@@ -409,7 +432,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         }})
 
         # not match checking
-        self.__call_script(script_name, {"params": {"condition_author": "Andersen", "content": "message1"}}, except_error=400)
+        self.__call_script(script_name, {"params": {"condition_author": "Andersen", "content": "message1"}}, expect_status=400)
 
         # match checking
         body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}})
@@ -433,18 +456,18 @@ class IpfsScriptingTestCase(unittest.TestCase):
         }
 
         self.__register_script(script_name, {'condition': {
+            'name': 'verify_user_permission',
+            'type': 'or',
+            'body': [condition, condition, {
                 'name': 'verify_user_permission',
-                'type': 'or',
-                'body': [condition, condition, {
-                    'name': 'verify_user_permission',
-                    'type': 'and',
-                    'body': [condition, condition]
-                }, {
-                    'name': 'verify_user_permission',
-                    'type': 'and',
-                    'body': [condition, condition]
-                }]
-            }, 'executable': {
+                'type': 'and',
+                'body': [condition, condition]
+            }, {
+                         'name': 'verify_user_permission',
+                         'type': 'and',
+                         'body': [condition, condition]
+                     }]
+        }, 'executable': {
             'name': executable_name,
             'type': 'find',
             'body': {'collection': self.collection_name, 'filter': {'content': '$params.content'}}
@@ -494,50 +517,6 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         self.delete_script(script_name)
 
-    def test03_find_with_anonymous(self):
-        script_name, executable_name = 'ipfs_database_find_with_anonymous', 'database_find'
-
-        self.__register_script(script_name, {'condition': {
-            'name': 'verify_user_permission',
-            'type': 'queryHasResults',
-            'body': {
-                'collection': self.collection_name,
-                'filter': {'author': '$params.condition_author'}
-            }
-        }, 'executable': {
-            'name': executable_name,
-            'type': 'find',
-            'body': {
-                'collection': self.collection_name,
-                'filter': {'content': '$params.content'}
-            }
-        }, 'allowAnonymousUser': True, 'allowAnonymousApp': True})
-
-        # not match checking without token
-        self.__call_script(script_name, {"params": {"condition_author": "Andersen", "content": "message1"}}, need_token=False, except_error=400)
-
-        # not match checking with token
-        self.__call_script(script_name, {"params": {"condition_author": "Andersen", "content": "message1"}}, need_token=True, except_error=400)
-
-        def validate_body(b):
-            b.get(executable_name).assert_equal('total', 1)
-            items = b.get(executable_name).get('items', list)
-            # assert items
-            self.assertEqual(len(items), 1)
-            self.assertEqual(items[0]['author'], 'John')
-            self.assertEqual(items[0]['content'], 'message1')
-            self.assertEqual(items[0]['words_count'], 10000)
-
-        # match checking without token
-        body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}}, need_token=False)
-        validate_body(body)
-
-        # match checking with token
-        body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}}, need_token=True)
-        validate_body(body)
-
-        self.delete_script(script_name)
-
     def test03_find_with_aggregated(self):
         script_name, executable_name = 'ipfs_database_find_with_aggregated', 'database_find'
         executable_count = 5
@@ -577,8 +556,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
     def test04_update(self):
         script_name, executable_name = 'ipfs_database_update', 'database_update'
-
-        self.__register_script(script_name, {'executable': {
+        script_body = {'executable': {
             'name': executable_name,
             'type': 'update',
             'body': {
@@ -590,20 +568,23 @@ class IpfsScriptingTestCase(unittest.TestCase):
                     }
                 }
             }
-        }})
+        }}
 
-        body = self.__call_script(script_name, {"params": {"content": "message9", "words_count": 100000}})
-        body.get(executable_name).assert_equal('modified_count', 1)
+        def get_call_body(words_count):
+            return {"params": {"content": "message9", "words_count": words_count}}
 
-        body = self.__call_script(script_name, {"params": {"content": "message9", "words_count": 90000}})
-        body.get(executable_name).assert_equal('modified_count', 1)
+        def call_response_checker(body: DictAsserter, anonymous):
+            body.get(executable_name).assert_equal('modified_count', 1)
 
-        self.delete_script(script_name)
+        def execute_once(words_count):
+            self.__register_call_delete_script(script_name, script_body, get_call_body(words_count), call_response_checker)
+
+        execute_once(90001)
+        execute_once(90000)
 
     def test04_update_insert_if_not_exists(self):
         script_name, executable_name = 'ipfs_database_update_insert_if_not_exists', 'database_update'
-
-        self.__register_script(script_name, {'executable': {
+        script_body = {'executable': {
             'name': executable_name,
             'type': 'update',
             'body': {
@@ -615,142 +596,151 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 }},
                 'options': {'upsert': True}
             }
-        }})
+        }}
+        call_body = {"params": {"author": "Alex", "content": "message10", "words_count": 100000}}
 
-        body = self.__call_script(script_name, {"params": {"author": "Alex", "content": "message10", "words_count": 100000}})
-        self.assertTrue(is_valid_object_id(body.get(executable_name).get('upserted_id', str)))
+        def call_response_checker(body: DictAsserter, anonymous):
+            self.assertTrue(is_valid_object_id(body.get(executable_name).get('upserted_id', str)))
 
-        self.delete_script(script_name)
+        self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
     def test05_delete(self):
         script_name, executable_name = 'ipfs_database_delete', 'database_delete'
-
-        self.__register_script(script_name, {'executable': {
+        script_body = {'executable': {
             'name': executable_name,
             'type': 'delete',
             'body': {
                 'collection': self.collection_name,
                 'filter': {'content': '$params.content'}
             }}
-        })
+        }
+        call_body = {"params": {"content": "message9"}}
 
-        body = self.__call_script(script_name, {"params": {"content": "message9"}})
-        body.get(executable_name).assert_equal('deleted_count', 1)
+        def call_response_checker(body: DictAsserter, anonymous):
+            body.get(executable_name).assert_equal('deleted_count', 1)
 
-        self.delete_script(script_name)
+        self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
+
+    def _upload_by_transaction(self, transaction_id, expect_status=HttpCode.OK, anonymous=False):
+        response = self.cli2.put(f'/scripting/stream/{transaction_id}',
+                                 self.file_content.encode(), is_json=False, need_token=not anonymous)
+        RA(response).assert_status(expect_status)
 
     def test06_file_upload(self):
         script_name, executable_name = 'ipfs_file_upload', 'file_upload'
-
-        self.__register_script(script_name, {"executable": {
+        script_body = {"executable": {
             "name": executable_name,
             "type": "fileUpload",
             "body": {
                 "path": "$params.path"
             }}
-        })
+        }
+        call_body = {"params": {"path": self.file_name}}
 
-        size_before, size_after = self.files_test.get_remote_file_size(self.file_name), len(IpfsScriptingTestCase.file_content)
-        with VaultFilesUsageChecker(size_after - size_before) as _:
-            self.call_and_execute_transaction(script_name, executable_name, is_download=False)
+        def call_response_checker(body: DictAsserter, anonymous):
+            id_ = body.get(executable_name).get('transaction_id', str)
 
-        self.delete_script(script_name)
+            with VaultFreezer() as _:
+                self._upload_by_transaction(id_, anonymous=anonymous, expect_status=HttpCode.FORBIDDEN)
+
+            size_before, size_after = self.files_test.get_remote_file_size(self.file_name), len(IpfsScriptingTestCase.file_content)
+            with VaultFilesUsageChecker(size_after - size_before) as _:
+                self._upload_by_transaction(id_, anonymous=anonymous)
+
+        self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
+
+    def _download_by_transaction(self, transaction_id, expect_status=HttpCode.OK, anonymous=False):
+        response = self.cli2.get(f'/scripting/stream/{transaction_id}',
+                                 self.file_content.encode(), is_json=False, need_token=not anonymous)
+        RA(response).assert_status(expect_status)
+        if expect_status == HttpCode.OK:
+            RA(response).text_equal(self.file_content)
 
     def test07_file_download(self):
         script_name, executable_name = 'ipfs_file_download', 'file_download'
-
-        self.__register_script(script_name, {"executable": {
+        script_body = {"executable": {
             "name": executable_name,
             "type": "fileDownload",
             "body": {
                 "path": "$params.path"
             }}
-        })
+        }
+        call_body = {"params": {"path": self.file_name}}
 
-        self.call_and_execute_transaction(script_name, executable_name)
+        def call_response_checker(body: DictAsserter, anonymous=False):
+            id_ = body.get(executable_name).get('transaction_id', str)
 
-        self.delete_script(script_name)
+            with VaultFreezer() as _:
+                self._download_by_transaction(id_, anonymous=anonymous, expect_status=HttpCode.FORBIDDEN)
 
-    def test07_file_download_with_anonymous(self):
-        script_name, executable_name = 'ipfs_file_download', 'file_download'
+            self._download_by_transaction(id_, anonymous=anonymous)
 
-        self.__register_script(script_name, {"executable": {
-            "name": executable_name,
-            "type": "fileDownload",
-            "body": {
-                "path": "$params.path"
-            }},  'allowAnonymousUser': True, 'allowAnonymousApp': True})
-
-        self.call_and_execute_transaction(script_name, executable_name, need_token=False)
-
-        self.delete_script(script_name)
+        self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
     def test08_file_properties(self):
         script_name, executable_name = 'ipfs_file_properties', 'file_properties'
-
-        self.__register_script(script_name, {"executable": {
+        script_body = {"executable": {
             "name": executable_name,
             "type": "fileProperties",
             "body": {
                 "path": "$params.path"
             }}
-        })
+        }
+        call_body = {'params': {'path': self.file_name}}
 
-        body = self.__call_script(script_name, {'params': {'path': self.file_name}})
-        body.get(executable_name).assert_equal('size', len(self.file_content))
-        body.get(executable_name).assert_equal('name', self.file_name)
-        body.get(executable_name).assert_equal('type', 'file')
-        body.get(executable_name).assert_true('last_modify', int)
+        def call_response_checker(body: DictAsserter):
+            body.get(executable_name).assert_equal('size', len(self.file_content))
+            body.get(executable_name).assert_equal('name', self.file_name)
+            body.get(executable_name).assert_equal('type', 'file')
+            body.get(executable_name).assert_true('last_modify', int)
 
-        self.delete_script(script_name)
+        self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
     def test09_file_hash(self):
         script_name, executable_name = 'ipfs_file_hash', 'file_hash'
-
-        self.__register_script(script_name, {"executable": {
+        script_body = {"executable": {
             "name": executable_name,
             "type": "fileHash",
             "body": {
                 "path": "$params.path"
             }}
-        })
+        }
+        call_body = {'params': {'path': self.file_name}}
 
-        body = self.__call_script(script_name, {'params': {'path': self.file_name}})
-        body.get(executable_name).assert_equal('SHA256', self.file_content_sha256)
+        def call_response_checker(body: DictAsserter):
+            body.get(executable_name).assert_equal('SHA256', self.file_content_sha256)
 
-        self.delete_script(script_name)
+        self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
     def test09_file_hash_with_part_params(self):
         script_name, executable_name = 'ipfs_file_hash_with_part_params', 'file_hash'
 
-        def register_hash(path_pattern: str):
-            self.__register_script(script_name, {"executable": {
+        def get_script_body(path_pattern: str):
+            return {"executable": {
                 "name": executable_name,
                 "type": "fileHash",
                 "body": {
                     "path": path_pattern
                 }}
-            })
+            }
 
-        def validate_call(path_value: str):
-            body = self.__call_script(script_name, {'params': {'path': path_value}})
+        def get_call_body(path_value: str):
+            return {'params': {'path': path_value}}
+
+        def call_response_checker(body: DictAsserter):
             body.get(executable_name).assert_equal('SHA256', self.file_content_sha256)
 
+        def check_with_pattern(path_pattern, path_value):
+            self.__register_call_delete_script(script_name, get_script_body(path_pattern), get_call_body(path_value), call_response_checker)
+
         folder_name, file_name = self.file_name.split("/")
-
-        register_hash(f'{folder_name}/$params.path')
-        validate_call(file_name)
-
-        register_hash(f'$params.path/{file_name}')
-        validate_call(folder_name)
+        check_with_pattern(f'{folder_name}/$params.path', file_name)
+        check_with_pattern(f'$params.path/{file_name}', folder_name)
 
         split_index = 5
-        register_hash('ipfs_scripting/${params.path}' + file_name[split_index:])
-        validate_call(file_name[:split_index])
+        check_with_pattern('ipfs_scripting/${params.path}' + file_name[split_index:], file_name[:split_index])
 
-        self.delete_script(script_name)
-
-    def test11_delete_script_not_exist(self):
+    def test10_delete_script_not_exist(self):
         self.delete_script(self.name_not_exist, expect_status=404)
 
 

@@ -11,17 +11,16 @@ from tests import init_test, test_log
 
 
 class SubscriptionTestCase(unittest.TestCase):
-    def __init__(self, method_name='runTest'):
+    def __init__(self, is_did2=False, method_name='runTest'):
         super().__init__(method_name)
         init_test()
-        self.cli = HttpClient(f'/api/v2')
-        self.backup_cli = HttpClient(f'/api/v2', is_backup_node=True)
+        self.cli = HttpClient(f'/api/v2', is_did2=is_did2)
+        self.backup_cli = HttpClient(f'/api/v2', is_did2=is_did2, is_backup_node=True)
 
     def test01_vault_subscribe(self):
         response = self.cli.put('/subscription/vault')
         self.assertIn(response.status_code, [200, 455])
 
-    @unittest.skip
     def test02_vault_activate(self):
         response = self.cli.post('/subscription/vault?op=activation')
         self.assertEqual(response.status_code, 201)
@@ -36,7 +35,6 @@ class SubscriptionTestCase(unittest.TestCase):
         response = self.cli.get('/subscription/vault/app_stats')
         self.assertTrue(response.status_code in [200, 404])
 
-    @unittest.skip
     def test05_vault_deactivate(self):
         response = self.cli.post('/subscription/vault?op=deactivation')
         self.assertEqual(response.status_code, 201)

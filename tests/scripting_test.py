@@ -8,10 +8,10 @@ import unittest
 import typing as t
 import urllib.parse
 
-from tests import init_test, is_valid_object_id
+from tests import init_test, is_valid_object_id, VaultFilesUsageChecker
 from tests.utils.http_client import HttpClient, AppDID
 from tests.utils.resp_asserter import RA
-from tests.files_test import VaultFilesUsageChecker, IpfsFilesTestCase
+from tests.files_test import IpfsFilesTestCase
 
 
 class IpfsScriptingTestCase(unittest.TestCase):

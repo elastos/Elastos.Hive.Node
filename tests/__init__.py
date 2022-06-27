@@ -1,10 +1,35 @@
 # -*- coding: utf-8 -*-
 import os
+import unittest
 
 from bson import ObjectId
 from bson.errors import InvalidId
 
 from src.utils.did.did_init import init_did_backend
+from tests.utils.http_client import HttpClient
+from tests.utils.resp_asserter import RA
+
+
+class VaultFilesUsageChecker(unittest.TestCase):
+    """ Only used check the file storage usage size changed in vault """
+
+    def __init__(self, increase_size, method_name='runTest'):
+        super().__init__(method_name)
+        self.cli = HttpClient(f'/api/v2')
+        self.increase_size = increase_size
+        self.file_size_before = self.__get_vault_file_usage_size()
+
+    def __get_vault_file_usage_size(self):
+        response = self.cli.get('/subscription/vault?files_used=true')
+        RA(response).assert_status(200)
+        return RA(response).body().get('files_used', int)
+
+    def __enter__(self):
+        ...
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        file_size_after = self.__get_vault_file_usage_size()
+        self.assertEqual(self.increase_size, file_size_after - self.file_size_before)
 
 
 def init_test():

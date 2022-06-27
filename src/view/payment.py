@@ -43,10 +43,6 @@ class Version(Resource):
 
             HTTP/1.1 401 Unauthorized
 
-        .. sourcecode:: http
-
-            HTTP/1.1 403 Forbidden
-
         """
 
         return self.payment.get_version()
@@ -133,10 +129,6 @@ class PlaceOrder(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 401 Unauthorized
-
-        .. sourcecode:: http
-
-            HTTP/1.1 403 Forbidden
 
         .. sourcecode:: http
 
@@ -229,10 +221,6 @@ class SettleOrder(Resource):
 
         .. sourcecode:: http
 
-            HTTP/1.1 403 Forbidden
-
-        .. sourcecode:: http
-
             HTTP/1.1 404 Not Found
 
         """
@@ -290,10 +278,6 @@ class Orders(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 401 Unauthorized
-
-        .. sourcecode:: http
-
-            HTTP/1.1 403 Forbidden
 
         .. sourcecode:: http
 
@@ -356,10 +340,6 @@ class Receipts(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 401 Unauthorized
-
-        .. sourcecode:: http
-
-            HTTP/1.1 403 Forbidden
 
         .. sourcecode:: http
 

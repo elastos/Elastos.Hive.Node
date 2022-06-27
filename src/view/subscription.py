@@ -273,6 +273,36 @@ class VaultActivateDeactivate(Resource):
         self.vault_subscription = VaultSubscription()
 
     def post(self):
+        """ Activate or deactivate the vault
+
+        The vault can only be read when it is deactivated.
+        This is very useful for do some operations on vault, like backup, promotion, ect.
+
+        .. :quickref: 02 Subscription; Activate&Deactivate
+
+        **Request**:
+
+        .. sourcecode:: http
+
+            None
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 201 Created
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 404 Not Found
+
+        """
         op = RV.get_args().get('op', str)
         if op == 'activation':
             return self.vault_subscription.activate()

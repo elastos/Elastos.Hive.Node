@@ -11,6 +11,7 @@ import pymongo
 from tests.utils.http_client import HttpClient
 from tests import init_test
 from tests.utils.resp_asserter import RA, DictAsserter
+from tests.utils.tester_http import HttpCode
 
 
 class DatabaseTestCase(unittest.TestCase):
@@ -131,7 +132,7 @@ class DatabaseTestCase(unittest.TestCase):
         second result: '{"acknowledged": true, "matched_count": 1, "modified_count": 0, "upserted_id": null}'
         """
         response = self.cli.patch(f'/db/collection/{self.collection_name}', body={
-            "filter": {"author": "insert_if_not_exists",},
+            "filter": {"author": "insert_if_not_exists"},
             "update": {"$setOnInsert": {"title": "Eve for Dummies4"}},
             "options": {"upsert": True, "bypass_document_validation": True}
         })
@@ -274,6 +275,40 @@ class DatabaseTestCase(unittest.TestCase):
     def test08_delete_collection(self):
         response = self.cli.delete(f'/db/{self.collection_name}')
         RA(response).assert_status(204)
+
+    def test09_freeze_check(self):
+        def check_freeze(is_freeze: bool):
+            response_ = self.cli.put(f'/db/collections/{self.collection_name}')  # create collection
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
+
+            response_ = self.cli.post(f'/db/collection/{self.collection_name}', body={  # insert
+                'document': [self.__create_doc(100)]
+            })
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.CREATED)
+
+            response_ = self.cli.patch(f'/db/collection/{self.collection_name}', body={  # update
+                "filter": {"author": "Alice"},
+                "update": {"$set": {"title": "The Metrix 101"}},
+            })
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
+
+            response_ = self.cli.delete(f'/db/collection/{self.collection_name}?deleteone=true', body={  # delete
+                "filter": {"author": "Alice", "title": "The Metrix 101"}
+            }, is_json=True)
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.NO_CONTENT)
+
+            response_ = self.cli.delete(f'/db/{self.collection_name}')  # delete collection
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.NO_CONTENT)
+
+        # deactivate the vault
+        response = HttpClient(f'/api/v2').post('/subscription/vault?op=deactivation')
+        RA(response).assert_status(HttpCode.CREATED)
+        check_freeze(is_freeze=True)
+
+        # activate the vault
+        response = HttpClient(f'/api/v2').post('/subscription/vault?op=activation')
+        RA(response).assert_status(HttpCode.CREATED)
+        check_freeze(is_freeze=False)
 
 
 if __name__ == '__main__':

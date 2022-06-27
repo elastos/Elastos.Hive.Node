@@ -1,0 +1,10 @@
+class HttpCode:
+    OK = 200
+    CREATED = 201
+    NO_CONTENT = 204
+
+    UNAUTHORIZED = 401
+    BAD_REQUEST = 400
+    FORBIDDEN = 403
+
+    INSUFFICIENT_STORAGE = 507

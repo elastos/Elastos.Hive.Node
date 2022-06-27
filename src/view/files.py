@@ -208,7 +208,7 @@ class WritingOperation(Resource):
 
         .. sourcecode:: http
 
-            HTTP/1.1 201 Created
+            HTTP/1.1 200 OK
 
         .. code-block:: json
 
@@ -258,7 +258,7 @@ class WritingOperation(Resource):
 
         .. sourcecode:: http
 
-            HTTP/1.1 201 Created
+            HTTP/1.1 200 OK
 
         .. code-block:: json
 

@@ -7,11 +7,11 @@ import os
 import unittest
 
 from src import hive_setting
-from src.utils.http_client import HttpClient as Http
 
 from tests import init_test, VaultFilesUsageChecker
 from tests.utils.http_client import HttpClient
 from tests.utils.resp_asserter import RA
+from tests.utils.tester_http import HttpCode
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
@@ -86,6 +86,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.__check_remote_file_exist(self.src_public_name)
 
         # check cid
+        from src.utils.http_client import HttpClient as Http
         response = Http().post(f'{hive_setting.IPFS_NODE_URL}/api/v0/cat?arg={response.json().get("cid")}', None, None, is_body=False, success_code=200)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.src_public_content)
@@ -185,7 +186,32 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertTrue(response.status_code in [204, 404])
 
     def test09_freeze_check(self):
-        ...
+        def check_freeze(is_freeze: bool):
+            name, content = self.src_file_name, self.src_file_content.encode()  # upload file
+            response_ = self.cli.put(f'/files/{name}', content, is_json=False)
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
+
+            response_ = self.cli.patch(f'/files/{self.src_file_name}?to={self.dst_file_name}')  # move file
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
+
+            response_ = self.cli.put(f'/files/{self.dst_file_name}?dest={self.src_file_name}')  # copy file
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
+
+            response_ = self.cli.delete(f'/files/{self.src_file_name}')  # delete file
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.NO_CONTENT)
+
+            response_ = self.cli.delete(f'/files/{self.dst_file_name}')  # delete file
+            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.NO_CONTENT)
+
+        # deactivate the vault
+        response = HttpClient(f'/api/v2').post('/subscription/vault?op=deactivation')
+        RA(response).assert_status(HttpCode.CREATED)
+        check_freeze(is_freeze=True)
+
+        # activate the vault
+        response = HttpClient(f'/api/v2').post('/subscription/vault?op=activation')
+        RA(response).assert_status(HttpCode.CREATED)
+        check_freeze(is_freeze=False)
 
 
 if __name__ == '__main__':

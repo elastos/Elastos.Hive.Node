@@ -54,6 +54,10 @@ class CreateCollection(Resource):
 
             HTTP/1.1 455 Already Exists
 
+        .. sourcecode:: http
+
+            HTTP/1.1 507 Insufficient Storage
+
         """
 
         collection_name = RV.get_value('collection_name', collection_name, str)
@@ -175,6 +179,10 @@ class InsertOrCount(Resource):
 
             HTTP/1.1 404 Not Found
 
+        .. sourcecode:: http
+
+            HTTP/1.1 507 Insufficient Storage
+
         Count the documents if the URL parameter is **op=count**
 
         **Request**:
@@ -213,10 +221,6 @@ class InsertOrCount(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 401 Unauthorized
-
-        .. sourcecode:: http
-
-            HTTP/1.1 403 Forbidden
 
         .. sourcecode:: http
 
@@ -314,6 +318,10 @@ class Update(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 404 Not Found
+
+        .. sourcecode:: http
+
+            HTTP/1.1 507 Insufficient Storage
 
         """
 
@@ -439,10 +447,6 @@ class Find(Resource):
 
         .. sourcecode:: http
 
-            HTTP/1.1 403 Forbidden
-
-        .. sourcecode:: http
-
             HTTP/1.1 404 Not Found
 
         """
@@ -526,10 +530,6 @@ class Query(Resource):
         .. sourcecode:: http
 
             HTTP/1.1 401 Unauthorized
-
-        .. sourcecode:: http
-
-            HTTP/1.1 403 Forbidden
 
         .. sourcecode:: http
 

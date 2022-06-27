@@ -194,12 +194,12 @@ class VaultManager:
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
         col.update_one(filter_, update, contains_extra=False)
 
-    def active_vault(self, user_did, is_active: bool):
+    def activate_vault(self, user_did, is_activate: bool):
         """ active or deactivate the vault without checking the existence of the vault """
 
         filter_ = {VAULT_SERVICE_DID: user_did}
         update = {'$set': {
-            VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING if is_active else VAULT_SERVICE_STATE_FREEZE,
+            VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING if is_activate else VAULT_SERVICE_STATE_FREEZE,
             VAULT_SERVICE_MODIFY_TIME: int(datetime.now().timestamp())}}
 
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)

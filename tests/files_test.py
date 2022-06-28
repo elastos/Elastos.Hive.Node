@@ -8,7 +8,7 @@ import unittest
 
 from src import hive_setting
 
-from tests import init_test, VaultFilesUsageChecker
+from tests import init_test, VaultFilesUsageChecker, VaultFreezer
 from tests.utils.http_client import HttpClient
 from tests.utils.resp_asserter import RA
 from tests.utils.tester_http import HttpCode
@@ -68,6 +68,11 @@ class IpfsFilesTestCase(unittest.TestCase):
 
         # upload self.src_file_name
         file_name, file_content = self.src_file_name, self.src_file_content.encode()
+
+        with VaultFreezer() as _:
+            response_ = self.cli.put(f'/files/{file_name}', file_content, is_json=False)
+            RA(response_).assert_status(HttpCode.FORBIDDEN)
+
         upload_file(file_name, file_content)
 
         # upload self.src_file_name2
@@ -105,6 +110,10 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 405)
 
     def test02_download_file(self):
+        with VaultFreezer() as _:
+            response = self.cli.get(f'/files/{self.src_file_name}')
+            self.assertEqual(response.status_code, 200)
+
         response = self.cli.get(f'/files/{self.src_file_name}')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, self.src_file_content)
@@ -114,6 +123,10 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test03_move_file(self):
+        with VaultFreezer() as _:
+            response = self.cli.patch(f'/files/{self.src_file_name}?to={self.dst_file_name}')
+            RA(response).assert_status(HttpCode.FORBIDDEN)
+
         with VaultFilesUsageChecker(0) as _:
             response = self.cli.patch(f'/files/{self.src_file_name}?to={self.dst_file_name}')
             self.assertEqual(response.status_code, 200)
@@ -125,6 +138,10 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test04_copy_file(self):
+        with VaultFreezer() as _:
+            response = self.cli.put(f'/files/{self.dst_file_name}?dest={self.src_file_name}')
+            RA(response).assert_status(HttpCode.FORBIDDEN)
+
         with VaultFilesUsageChecker(len(self.src_file_content)) as _:
             response = self.cli.put(f'/files/{self.dst_file_name}?dest={self.src_file_name}')
             self.assertEqual(response.status_code, 200)
@@ -137,6 +154,10 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test05_list_folder(self):
+        with VaultFreezer() as _:
+            response = self.cli.get(f'/files/{self.folder_name}?comp=children')
+            RA(response).assert_status(HttpCode.OK)
+
         response = self.cli.get(f'/files/{self.folder_name}?comp=children')
         RA(response).assert_status(200)
         files = RA(response).body().get('value', list)
@@ -145,6 +166,10 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(file['name'], self.src_file_name2)
 
     def test06_get_properties(self):
+        with VaultFreezer() as _:
+            response = self.cli.get(f'/files/{self.src_file_name}?comp=metadata')
+            RA(response).assert_status(HttpCode.OK)
+
         self.__check_remote_file_exist(self.src_file_name)
 
     def test06_get_properties_invalid_parameter(self):
@@ -152,6 +177,10 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test07_get_hash(self):
+        with VaultFreezer() as _:
+            response = self.cli.get(f'/files/{self.src_file_name}?comp=hash')
+            RA(response).assert_status(HttpCode.OK)
+
         response = self.cli.get(f'/files/{self.src_file_name}?comp=hash')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_file_name)
@@ -161,6 +190,10 @@ class IpfsFilesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test08_delete_file(self):
+        with VaultFreezer() as _:
+            response = self.cli.delete(f'/files/{self.src_file_name}')
+            RA(response).assert_status(HttpCode.FORBIDDEN)
+
         with VaultFilesUsageChecker(-len(self.src_file_content)) as _:
             self.__delete_file(self.src_file_name)
 
@@ -184,34 +217,6 @@ class IpfsFilesTestCase(unittest.TestCase):
     def __delete_file(self, file_name):
         response = self.cli.delete(f'/files/{file_name}')
         self.assertTrue(response.status_code in [204, 404])
-
-    def test09_freeze_check(self):
-        def check_freeze(is_freeze: bool):
-            name, content = self.src_file_name, self.src_file_content.encode()  # upload file
-            response_ = self.cli.put(f'/files/{name}', content, is_json=False)
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
-
-            response_ = self.cli.patch(f'/files/{self.src_file_name}?to={self.dst_file_name}')  # move file
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
-
-            response_ = self.cli.put(f'/files/{self.dst_file_name}?dest={self.src_file_name}')  # copy file
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
-
-            response_ = self.cli.delete(f'/files/{self.src_file_name}')  # delete file
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.NO_CONTENT)
-
-            response_ = self.cli.delete(f'/files/{self.dst_file_name}')  # delete file
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.NO_CONTENT)
-
-        # deactivate the vault
-        response = HttpClient(f'/api/v2').post('/subscription/vault?op=deactivation')
-        RA(response).assert_status(HttpCode.CREATED)
-        check_freeze(is_freeze=True)
-
-        # activate the vault
-        response = HttpClient(f'/api/v2').post('/subscription/vault?op=activation')
-        RA(response).assert_status(HttpCode.CREATED)
-        check_freeze(is_freeze=False)
 
 
 if __name__ == '__main__':

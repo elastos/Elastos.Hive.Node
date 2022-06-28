@@ -3,6 +3,7 @@
 """
 Testing file for the ipfs-scripting module.
 """
+import random
 import typing
 
 import pymongo
@@ -121,6 +122,8 @@ class IpfsScriptingTestCase(unittest.TestCase):
         :return body of calling response if no error, else None
         """
 
+        executable_type = script_body['executable']['type']
+
         def normal_check(anonymous):
             with VaultFreezer() as _:
                 self.__register_script(script_name, script_body, expect_status=HttpCode.FORBIDDEN, anonymous=anonymous)
@@ -128,7 +131,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
             self.__register_script(script_name, script_body, expect_status=expect_status, anonymous=anonymous)
 
             with VaultFreezer() as _:
-                self.__call_script(script_name, call_body, expect_status=HttpCode.FORBIDDEN, anonymous=anonymous)
+                # FORBIDDEN is only for write operation
+                if executable_type in ['insert', 'update', 'delete', 'fileUpload']:
+                    self.__call_script(script_name, call_body, expect_status=HttpCode.FORBIDDEN, anonymous=anonymous)
+                else:
+                    self.__call_script(script_name, call_body, expect_status=HttpCode.OK, anonymous=anonymous)
 
             # no context: not found script if non-anonymous else can not find target_did and target_app_did
             #   all return BAD_REQUEST
@@ -223,6 +230,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         def execute_once(content, words_count):
             self.__register_call_delete_script(script_name, script_body, get_call_body(content, words_count), call_response_checker)
 
+        # 18 docs
         execute_once('message1', 10000)
         execute_once('message3', 30000)
         execute_once('message5', 50000)
@@ -246,7 +254,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         call_body = {"params": {"author": "John"}}
 
         def call_response_checker(body: DictAsserter, anonymous):
-            body.get(executable_name).assert_equal('count', 9)
+            body.get(executable_name).assert_equal('count', 18)
 
         self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
@@ -263,21 +271,21 @@ class IpfsScriptingTestCase(unittest.TestCase):
         call_body = {"params": {"author": "John"}}
 
         def call_response_checker(body: DictAsserter, anonymous):
-            body.get(executable_name).assert_equal('total', 9)
+            body.get(executable_name).assert_equal('total', 18)
             items = body.get(executable_name).get('items', list)
 
             # check asserted items.
-            self.assertEqual(len(items), 9)
+            self.assertEqual(len(items), 18)
             self.assertTrue(all([a['author'] == 'John' for a in items]))
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 2)
 
         self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
@@ -297,21 +305,21 @@ class IpfsScriptingTestCase(unittest.TestCase):
         call_body = {"params": {"author": "John"}}
 
         def call_response_checker(body: DictAsserter, anonymous):
-            body.get(executable_name).assert_equal('total', 9)
+            body.get(executable_name).assert_equal('total', 18)
             items = body.get(executable_name).get('items', list)
 
             # check asserted items.
-            self.assertEqual(len(items), 9)
+            self.assertEqual(len(items), 18)
             self.assertTrue(all([a['author'] == 'John' for a in items]))
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 1)
-            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 1)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message1', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message2', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message3', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message4', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message5', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message6', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message7', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message8', items))), 2)
+            self.assertEqual(len(list(filter(lambda a: a['content'] == 'message9', items))), 2)
 
         self.__register_call_delete_script(script_name, get_script_body(True), call_body, call_response_checker)
 
@@ -344,7 +352,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
                 call_body['params'].update(extra_params)
 
             def call_response_checker(body: DictAsserter, anonymous):
-                body.get(executable_name).assert_equal('total', 9)
+                body.get(executable_name).assert_equal('total', 18)
                 items = body.get(executable_name).get('items', list)
 
                 # assert items
@@ -354,12 +362,12 @@ class IpfsScriptingTestCase(unittest.TestCase):
             self.__register_call_delete_script(script_name, get_script_body(limit, skip), call_body, call_response_checker)
 
         # total 9
-        execute_once(3, 0, 3, 'message1')
-        execute_once(5, 3, 5, 'message4')
-        execute_once(7, 5, 4, 'message6')
+        execute_once(6, 0, 6, 'message1')
+        execute_once(10, 6, 10, 'message4')
+        execute_once(14, 10, 8, 'message6')
 
         # options also support $params
-        execute_once('$params.limit', '$params.skip', 2, 'message3', extra_params={'limit': 2, 'skip': 2})
+        execute_once('$params.limit', '$params.skip', 4, 'message3', extra_params={'limit': 4, 'skip': 4})
 
     def test03_find_with_only_url(self):
         script_name, executable_name = 'ipfs_database_find_with_only_url', 'database_find'
@@ -377,11 +385,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
         url_params = f'/{self.target_did}@{self.target_app_did}/' + urllib.parse.quote_plus('{"author":"John","content":"message1"}')
         response = self.cli2.get(f'/scripting/{script_name}{url_params}')
         RA(response).assert_status(200)
-        RA(response).body().get(executable_name).assert_equal('total', 1)
+        RA(response).body().get(executable_name).assert_equal('total', 2)
         items = RA(response).body().get(executable_name).get('items', list)
 
         # assert items
-        self.assertEqual(len(items), 1)
+        self.assertEqual(len(items), 2)
         self.assertEqual(items[0]['author'], 'John')
         self.assertEqual(items[0]['content'], 'message1')
         self.assertEqual(items[0]['words_count'], 10000)
@@ -401,11 +409,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
         call_body = {"params": {"author": "John", "start": 5000, "end": 15000}}
 
         def call_response_checker(body: DictAsserter, anonymous):
-            body.get(executable_name).assert_equal('total', 1)
+            body.get(executable_name).assert_equal('total', 2)
             items = body.get(executable_name).get('items', list)
 
             # assert items
-            self.assertEqual(len(items), 1)
+            self.assertEqual(len(items), 2)
             self.assertEqual(items[0]['author'], 'John')
             self.assertEqual(items[0]['content'], 'message1')
             self.assertEqual(items[0]['words_count'], 10000)
@@ -436,11 +444,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         # match checking
         body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}})
-        body.get(executable_name).assert_equal('total', 1)
+        body.get(executable_name).assert_equal('total', 2)
         items = body.get(executable_name).get('items', list)
 
         # assert items
-        self.assertEqual(len(items), 1)
+        self.assertEqual(len(items), 2)
         self.assertEqual(items[0]['author'], 'John')
         self.assertEqual(items[0]['content'], 'message1')
         self.assertEqual(items[0]['words_count'], 10000)
@@ -475,11 +483,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         # match checking
         body = self.__call_script(script_name, {"params": {"condition_author": "John", "content": "message1"}})
-        body.get(executable_name).assert_equal('total', 1)
+        body.get(executable_name).assert_equal('total', 2)
         items = body.get(executable_name).get('items', list)
 
         # assert items
-        self.assertEqual(len(items), 1)
+        self.assertEqual(len(items), 2)
         self.assertEqual(items[0]['author'], 'John')
         self.assertEqual(items[0]['content'], 'message1')
         self.assertEqual(items[0]['words_count'], 10000)
@@ -501,19 +509,19 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         # sort with pymongo.ASCENDING on mongo style.
         body = self.__call_script(script_name, {"params": {"author": "John", 'sort': [['words_count', pymongo.ASCENDING]]}})
-        body.get(executable_name).assert_equal('total', 9)
+        body.get(executable_name).assert_equal('total', 18)
         items = body.get(executable_name).get('items', list)
         # check the order is pymongo.ASCENDING
         counts = list(map(lambda i: i['words_count'], items))
-        self.assertTrue(all(counts[i] < counts[i + 1] for i in range(len(counts) - 1)))
+        self.assertTrue(all(counts[i] <= counts[i + 1] for i in range(len(counts) - 1)))
 
         # sort with pymongo.ASCENDING on hive style.
         body = self.__call_script(script_name, {"params": {"author": "John", 'sort': {'words_count': pymongo.DESCENDING}}})
-        body.get(executable_name).assert_equal('total', 9)
+        body.get(executable_name).assert_equal('total', 18)
         items = body.get(executable_name).get('items', list)
         # check the order is pymongo.DESCENDING
         counts = list(map(lambda i: i['words_count'], items))
-        self.assertTrue(all(counts[i] > counts[i + 1] for i in range(len(counts) - 1)))
+        self.assertTrue(all(counts[i] >= counts[i + 1] for i in range(len(counts) - 1)))
 
         self.delete_script(script_name)
 
@@ -542,10 +550,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
         # executables = ADictAsserter(body)
 
         def assert_executable(index: str):
-            body.get(executable_name + index).assert_equal('total', 1)
+            body.get(executable_name + index).assert_equal('total', 2)
             items = body.get(executable_name + index).get('items', list)
             # assert items
-            self.assertEqual(len(items), 1)
+            self.assertEqual(len(items), 2)
             self.assertEqual(items[0]['author'], 'John')
             self.assertEqual(items[0]['content'], f'message{index}')
             self.assertEqual(items[0]['words_count'], int(f'{index}0000'))
@@ -561,26 +569,26 @@ class IpfsScriptingTestCase(unittest.TestCase):
             'type': 'update',
             'body': {
                 'collection': self.collection_name,
-                'filter': {'content': '$params.content'},
+                'filter': {'content': '$params.content', 'words_count': '$params.words_count_src'},
                 'update': {
                     '$set': {
-                        'words_count': '$params.words_count'
+                        'words_count': '$params.words_count_dst'
                     }
                 }
             }
         }}
 
-        def get_call_body(words_count):
-            return {"params": {"content": "message9", "words_count": words_count}}
+        def get_call_body(words_count_src, words_count_dst):
+            return {"params": {"content": "message9", "words_count_src": words_count_src, "words_count_dst": words_count_dst}}
 
         def call_response_checker(body: DictAsserter, anonymous):
             body.get(executable_name).assert_equal('modified_count', 1)
 
-        def execute_once(words_count):
-            self.__register_call_delete_script(script_name, script_body, get_call_body(words_count), call_response_checker)
+        def execute_once(words_count_src, words_count_dst):
+            self.__register_call_delete_script(script_name, script_body, get_call_body(words_count_src, words_count_dst), call_response_checker)
 
-        execute_once(90001)
-        execute_once(90000)
+        execute_once(90000, 90001)
+        execute_once(90001, 90000)
 
     def test04_update_insert_if_not_exists(self):
         script_name, executable_name = 'ipfs_database_update_insert_if_not_exists', 'database_update'
@@ -600,7 +608,10 @@ class IpfsScriptingTestCase(unittest.TestCase):
         call_body = {"params": {"author": "Alex", "content": "message10", "words_count": 100000}}
 
         def call_response_checker(body: DictAsserter, anonymous):
-            self.assertTrue(is_valid_object_id(body.get(executable_name).get('upserted_id', str)))
+            if not anonymous:
+                self.assertTrue(is_valid_object_id(body.get(executable_name).get('upserted_id', str)))
+            else:
+                self.assertFalse(body.get(executable_name)['upserted_id'])
 
         self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
@@ -670,10 +681,11 @@ class IpfsScriptingTestCase(unittest.TestCase):
         def call_response_checker(body: DictAsserter, anonymous=False):
             id_ = body.get(executable_name).get('transaction_id', str)
 
-            with VaultFreezer() as _:
-                self._download_by_transaction(id_, anonymous=anonymous, expect_status=HttpCode.FORBIDDEN)
-
-            self._download_by_transaction(id_, anonymous=anonymous)
+            if random.randint(0, 1) == 0:
+                with VaultFreezer() as _:
+                    self._download_by_transaction(id_, anonymous=anonymous, expect_status=HttpCode.OK)
+            else:
+                self._download_by_transaction(id_, anonymous=anonymous)
 
         self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
@@ -688,7 +700,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         }
         call_body = {'params': {'path': self.file_name}}
 
-        def call_response_checker(body: DictAsserter):
+        def call_response_checker(body: DictAsserter, anonymous):
             body.get(executable_name).assert_equal('size', len(self.file_content))
             body.get(executable_name).assert_equal('name', self.file_name)
             body.get(executable_name).assert_equal('type', 'file')
@@ -707,7 +719,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         }
         call_body = {'params': {'path': self.file_name}}
 
-        def call_response_checker(body: DictAsserter):
+        def call_response_checker(body: DictAsserter, anonymous):
             body.get(executable_name).assert_equal('SHA256', self.file_content_sha256)
 
         self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
@@ -727,7 +739,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         def get_call_body(path_value: str):
             return {'params': {'path': path_value}}
 
-        def call_response_checker(body: DictAsserter):
+        def call_response_checker(body: DictAsserter, anonymous):
             body.get(executable_name).assert_equal('SHA256', self.file_content_sha256)
 
         def check_with_pattern(path_pattern, path_value):

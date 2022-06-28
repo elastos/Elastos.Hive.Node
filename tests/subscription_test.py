@@ -11,7 +11,8 @@ from tests import init_test, test_log
 
 
 class SubscriptionTestCase(unittest.TestCase):
-    def __init__(self, is_did2=False, method_name='runTest'):
+    def __init__(self, method_name='runTest', is_did2=False):
+        """ MUST add params at the end of the list, or error from test engine """
         super().__init__(method_name)
         init_test()
         self.cli = HttpClient(f'/api/v2', is_did2=is_did2)

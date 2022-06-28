@@ -9,7 +9,7 @@ import unittest
 import pymongo
 
 from tests.utils.http_client import HttpClient
-from tests import init_test
+from tests import init_test, VaultFreezer
 from tests.utils.resp_asserter import RA, DictAsserter
 from tests.utils.tester_http import HttpCode
 
@@ -28,6 +28,10 @@ class DatabaseTestCase(unittest.TestCase):
         HttpClient(f'/api/v2').put('/subscription/vault')
 
     def test01_create_collection(self):
+        with VaultFreezer() as _:
+            response = self.cli.put(f'/db/collections/{self.collection_name}')
+            RA(response).assert_status(HttpCode.FORBIDDEN)
+
         response = self.cli.put(f'/db/collections/{self.collection_name}')
         RA(response).assert_status(200, 455)
         if response.status_code == 200:
@@ -39,6 +43,12 @@ class DatabaseTestCase(unittest.TestCase):
                 'words_count': 10000 * index}
 
     def test02_insert(self):
+        with VaultFreezer() as _:
+            response = self.cli.post(f'/db/collection/{self.collection_name}', body={
+                'document': [self.__create_doc(i + 1) for i in range(2)]
+            })
+            RA(response).assert_status(HttpCode.FORBIDDEN)
+
         response = self.cli.post(f'/db/collection/{self.collection_name}', body={
             'document': [self.__create_doc(i+1) for i in range(2)]
         })
@@ -88,6 +98,13 @@ class DatabaseTestCase(unittest.TestCase):
         RA(response).assert_status(400)
 
     def test03_update(self):
+        with VaultFreezer() as _:
+            response = self.cli.patch(f'/db/collection/{self.collection_name}', body={
+                "filter": {"author": "timestamp_default"},
+                "update": {"$set": {"title": "Eve for Dummies1_1"}},
+            })
+            RA(response).assert_status(HttpCode.FORBIDDEN)
+
         response = self.cli.patch(f'/db/collection/{self.collection_name}', body={
             "filter": {"author": "timestamp_default"},
             "update": {"$set": {"title": "Eve for Dummies1_1"}},
@@ -146,6 +163,12 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(len(RA(response).body().get('items', list)), 1)
 
     def test04_count(self):
+        with VaultFreezer() as _:
+            response = self.cli.post(f'/db/collection/{self.collection_name}?op=count', body={
+                "filter": {"author": "Alice"}
+            })
+            RA(response).assert_status(HttpCode.CREATED)
+
         response = self.cli.post(f'/db/collection/{self.collection_name}?op=count', body={
             "filter": {"author": "Alice"}
         })
@@ -165,6 +188,10 @@ class DatabaseTestCase(unittest.TestCase):
         RA(response).assert_status(400)
 
     def test05_find(self):
+        with VaultFreezer() as _:
+            response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"Alice"}')
+            RA(response).assert_status(HttpCode.OK)
+
         response = self.cli.get(f'/db/{self.collection_name}' + '?filter={"author":"Alice"}')
         RA(response).assert_status(200)
         self.assertEqual(len(RA(response).body().get('items', list)), 5)
@@ -179,6 +206,13 @@ class DatabaseTestCase(unittest.TestCase):
         RA(response).assert_status(400)
 
     def test06_query(self):
+        with VaultFreezer() as _:
+            response = self.cli.post(f'/db/query', body={
+                "collection": self.collection_name,
+                "filter": {"author": "Alice"}
+            })
+            RA(response).assert_status(HttpCode.CREATED)
+
         response = self.cli.post(f'/db/query', body={
             "collection": self.collection_name,
             "filter": {"author": "Alice"}
@@ -242,6 +276,12 @@ class DatabaseTestCase(unittest.TestCase):
         RA(response).assert_status(400)
 
     def test07_delete(self):
+        with VaultFreezer() as _:
+            response = self.cli.delete(f'/db/collection/{self.collection_name}?deleteone=true', body={
+                "filter": {"author": "Alice"}
+            }, is_json=True)
+            RA(response).assert_status(HttpCode.FORBIDDEN)
+
         # delete one
         response = self.cli.delete(f'/db/collection/{self.collection_name}?deleteone=true', body={
             "filter": {"author": "Alice"}
@@ -275,40 +315,6 @@ class DatabaseTestCase(unittest.TestCase):
     def test08_delete_collection(self):
         response = self.cli.delete(f'/db/{self.collection_name}')
         RA(response).assert_status(204)
-
-    def test09_freeze_check(self):
-        def check_freeze(is_freeze: bool):
-            response_ = self.cli.put(f'/db/collections/{self.collection_name}')  # create collection
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
-
-            response_ = self.cli.post(f'/db/collection/{self.collection_name}', body={  # insert
-                'document': [self.__create_doc(100)]
-            })
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.CREATED)
-
-            response_ = self.cli.patch(f'/db/collection/{self.collection_name}', body={  # update
-                "filter": {"author": "Alice"},
-                "update": {"$set": {"title": "The Metrix 101"}},
-            })
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.OK)
-
-            response_ = self.cli.delete(f'/db/collection/{self.collection_name}?deleteone=true', body={  # delete
-                "filter": {"author": "Alice", "title": "The Metrix 101"}
-            }, is_json=True)
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.NO_CONTENT)
-
-            response_ = self.cli.delete(f'/db/{self.collection_name}')  # delete collection
-            RA(response_).assert_status(HttpCode.FORBIDDEN if is_freeze else HttpCode.NO_CONTENT)
-
-        # deactivate the vault
-        response = HttpClient(f'/api/v2').post('/subscription/vault?op=deactivation')
-        RA(response).assert_status(HttpCode.CREATED)
-        check_freeze(is_freeze=True)
-
-        # activate the vault
-        response = HttpClient(f'/api/v2').post('/subscription/vault?op=activation')
-        RA(response).assert_status(HttpCode.CREATED)
-        check_freeze(is_freeze=False)
 
 
 if __name__ == '__main__':

@@ -40,6 +40,10 @@ def before_request():
     if request.method == "OPTIONS":
         # return None to let CORS handle OPTIONS
         return
+    elif request.method == '""OPTIONS':
+        # for hive js demo local connecting, its maybe ionic bug
+        request.method = 'OPTIONS'
+        return '{}'
 
     # Sets the "wsgi.input_terminated" environment flag, thus enabling
     # Werkzeug to pass chunked requests as streams; this makes the API

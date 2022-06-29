@@ -7,7 +7,7 @@ import time
 import traceback
 from datetime import datetime
 
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
 from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID
 from src.utils.file_manager import fm
@@ -101,38 +101,43 @@ class ExecutorBase(threading.Thread):
                                root_cid=None,
                                is_unpin=False):
         """
-        Handle the CIDs of the backup metadata.
+        Handle the CIDs of the backup metadata which defined in ipfs_backup_client.py
+
         :param request_metadata: The request json data of the backup processing.
-        :param is_only_file: Only operate the CIDs of the files. Or will handle database packages.
-        :param is_file_pin_to_ipfs: Whether need pin/unpin files to IPFS node.
+        :param is_only_file: Only operate the CIDs of the files. Or to handle database packages.
+        :param is_file_pin_to_ipfs: Whether it needs pin/unpin files to IPFS node, only for files of request_metadata
         :param root_cid: The CID for the request metadata file.
         :param is_unpin: Pin or unpin the file on the IPFS node.
         """
+
         execute_pin_unpin = fm.ipfs_pin_cid if not is_unpin else fm.ipfs_unpin_cid
+
+        # pin or unpin the cid of request_metadata
         if root_cid:
             execute_pin_unpin(root_cid)
             logging.info('[ExecutorBase] Success to pin root cid.')
 
+        # can not handle without request_metadata
         if not request_metadata:
             logging.info('[ExecutorBase] Invalid request metadata, skip pin CIDs.')
             return
 
-        if is_file_pin_to_ipfs:
-            ipfs_files = IpfsFiles()
-            files = request_metadata.get('files')
-            if files:
-                for f in files:
-                    execute_pin_unpin(f['cid'])
-                    if not is_unpin:
-                        ipfs_files.increase_refcount_cid(f['cid'], count=f['count'])
-                    else:
-                        ipfs_files.decrease_refcount_cid(f['cid'], count=f['count'])
-        logging.info('[ExecutorBase] Success to pin all files CIDs.')
+        # pin or unpin files
+        if is_file_pin_to_ipfs and request_metadata.get('files'):
+            for f in request_metadata.get('files'):
+                execute_pin_unpin(f['cid'])
+                cid_ref = IpfsCidRef(f['cid'])
+                if not is_unpin:
+                    cid_ref.decrease(f['count'])
+                else:
+                    cid_ref.increase(f['count'])
+            logging.info('[ExecutorBase] Success to pin all files CIDs.')
 
+        # pin or unpin database packages
         if not is_only_file and request_metadata.get('databases'):
             for d in request_metadata.get('databases'):
                 execute_pin_unpin(d['cid'])
-        logging.info('[ExecutorBase] Success to pin all databases CIDs.')
+            logging.info(f'[ExecutorBase] Success to {"pin" if not is_unpin else "unpin"} all databases CIDs.')
 
 
 class BackupExecutor(ExecutorBase):

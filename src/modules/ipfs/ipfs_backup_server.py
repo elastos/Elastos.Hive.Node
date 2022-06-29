@@ -45,7 +45,7 @@ class IpfsBackupServer:
         request_metadata = self.get_server_request_metadata(g.usr_did, doc, is_promotion=True,
                                                             vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
         if request_metadata['vault_size'] > fm.get_vault_max_size(g.usr_did):
-            raise InsufficientStorageException(msg="No enough space to restore vault data");
+            raise InsufficientStorageException(msg="No enough space to restore vault data")
 
         ExecutorBase.pin_cids_to_local_ipfs(request_metadata,
                                             is_only_file=True,

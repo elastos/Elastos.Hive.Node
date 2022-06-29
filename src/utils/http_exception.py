@@ -16,6 +16,7 @@ class HiveException(Exception):
     NO_INTERNAL_CODE = -1
 
     def __init__(self, code, internal_code, msg):
+        self.hive_code = code  # flag to be checked as HiveException
         self.code = code
         self.internal_code = internal_code
         self.msg = msg

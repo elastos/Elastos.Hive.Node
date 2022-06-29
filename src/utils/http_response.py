@@ -37,16 +37,13 @@ class HiveApi(Api):
         return resp
 
     def handle_error(self, e):
-        """ Convert any exception (HiveException and Exception) to error response message. """
+        """ Convert any exception (HiveException, Exception, etc.) to error response message. """
         ex = e
-        if not hasattr(e, 'get_error_dict') or not hasattr(e, 'code'):
-            if hasattr(e, 'code'):
-                ex = HiveException(e.code, -1, str(e))
-            else:
-                msg = f'V2 internal error: {str(e)}, {traceback.format_exc()}'
-                logging.getLogger('http response').error(msg)
-                capture_exception(error=Exception(f'V2 UNEXPECTED: {msg}'))
-                ex = InternalServerErrorException(msg=msg)
+        if not hasattr(e, 'hive_code') and not hasattr(e, 'get_error_dict'):  # not HiveException
+            msg = f'V2 internal error: {str(e)}, {traceback.format_exc()}'
+            logging.getLogger('http response').error(msg)
+            capture_exception(error=Exception(f'V2 UNEXPECTED: {msg}'))
+            ex = InternalServerErrorException(msg=msg)
         return jsonify(ex.get_error_dict()), ex.code
 
 

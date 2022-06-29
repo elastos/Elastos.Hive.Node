@@ -56,6 +56,7 @@ class BackupRestore(Resource):
 
     def post(self):
         """ Backup or restore the data of the vault service.
+
         Backup the data to another hive node by the credential if contains URL parameter is **to=hive_node**.
 
         .. :quickref: 06 Backup; Backup & Restore

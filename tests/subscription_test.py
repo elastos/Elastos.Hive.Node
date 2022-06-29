@@ -42,9 +42,7 @@ class SubscriptionTestCase(unittest.TestCase):
 
     def test06_vault_unsubscribe(self):
         response = self.cli.delete('/subscription/vault')
-        self.assertEqual(response.status_code, 204)
-        response = self.cli.delete('/subscription/vault')
-        self.assertEqual(response.status_code, 404)
+        self.assertIn(response.status_code, [204, 404])
 
     def test07_price_plan(self):
         response = self.cli.get('/subscription/pricing_plan?subscription=all&name=Free')
@@ -62,9 +60,7 @@ class SubscriptionTestCase(unittest.TestCase):
 
     def test10_backup_unsubscribe(self):
         response = self.backup_cli.delete('/subscription/backup')
-        self.assertEqual(response.status_code, 204)
-        response = self.backup_cli.delete('/subscription/backup')
-        self.assertEqual(response.status_code, 404)
+        self.assertIn(response.status_code, [204, 404])
 
 
 if __name__ == '__main__':

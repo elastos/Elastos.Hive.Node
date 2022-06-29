@@ -12,7 +12,7 @@ from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExec
 from src.modules.subscription.subscription import VaultSubscription
 from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_INPROGRESS, BKSERVER_REQ_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
-    BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER, USR_DID
+    BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER, USR_DID, BACKUP_REQUEST_STATE_SUCCESS
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
@@ -79,10 +79,25 @@ class IpfsBackupServer:
 
     def internal_restore(self):
         doc = self.find_backup_request(g.usr_did, throw_exception=True)
+
+        # BKSERVER_REQ_ACTION: None, means not backup called; 'backup', backup called, and can be three states.
+        if not doc.get(BKSERVER_REQ_ACTION):
+            raise BadRequestException(msg='No backup data for restoring on backup node.')
+        elif doc.get(BKSERVER_REQ_ACTION) != BACKUP_REQUEST_ACTION_BACKUP:
+            raise BadRequestException(msg=f'No backup data for restoring with invalid action "{doc.get(BKSERVER_REQ_ACTION)}" on backup node.')
+
+        # if BKSERVER_REQ_ACTION is not None, it can be three states
         if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
             raise BadRequestException(msg='Failed because backup is in processing..')
         elif doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_FAILED:
             raise BadRequestException(msg='Cannot execute restore because last backup is failed.')
+        elif doc.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_SUCCESS:
+            raise BadRequestException(msg=f'Cannot execute restore because unknown state "{doc.get(BKSERVER_REQ_STATE)}".')
+
+        if not doc.get(BKSERVER_REQ_CID):
+            raise BadRequestException(msg=f'Cannot execute restore because invalid data cid "{doc.get(BKSERVER_REQ_CID)}".')
+
+        # backup data is valid, go on
         return {
             'cid': doc.get(BKSERVER_REQ_CID),
             'sha256': doc.get(BKSERVER_REQ_SHA256),

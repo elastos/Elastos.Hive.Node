@@ -9,20 +9,20 @@ from datetime import datetime
 
 from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
 from src.modules.subscription.vault import VaultManager
-from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID
+from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID, BACKUP_REQUEST_STATE_INPROGRESS
 from src.utils.file_manager import fm
 from src.utils.http_exception import HiveException
 from src.utils_v1.common import gene_temp_file_name
 
 
 class ExecutorBase(threading.Thread):
-    def __init__(self, user_did, owner, **kwargs):
+    def __init__(self, user_did, owner, action, start_delay=0, is_force=False):
         super().__init__()
         self.user_did = user_did
         self.owner = owner
-        self.action = kwargs.get('action', 'backup')
-        self.start_delay = kwargs.get('start_delay', 0)
-        self.is_force = kwargs.get('is_force', False)
+        self.action = action
+        self.start_delay = start_delay
+        self.is_force = is_force
         self.vault_manager = VaultManager()
 
     def run(self):
@@ -30,11 +30,12 @@ class ExecutorBase(threading.Thread):
             if self.start_delay > 0:
                 time.sleep(self.start_delay)
             logging.info(f'[ExecutorBase] Enter execute the executor for {self.action}.')
+            self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_INPROGRESS)
             self.execute()
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_SUCCESS)
             logging.info(f'[ExecutorBase] Leave execute the executor for {self.action}.')
         except HiveException as e:
-            msg = f'[ExecutorBase] Failed to {self.action} on the vault side: {e}'
+            msg = f'[ExecutorBase] Failed to {self.action} on the vault side: {e.msg}'
             logging.error(msg)
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_FAILED, msg)
         except Exception as e:
@@ -142,7 +143,7 @@ class ExecutorBase(threading.Thread):
 
 class BackupExecutor(ExecutorBase):
     def __init__(self, user_did, client, req, **kwargs):
-        super().__init__(user_did, client, **kwargs)
+        super().__init__(user_did, client, 'backup', **kwargs)
         self.req = req
 
     def execute(self):
@@ -158,7 +159,7 @@ class BackupExecutor(ExecutorBase):
 
 class RestoreExecutor(ExecutorBase):
     def __init__(self, user_did, client, **kwargs):
-        super().__init__(user_did, client, action='restore', **kwargs)
+        super().__init__(user_did, client, 'restore', **kwargs)
 
     def execute(self):
         request_metadata = self.owner.get_vault_data_cid_from_backup_node(self.user_did)
@@ -166,14 +167,14 @@ class RestoreExecutor(ExecutorBase):
         self.__class__.pin_cids_to_local_ipfs(request_metadata, is_only_file=True)
         logging.info('[RestoreExecutor] Success to pin files CIDs.')
         self.owner.restore_database_by_dump_files(request_metadata)
-        logging.info('[RestoreExecutor] Success to restore the dump files of the use\'s database.')
+        logging.info("[RestoreExecutor] Success to restore the dump files of the user's database.")
         self.__class__.update_vault_usage_by_metadata(self.user_did, request_metadata)
         logging.info('[RestoreExecutor] Success to update the usage of the vault.')
 
 
 class BackupServerExecutor(ExecutorBase):
     def __init__(self, user_did, server, req, **kwargs):
-        super().__init__(user_did, server, action='backup_server', **kwargs)
+        super().__init__(user_did, server, 'backup_server', **kwargs)
         self.req = req
 
     def execute(self):

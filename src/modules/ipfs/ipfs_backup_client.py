@@ -108,30 +108,58 @@ class IpfsBackupClient:
             raise BadRequestException(msg=f'The remote backup is being in progress. Please await the process finished')
 
     def __get_remote_backup_state(self, user_did):
-        state, result, msg = BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, ''
-        req = self.__get_request(user_did)
-        if req:
-            state = req.get(BACKUP_REQUEST_ACTION)
-            result = req.get(BACKUP_REQUEST_STATE)
-            msg = req.get(BACKUP_REQUEST_STATE_MSG)
+        # state, result, msg = BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, ''
+        doc = self.__get_request(user_did)
+        if not doc:
+            # not do any backup or restore.
+            return {
+                'state': BACKUP_REQUEST_STATE_STOP,
+                'result': BACKUP_REQUEST_STATE_SUCCESS,
+                'message': '',
+            }
+        state = doc[BACKUP_REQUEST_ACTION]
 
-            # request to remote backup node to retrieve the current backup progress state if
-            # it's already been backup or restored.
-            if state in [BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE] and result == BACKUP_REQUEST_STATE_SUCCESS:
-                try:
-                    body = self.http.get(req.get(BACKUP_REQUEST_TARGET_HOST) + URL_V2 + URL_SERVER_INTERNAL_STATE,
-                                         req.get(BACKUP_REQUEST_TARGET_TOKEN))
-                    result, msg = body['result'], body['message']
-                except HiveException as e:
-                    result, msg = BACKUP_REQUEST_STATE_FAILED, e.msg
-                    self.update_request_state(user_did, BACKUP_REQUEST_STATE_FAILED, msg=msg)
-                except Exception as e:
-                    result, msg = BACKUP_REQUEST_STATE_FAILED, f'unexpected error: {str(e)}'
-                    self.update_request_state(user_did, BACKUP_REQUEST_STATE_FAILED, msg=msg)
+        # if failed in local, just return
+        if doc[BACKUP_REQUEST_STATE] == BACKUP_REQUEST_STATE_FAILED:
+            return {
+                'state': state,
+                'result': doc[BACKUP_REQUEST_STATE],
+                'message': doc[BACKUP_REQUEST_STATE_MSG],
+            }
+
+        # if failed on remote, just return remote state
+        try:
+            body = self.http.get(doc.get(BACKUP_REQUEST_TARGET_HOST) + URL_V2 + URL_SERVER_INTERNAL_STATE,
+                                 doc.get(BACKUP_REQUEST_TARGET_TOKEN))
+            remote_result, remote_msg = body['result'], body['message']
+            if remote_result == BACKUP_REQUEST_STATE_FAILED:
+                return {
+                    'state': state,
+                    'result': remote_result,
+                    'message': remote_msg,
+                }
+        except HiveException as e:
+            result, msg = BACKUP_REQUEST_STATE_FAILED, e.msg
+            self.update_request_state(user_did, BACKUP_REQUEST_STATE_FAILED, msg=msg)
+            raise e
+        except Exception as e:
+            result, msg = BACKUP_REQUEST_STATE_FAILED, f'unexpected error: {str(e)}'
+            self.update_request_state(user_did, BACKUP_REQUEST_STATE_FAILED, msg=msg)
+            raise BadRequestException(f'failed to {URL_SERVER_INTERNAL_STATE}: {msg}')
+
+        # any 'process' in local or remote = 'process'
+        if doc[BACKUP_REQUEST_STATE] == BACKUP_REQUEST_STATE_INPROGRESS or remote_result == BACKUP_REQUEST_STATE_INPROGRESS:
+            return {
+                'state': state,
+                'result': BACKUP_REQUEST_STATE_INPROGRESS,
+                'message': '',
+            }
+
+        # otherwise, success
         return {
-            'state': state if state else BACKUP_REQUEST_STATE_STOP,
-            'result': result if result else BACKUP_REQUEST_STATE_SUCCESS,
-            'message': msg if msg else '',
+            'state': state,
+            'result': BACKUP_REQUEST_STATE_SUCCESS,
+            'message': '',
         }
 
     def __get_request(self, user_did):
@@ -166,7 +194,7 @@ class IpfsBackupClient:
             USR_DID: user_did,
             BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE,
             BACKUP_REQUEST_ACTION: BACKUP_REQUEST_ACTION_RESTORE if is_restore else BACKUP_REQUEST_ACTION_BACKUP,
-            BACKUP_REQUEST_STATE: BACKUP_REQUEST_STATE_INPROGRESS,
+            BACKUP_REQUEST_STATE: BACKUP_REQUEST_STATE_STOP,
             BACKUP_REQUEST_STATE_MSG: None,
             BACKUP_REQUEST_TARGET_HOST: target_host,
             BACKUP_REQUEST_TARGET_DID: target_did,
@@ -185,7 +213,7 @@ class IpfsBackupClient:
 
         updated_doc = {
             BACKUP_REQUEST_ACTION: BACKUP_REQUEST_ACTION_RESTORE if is_restore else BACKUP_REQUEST_ACTION_BACKUP,
-            BACKUP_REQUEST_STATE: BACKUP_REQUEST_STATE_INPROGRESS,
+            BACKUP_REQUEST_STATE: BACKUP_REQUEST_STATE_STOP,
             BACKUP_REQUEST_STATE_MSG: None,
             BACKUP_REQUEST_TARGET_HOST: target_host,
             BACKUP_REQUEST_TARGET_DID: target_did,

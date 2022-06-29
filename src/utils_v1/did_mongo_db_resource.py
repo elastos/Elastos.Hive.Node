@@ -197,6 +197,8 @@ def restore_mongodb_from_full_path(full_path: Path):
         raise BadRequestException(msg=f'Failed to import mongo db by invalid full dir {full_path.as_posix()}')
 
     try:
+        # https://www.mongodb.com/docs/database-tools/mongorestore/#cmdoption--drop
+        # --drop: drop collections before restore, but does not drop collections that are not in the backup.
         line2 = f'mongorestore --uri="{hive_setting.MONGODB_URI}" --drop --archive="{full_path.as_posix()}"'
         subprocess.check_output(line2, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:

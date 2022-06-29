@@ -34,7 +34,5 @@ class IpfsCidRef:
         if doc[COUNT] <= count:
             col.delete_one(filter_)
         else:
-            update = {
-                {'$inc': {COUNT: -count}}
-            }
+            update = {'$inc': {COUNT: -count}}
             col.update_one(filter_, update)

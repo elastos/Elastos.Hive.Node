@@ -9,7 +9,7 @@ from pathlib import Path
 import requests
 
 from src.utils.file_manager import fm
-from src.utils.http_exception import BadRequestException
+from src.utils.http_exception import BadRequestException, HiveException
 
 
 class HttpClient:
@@ -18,8 +18,14 @@ class HttpClient:
 
     def __check_status_code(self, r, expect_code):
         if r.status_code != expect_code:
+            msg = r.text
+            try:
+                body = r.json()
+                msg = body['error']['message']
+            except Exception as e:
+                ...
             raise BadRequestException(msg=f'[HttpClient] Failed to {r.request.method} ({r.request.url}) '
-                                          f'with status code: {r.status_code}, {r.text}')
+                                          f'with status code: {r.status_code}, {msg}')
 
     def __raise_http_exception(self, url, method, e):
         raise BadRequestException(msg=f'[HttpClient] Failed to {method} ({url}) with exception: {str(e)}')
@@ -30,6 +36,8 @@ class HttpClient:
             r = requests.get(url, headers=headers, timeout=self.timeout, **kwargs)
             self.__check_status_code(r, 200)
             return r.json() if is_body else r
+        except HiveException as e:
+            raise e
         except Exception as e:
             self.__raise_http_exception(url, 'GET', e)
 
@@ -48,6 +56,8 @@ class HttpClient:
                 if is_json else requests.post(url, headers=headers, data=body, timeout=self.timeout, **kwargs)
             self.__check_status_code(r, success_code)
             return r.json() if is_body else r
+        except HiveException as e:
+            raise e
         except Exception as e:
             self.__raise_http_exception(url, 'POST', e)
 
@@ -69,6 +79,8 @@ class HttpClient:
             r = requests.put(url, headers=headers, data=body, timeout=self.timeout)
             self.__check_status_code(r, 200)
             return r.json() if is_body else r
+        except HiveException as e:
+            raise e
         except Exception as e:
             self.__raise_http_exception(url, 'PUT', e)
 
@@ -81,5 +93,7 @@ class HttpClient:
             headers = {"Authorization": "token " + access_token}
             r = requests.delete(url, headers=headers, timeout=self.timeout)
             self.__check_status_code(r, 204)
+        except HiveException as e:
+            raise e
         except Exception as e:
             self.__raise_http_exception(url, 'DELETE', e)

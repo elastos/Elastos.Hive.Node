@@ -206,8 +206,23 @@ class FileManager:
                                    is_json=False, files=files, success_code=200)
         return json_data['Hash']
 
+    def ipfs_local_exist_cid(self, cid):
+        try:
+            response = self.http.post(f'{self.ipfs_url}/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
+            return True
+        except BadRequestException as e:
+            return False
+
     def ipfs_unpin_cid(self, cid):
-        response = self.http.post(self.ipfs_url + f'/api/v0/pin/rm?arg=/ipfs/{cid}&recursive=true', None, None, is_body=False, success_code=200)
+        if not self.ipfs_local_exist_cid(cid):
+            return
+
+        try:
+            response = self.http.post(self.ipfs_url + f'/api/v0/pin/rm?arg=/ipfs/{cid}&recursive=true', None, None, is_body=False, success_code=200)
+        except BadRequestException as e:
+            # skip this error
+            if 'not pinned or pinned indirectly' not in e.msg:
+                raise e
 
     def get_file_cids(self, user_did):
         databases = cli.get_all_user_databases(user_did)

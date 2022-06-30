@@ -7,7 +7,7 @@ INFO: To run this on travis which needs support mongodb dump first.
 import time
 import unittest
 
-from tests import init_test, test_log
+from tests import init_test, test_log, HttpCode
 from tests.database_test import DatabaseTestCase
 from tests.utils.http_client import HttpClient
 from tests.subscription_test import SubscriptionTestCase
@@ -36,6 +36,7 @@ class IpfsBackupTestCase(unittest.TestCase):
         while time.time() < max_timestamp:
             r = self.cli.get('/vault/content')
             self.assertEqual(r.status_code, 200)
+
             self.assertTrue('result' in r.json())
             if r.json()['result'] == 'process':
                 continue
@@ -60,17 +61,15 @@ class IpfsBackupTestCase(unittest.TestCase):
 
         # backup without backup service
         self.subscription.test10_backup_unsubscribe()
-        r = self.cli.post('/vault/content?to=hive_node',
-                          body={'credential': self.cli.get_backup_credential()})
-        self.check_result(failed_message='The backup service can not be found')
+        r = self.cli.post('/vault/content?to=hive_node', body={'credential': self.cli.get_backup_credential()})
+        self.assertEqual(r.status_code, HttpCode.BAD_REQUEST)
 
         # prepare backup service
         self.subscription.test08_backup_subscribe()
 
         # restore without backup data of backup service
-        r = self.cli.post('/vault/content?from=hive_node',
-                          body={'credential': self.cli.get_backup_credential()})
-        self.check_result(failed_message='No backup data for restoring on backup node')
+        r = self.cli.post('/vault/content?from=hive_node', body={'credential': self.cli.get_backup_credential()})
+        self.assertEqual(r.status_code, HttpCode.BAD_REQUEST)
 
     def test02_backup(self):
         self.subscription.test01_vault_subscribe()
@@ -83,15 +82,8 @@ class IpfsBackupTestCase(unittest.TestCase):
         database_test.test02_insert_with_options()
         files_test.test01_upload_file()
 
-        # check no backup service
-        SubscriptionTestCase().test10_backup_unsubscribe()
-        r = self.cli.post('/vault/content?to=hive_node',
-                          body={'credential': self.cli.get_backup_credential()})
-        SubscriptionTestCase().test08_backup_subscribe()
-
         # do backup and make sure successful
-        r = self.cli.post('/vault/content?to=hive_node',
-                          body={'credential': self.cli.get_backup_credential()})
+        r = self.cli.post('/vault/content?to=hive_node', body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
         self.check_result()
 
@@ -100,8 +92,7 @@ class IpfsBackupTestCase(unittest.TestCase):
         self.subscription.test01_vault_subscribe()
 
         # do restore and make sure successful
-        r = self.cli.post('/vault/content?from=hive_node',
-                          body={'credential': self.cli.get_backup_credential()})
+        r = self.cli.post('/vault/content?from=hive_node', body={'credential': self.cli.get_backup_credential()})
         self.assertEqual(r.status_code, 201)
         self.check_result()
 

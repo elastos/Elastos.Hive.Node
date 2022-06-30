@@ -30,18 +30,19 @@ from flask import g
 from src.modules.auth.auth import Auth
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
+from src.modules.ipfs.backup_server_client import BackupServerClient
 from src.modules.ipfs.ipfs_backup_executor import BackupExecutor, RestoreExecutor
 from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
-    BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_INPROGRESS, \
+    BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
-    URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, URL_SERVER_INTERNAL_STATE, \
+    URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, \
     COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2, BACKUP_REQUEST_STATE_FAILED
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
 from src.utils.http_client import HttpClient
-from src.utils.http_exception import BadRequestException, InsufficientStorageException, HiveException
+from src.utils.http_exception import BadRequestException, InsufficientStorageException
 from src.utils_v1.common import gene_temp_file_name
 from src.utils_v1.constants import DID_INFO_DB_NAME
 from src.utils_v1.did_mongo_db_resource import dump_mongodb_to_full_path, restore_mongodb_from_full_path
@@ -59,9 +60,53 @@ class IpfsBackupClient:
         """ :v2 API: """
         self.vault_manager.get_vault(g.usr_did)
 
-        return self.__get_remote_backup_state(g.usr_did)
+        doc = self.__get_request(g.usr_did)
+        if not doc:
+            # not do any backup or restore before
+            return {
+                'state': BACKUP_REQUEST_STATE_STOP,
+                'result': BACKUP_REQUEST_STATE_SUCCESS,
+                'message': '',
+            }
+        local_action, local_state, local_msg = doc[BACKUP_REQUEST_ACTION], doc[BACKUP_REQUEST_STATE], doc[BACKUP_REQUEST_STATE_MSG]
 
-    def backup(self, credential, is_force):
+        # if restore or failed in local, just return
+        if local_action == BACKUP_REQUEST_ACTION_RESTORE or local_state == BACKUP_REQUEST_STATE_FAILED:
+            return {
+                'state': doc[BACKUP_REQUEST_ACTION],
+                'result': doc[BACKUP_REQUEST_STATE],
+                'message': doc[BACKUP_REQUEST_STATE_MSG],
+            }
+
+        # local is 'backup' and the state is 'success' or 'process'.
+
+        client = BackupServerClient(doc[BACKUP_REQUEST_TARGET_HOST], token=doc[BACKUP_REQUEST_TARGET_TOKEN])
+        remote_action, remote_state, remote_message = client.get_state()  # remote is also 'backup'
+
+        if BACKUP_REQUEST_STATE_PROCESS in [local_state, remote_state]:
+            # any side in process
+            return {
+                'state': BACKUP_REQUEST_ACTION_BACKUP,
+                'result': BACKUP_REQUEST_STATE_PROCESS,
+                'message': f'local result={local_state}, remote result={remote_state}',
+            }
+
+        if remote_state == BACKUP_REQUEST_STATE_FAILED:
+            # remote failed
+            return {
+                'state': BACKUP_REQUEST_ACTION_BACKUP,
+                'result': BACKUP_REQUEST_STATE_FAILED,
+                'message': f'remote: {remote_message}',
+            }
+
+        # success
+        return {
+            'state': BACKUP_REQUEST_ACTION_BACKUP,
+            'result': BACKUP_REQUEST_STATE_SUCCESS,
+            'message': '',
+        }
+
+    def backup(self, credential: str, is_force):
         """
         The client application request to backup vault data to target backup node.
          - Check a backup/restore proess already is inprogress; if not, then
@@ -77,9 +122,8 @@ class IpfsBackupClient:
         self.vault_manager.get_vault(g.usr_did)
 
         credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
-        if not is_force:
-            self.__check_remote_backup_in_progress(g.usr_did)
-        req = self.__save_request(g.usr_did, credential, credential_info)
+        client = self.__validate_remote_state(credential_info['targetHost'], credential, is_force, is_restore=False)
+        req = self.__save_request(g.usr_did, credential_info, client.get_token(), is_restore=False)
         BackupExecutor(g.usr_did, self, req, is_force=is_force).start()
 
     def restore(self, credential, is_force):
@@ -97,70 +141,30 @@ class IpfsBackupClient:
         self.vault_manager.get_vault(g.usr_did)
 
         credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
-        if not is_force:
-            self.__check_remote_backup_in_progress(g.usr_did)
-        self.__save_request(g.usr_did, credential, credential_info, is_restore=True)
+        client = self.__validate_remote_state(credential_info['targetHost'], credential, is_force, is_restore=True)
+        self.__save_request(g.usr_did, credential_info, client.get_token(), is_restore=True)
         RestoreExecutor(g.usr_did, self).start()
 
-    def __check_remote_backup_in_progress(self, user_did):
-        result = self.__get_remote_backup_state(user_did)
-        if result['result'] == BACKUP_REQUEST_STATE_INPROGRESS:
-            raise BadRequestException(f'The remote backup is being in progress. Please await the process finished')
+    def __validate_remote_state(self, target_host, credential, is_force, is_restore):
+        """ also do connectivity check """
+        client = BackupServerClient(target_host, credential)
+        remote_action, remote_state, _ = client.get_state()
 
-    def __get_remote_backup_state(self, user_did):
-        # state, result, msg = BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, ''
-        doc = self.__get_request(user_did)
-        if not doc:
-            # not do any backup or restore.
-            return {
-                'state': BACKUP_REQUEST_STATE_STOP,
-                'result': BACKUP_REQUEST_STATE_SUCCESS,
-                'message': '',
-            }
-        state = doc[BACKUP_REQUEST_ACTION]
+        # if is_force, skip check.
+        if not is_force:
+            if is_restore and (remote_action != BACKUP_REQUEST_ACTION_BACKUP and remote_state != BACKUP_REQUEST_STATE_SUCCESS):
+                raise BadRequestException('Latest state of the backup server is not success (backup)')
 
-        # if failed in local, just return
-        if doc[BACKUP_REQUEST_STATE] == BACKUP_REQUEST_STATE_FAILED:
-            return {
-                'state': state,
-                'result': doc[BACKUP_REQUEST_STATE],
-                'message': doc[BACKUP_REQUEST_STATE_MSG],
-            }
+            # remote check: check first to make sure backup server can do backup & restore.
+            if remote_state == BACKUP_REQUEST_STATE_PROCESS:
+                raise BadRequestException('The backup server is in process.')
 
-        # if failed on remote, just return remote state
-        try:
-            body = self.http.get(doc.get(BACKUP_REQUEST_TARGET_HOST) + URL_V2 + URL_SERVER_INTERNAL_STATE,
-                                 doc.get(BACKUP_REQUEST_TARGET_TOKEN))
-            remote_result, remote_msg = body['result'], body['message']
-            if remote_result == BACKUP_REQUEST_STATE_FAILED:
-                return {
-                    'state': state,
-                    'result': remote_result,
-                    'message': remote_msg,
-                }
-        except HiveException as e:
-            result, msg = BACKUP_REQUEST_STATE_FAILED, e.msg
-            self.update_request_state(user_did, BACKUP_REQUEST_STATE_FAILED, msg=msg)
-            raise e
-        except Exception as e:
-            result, msg = BACKUP_REQUEST_STATE_FAILED, f'unexpected error: {str(e)}'
-            self.update_request_state(user_did, BACKUP_REQUEST_STATE_FAILED, msg=msg)
-            raise BadRequestException(f'failed to {URL_SERVER_INTERNAL_STATE}: {msg}')
+            # local check
+            doc = self.__get_request(g.usr_did)
+            if doc and doc[BACKUP_REQUEST_STATE] == BACKUP_REQUEST_STATE_PROCESS:
+                raise BadRequestException(f'Local "{doc[BACKUP_REQUEST_ACTION]}" is in process.')
 
-        # any 'process' in local or remote = 'process'
-        if doc[BACKUP_REQUEST_STATE] == BACKUP_REQUEST_STATE_INPROGRESS or remote_result == BACKUP_REQUEST_STATE_INPROGRESS:
-            return {
-                'state': state,
-                'result': BACKUP_REQUEST_STATE_INPROGRESS,
-                'message': '',
-            }
-
-        # otherwise, success
-        return {
-            'state': state,
-            'result': BACKUP_REQUEST_STATE_SUCCESS,
-            'message': '',
-        }
+        return client
 
     def __get_request(self, user_did):
         col_filter = {USR_DID: user_did,
@@ -169,10 +173,7 @@ class IpfsBackupClient:
                                    create_on_absence=True,
                                    throw_exception=False)
 
-    def __save_request(self, user_did, credential, credential_info, is_restore=False):
-        # verify the credential
-        target_host = credential_info['targetHost']
-        access_token = self.__get_access_token_from_backup_server(target_host, credential)
+    def __save_request(self, user_did, credential_info, access_token, is_restore):
         target_host, target_did = credential_info['targetHost'], credential_info['targetDID']
         req = self.__get_request(user_did)
         if not req:
@@ -321,7 +322,7 @@ class IpfsBackupClient:
         requests = col.find_many({})
 
         for req in requests:
-            if req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
+            if req.get(BACKUP_REQUEST_STATE) != BACKUP_REQUEST_STATE_PROCESS:
                 continue
 
             # only handle the state BACKUP_REQUEST_STATE_INPROGRESS

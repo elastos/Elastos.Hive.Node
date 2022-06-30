@@ -24,28 +24,27 @@ The definition of the request metadata:
 }
 """
 import logging
+import typing as t
 
 from flask import g
 
+from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
+    BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
+    BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
+    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
+    URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, \
+    COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2
+from src.utils_v1.common import gene_temp_file_name
+from src.utils_v1.did_mongo_db_resource import dump_mongodb_to_full_path, restore_mongodb_from_full_path
+from src.utils.http_exception import BadRequestException, InsufficientStorageException
+from src.utils.http_client import HttpClient
+from src.utils.file_manager import fm
 from src.modules.auth.auth import Auth
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.backup_server_client import BackupServerClient
 from src.modules.ipfs.ipfs_backup_executor import BackupExecutor, RestoreExecutor
 from src.modules.subscription.vault import VaultManager
-from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
-    BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
-    BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
-    BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
-    URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, \
-    COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2, BACKUP_REQUEST_STATE_FAILED
-from src.utils.db_client import cli
-from src.utils.file_manager import fm
-from src.utils.http_client import HttpClient
-from src.utils.http_exception import BadRequestException, InsufficientStorageException
-from src.utils_v1.common import gene_temp_file_name
-from src.utils_v1.constants import DID_INFO_DB_NAME
-from src.utils_v1.did_mongo_db_resource import dump_mongodb_to_full_path, restore_mongodb_from_full_path
 
 
 class IpfsBackupClient:
@@ -60,7 +59,7 @@ class IpfsBackupClient:
         """ :v2 API: """
         self.vault_manager.get_vault(g.usr_did)
 
-        doc = self.__get_request(g.usr_did)
+        doc = self.__get_request_doc(g.usr_did)
         if not doc:
             # not do any backup or restore before
             return {
@@ -68,42 +67,11 @@ class IpfsBackupClient:
                 'result': BACKUP_REQUEST_STATE_SUCCESS,
                 'message': '',
             }
-        local_action, local_state, local_msg = doc[BACKUP_REQUEST_ACTION], doc[BACKUP_REQUEST_STATE], doc[BACKUP_REQUEST_STATE_MSG]
 
-        # if restore or failed in local, just return
-        if local_action == BACKUP_REQUEST_ACTION_RESTORE or local_state == BACKUP_REQUEST_STATE_FAILED:
-            return {
-                'state': doc[BACKUP_REQUEST_ACTION],
-                'result': doc[BACKUP_REQUEST_STATE],
-                'message': doc[BACKUP_REQUEST_STATE_MSG],
-            }
-
-        # local is 'backup' and the state is 'success' or 'process'.
-
-        client = BackupServerClient(doc[BACKUP_REQUEST_TARGET_HOST], token=doc[BACKUP_REQUEST_TARGET_TOKEN])
-        remote_action, remote_state, remote_message = client.get_state()  # remote is also 'backup'
-
-        if BACKUP_REQUEST_STATE_PROCESS in [local_state, remote_state]:
-            # any side in process
-            return {
-                'state': BACKUP_REQUEST_ACTION_BACKUP,
-                'result': BACKUP_REQUEST_STATE_PROCESS,
-                'message': f'local result={local_state}, remote result={remote_state}',
-            }
-
-        if remote_state == BACKUP_REQUEST_STATE_FAILED:
-            # remote failed
-            return {
-                'state': BACKUP_REQUEST_ACTION_BACKUP,
-                'result': BACKUP_REQUEST_STATE_FAILED,
-                'message': f'remote: {remote_message}',
-            }
-
-        # success
         return {
-            'state': BACKUP_REQUEST_ACTION_BACKUP,
-            'result': BACKUP_REQUEST_STATE_SUCCESS,
-            'message': '',
+            'state': doc[BACKUP_REQUEST_ACTION],
+            'result': doc[BACKUP_REQUEST_STATE],
+            'message': doc[BACKUP_REQUEST_STATE_MSG],
         }
 
     def backup(self, credential: str, is_force):
@@ -123,7 +91,7 @@ class IpfsBackupClient:
 
         credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
         client = self.__validate_remote_state(credential_info['targetHost'], credential, is_force, is_restore=False)
-        req = self.__save_request(g.usr_did, credential_info, client.get_token(), is_restore=False)
+        req = self.__save_request_doc(g.usr_did, credential_info, client.get_token(), is_restore=False)
         BackupExecutor(g.usr_did, self, req, is_force=is_force).start()
 
     def restore(self, credential, is_force):
@@ -142,7 +110,7 @@ class IpfsBackupClient:
 
         credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
         client = self.__validate_remote_state(credential_info['targetHost'], credential, is_force, is_restore=True)
-        self.__save_request(g.usr_did, credential_info, client.get_token(), is_restore=True)
+        self.__save_request_doc(g.usr_did, credential_info, client.get_token(), is_restore=True)
         RestoreExecutor(g.usr_did, self).start()
 
     def __validate_remote_state(self, target_host, credential, is_force, is_restore):
@@ -153,90 +121,53 @@ class IpfsBackupClient:
         # if is_force, skip check.
         if not is_force:
             if is_restore and (remote_action != BACKUP_REQUEST_ACTION_BACKUP and remote_state != BACKUP_REQUEST_STATE_SUCCESS):
-                raise BadRequestException('Latest state of the backup server is not success (backup)')
+                raise BadRequestException('No latest successful backup data on the backup server.')
 
             # remote check: check first to make sure backup server can do backup & restore.
             if remote_state == BACKUP_REQUEST_STATE_PROCESS:
                 raise BadRequestException('The backup server is in process.')
 
             # local check
-            doc = self.__get_request(g.usr_did)
+            doc = self.__get_request_doc(g.usr_did)
             if doc and doc[BACKUP_REQUEST_STATE] == BACKUP_REQUEST_STATE_PROCESS:
                 raise BadRequestException(f'Local "{doc[BACKUP_REQUEST_ACTION]}" is in process.')
 
         return client
 
-    def __get_request(self, user_did):
-        col_filter = {USR_DID: user_did,
-                      BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE}
-        return cli.find_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, col_filter,
-                                   create_on_absence=True,
-                                   throw_exception=False)
-
-    def __save_request(self, user_did, credential_info, access_token, is_restore):
-        target_host, target_did = credential_info['targetHost'], credential_info['targetDID']
-        req = self.__get_request(user_did)
-        if not req:
-            self.__insert_request(user_did, target_host, target_did, access_token, is_restore=is_restore)
-        else:
-            self.__update_request(user_did, target_host, target_did, access_token, req, is_restore=is_restore)
-        return self.__get_request(user_did)
-
-    def __get_access_token_from_backup_server(self, target_host, credential):
-        try:
-            challenge_response, backup_service_instance_did = \
-                self.auth.backup_client_sign_in(target_host, credential, 'DIDBackupAuthResponse')
-            return self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
-        except Exception as e:
-            raise BadRequestException(f'Failed to get the token from the backup server: {str(e)}')
-
-    def __insert_request(self, user_did, target_host, target_did, access_token, is_restore=False):
-        new_doc = {
-            USR_DID: user_did,
-            BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE,
-            BACKUP_REQUEST_ACTION: BACKUP_REQUEST_ACTION_RESTORE if is_restore else BACKUP_REQUEST_ACTION_BACKUP,
-            BACKUP_REQUEST_STATE: BACKUP_REQUEST_STATE_STOP,
-            BACKUP_REQUEST_STATE_MSG: None,
-            BACKUP_REQUEST_TARGET_HOST: target_host,
-            BACKUP_REQUEST_TARGET_DID: target_did,
-            BACKUP_REQUEST_TARGET_TOKEN: access_token
-        }
-        cli.insert_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, new_doc, create_on_absence=True)
-
-    def __update_request(self, user_did, target_host, target_did, access_token, req, is_restore=False):
-        # if request.args.get('is_multi') != 'True':
-        #     # INFO: Use url parameter 'is_multi' to skip this check.
-        #     cur_target_host = req.get(BACKUP_REQUEST_TARGET_HOST)
-        #     cur_target_did = req.get(BACKUP_REQUEST_TARGET_DID)
-        #     if cur_target_host and cur_target_did \
-        #             and (cur_target_host != target_host or cur_target_did != target_did):
-        #         raise InvalidParameterException('Do not support backup to multi hive node.')
-
-        updated_doc = {
-            BACKUP_REQUEST_ACTION: BACKUP_REQUEST_ACTION_RESTORE if is_restore else BACKUP_REQUEST_ACTION_BACKUP,
-            BACKUP_REQUEST_STATE: BACKUP_REQUEST_STATE_STOP,
-            BACKUP_REQUEST_STATE_MSG: None,
-            BACKUP_REQUEST_TARGET_HOST: target_host,
-            BACKUP_REQUEST_TARGET_DID: target_did,
-            BACKUP_REQUEST_TARGET_TOKEN: access_token
-        }
-
-        _filter = {USR_DID: user_did,
+    def __get_request_doc(self, user_did):
+        filter_ = {USR_DID: user_did,
                    BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE}
-        cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, _filter, {'$set': updated_doc}, is_extra=True)
+        return self.mcli.get_management_collection(COL_IPFS_BACKUP_CLIENT).find_one(filter_)
 
-    # the flowing is for the executors.
+    def __save_request_doc(self, user_did, credential_info, access_token, is_restore):
+        target_host, target_did = credential_info['targetHost'], credential_info['targetDID']
+        filter_ = {USR_DID: user_did,
+                   BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE}
+
+        update = {'$set': {
+            BACKUP_REQUEST_ACTION: BACKUP_REQUEST_ACTION_RESTORE if is_restore else BACKUP_REQUEST_ACTION_BACKUP,
+            BACKUP_REQUEST_STATE: BACKUP_REQUEST_STATE_STOP,
+            BACKUP_REQUEST_STATE_MSG: None,
+            BACKUP_REQUEST_TARGET_HOST: target_host,
+            BACKUP_REQUEST_TARGET_DID: target_did,
+            BACKUP_REQUEST_TARGET_TOKEN: access_token}}
+
+        self.mcli.get_management_collection(COL_IPFS_BACKUP_CLIENT).update_one(filter_, update, upsert=True)
+        return self.__get_request_doc(user_did)
+
+    # the following is for the executors.
 
     def update_request_state(self, user_did, state, msg=None):
-        updated_doc = {
+        filter_ = {USR_DID: user_did,
+                   BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE}
+
+        update = {'$set': {
             BACKUP_REQUEST_STATE: state,
-            BACKUP_REQUEST_STATE_MSG: msg
-        }
+            BACKUP_REQUEST_STATE_MSG: msg}}
 
-        _filter = {USR_DID: user_did, BACKUP_TARGET_TYPE: BACKUP_TARGET_TYPE_HIVE_NODE}
-        cli.update_one_origin(DID_INFO_DB_NAME, COL_IPFS_BACKUP_CLIENT, _filter, {'$set': updated_doc}, is_extra=True)
+        self.mcli.get_management_collection(COL_IPFS_BACKUP_CLIENT).update_one(filter_, update)
 
-    def dump_database_data_to_backup_cids(self, user_did):
+    def dump_database_data_to_backup_cids(self, user_did, process_callback=t.Optional[t.Callable[[int, int], None]]):
         """
         Each application holds its database under same user did.
         The steps to dump each database data to each application under the specific did:
@@ -244,11 +175,14 @@ class IpfsBackupClient:
         - upload this snapshot file into IPFS node
         """
         names = self.user_manager.get_database_names(user_did)
-        metadata_list = list()
-        for name in names:
+        metadata_list, length = list(), len(names)
+        for i in range(length):
+            if process_callback:
+                process_callback(i + 1, length)
+
             d = {
                 'path': gene_temp_file_name(),
-                'name': name
+                'name': names[i]
             }
             # dump the database data to snapshot file.
             dump_mongodb_to_full_path(d['name'], d['path'])
@@ -279,7 +213,7 @@ class IpfsBackupClient:
                 'size': size,
                 'is_force': is_force}
 
-        req = self.__get_request(user_did)
+        req = self.__get_request_doc(user_did)
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_BACKUP,
                        req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
 
@@ -290,14 +224,14 @@ class IpfsBackupClient:
         - get a json document by the root cid, where the json document contains a list of CIDs
           to the files and database data on IPFS network.
         """
-        req = self.__get_request(user_did)
+        req = self.__get_request_doc(user_did)
         data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])
-        vault_metadata = fm.ipfs_download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
+        request_metadata = fm.ipfs_download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
 
-        if vault_metadata['vault_size'] > fm.get_vault_max_size(user_did):
+        if request_metadata['vault_size'] > fm.get_vault_max_size(user_did):
             raise InsufficientStorageException('No enough space to restore, please upgrade the vault and try again.')
-        return vault_metadata
+        return request_metadata
 
     def restore_database_by_dump_files(self, request_metadata):
         databases = request_metadata['databases']

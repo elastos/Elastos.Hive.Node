@@ -105,7 +105,7 @@ class IpfsBackupClient:
     def __check_remote_backup_in_progress(self, user_did):
         result = self.__get_remote_backup_state(user_did)
         if result['result'] == BACKUP_REQUEST_STATE_INPROGRESS:
-            raise BadRequestException(msg=f'The remote backup is being in progress. Please await the process finished')
+            raise BadRequestException(f'The remote backup is being in progress. Please await the process finished')
 
     def __get_remote_backup_state(self, user_did):
         # state, result, msg = BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, ''
@@ -187,7 +187,7 @@ class IpfsBackupClient:
                 self.auth.backup_client_sign_in(target_host, credential, 'DIDBackupAuthResponse')
             return self.auth.backup_client_auth(target_host, challenge_response, backup_service_instance_did)
         except Exception as e:
-            raise BadRequestException(msg=f'Failed to get the token from the backup server: {str(e)}')
+            raise BadRequestException(f'Failed to get the token from the backup server: {str(e)}')
 
     def __insert_request(self, user_did, target_host, target_did, access_token, is_restore=False):
         new_doc = {
@@ -209,7 +209,7 @@ class IpfsBackupClient:
         #     cur_target_did = req.get(BACKUP_REQUEST_TARGET_DID)
         #     if cur_target_host and cur_target_did \
         #             and (cur_target_host != target_host or cur_target_did != target_did):
-        #         raise InvalidParameterException(msg='Do not support backup to multi hive node.')
+        #         raise InvalidParameterException('Do not support backup to multi hive node.')
 
         updated_doc = {
             BACKUP_REQUEST_ACTION: BACKUP_REQUEST_ACTION_RESTORE if is_restore else BACKUP_REQUEST_ACTION_BACKUP,
@@ -295,7 +295,7 @@ class IpfsBackupClient:
         vault_metadata = fm.ipfs_download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
 
         if vault_metadata['vault_size'] > fm.get_vault_max_size(user_did):
-            raise InsufficientStorageException(msg='No alowed enough space to restore vault data from backup node.')
+            raise InsufficientStorageException('No enough space to restore, please upgrade the vault and try again.')
         return vault_metadata
 
     def restore_database_by_dump_files(self, request_metadata):
@@ -309,7 +309,7 @@ class IpfsBackupClient:
             if msg:
                 logging.error(f'[IpfsBackupClient] Failed to download dump file for database {d["name"]}.')
                 temp_file.unlink()
-                raise BadRequestException(msg=msg)
+                raise BadRequestException(msg)
             restore_mongodb_from_full_path(temp_file)
             temp_file.unlink()
             logging.info(f'[IpfsBackupClient] Success to restore the dump file for database {d["name"]}.')

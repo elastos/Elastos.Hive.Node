@@ -61,12 +61,12 @@ def before_request():
     except UnauthorizedException as e:
         return e.get_error_response()
     except HiveException as e:
-        return UnauthorizedException(msg=f'TokenParser error: {e.msg}').get_error_response()
+        return UnauthorizedException(f'TokenParser error: {e.msg}').get_error_response()
     except Exception as e:
         msg = f'Invalid v2 token: {str(e)}, {traceback.format_exc()}'
         logging.getLogger('BEFORE REQUEST').error(msg)
         capture_exception(error=Exception(f'V2T UNEXPECTED: {msg}'))
-        return UnauthorizedException(msg=msg).get_error_response()
+        return UnauthorizedException(msg).get_error_response()
 
 
 @app.after_request

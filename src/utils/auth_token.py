@@ -173,7 +173,7 @@ class TokenParser:
         is_internal = any(map(lambda url: request.full_path.startswith(url), self.INTERNAL_URLS))
         info, err = _get_token_details_from_header(is_internal=is_internal)
         if err is not None:
-            raise UnauthorizedException(msg=f'Parse access token error: {err}')
+            raise UnauthorizedException(f'Parse access token error: {err}')
 
         # Only normal token contains application DID.
         g.usr_did, g.app_ins_did, g.app_did = info[USER_DID], info[APP_INSTANCE_DID], info.get(APP_ID)

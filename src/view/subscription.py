@@ -5,7 +5,7 @@ The view of subscription module.
 """
 from flask_restful import Resource
 
-from src.utils.http_exception import BadRequestException
+from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import RV
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.modules.subscription.subscription import VaultSubscription
@@ -309,7 +309,7 @@ class VaultActivateDeactivate(Resource):
         elif op == 'deactivation':
             return self.vault_subscription.deactivate()
         else:
-            raise BadRequestException(msg=f'Unsupported parameter "op" value {op}')
+            raise InvalidParameterException(f'Unsupported parameter "op" value {op}')
 
 
 class VaultUnsubscribe(Resource):
@@ -467,7 +467,7 @@ class BackupActivateDeactivate(Resource):
         elif op == 'deactivation':
             return self.backup_server.deactivate()
         else:
-            raise BadRequestException(msg=f'Unsupported parameter "op" value {op}')
+            raise InvalidParameterException(f'Unsupported parameter "op" value {op}')
 
 
 class BackupUnsubscribe(Resource):

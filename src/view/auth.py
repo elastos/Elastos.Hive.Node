@@ -90,7 +90,7 @@ class Auth(Resource):
         """
         challenge_response, msg = params.get_str('challenge_response')
         if msg:
-            raise InvalidParameterException(msg=msg)
+            raise InvalidParameterException(msg)
         return self.auth.auth(challenge_response)
 
 

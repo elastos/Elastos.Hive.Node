@@ -336,6 +336,6 @@ class IpfsFiles:
                                 create_on_absence=True, throw_exception=throw_exception)
         if not metadata:
             if throw_exception:
-                raise FileNotFoundException(f'No file metadata with path: {path} found')
+                raise FileNotFoundException(f"File '{path}' not found")
             return None
         return metadata

@@ -98,7 +98,9 @@ class Auth(Entity, metaclass=Singleton):
             "token": access_token,
         }
 
-    def __get_info_from_challenge_response(self, challenge_response, props: list):
+    def __get_info_from_challenge_response(self, challenge_response, expect_vc_fields: list):
+        """ for /auth and /backup_auth """
+
         jwt: JWT = JWT.parse(challenge_response)
 
         # presentation check
@@ -138,14 +140,15 @@ class Auth(Entity, metaclass=Singleton):
         exp_time = credential.get_expiration_date()
         issuer: DID = credential.get_issuer()
 
+        types = RequestData(**vcs[0]).get('type', list)
+
         # get the info from credential
 
         info = RequestData(**vcs[0]).get('credentialSubject', dict)
         if info.get('id', str) != auth_info[APP_INSTANCE_DID]:  # application instance did for user, service did for vault node
             raise BadRequestException(msg='Credentials "id" MUST be application instance DID')
 
-        for key in props:
-            info.validate(key, str)
+        Auth.__fix_credential_info_with_latest_backup(info, types, expect_vc_fields)
 
         info["userDid"] = str(issuer)
         # min(7 days, credential expire time)
@@ -165,9 +168,9 @@ class Auth(Entity, metaclass=Singleton):
             'token': access_token
         }
 
-    def get_backup_credential_info(self, credential):
+    def get_backup_credential_info(self, user_did, credential):
         """ for vault /backup client to get the information from the backup credential """
-        credential_info, err = self.__get_credential_info(credential, ["targetHost", "targetDID"])
+        credential_info, err = self.__get_backup_credential_info(user_did, credential, ["sourceDID", "targetHost", "targetDID"])
         if credential_info is None:
             raise InvalidParameterException(msg=f'Failed to get credential info: {err}')
         return credential_info
@@ -243,7 +246,26 @@ class Auth(Entity, metaclass=Singleton):
         vp_json = self.create_presentation_str(vc, create_nonce(), super().get_did_string())
         return json.loads(vp_json)
 
-    def __get_credential_info(self, vc_str, props: list):
+    @staticmethod
+    def __fix_credential_info_with_latest_backup(info: dict, types: list, expect_fields: list):
+        def filed_check(names):
+            for name in names:
+                if name not in info or not info[name]:
+                    return None, "The credentialSubject's '" + name + "' isn't exist or not valid."
+
+        # Use new defined fields
+        if 'HiveBackupCredential' in types:
+            filed_check(['sourceHiveNodeDID', 'targetHiveNodeDID', 'targetNodeURL'])
+
+            info['sourceDID'] = info['sourceHiveNodeDID']
+            info['targetDID'] = info['targetHiveNodeDID']
+            info['targetHost'] = info['targetNodeURL']
+        else:
+            filed_check(expect_fields)
+
+        return info
+
+    def __get_backup_credential_info(self, user_did, vc_str, expect_fields: list):
         """
         :return: (dict, str)
         """
@@ -251,33 +273,35 @@ class Auth(Entity, metaclass=Singleton):
         if not vc.is_valid():
             return None, 'credential is invalid.'
 
+        expire_time, now = vc.get_expiration_date(), datetime.now().timestamp()
+        if expire_time < now:
+            return None, "The backup credential expired."
+
         vc_json = json.loads(vc_str)
+
+        # type 'BackupCredential' is compatible with previous one
+        if 'type' not in vc_json or not isinstance(vc_json['type'], list) \
+                or ('BackupCredential' not in vc_json['type']
+                    and 'HiveBackupCredential' not in vc_json['type']):
+            return None, "Invalid backup credential type."
+
+        if "issuer" not in vc_json or vc_json['issuer'] != user_did:
+            return None, "The credential issuer isn't exist."
+
         if "credentialSubject" not in vc_json:
             return None, "The credentialSubject isn't exist."
         credential_subject = vc_json["credentialSubject"]
 
-        if "id" not in credential_subject:
-            return None, "The credentialSubject's id isn't exist."
+        if "id" not in credential_subject or credential_subject['id'] != super().get_did_string():
+            return None, "The credentialSubject's id isn't exist or not the hive node did."
 
-        if 'sourceDID' not in props:
-            props.append('sourceDID')
-
-        for prop in props:
-            if prop not in credential_subject:
-                return None, "The credentialSubject's '" + prop + "' isn't exist."
+        Auth.__fix_credential_info_with_latest_backup(credential_subject, vc_json['type'], expect_fields)
 
         if credential_subject['sourceDID'] != super().get_did_string():
             return None, f'The sourceDID({credential_subject["sourceDID"]}) is not the hive node did.'
 
-        if "issuer" not in vc_json:
-            return None, "The credential issuer isn't exist."
         credential_subject["userDid"] = vc_json["issuer"]
-
-        expire, exp = vc.get_expiration_date(), int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED
-        if expire > exp:
-            expire = exp
-
-        credential_subject["expTime"] = expire
+        credential_subject["expTime"] = min(expire_time, now + hive_setting.ACCESS_TOKEN_EXPIRED)
         return credential_subject, None
 
 

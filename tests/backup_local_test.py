@@ -38,9 +38,7 @@ class IpfsBackupTestCase(unittest.TestCase):
             self.assertEqual(r.status_code, 200)
 
             self.assertTrue('result' in r.json())
-            if r.json()['result'] == 'process':
-                continue
-            elif r.json()['result'] == 'failed':
+            if r.json()['result'] == 'failed':
                 if failed_message is not None:
                     self.assertIn(failed_message, r.json()["message"])
                 test_log(f'failed with message: {r.json()["message"]}')
@@ -50,9 +48,8 @@ class IpfsBackupTestCase(unittest.TestCase):
                     self.assertTrue(False, 'result state should not be successful')
                 test_log(f'backup or restore successfully')
                 break
-            else:
-                self.assertTrue(False, f'Unknown result {r.json()["result"]} for the backup process.')
-            test_log(f'backup & restore is in progress, wait')
+
+            test_log(f'backup & restore is in progress ("{r.json()["result"]}", {r.json()["message"]}), wait')
             time.sleep(1)
 
     def test01_backup_restore_failed(self):

@@ -48,10 +48,8 @@ class IpfsBackupServer:
             # TODO: how to handle this exception by user ???
             raise InsufficientStorageException("No enough space to restore vault data")
 
-        ExecutorBase.pin_cids_to_local_ipfs(request_metadata,
-                                            is_only_file=True,
-                                            is_file_pin_to_ipfs=False)
         self.client.restore_database_by_dump_files(request_metadata)
+        ExecutorBase.handle_cids_in_local_ipfs(request_metadata, contain_databases=False, only_files_ref=True)
         ExecutorBase.update_vault_usage_by_metadata(g.usr_did, request_metadata)
 
     def internal_backup(self, cid, sha256, size, is_force):
@@ -62,7 +60,7 @@ class IpfsBackupServer:
         update = {
             BKSERVER_REQ_ACTION: BACKUP_REQUEST_ACTION_BACKUP,
             BKSERVER_REQ_STATE: BACKUP_REQUEST_STATE_PROCESS,
-            BKSERVER_REQ_STATE_MSG: None,
+            BKSERVER_REQ_STATE_MSG: '50',  # start from 50%
             BKSERVER_REQ_CID: cid,
             BKSERVER_REQ_SHA256: sha256,
             BKSERVER_REQ_SIZE: size
@@ -157,7 +155,7 @@ class IpfsBackupServer:
         logging.debug(f'start remove the backup of the user {user_did}, _id, {str(doc["_id"])}')
         if doc.get(BKSERVER_REQ_CID):
             request_metadata = self._get_verified_request_metadata(user_did, doc)
-            ExecutorBase.pin_cids_to_local_ipfs(request_metadata, root_cid=doc.get(BKSERVER_REQ_CID), is_unpin=True)
+            ExecutorBase.handle_cids_in_local_ipfs(request_metadata, root_cid=doc.get(BKSERVER_REQ_CID), is_unpin=True)
 
         cli.delete_one_origin(DID_INFO_DB_NAME,
                               COL_IPFS_BACKUP_SERVER,

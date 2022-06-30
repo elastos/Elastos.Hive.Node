@@ -158,6 +158,11 @@ class IpfsFilesTestCase(unittest.TestCase):
             response = self.cli.get(f'/files/{self.folder_name}?comp=children')
             RA(response).assert_status(HttpCode.OK)
 
+        # list root folder
+        response = self.cli.get(f'/files/?comp=children')
+        RA(response).assert_status(200)
+
+        # list sub-folder
         response = self.cli.get(f'/files/{self.folder_name}?comp=children')
         RA(response).assert_status(200)
         files = RA(response).body().get('value', list)

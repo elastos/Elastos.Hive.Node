@@ -189,12 +189,12 @@ def dump_mongodb_to_full_path(db_name, full_path: Path):
         line2 = f'mongodump --uri="{hive_setting.MONGODB_URI}" -d {db_name} --archive="{full_path.as_posix()}"'
         subprocess.check_output(line2, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise BadRequestException(msg=f'Failed to dump database {db_name}: {e.output}')
+        raise BadRequestException(f'Failed to dump database {db_name}: {e.output}')
 
 
 def restore_mongodb_from_full_path(full_path: Path):
     if not full_path.exists():
-        raise BadRequestException(msg=f'Failed to import mongo db by invalid full dir {full_path.as_posix()}')
+        raise BadRequestException(f'Failed to import mongo db by invalid full dir {full_path.as_posix()}')
 
     try:
         # https://www.mongodb.com/docs/database-tools/mongorestore/#cmdoption--drop
@@ -202,7 +202,7 @@ def restore_mongodb_from_full_path(full_path: Path):
         line2 = f'mongorestore --uri="{hive_setting.MONGODB_URI}" --drop --archive="{full_path.as_posix()}"'
         subprocess.check_output(line2, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise BadRequestException(msg=f'Failed to load database by {full_path.as_posix()}: {e.output}')
+        raise BadRequestException(f'Failed to load database by {full_path.as_posix()}: {e.output}')
 
 
 def delete_mongo_db_export(did):

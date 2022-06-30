@@ -60,19 +60,19 @@ class Condition:
 
         def validate(data, layer):
             if layer > 5:
-                raise BadRequestException(msg='Too more nested conditions.')
+                raise InvalidParameterException('Too more nested conditions.')
 
             validate_exists(data, ['name', 'type', 'body'])
 
             condition_type = data['type']
             if condition_type not in ['or', 'and', 'queryHasResults']:
-                raise BadRequestException(msg=f"Unsupported condition type {condition_type}")
+                raise InvalidParameterException(f"Unsupported condition type {condition_type}")
 
             if condition_type in ['and', 'or']:
                 if not isinstance(data['body'], list)\
                         or not data['body']:
-                    raise BadRequestException(msg=f"Condition body MUST be list "
-                                                  f"and at least contain one element for the type '{condition_type}'")
+                    raise InvalidParameterException(f"Condition body MUST be list "
+                                                    f"and at least contain one element for the type '{condition_type}'")
                 for d in data['body']:
                     validate(d, layer + 1)
             else:
@@ -123,12 +123,12 @@ class Context:
         target_did = json_data.get('target_did')
         target_app_did = json_data.get('target_app_did')
         if not target_did or not target_app_did:
-            raise BadRequestException(msg='target_did or target_app_did MUST be set.')
+            raise InvalidParameterException('target_did or target_app_did MUST be set.')
 
     def check_target_dids(self):
         """ add this check because of supporting anonymously running script """
         if not self.target_did or not self.target_app_did:
-            raise BadRequestException(msg=f"target_did and target_app_did MUST be provided when do anonymous access.")
+            raise BadRequestException(f"target_did and target_app_did MUST be provided when do anonymous access.")
 
     def get_script_data(self, script_name):
         """ get the script data by target_did and target_app_did """
@@ -217,7 +217,7 @@ class Script:
     def validate_script_data(json_data):
         """ json_data: script content """
         if not json_data:
-            raise BadRequestException(msg="Script definition can't be empty.")
+            raise InvalidParameterException("Script definition can't be empty.")
 
         validate_exists(json_data, ['executable'])
 
@@ -240,7 +240,7 @@ class Script:
 
         script_data = self.context.get_script_data(self.name)
         if not script_data:
-            raise BadRequestException(msg=f"Can't get the script with name '{self.name}'")
+            raise BadRequestException(f"Can't get the script with name '{self.name}'")
 
         self.anonymous_app = script_data.get('allowAnonymousUser', False)
         self.anonymous_user = script_data.get('allowAnonymousApp', False)
@@ -248,7 +248,7 @@ class Script:
         # The feature support that the script can be run without access token when two anonymous options are all True
         anonymous_access = self.anonymous_app and self.anonymous_user
         if not anonymous_access and g.token_error is not None:
-            raise UnauthorizedException(msg=f'Parse access token for running script error: {g.token_error}')
+            raise UnauthorizedException(f'Parse access token for running script error: {g.token_error}')
 
         # Reverse the script content to let the key contains '$'
         fix_dollar_keys_recursively(script_data, is_save=False)
@@ -256,7 +256,7 @@ class Script:
         # condition checking for all executables
         condition = Condition(self.params)
         if not condition.is_satisfied(script_data.get('condition'), self.context):
-            raise BadRequestException(msg="Caller can't match the condition.")
+            raise BadRequestException("Caller can't match the condition.")
 
         # run executables and get the results
         executables: [Executable] = Executable.create_executables(self, script_data['executable'])
@@ -353,7 +353,7 @@ class Scripting:
         # Do anonymous checking, it's same as 'Script.execute'
         anonymous_access = trans.get('anonymous', False)
         if not anonymous_access and g.token_error is not None:
-            raise UnauthorizedException(msg=f'Parse access token for running script error: {g.token_error}')
+            raise UnauthorizedException(f'Parse access token for running script error: {g.token_error}')
 
         # check vault
         vault = self.vault_manager.get_vault(target_did)
@@ -386,4 +386,4 @@ class Scripting:
             trans = jwt.decode(transaction_id, hive_setting.PASSWORD, algorithms=['HS256'])
             return trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
         except Exception as e:
-            raise BadRequestException(msg=f"Invalid transaction id '{transaction_id}'")
+            raise InvalidParameterException(f"Invalid transaction id '{transaction_id}'")

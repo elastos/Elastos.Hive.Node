@@ -6,7 +6,7 @@ The view of ipfs module for files and scripting.
 from flask_restful import Resource
 
 from src.modules.ipfs.ipfs_files import IpfsFiles
-from src.utils.http_exception import BadRequestException, InvalidParameterException
+from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import rqargs
 from src.utils.http_response import response_stream
 
@@ -172,7 +172,7 @@ class ReadingOperation(Resource):
 
         component, _ = rqargs.get_str('comp')
         if not path and component != 'children':
-            raise InvalidParameterException(msg='Resource path is mandatory, but its missing.')
+            raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
         if not component:
             return self.ipfs_files.download_file(path)
@@ -183,7 +183,7 @@ class ReadingOperation(Resource):
         elif component == 'hash':
             return self.ipfs_files.get_hash(path)
         else:
-            raise BadRequestException(msg=f'Unsupported parameter "comp" value {component}')
+            raise InvalidParameterException(f'Unsupported parameter "comp" value {component}')
 
 
 class WritingOperation(Resource):
@@ -292,18 +292,18 @@ class WritingOperation(Resource):
         """
 
         if not path:
-            raise InvalidParameterException(msg='Resource path is mandatory, but its missing.')
+            raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
         dst_path, _ = rqargs.get_str('dest')
         if not dst_path:
             is_public, msg = rqargs.get_bool('public', False)
             script_name, msg = rqargs.get_str('script_name', '')
             if is_public and not script_name:
-                raise InvalidParameterException(msg='MUST provide script name when public is true.')
+                raise InvalidParameterException('MUST provide script name when public is true.')
             return self.ipfs_files.upload_file(path, is_public, script_name)
 
         if path == dst_path:
-            raise InvalidParameterException(msg=f'The source file {path} can be copied to a target file with same name')
+            raise InvalidParameterException(f'The source file {path} can be copied to a target file with same name')
         return self.ipfs_files.copy_file(path, dst_path)
 
 
@@ -359,13 +359,13 @@ class MoveFile(Resource):
         """
 
         if not path:
-            raise InvalidParameterException(msg='Resource path is mandatory, but its missing.')
+            raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
         dst_path, _ = rqargs.get_str('to')
         if not dst_path:
-            raise InvalidParameterException(msg='The path MUST be provided.')
+            raise InvalidParameterException('The path MUST be provided.')
         if path == dst_path:
-            raise InvalidParameterException(msg=f'The source file {path} can be moved to a target file with same name')
+            raise InvalidParameterException(f'The source file {path} can be moved to a target file with same name')
         return self.ipfs_files.move_file(path, dst_path)
 
 
@@ -411,6 +411,6 @@ class DeleteFile(Resource):
         """
 
         if not path:
-            raise InvalidParameterException(msg='Resource path is mandatory, but its missing.')
+            raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
         return self.ipfs_files.delete_file(path)

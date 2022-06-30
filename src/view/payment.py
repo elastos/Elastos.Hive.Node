@@ -289,7 +289,7 @@ class Orders(Resource):
         contract_order_id = RV.get_args().get_opt('order_id', int, None)
 
         if subscription and subscription not in ['vault', 'backup']:
-            raise InvalidParameterException(msg='Invalid parameter subscription: Can only be "vault" or "backup"')
+            raise InvalidParameterException('Invalid parameter subscription: Can only be "vault" or "backup"')
 
         return self.payment.get_orders(subscription, contract_order_id)
 

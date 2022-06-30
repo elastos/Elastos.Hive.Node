@@ -57,7 +57,7 @@ class Payment(metaclass=Singleton):
 
         # plan must exist and not free
         if not plan or plan['amount'] <= 0.00000001:
-            raise InvalidParameterException(msg=f'Invalid pricing_name {pricing_name} or the related plan is free.')
+            raise InvalidParameterException(f'Invalid pricing_name {pricing_name} or the related plan is free.')
 
         # create order with proof
         order = self.order_manager.insert_order(g.usr_did, subscription, plan)
@@ -72,7 +72,7 @@ class Payment(metaclass=Singleton):
         try:
             order_info = self.order_contract.get_order(contract_order_id)
         except Exception as e:
-            raise BadRequestException(msg=f'Failed get order info from contract: {str(e)}, {traceback.format_exc()}')
+            raise InvalidParameterException(f'Failed get order info from contract: {str(e)}, {traceback.format_exc()}')
 
         order = self.__verify_contract_order(order_info)
 
@@ -98,23 +98,23 @@ class Payment(metaclass=Singleton):
 
     def __verify_contract_order(self, contract_order):
         if contract_order['to'] != self.ela_address:
-            raise BadRequestException(msg=f'The oder from order_id is not for this hive node.')
+            raise BadRequestException('The oder from order_id is not for this hive node.')
 
         # Make sure the proof is in this node.
         order = self.order_manager.get_order_by_proof(g.usr_did, contract_order['memo'])
         if order.is_settled():
-            raise BadRequestException(msg=f'The proof {contract_order["memo"]} invalid: the order has been settled.')
+            raise BadRequestException(f'The proof {contract_order["memo"]} invalid: the order has been settled.')
 
         if not order.belongs(g.usr_did):
-            raise BadRequestException(msg=f'The proof {contract_order["memo"]} invalid: not your order.')
+            raise BadRequestException(f'The proof {contract_order["memo"]} invalid: not your order.')
 
         if not order.is_amount_enough(contract_order['amount']):
-            raise BadRequestException(msg=f'The proof {contract_order["memo"]} invalid: payment amount is not enough.')
+            raise BadRequestException(f'The proof {contract_order["memo"]} invalid: payment amount is not enough.')
 
         # Also needs to verify the proof.
         details, now = self.auth.get_proof_info(contract_order['memo'], g.usr_did), int(datetime.now().timestamp())
         if now > details['expiration_time']:
-            raise BadRequestException(msg=f'The proof {contract_order["memo"]} expired.')
+            raise BadRequestException(f'The proof {contract_order["memo"]} expired.')
 
         return order
 

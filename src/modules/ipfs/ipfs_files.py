@@ -296,9 +296,9 @@ class IpfsFiles:
         src_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, src_filter)
         dst_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, dst_filter)
         if not src_doc:
-            raise FileNotFoundException(msg=f'The source file {src_path} not found, impossible to move/copy.')
+            raise FileNotFoundException(f'The source file {src_path} not found, impossible to move/copy.')
         if dst_doc:
-            raise AlreadyExistsException(msg=f'A file with destnation name {dst_path} already exists, impossible to move/copy')
+            raise AlreadyExistsException(f'A file with destnation name {dst_path} already exists, impossible to move/copy')
 
         if is_copy:
             metadata = {
@@ -336,6 +336,6 @@ class IpfsFiles:
                                 create_on_absence=True, throw_exception=throw_exception)
         if not metadata:
             if throw_exception:
-                raise FileNotFoundException(msg=f'No file metadata with path: {path} found')
+                raise FileNotFoundException(f'No file metadata with path: {path} found')
             return None
         return metadata

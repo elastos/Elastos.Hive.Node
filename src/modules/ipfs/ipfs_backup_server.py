@@ -45,7 +45,8 @@ class IpfsBackupServer:
         request_metadata = self.get_server_request_metadata(g.usr_did, doc, is_promotion=True,
                                                             vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
         if request_metadata['vault_size'] > fm.get_vault_max_size(g.usr_did):
-            raise InsufficientStorageException(msg="No enough space to restore vault data")
+            # TODO: how to handle this exception by user ???
+            raise InsufficientStorageException("No enough space to restore vault data")
 
         ExecutorBase.pin_cids_to_local_ipfs(request_metadata,
                                             is_only_file=True,
@@ -56,7 +57,7 @@ class IpfsBackupServer:
     def internal_backup(self, cid, sha256, size, is_force):
         doc = self.find_backup_request(g.usr_did, throw_exception=True)
         if not is_force and doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
-            raise BadRequestException(msg='Failed because backup is in processing.')
+            raise BadRequestException('Failed because backup is in processing.')
         fm.ipfs_pin_cid(cid)
         update = {
             BKSERVER_REQ_ACTION: BACKUP_REQUEST_ACTION_BACKUP,
@@ -82,20 +83,20 @@ class IpfsBackupServer:
 
         # BKSERVER_REQ_ACTION: None, means not backup called; 'backup', backup called, and can be three states.
         if not doc.get(BKSERVER_REQ_ACTION):
-            raise BadRequestException(msg='No backup data for restoring on backup node.')
+            raise BadRequestException('No backup data for restoring on backup node.')
         elif doc.get(BKSERVER_REQ_ACTION) != BACKUP_REQUEST_ACTION_BACKUP:
-            raise BadRequestException(msg=f'No backup data for restoring with invalid action "{doc.get(BKSERVER_REQ_ACTION)}" on backup node.')
+            raise BadRequestException(f'No backup data for restoring with invalid action "{doc.get(BKSERVER_REQ_ACTION)}" on backup node.')
 
         # if BKSERVER_REQ_ACTION is not None, it can be three states
         if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
-            raise BadRequestException(msg='Failed because backup is in processing..')
+            raise BadRequestException('Failed because backup is in processing..')
         elif doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_FAILED:
-            raise BadRequestException(msg='Cannot execute restore because last backup is failed.')
+            raise BadRequestException('Cannot execute restore because last backup is failed.')
         elif doc.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_SUCCESS:
-            raise BadRequestException(msg=f'Cannot execute restore because unknown state "{doc.get(BKSERVER_REQ_STATE)}".')
+            raise BadRequestException(f'Cannot execute restore because unknown state "{doc.get(BKSERVER_REQ_STATE)}".')
 
         if not doc.get(BKSERVER_REQ_CID):
-            raise BadRequestException(msg=f'Cannot execute restore because invalid data cid "{doc.get(BKSERVER_REQ_CID)}".')
+            raise BadRequestException(f'Cannot execute restore because invalid data cid "{doc.get(BKSERVER_REQ_CID)}".')
 
         # backup data is valid, go on
         return {
@@ -128,10 +129,11 @@ class IpfsBackupServer:
     def _check_verified_request_metadata(self, request_metadata, req, is_promotion=False, vault_max_size=0):
         if is_promotion:
             if request_metadata['vault_size'] > vault_max_size:
-                raise InsufficientStorageException(msg='No enough space for promotion.')
+                raise InsufficientStorageException('No enough space for promotion.')
         else:
+            # for backup
             if request_metadata['backup_size'] > req[VAULT_BACKUP_SERVICE_MAX_STORAGE]:
-                raise InsufficientStorageException(msg='No enough space for backup on the backup node.')
+                raise InsufficientStorageException('No enough space for backup on the backup node.')
 
     # ipfs-subscription
 
@@ -144,7 +146,7 @@ class IpfsBackupServer:
     def unsubscribe(self):
         doc = self.find_backup_request(g.usr_did, throw_exception=True)
         if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
-            raise BadRequestException(msg='the backup & restore is in process.')
+            raise BadRequestException(f'The {doc.get(BKSERVER_REQ_ACTION)} is in process.')
 
         self.user_manager.remove_user(g.usr_did)
         self.remove_backup_by_did(g.usr_did, doc)

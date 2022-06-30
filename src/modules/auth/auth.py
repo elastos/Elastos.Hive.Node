@@ -43,7 +43,7 @@ class Auth(Entity, metaclass=Singleton):
         doc_str = json.dumps(app_instance_doc)
         doc = DIDDocument.from_json(doc_str)
         if not doc.is_valid():
-            raise BadRequestException(msg='The did document is invalid in getting app instance did.')
+            raise InvalidParameterException('The did document is invalid in getting app instance did.')
         did = doc.get_subject()
 
         # INFO: save application instance did document to /localdids folder
@@ -53,7 +53,7 @@ class Auth(Entity, metaclass=Singleton):
                 f.write(doc_str)
                 f.flush()
         except Exception as e:
-            raise BadRequestException(msg='Failed to cache application instance DID document.')
+            raise BadRequestException('Failed to cache application instance DID document.')
 
         return did
 
@@ -72,7 +72,7 @@ class Auth(Entity, metaclass=Singleton):
             col.update_one(filter_, update, contains_extra=False, upsert=True)
         except Exception as e:
             logging.getLogger("HiveAuth").error(f"Exception in __save_nonce_to_db: {e}")
-            raise BadRequestException(msg=f'Failed to generate nonce: {e}')
+            raise BadRequestException(f'Failed to generate nonce: {e}')
         return nonce, expire_time
 
     def __create_challenge(self, app_instance_did: DID, nonce: str, expire_time):
@@ -108,23 +108,23 @@ class Auth(Entity, metaclass=Singleton):
         vp_str = jwt.get_claim_as_json('presentation')
         presentation: Presentation = Presentation.from_json(vp_str)
         if not presentation.is_valid():
-            raise BadRequestException(msg=f'The presentation is invalid')
+            raise InvalidParameterException('The presentation is invalid')
 
         if presentation.get_credential_count() < 1:
-            raise BadRequestException(msg=f'No presentation credential exists')
+            raise InvalidParameterException('No presentation credential exists')
 
         realm = presentation.get_realm()
         if realm != super().get_did_string():
-            raise BadRequestException(msg=f'Invalid presentation realm or not match.')
+            raise InvalidParameterException('Invalid presentation realm or not match.')
 
         # presentation check nonce
 
         auth_info = get_auth_info_by_nonce(presentation.get_nonce())
         if not auth_info:
-            raise BadRequestException(msg='Can not get presentation nonce information from database.')
+            raise InvalidParameterException('Can not get presentation nonce information from database.')
 
         if auth_info[DID_INFO_NONCE_EXPIRED] < int(datetime.now().timestamp()):
-            raise BadRequestException(msg='The nonce expired.')
+            raise InvalidParameterException('The nonce expired.')
 
         # credential check
 
@@ -132,11 +132,11 @@ class Auth(Entity, metaclass=Singleton):
         vp = RequestData(**json.loads(vp_str))
         vcs = vp.get('verifiableCredential', list)
         if not vcs or not vcs[0] or not isinstance(vcs[0], dict):
-            raise BadRequestException(msg="'verifiableCredential' is invalid")
+            raise InvalidParameterException("'verifiableCredential' is invalid")
 
         credential = Credential.from_json(json.dumps(vcs[0]))
         if not credential.is_valid():
-            raise BadRequestException(msg="First 'verifiableCredential' item is invalid'")
+            raise InvalidParameterException("First 'verifiableCredential' item is invalid'")
         exp_time = credential.get_expiration_date()
         issuer: DID = credential.get_issuer()
 
@@ -146,7 +146,7 @@ class Auth(Entity, metaclass=Singleton):
 
         info = RequestData(**vcs[0]).get('credentialSubject', dict)
         if info.get('id', str) != auth_info[APP_INSTANCE_DID]:  # application instance did for user, service did for vault node
-            raise BadRequestException(msg='Credentials "id" MUST be application instance DID')
+            raise InvalidParameterException('Credentials "id" MUST be application instance DID')
 
         Auth.__fix_credential_info_with_latest_backup(info, types, expect_vc_fields)
 
@@ -172,7 +172,7 @@ class Auth(Entity, metaclass=Singleton):
         """ for vault /backup client to get the information from the backup credential """
         credential_info, err = self.__get_backup_credential_info(user_did, credential, ["sourceDID", "targetHost", "targetDID"])
         if credential_info is None:
-            raise InvalidParameterException(msg=f'Failed to get credential info: {err}')
+            raise InvalidParameterException(f'Failed to get credential info: {err}')
         return credential_info
 
     def backup_client_sign_in(self, host_url, credential: str, subject: str):
@@ -184,19 +184,19 @@ class Auth(Entity, metaclass=Singleton):
         doc: dict = json.loads(self.get_doc().to_json())
         body = self.http.post(host_url + URL_V2 + URL_SIGN_IN, None, {"id": doc})
         if 'challenge' not in body or not body["challenge"]:
-            raise InvalidParameterException(msg='backup_sign_in: failed to sign in to backup node.')
+            raise InvalidParameterException('backup_sign_in: failed to sign in to backup node.')
 
         jwt: JWT = JWT.parse(body["challenge"])
         audience = jwt.get_audience()
         if audience != self.get_did_string():
-            raise InvalidParameterException(msg=f'backup_sign_in: failed to get the audience of the challenge.')
+            raise InvalidParameterException('backup_sign_in: failed to get the audience of the challenge.')
 
         nonce, issuer = jwt.get_claim('nonce'), jwt.get_issuer()
         vp_json = self.create_presentation_str(vc, nonce, issuer)
         expire = int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
         challenge_response = self.create_vp_token(vp_json, subject, issuer, expire)
         if challenge_response is None:
-            raise InvalidParameterException(msg=f'backup_sign_in: failed to create the challenge response.')
+            raise InvalidParameterException('backup_sign_in: failed to create the challenge response.')
         return challenge_response, issuer
 
     def backup_client_auth(self, host_url, challenge_response, backup_service_instance_did):
@@ -206,16 +206,16 @@ class Auth(Entity, metaclass=Singleton):
         """
         body = self.http.post(host_url + URL_V2 + URL_BACKUP_AUTH, None, {"challenge_response": challenge_response})
         if 'token' not in body or not body["token"]:
-            raise InvalidParameterException(msg='backup_auth: failed to backup auth to backup node.')
+            raise InvalidParameterException('backup_auth: failed to backup auth to backup node.')
 
         jwt = JWT.parse(body["token"])
         audience = jwt.get_audience()
         if audience != self.get_did_string():
-            raise InvalidParameterException(msg=f'backup_auth: failed to get the audience of the challenge.')
+            raise InvalidParameterException('backup_auth: failed to get the audience of the challenge.')
 
         issuer = jwt.get_issuer()
         if issuer != backup_service_instance_did:
-            raise InvalidParameterException(msg=f'backup_auth: failed to get the issuer of the challenge.')
+            raise InvalidParameterException('backup_auth: failed to get the issuer of the challenge.')
 
         return body["token"]
 
@@ -226,14 +226,14 @@ class Auth(Entity, metaclass=Singleton):
     def get_proof_info(self, proof, user_did):
         """ Only for payment to parse not-empty proof and return info """
         if not proof:
-            raise BadRequestException(msg=f"Invalid proof {proof} from contract.")
+            raise BadRequestException(f"Invalid proof {proof} from contract.")
 
         jwt = JWT.parse(proof)
 
         if jwt.get_issuer() != self.get_did_string() \
                 or jwt.get_audience() != user_did \
                 or jwt.get_subject() != 'Hive Payment':
-            raise BadRequestException(msg=f"Invalid proof {proof} from contract: invalid issuer or audience or subject")
+            raise BadRequestException(f"Invalid proof {proof} from contract: invalid issuer or audience or subject")
 
         return json.loads(jwt.get_claim_as_json('order'))
 

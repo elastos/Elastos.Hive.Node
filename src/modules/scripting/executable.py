@@ -2,7 +2,7 @@ from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTI
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_CALLER_DID, \
     SCRIPTING_EXECUTABLE_CALLER_APP_DID, SCRIPTING_EXECUTABLE_PARAMS, SCRIPTING_EXECUTABLE_TYPE_COUNT
-from src.utils.http_exception import BadRequestException, NotImplementedException
+from src.utils.http_exception import NotImplementedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.ipfs_files import IpfsFiles
 from src.modules.subscription.vault import VaultManager
@@ -17,7 +17,7 @@ def validate_exists(json_data, properties, parent_name=None):
     :param properties: properties under 'json_data'['parent_name']
     """
     if not isinstance(json_data, dict):
-        raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" (not dict)')
+        raise InvalidParameterException(f'Invalid parameter: "{str(json_data)}" (not dict)')
 
     # try to get the parent dict
     if not parent_name:
@@ -27,14 +27,14 @@ def validate_exists(json_data, properties, parent_name=None):
         parts = parent_name.split('.')
         data = json_data.get(parts[0])
         if not isinstance(data, dict):
-            raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" ("{parts[0]}" is not dict)')
+            raise InvalidParameterException(f'Invalid parameter: "{str(json_data)}" ("{parts[0]}" is not dict)')
 
         validate_exists(data, properties, parent_name='.'.join(parts[1:]) if len(parts) > 1 else None)
 
     # directly check
     for prop in properties:
         if prop not in data:
-            raise BadRequestException(msg=f'Invalid parameter: "{str(json_data)}" ("{prop}" not exist)')
+            raise InvalidParameterException(f'Invalid parameter: "{str(json_data)}" ("{prop}" not exist)')
 
 
 def get_populated_value_with_params(data, user_did, app_did, params):
@@ -59,16 +59,16 @@ def get_populated_value_with_params(data, user_did, app_did, params):
         elif isinstance(value, str):
             if value == SCRIPTING_EXECUTABLE_CALLER_DID:
                 if not user_did:
-                    raise BadRequestException(f"Can not find caller's 'user_did' as '$caller_did' exists in script.")
+                    raise InvalidParameterException(f"Can not find caller's 'user_did' as '$caller_did' exists in script.")
                 return user_did
             elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
                 if not app_did:
-                    raise BadRequestException(f"Can not find caller's 'app_did' as '$caller_app_did' exists in script.")
+                    raise InvalidParameterException(f"Can not find caller's 'app_did' as '$caller_app_did' exists in script.")
                 return app_did
             elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
                 p = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
                 if p not in params:
-                    raise BadRequestException(f'Can not find "{p}" of "params" for the script.')
+                    raise InvalidParameterException(f'Can not find "{p}" of "params" for the script.')
                 return params[p]
             return value
         else:
@@ -145,13 +145,13 @@ class Executable:
             types.append(SCRIPTING_EXECUTABLE_TYPE_AGGREGATED)
 
         if json_data['type'] not in types:
-            raise BadRequestException(msg=f"Invalid type {json_data['type']} of the executable.")
+            raise InvalidParameterException(f"Invalid type {json_data['type']} of the executable.")
 
         if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
             items = json_data['body']
             if not isinstance(items, list or len(items) < 1):
-                raise BadRequestException(msg=f"Executable body MUST be list for type "
-                                              f"'{SCRIPTING_EXECUTABLE_TYPE_AGGREGATED}'.")
+                raise InvalidParameterException(f"Executable body MUST be list for type "
+                                                f"'{SCRIPTING_EXECUTABLE_TYPE_AGGREGATED}'.")
 
             for item in items:
                 Executable.validate_data(item, can_aggregated=False)
@@ -169,10 +169,10 @@ class Executable:
                 validate_exists(json_data['body'], ['update'])
 
             if 'filter' in json_data['body'] and not isinstance(json_data['body']['filter'], dict):
-                raise BadRequestException(msg=f'The "filter" MUST be dictionary.')
+                raise InvalidParameterException(f'The "filter" MUST be dictionary.')
 
             if 'options' in json_data['body'] and not isinstance(json_data['body']['options'], dict):
-                raise BadRequestException(msg=f'The "options" MUST be dictionary.')
+                raise InvalidParameterException(f'The "options" MUST be dictionary.')
 
         elif json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD,
                                    SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD,
@@ -182,7 +182,7 @@ class Executable:
 
             path = json_data['body']['path']
             if not path or not isinstance(path, str):
-                raise BadRequestException(msg=f'Invalid parameter "path" {json_data}')
+                raise InvalidParameterException(f'Invalid parameter "path" {json_data}')
 
     @staticmethod
     def create_executables(script, executable_data) -> ['Executable']:

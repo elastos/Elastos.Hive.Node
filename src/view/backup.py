@@ -131,13 +131,13 @@ class BackupRestore(Resource):
         to, fr, is_force = rqargs.get_str('to')[0], rqargs.get_str('from')[0], rqargs.get_bool('is_force')[0]
         credential, msg = params.get_str('credential')
         if msg or not credential:
-            raise InvalidParameterException(msg='Invalid parameter.')
+            raise InvalidParameterException('Invalid parameter.')
         if to == 'hive_node':
             return self.backup_client.backup(credential, is_force)
         elif fr == 'hive_node':
             return self.backup_client.restore(credential, is_force)
         else:
-            raise InvalidParameterException(msg='Invalid parameter, to or fr need be set.')
+            raise InvalidParameterException('Invalid parameter, to or fr need be set.')
 
 
 ###############################################################################

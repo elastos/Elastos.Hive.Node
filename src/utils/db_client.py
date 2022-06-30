@@ -70,7 +70,7 @@ class DatabaseClient:
         if col is None:
             if not throw_exception:
                 return []
-            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException('Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
 
     def find_many_origin(self, db_name, collection_name, col_filter,
@@ -79,7 +79,7 @@ class DatabaseClient:
         if col is None:
             if not throw_exception:
                 return []
-            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException('Cannot find collection with name ' + collection_name)
         return list(col.find(convert_oid(col_filter) if col_filter else None, **(options if options else {})))
 
     def find_one(self, user_did, app_did, collection_name, col_filter, options=None,
@@ -94,7 +94,7 @@ class DatabaseClient:
         if not create_on_absence and col is None:
             if not throw_exception:
                 return None
-            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException('Cannot find collection with name ' + collection_name)
         return col.find_one(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
     def count(self, user_did, app_did, collection_name, col_filter, options=None,
@@ -109,7 +109,7 @@ class DatabaseClient:
         if not create_on_absence and col is None:
             if not throw_exception:
                 return 0
-            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException('Cannot find collection with name ' + collection_name)
         return col.count_documents(convert_oid(col_filter) if col_filter else None, **(options if options else {}))
 
     def insert_one(self, user_did, app_did, collection_name, document, options=None, create_on_absence=False, **kwargs):
@@ -120,7 +120,7 @@ class DatabaseClient:
                           create_on_absence=False, is_extra=True, **kwargs):
         col = self.get_origin_collection(db_name, collection_name, create_on_absence)
         if col is None:
-            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException('Cannot find collection with name ' + collection_name)
 
         if is_extra:
             now_timestamp = int(datetime.now().timestamp())
@@ -143,7 +143,7 @@ class DatabaseClient:
                           options=None, create_on_absence=False, is_many=False, is_extra=False, **kwargs):
         col = self.get_origin_collection(db_name, collection_name, create_on_absence=create_on_absence)
         if col is None:
-            raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+            raise CollectionNotFoundException('Cannot find collection with name ' + collection_name)
 
         if is_extra:
             now_timestamp = datetime.now().timestamp()
@@ -173,7 +173,7 @@ class DatabaseClient:
         col = self.get_origin_collection(db_name, collection_name)
         if col is None:
             if is_check_exist:
-                raise CollectionNotFoundException(msg='Cannot find collection with name ' + collection_name)
+                raise CollectionNotFoundException('Cannot find collection with name ' + collection_name)
             else:
                 return {"acknowledged": False, "deleted_count": 0}
 
@@ -194,7 +194,7 @@ class DatabaseClient:
                     f.write(chunk)
             return os.path.getsize(file_path.as_posix())
         except Exception as e:
-            raise BadRequestException(msg='Failed to save the file content to local.')
+            raise BadRequestException('Failed to save the file content to local.')
 
     def create_collection(self, user_did, app_did, collection_name):
         try:

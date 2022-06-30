@@ -24,11 +24,11 @@ class HttpClient:
                 msg = body['error']['message']
             except Exception as e:
                 ...
-            raise BadRequestException(msg=f'[HttpClient] Failed to {r.request.method}, ({r.request.url}) '
+            raise BadRequestException(f'[HttpClient] Failed to {r.request.method}, ({r.request.url}) '
                                           f'with status code: {r.status_code}, {msg}')
 
     def __raise_http_exception(self, url, method, e):
-        raise BadRequestException(msg=f'[HttpClient] Failed to {method}, ({url}) with exception: {str(e)}')
+        raise BadRequestException(f'[HttpClient] Failed to {method}, ({url}) with exception: {str(e)}')
 
     def get(self, url, access_token, is_body=True, **kwargs):
         try:

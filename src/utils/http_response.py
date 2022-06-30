@@ -7,6 +7,7 @@ import traceback
 import logging
 import typing as t
 
+from werkzeug.exceptions import HTTPException
 from flask import request, make_response, jsonify
 from flask_restful import Api
 from sentry_sdk import capture_exception
@@ -39,7 +40,10 @@ class HiveApi(Api):
     def handle_error(self, e):
         """ Convert any exception (HiveException, Exception, etc.) to error response message. """
         ex = e
-        if not hasattr(e, 'hive_code') and not hasattr(e, 'get_error_dict'):  # not HiveException
+        if isinstance(e, HTTPException):
+            # the http exception from flask, here hive node has no opportunity to handle request in view
+            ex = HiveException(e.code, -1, e.description)
+        elif not hasattr(e, 'hive_code') and not hasattr(e, 'get_error_dict'):  # not HiveException
             msg = f'V2 internal error: {str(e)}, {traceback.format_exc()}'
             logging.getLogger('http response').error(msg)
             capture_exception(error=Exception(f'V2 UNEXPECTED: {msg}'))

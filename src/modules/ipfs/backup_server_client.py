@@ -1,9 +1,9 @@
 import typing
 
-from src.modules.auth.auth import Auth
 from src.utils.consts import URL_V2, URL_SERVER_INTERNAL_STATE
 from src.utils.http_client import HttpClient
 from src.utils.http_exception import BadRequestException
+from src.modules.auth.auth import Auth
 
 
 class BackupServerClient:

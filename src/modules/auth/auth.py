@@ -170,7 +170,7 @@ class Auth(Entity, metaclass=Singleton):
 
     def get_backup_credential_info(self, user_did, credential):
         """ for vault /backup client to get the information from the backup credential """
-        credential_info, err = self.__get_backup_credential_info(user_did, credential, ["sourceDID", "targetHost", "targetDID"])
+        credential_info, err = self.__get_backup_credential_info(user_did, credential, ["sourceDID", "targetDID", "targetHost"])
         if credential_info is None:
             raise InvalidParameterException(f'Failed to get credential info: {err}')
         return credential_info

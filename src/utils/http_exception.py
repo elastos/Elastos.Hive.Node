@@ -29,7 +29,7 @@ class HiveException(Exception):
         return jsonify(self.get_error_dict()), self.code
 
     def get_error_dict(self):
-        return HiveException.__get_error_dict(self.internal_code, self.code)
+        return HiveException.__get_error_dict(self.internal_code, self.msg)
 
     @staticmethod
     def get_flask_error_dict(msg):

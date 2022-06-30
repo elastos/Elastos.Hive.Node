@@ -10,7 +10,7 @@ from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.subscription.subscription import VaultSubscription
-from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_INPROGRESS, BKSERVER_REQ_ACTION, \
+from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
     BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER, USR_DID, BACKUP_REQUEST_STATE_SUCCESS
 from src.utils.db_client import cli
@@ -56,12 +56,12 @@ class IpfsBackupServer:
 
     def internal_backup(self, cid, sha256, size, is_force):
         doc = self.find_backup_request(g.usr_did, throw_exception=True)
-        if not is_force and doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
+        if not is_force and doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
             raise BadRequestException('Failed because backup is in processing.')
         fm.ipfs_pin_cid(cid)
         update = {
             BKSERVER_REQ_ACTION: BACKUP_REQUEST_ACTION_BACKUP,
-            BKSERVER_REQ_STATE: BACKUP_REQUEST_STATE_INPROGRESS,
+            BKSERVER_REQ_STATE: BACKUP_REQUEST_STATE_PROCESS,
             BKSERVER_REQ_STATE_MSG: None,
             BKSERVER_REQ_CID: cid,
             BKSERVER_REQ_SHA256: sha256,
@@ -73,7 +73,7 @@ class IpfsBackupServer:
     def internal_backup_state(self):
         doc = self.find_backup_request(g.usr_did, throw_exception=True)
         return {
-            'state': doc.get(BKSERVER_REQ_ACTION),
+            'state': doc.get(BKSERVER_REQ_ACTION),  # None or backup
             'result': doc.get(BKSERVER_REQ_STATE),
             'message': doc.get(BKSERVER_REQ_STATE_MSG)
         }
@@ -88,7 +88,7 @@ class IpfsBackupServer:
             raise BadRequestException(f'No backup data for restoring with invalid action "{doc.get(BKSERVER_REQ_ACTION)}" on backup node.')
 
         # if BKSERVER_REQ_ACTION is not None, it can be three states
-        if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
+        if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
             raise BadRequestException('Failed because backup is in processing..')
         elif doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_FAILED:
             raise BadRequestException('Cannot execute restore because last backup is failed.')
@@ -145,10 +145,11 @@ class IpfsBackupServer:
 
     def unsubscribe(self):
         doc = self.find_backup_request(g.usr_did, throw_exception=True)
-        if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_INPROGRESS:
-            raise BadRequestException(f'The {doc.get(BKSERVER_REQ_ACTION)} is in process.')
+        if doc.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
+            raise BadRequestException(f"The '{doc.get(BKSERVER_REQ_ACTION)}' is in process.")
 
-        self.user_manager.remove_user(g.usr_did)
+        # INFO: maybe use has a vault.
+        # self.user_manager.remove_user(g.usr_did)
         self.remove_backup_by_did(g.usr_did, doc)
 
     def remove_backup_by_did(self, user_did, doc):
@@ -220,7 +221,7 @@ class IpfsBackupServer:
         requests = col.find_many({})
 
         for req in requests:
-            if req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_INPROGRESS:
+            if req.get(BKSERVER_REQ_STATE) != BACKUP_REQUEST_STATE_PROCESS:
                 return
 
             # only handle BACKUP_REQUEST_STATE_INPROGRESS ones.

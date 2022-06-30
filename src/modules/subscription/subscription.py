@@ -85,7 +85,8 @@ class VaultSubscription(metaclass=Singleton):
 
         self.vault_manager.drop_vault_data(g.usr_did)
         self.order_manager.archive_orders_receipts(g.usr_did)
-        self.user_manager.remove_user(g.usr_did)
+        # INFO: maybe user has a backup service
+        # self.user_manager.remove_user(g.usr_did)
 
         cli.delete_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {VAULT_SERVICE_DID: g.usr_did}, is_check_exist=False)
 

@@ -9,7 +9,7 @@ from datetime import datetime
 
 from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
 from src.modules.subscription.vault import VaultManager
-from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID, BACKUP_REQUEST_STATE_INPROGRESS
+from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID, BACKUP_REQUEST_STATE_PROCESS
 from src.utils.file_manager import fm
 from src.utils.http_exception import HiveException
 from src.utils_v1.common import gene_temp_file_name
@@ -30,7 +30,7 @@ class ExecutorBase(threading.Thread):
             if self.start_delay > 0:
                 time.sleep(self.start_delay)
             logging.info(f'[ExecutorBase] Enter execute the executor for {self.action}.')
-            self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_INPROGRESS)
+            self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS)
             self.execute()
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_SUCCESS)
             logging.info(f'[ExecutorBase] Leave execute the executor for {self.action} without error.')

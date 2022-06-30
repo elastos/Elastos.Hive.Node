@@ -61,7 +61,7 @@ class Entity:
     def load_existed_did(self):
         dids = self.did_store.list_dids()
         if not dids:
-            raise BadRequestException(msg='Entity.init_from_file: no did in store')
+            raise BadRequestException('Entity.init_from_file: no did in store')
         return dids[0], self.did_store.load_did(dids[0])
 
     def init_did_from_mnemonic(self, mnemonic: str, passphrase: str, need_resolve: bool):

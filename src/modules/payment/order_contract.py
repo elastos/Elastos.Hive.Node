@@ -25,7 +25,7 @@ class OrderContract:
     def get_order(self, order_id: int) -> t.Optional[dict]:
         order = self.__get_contract().functions.getOrder(order_id).call()
         if not order or len(order) < 4:
-            raise BadRequestException(msg=f'Invalid contract order info: {order}')
+            raise BadRequestException(f'Invalid contract order info: {order}')
         oid, amount, to, memo = order[0], Web3(Web3.HTTPProvider(self.url)).fromWei(order[1], "ether"), order[2], order[3]
         return {
             'orderId': oid,

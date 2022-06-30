@@ -39,15 +39,18 @@ class HiveApi(Api):
 
     def handle_error(self, e):
         """ Convert any exception (HiveException, Exception, etc.) to error response message. """
-        ex = e
         if isinstance(e, HTTPException):
             # the http exception from flask, here hive node has no opportunity to handle request in view
-            ex = HiveException(e.code, -1, e.description)
-        elif not hasattr(e, 'hive_code') and not hasattr(e, 'get_error_dict'):  # not HiveException
+            return jsonify(HiveException.get_flask_error_dict(e.description)), e.code
+
+        ex = e
+        if not isinstance(e, HiveException):
+            # to be treated as an unexpected exception
             msg = f'V2 internal error: {str(e)}, {traceback.format_exc()}'
             logging.getLogger('http response').error(msg)
             capture_exception(error=Exception(f'V2 UNEXPECTED: {msg}'))
-            ex = InternalServerErrorException(msg=msg)
+            ex = InternalServerErrorException(msg)
+
         return jsonify(ex.get_error_dict()), ex.code
 
 

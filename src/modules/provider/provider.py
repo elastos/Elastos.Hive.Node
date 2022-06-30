@@ -86,7 +86,7 @@ class Provider:
 
     def check_auth_owner_id(self):
         if g.usr_did != self.owner_did:
-            raise ForbiddenException(msg='No permission for accessing node information.')
+            raise ForbiddenException('No permission for accessing node information.')
 
     @staticmethod
     def _get_verifiable_credential_info(vc_str: str) -> (t.Optional[dict], str):

@@ -64,7 +64,7 @@ class MongodbCollection:
 
         result = self.col.insert_one(self.convert_oid(doc), **options)
         if not result.inserted_id:
-            raise BadRequestException(msg=f'Failed to insert the doc: {str(doc)}.')
+            raise BadRequestException(f'Failed to insert the doc: {str(doc)}.')
 
         return {
             "acknowledged": result.acknowledged,
@@ -81,7 +81,7 @@ class MongodbCollection:
 
         result = self.col.insert_many(self.convert_oid(docs), **options)
         if len(result.inserted_ids) < len(docs):
-            raise BadRequestException(msg=f'Failed to insert the docs: {str(docs)}.')
+            raise BadRequestException(f'Failed to insert the docs: {str(docs)}.')
 
         return {
             "acknowledged": result.acknowledged,
@@ -281,7 +281,7 @@ class MongodbClient:
             if create_on_absence:
                 database.create_collection(col_name)
             else:
-                raise CollectionNotFoundException(msg=f'Can not find collection {col_name}')
+                raise CollectionNotFoundException(f'Can not find collection {col_name}')
         return MongodbCollection(database[col_name], is_management=False)
 
     def create_user_collection(self, user_did, app_did, col_name) -> MongodbCollection:
@@ -297,7 +297,7 @@ class MongodbClient:
         database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
         if col_name not in database.list_collection_names():
             if check_exist:
-                raise CollectionNotFoundException()
+                raise CollectionNotFoundException(f"Can not found user's collection {col_name}")
         else:
             database.drop_collection(col_name)
 

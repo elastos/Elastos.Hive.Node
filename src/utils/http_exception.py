@@ -6,6 +6,7 @@ Http exceptions definition.
 import json
 import logging
 import traceback
+import typing as t
 
 from bson import json_util
 from flask import jsonify, request
@@ -15,25 +16,39 @@ from sentry_sdk import capture_exception
 class HiveException(Exception):
     NO_INTERNAL_CODE = -1
 
-    def __init__(self, code, internal_code, msg):
-        self.hive_code = code  # flag to be checked as HiveException
-        self.code = code
-        self.internal_code = internal_code
+    UNEXPECTED_INTERNAL_CODE = 2000
+    FLASK_INTERNAL_CODE = 3000
+
+    code: t.Optional[int] = None
+    internal_code: t.Optional[int] = NO_INTERNAL_CODE
+
+    def __init__(self, msg):
         self.msg = msg
 
     def get_error_response(self):
         return jsonify(self.get_error_dict()), self.code
 
     def get_error_dict(self):
-        error = {"message": self.msg}
-        if not isinstance(self.internal_code, int):
-            # INFO: catch this specific issue.
-            msg = f'Invalid v2 internal code: {str(type(self.internal_code))}, {str(self.internal_code)} {traceback.format_exc()}'
-            logging.getLogger('get_error_dict').error(msg)
-            capture_exception(error=Exception(f'V2EC UNEXPECTED: {msg}'))
-        self.internal_code = self.internal_code if isinstance(self.internal_code, int) else -2
-        if self.internal_code > -1:
-            error['internal_code'] = self.internal_code
+        return HiveException.__get_error_dict(self.internal_code, self.code)
+
+    @staticmethod
+    def get_flask_error_dict(msg):
+        return HiveException.__get_error_dict(HiveException.FLASK_INTERNAL_CODE, msg)
+
+    @staticmethod
+    def __get_error_dict(internal_code, msg):
+        if not isinstance(internal_code, int):
+            # unexpected check: catch this specific issue.
+            msg_ = f'Invalid v2 internal code: {str(type(internal_code))}, {str(internal_code)} {traceback.format_exc()}'
+            logging.getLogger('get_error_dict').error(msg_)
+            capture_exception(error=Exception(f'V2EC UNEXPECTED: {msg_}'))
+
+        # 'internal_code' is optional
+        internal_code = internal_code if isinstance(internal_code, int) else HiveException.UNEXPECTED_INTERNAL_CODE
+        error = {"message": msg}
+        if internal_code > -1:
+            error['internal_code'] = internal_code
+
         return {"error": error}
 
     @staticmethod
@@ -69,34 +84,46 @@ class HiveException(Exception):
 
 class BadRequestException(HiveException):
     INVALID_PARAMETER = 1
-    BACKUP_IS_IN_PROCESSING = 2
+    BACKUP_IS_IN_PROCESS = 2
     ELADID_ERROR = 3
 
-    def __init__(self, msg='Invalid parameter', internal_code=INVALID_PARAMETER):
-        super().__init__(400, internal_code, msg)
+    code = 400
+    internal_code = HiveException.NO_INTERNAL_CODE
+
+    def __init__(self, msg='Bad request'):
+        super().__init__(msg)
 
 
 class InvalidParameterException(BadRequestException):
+    internal_code = BadRequestException.INVALID_PARAMETER
+
     def __init__(self, msg='Invalid parameter'):
-        super().__init__(internal_code=super().INVALID_PARAMETER, msg=msg)
+        super().__init__(msg)
 
 
 class BackupIsInProcessingException(BadRequestException):
-    def __init__(self, msg='Backup is in processing.'):
-        super().__init__(internal_code=super().BACKUP_IS_IN_PROCESSING, msg=msg)
+    internal_code = BadRequestException.BACKUP_IS_IN_PROCESS
+
+    def __init__(self, msg='Backup is in process.'):
+        super().__init__(msg)
 
 
 class ElaDIDException(BadRequestException):
+    internal_code = BadRequestException.ELADID_ERROR
+
     def __init__(self, msg):
-        super().__init__(internal_code=super().ELADID_ERROR, msg=msg)
+        super().__init__(msg)
 
 
 # UnauthorizedException
 
 
 class UnauthorizedException(HiveException):
+    code = 401
+    internal_code = HiveException.NO_INTERNAL_CODE
+
     def __init__(self, msg='You are unauthorized to make this request.'):
-        super().__init__(401, super().NO_INTERNAL_CODE, msg)
+        super().__init__(msg)
 
 
 # ForbiddenException @deprecated
@@ -105,13 +132,18 @@ class UnauthorizedException(HiveException):
 class ForbiddenException(HiveException):
     VAULT_FROZEN = 1
 
-    def __init__(self, msg='Forbidden.', internal_code=HiveException.NO_INTERNAL_CODE):
-        super().__init__(403, internal_code, msg)
+    code = 403
+    internal_code = HiveException.NO_INTERNAL_CODE
+
+    def __init__(self, msg='Forbidden'):
+        super().__init__(msg)
 
 
 class VaultFrozenException(ForbiddenException):
-    def __init__(self, msg='The vault is frozen and can not be writen'):
-        super().__init__(msg, super().VAULT_FROZEN)
+    internal_code = ForbiddenException.VAULT_FROZEN
+
+    def __init__(self, msg='The vault is frozen and has not writen permission.'):
+        super().__init__(msg)
 
 
 # NotFoundException
@@ -122,88 +154,121 @@ class NotFoundException(HiveException):
     BACKUP_NOT_FOUND = 2
     SCRIPT_NOT_FOUND = 3
     COLLECTION_NOT_FOUND = 4
-    PRICE_PLAN_NOT_FOUND = 5
+    PRICING_PLAN_NOT_FOUND = 5
     FILE_NOT_FOUND = 6
     ORDER_NOT_FOUND = 7
     RECEIPT_NOT_FOUND = 8
     APPLICATION_NOT_FOUND = 9
 
-    def __init__(self, msg='The vault can not be found or is not activate.', internal_code=VAULT_NOT_FOUND):
-        super().__init__(404, internal_code, msg)
+    code = 404
+    internal_code = HiveException.NO_INTERNAL_CODE
+
+    def __init__(self, msg='Not found'):
+        super().__init__(msg)
 
 
 class VaultNotFoundException(NotFoundException):
+    internal_code = NotFoundException.VAULT_NOT_FOUND
+
     def __init__(self, msg='The vault can not be found.'):
-        super().__init__(internal_code=NotFoundException.VAULT_NOT_FOUND, msg=msg)
+        super().__init__(msg)
 
 
 class BackupNotFoundException(NotFoundException):
+    internal_code = NotFoundException.BACKUP_NOT_FOUND
+
     def __init__(self, msg='The backup service can not be found.'):
-        super().__init__(internal_code=NotFoundException.BACKUP_NOT_FOUND, msg=msg)
+        super().__init__(msg)
 
 
 class ApplicationNotFoundException(NotFoundException):
-    def __init__(self, msg='The application of the user can not be found.'):
-        super().__init__(internal_code=NotFoundException.APPLICATION_NOT_FOUND, msg=msg)
+    internal_code = NotFoundException.APPLICATION_NOT_FOUND
+
+    def __init__(self, msg="The user's application can not be found."):
+        super().__init__(msg)
 
 
 class ScriptNotFoundException(NotFoundException):
+    internal_code = NotFoundException.SCRIPT_NOT_FOUND
+
     def __init__(self, msg='The script can not be found.'):
-        super().__init__(internal_code=NotFoundException.SCRIPT_NOT_FOUND, msg=msg)
+        super().__init__(msg)
 
 
 class CollectionNotFoundException(NotFoundException):
+    internal_code = NotFoundException.COLLECTION_NOT_FOUND
+
     def __init__(self, msg='The collection can not be found.'):
-        super().__init__(internal_code=NotFoundException.COLLECTION_NOT_FOUND, msg=msg)
+        super().__init__(msg)
 
 
 class PricePlanNotFoundException(NotFoundException):
-    def __init__(self, msg='The price plan can not be found.'):
-        super().__init__(internal_code=NotFoundException.PRICE_PLAN_NOT_FOUND, msg=msg)
+    internal_code = NotFoundException.PRICING_PLAN_NOT_FOUND
+
+    def __init__(self, msg='The pricing plan can not be found.'):
+        super().__init__(msg)
 
 
 class FileNotFoundException(NotFoundException):
+    internal_code = NotFoundException.FILE_NOT_FOUND
+
     def __init__(self, msg='The file can not be found.'):
-        super().__init__(internal_code=NotFoundException.FILE_NOT_FOUND, msg=msg)
+        super().__init__(msg)
 
 
 class OrderNotFoundException(NotFoundException):
-    def __init__(self, msg='The order can not be found.'):
-        super().__init__(internal_code=NotFoundException.ORDER_NOT_FOUND, msg=msg)
+    internal_code = NotFoundException.ORDER_NOT_FOUND
+
+    def __init__(self, msg='The payment order can not be found.'):
+        super().__init__(msg)
 
 
 class ReceiptNotFoundException(NotFoundException):
-    def __init__(self, msg='The receipt can not be found.'):
-        super().__init__(internal_code=NotFoundException.RECEIPT_NOT_FOUND, msg=msg)
+    internal_code = NotFoundException.RECEIPT_NOT_FOUND
+
+    def __init__(self, msg='The payment receipt can not be found.'):
+        super().__init__(msg)
 
 
 # AlreadyExistsException
 
 
 class AlreadyExistsException(HiveException):
-    def __init__(self, msg='Already exists.'):
-        super().__init__(455, super().NO_INTERNAL_CODE, msg)
+    code = 455
+    internal_code = HiveException.NO_INTERNAL_CODE
+
+    def __init__(self, msg='Already exists'):
+        super().__init__(msg)
 
 
 # InternalServerErrorException
 
 
 class InternalServerErrorException(HiveException):
-    def __init__(self, msg='Internal server error.'):
-        super().__init__(500, super().NO_INTERNAL_CODE, msg)
+    code = 500
+    internal_code = HiveException.NO_INTERNAL_CODE
+
+    def __init__(self, msg='Internal server error'):
+        super().__init__(msg)
 
 
 # NotImplementedException
 
 
 class NotImplementedException(HiveException):
-    def __init__(self, msg='Not implemented yet.'):
-        super().__init__(501, super().NO_INTERNAL_CODE, msg)
+    code = 501
+    internal_code = HiveException.NO_INTERNAL_CODE
+
+    def __init__(self, msg='Not implemented yet'):
+        super().__init__(msg)
 
 
 # InsufficientStorageException
 
 
 class InsufficientStorageException(HiveException):
+    code = 507
+    internal_code = HiveException.NO_INTERNAL_CODE
+
     def __init__(self, msg='Insufficient storage.'):
-        super().__init__(507, super().NO_INTERNAL_CODE, msg)
+        super().__init__(msg)

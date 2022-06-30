@@ -43,7 +43,7 @@ class FileManager:
     def get_vault_max_size(self, user_did):
         doc = cli.find_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, {DID: user_did})
         if not doc:
-            raise VaultNotFoundException(msg='Vault not found for get max size.')
+            raise VaultNotFoundException('Vault not found for get max size.')
         return int(doc[VAULT_SERVICE_MAX_STORAGE])
 
     def get_file_checksum_list(self, root_path: Path) -> list:
@@ -65,7 +65,7 @@ class FileManager:
 
     def write_file_by_response(self, response, file_path: Path, is_temp=False):
         if not self.create_parent_dir(file_path):
-            raise BadRequestException(msg=f'Failed to create parent folder for file {file_path.name}')
+            raise BadRequestException(f'Failed to create parent folder for file {file_path.name}')
 
         if is_temp:
             def on_save_to_temp(temp_file):
@@ -80,7 +80,7 @@ class FileManager:
 
     def write_file_by_request_stream(self, file_path: Path):
         if not self.create_parent_dir(file_path):
-            raise BadRequestException(msg=f'Failed to create parent directory to hold file {file_path.name}.')
+            raise BadRequestException(f'Failed to create parent directory to hold file {file_path.name}.')
 
         def on_save_to_temp(temp_file):
             with open(temp_file.as_posix(), "bw") as f:
@@ -194,7 +194,7 @@ class FileManager:
         msg = fm.ipfs_download_file_to_path(cid, temp_file, is_proxy=is_proxy, sha256=sha256, size=size)
         if msg:
             temp_file.unlink()
-            raise BadRequestException(msg=msg)
+            raise BadRequestException(msg)
         with temp_file.open() as f:
             metadata = json.load(f)
         temp_file.unlink()

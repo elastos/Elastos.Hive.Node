@@ -56,7 +56,7 @@ class VaultSubscription(metaclass=Singleton):
         cli.insert_one_origin(DID_INFO_DB_NAME, VAULT_SERVICE_COL, doc, create_on_absence=True, is_extra=False)
         # INFO: user database will create with first collection creation.
         if not fm.create_dir(hive_setting.get_user_vault_path(user_did)):
-            raise BadRequestException(msg='Failed to create folder for the user.')
+            raise BadRequestException('Failed to create folder for the user.')
         return doc
 
     def __get_vault_info(self, doc, files_used=False):
@@ -178,7 +178,7 @@ class VaultSubscription(metaclass=Singleton):
         if throw_exception and is_not_exist_raise and not doc:
             raise VaultNotFoundException()
         if throw_exception and not is_not_exist_raise and doc:
-            raise AlreadyExistsException(msg='The vault already exists.')
+            raise AlreadyExistsException('The vault already exists.')
         return doc
 
     def _get_remain_days(self, cur_plan, cur_end_timestamp, now_timestamp, plan):
@@ -207,7 +207,7 @@ class VaultSubscription(metaclass=Singleton):
         """ Get the information from the service did. """
         logging.info(f'get_appdid_info: did, {did_str}')
         if not did_str:
-            raise BadRequestException(msg='get_appdid_info: did must provide.')
+            raise BadRequestException('get_appdid_info: did must provide.')
 
         did: DID = DID.from_string(did_str)
         doc: DIDDocument = did.resolve()

@@ -33,7 +33,7 @@ class ExecutorBase(threading.Thread):
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_INPROGRESS)
             self.execute()
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_SUCCESS)
-            logging.info(f'[ExecutorBase] Leave execute the executor for {self.action}.')
+            logging.info(f'[ExecutorBase] Leave execute the executor for {self.action} without error.')
         except HiveException as e:
             msg = f'[ExecutorBase] Failed to {self.action} on the vault side: {e.msg}'
             logging.error(msg)

@@ -76,7 +76,7 @@ class IpfsBackupClient:
         """
         self.vault_manager.get_vault(g.usr_did)
 
-        credential_info = self.auth.get_backup_credential_info(credential)
+        credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
         if not is_force:
             self.__check_remote_backup_in_progress(g.usr_did)
         req = self.__save_request(g.usr_did, credential, credential_info)
@@ -96,7 +96,7 @@ class IpfsBackupClient:
         """
         self.vault_manager.get_vault(g.usr_did)
 
-        credential_info = self.auth.get_backup_credential_info(credential)
+        credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
         if not is_force:
             self.__check_remote_backup_in_progress(g.usr_did)
         self.__save_request(g.usr_did, credential, credential_info, is_restore=True)

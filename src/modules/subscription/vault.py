@@ -29,7 +29,7 @@ class Vault(Dotdict):
         return int(self.file_use_storage)
 
     def get_storage_gap(self):
-        return int(self.max_storage - (self.file_use_storage + self.db_use_storage))
+        return int(self.get_storage_quota() - (self.file_use_storage + self.db_use_storage))
 
     def get_storage_usage(self):
         return int(self.file_use_storage + self.db_use_storage)

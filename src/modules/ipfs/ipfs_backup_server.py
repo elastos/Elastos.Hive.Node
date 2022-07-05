@@ -33,6 +33,7 @@ class IpfsBackupServer:
 
     def promotion(self):
         """ This processing is just like restore the vault:
+
         1. check the vault MUST not exist.
         2. check the backup request and get the metadata.
         3. create the vault of the free plan.
@@ -44,9 +45,11 @@ class IpfsBackupServer:
         vault = self.vault.create_vault(g.usr_did, self.vault.get_price_plan('vault', 'Free'), is_upgraded=True)
         request_metadata = self.get_server_request_metadata(g.usr_did, doc, is_promotion=True,
                                                             vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
-        if request_metadata['vault_size'] > fm.get_vault_max_size(g.usr_did):
-            # TODO: how to handle this exception by user ???
-            raise InsufficientStorageException("No enough space to restore vault data")
+
+        # INFO: if free vault can not hold the backup data, then let it go
+        #       or user can not promote again anymore.
+        # if request_metadata['vault_size'] > fm.get_vault_max_size(g.usr_did):
+        #     raise InsufficientStorageException("No enough space to restore vault data")
 
         self.client.restore_database_by_dump_files(request_metadata)
         ExecutorBase.handle_cids_in_local_ipfs(request_metadata, contain_databases=False, only_files_ref=True)

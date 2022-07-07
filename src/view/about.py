@@ -103,7 +103,10 @@ class NodeInfo(Resource):
                 "email": <str>,
                 "description": <str>,
                 "version": <str>,
-                "last_commit_id": <str>
+                "last_commit_id": <str>,
+                "user_count": <int>,
+                "vault_count": <int>,
+                "backup_count": <int>,
             }
 
         **Response Error**:

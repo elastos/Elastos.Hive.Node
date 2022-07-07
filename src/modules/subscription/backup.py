@@ -31,6 +31,10 @@ class BackupManager:
     def __init__(self):
         self.mcli = MongodbClient()
 
+    def get_backup_count(self) -> int:
+        col = self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER)
+        return col.count({})
+
     def get_backup(self, user_did):
         """ Get the backup for user or raise not-found exception. """
         backup = self.__only_get_backup(user_did)

@@ -45,6 +45,9 @@ class AboutTestCase(unittest.TestCase):
         self.verify_ownership_presentation(response.json().get('ownership_presentation'))
         self.assertTrue(response.json().get('version'))
         self.assertTrue(response.json().get('last_commit_id'))
+        self.assertGreaterEqual(response.json().get('user_count'), 0)
+        self.assertGreaterEqual(response.json().get('vault_count'), 0)
+        self.assertGreaterEqual(response.json().get('backup_count'), 0)
 
     def verify_ownership_presentation(self, presentation: any):
         if type(presentation) is not dict:

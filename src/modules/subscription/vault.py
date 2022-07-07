@@ -8,7 +8,7 @@ from src.utils.consts import COL_IPFS_FILES
 from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException, CollectionNotFoundException, VaultFrozenException
 from src.utils_v1.constants import VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, \
-    VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING
+    VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_LATEST_ACCESS_TIME
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 
@@ -190,6 +190,13 @@ class VaultManager:
                 '$inc': {key: size},
                 '$set': {VAULT_SERVICE_MODIFY_TIME: now}
             }
+
+        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
+        col.update_one(filter_, update, contains_extra=False)
+
+    def update_vault_latest_access_time(self, user_did: str):
+        filter_ = {VAULT_SERVICE_DID: user_did}
+        update = {'$set': {VAULT_SERVICE_LATEST_ACCESS_TIME: int(datetime.now().timestamp())}}
 
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
         col.update_one(filter_, update, contains_extra=False)

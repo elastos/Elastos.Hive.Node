@@ -24,29 +24,39 @@ pool = ThreadPoolExecutor(1)
 @hive_job('update_vault_databases_usage', 'executor')
 def update_vault_databases_usage_task(user_did: str, full_url: str):
     from src.modules.subscription.vault import VaultManager
+    vault_manager = VaultManager()
 
-    try:
-        # v1, just consider auth, subscription, database, files, subscripting
-        exclude_start_urls = [
-            '/api/v1/echo',
-            '/api/v1/hive',  # about
-            '/api/v1/did',
-            '/api/v1/service/vault',  # subscription
-            '/api/v2/node',
-            '/api/v2/about',
-            '/api/v2/did',
-            '/api/v2/subscription',
-            '/api/v2/payment',
-            '/api/v2/provider',
-        ]
-        need_update = all([not full_url.startswith(url) for url in exclude_start_urls])
-        if need_update:
-            VaultManager().recalculate_user_databases_size(user_did)
-            logging.getLogger('AFTER REQUEST').info(f'Succeeded to update_vault_databases_usage({user_did}), {full_url}')
-    except Exception as e:
-        msg = f'update_vault_databases_usage: {str(e)}, {traceback.format_exc()}'
-        logging.getLogger('AFTER REQUEST').error(msg)
-        capture_exception(error=Exception(f'AFTER REQUEST UNEXPECTED: {msg}'))
+    # record latest vault access time, include v1, v2 and database, files, scripting (caller)
+    access_start_urls = [
+        '/api/v1/db',
+        '/api/v1/files',
+        '/api/v1/scripting',
+        '/api/v2/vault/db',
+        '/api/v2/vault/files',
+        '/api/v2/vault/scripting',
+    ]
+
+    need_update = any([full_url.startswith(url) for url in access_start_urls])
+    if need_update:
+        vault_manager.update_vault_latest_access_time(user_did)
+
+    # v1, just consider auth, subscription, database, files, subscripting
+    exclude_start_urls = [
+        '/api/v1/echo',
+        '/api/v1/hive',  # about
+        '/api/v1/did',
+        '/api/v1/service/vault',  # subscription
+        '/api/v2/node',
+        '/api/v2/about',
+        '/api/v2/did',
+        '/api/v2/subscription',
+        '/api/v2/payment',
+        '/api/v2/provider',
+    ]
+    need_update = all([not full_url.startswith(url) for url in exclude_start_urls])
+    if need_update:
+        vault_manager.recalculate_user_databases_size(user_did)
+        logging.getLogger('AFTER REQUEST').info(f'Succeeded to update_vault_databases_usage({user_did}), {full_url}')
 
 
 @hive_job('retry_backup_when_reboot', 'executor')

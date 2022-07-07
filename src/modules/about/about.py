@@ -31,6 +31,10 @@ class About:
         }
 
     def get_node_info(self):
+        from src.modules.auth.user import UserManager
+        from src.modules.subscription.vault import VaultManager
+        from src.modules.subscription.backup import BackupManager
+
         owner_did, credential = Provider.get_verified_owner_did()
         auth = Auth()
         return {
@@ -41,5 +45,8 @@ class About:
             "email": hive_setting.NODE_EMAIL,
             "description": hive_setting.NODE_DESCRIPTION,
             "version": hive_setting.VERSION,
-            "last_commit_id": hive_setting.LAST_COMMIT
+            "last_commit_id": hive_setting.LAST_COMMIT,
+            "user_count": UserManager().get_user_count(),
+            "vault_count": VaultManager().get_vault_count(),
+            "backup_count": BackupManager().get_backup_count(),
         }

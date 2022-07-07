@@ -92,6 +92,10 @@ class VaultManager:
         self.mcli = MongodbClient()
         self.user_manager = UserManager()
 
+    def get_vault_count(self) -> int:
+        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
+        return col.count({})
+
     def get_vault(self, user_did) -> Vault:
         """ Get the vault for user or raise not-found exception.
 

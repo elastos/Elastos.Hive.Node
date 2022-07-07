@@ -168,7 +168,7 @@ class MongodbCollection:
     def count(self, filter_, **kwargs):
         options = {k: v for k, v in kwargs.items() if k in ("skip", "limit", "maxTimeMS")}
 
-        return self.col.count_documents(self.convert_oid(filter_) if filter_ else None, **options)
+        return self.col.count_documents(self.convert_oid(filter_) if filter_ else {}, **options)
 
     def delete_one(self, filter_):
         return self.delete_many(filter_, only_one=True)
@@ -182,6 +182,9 @@ class MongodbCollection:
             "acknowledged": result.acknowledged,
             "deleted_count": result.deleted_count
         }
+
+    def distinct(self, field: str) -> list:
+        return self.col.distinct(field)
 
     def convert_oid(self, value: _T):
         """ try to convert the following dict recursively.

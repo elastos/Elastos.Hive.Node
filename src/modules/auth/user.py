@@ -24,6 +24,10 @@ class UserManager:
         docs = col.find_many(filter_)
         return list(set(map(lambda d: d[APP_ID], docs)))
 
+    def get_user_count(self):
+        col = self.mcli.get_management_collection(COL_APPLICATION)
+        return len(col.distinct(USER_DID))
+
     def get_app_docs(self, user_did) -> list:
         """ get all application information by user did"""
 

@@ -32,7 +32,6 @@ class ExecutorBase(threading.Thread):
             if self.start_delay > 0:
                 time.sleep(self.start_delay)
             logging.info(f'[ExecutorBase] Enter execute the executor for {self.action}.')
-            self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '0')
             self.execute()
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_SUCCESS, '')
             logging.info(f'[ExecutorBase] Leave execute the executor for {self.action} without error.')
@@ -159,6 +158,8 @@ class BackupExecutor(ExecutorBase):
             percent = str(int(15 * (index - 1) / total))
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, percent)
 
+        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '0')  # 100-based
+
         database_cids = self.owner.dump_database_data_to_backup_cids(self.user_did, callback_dump_databases)
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '15')  # 100-based
         logging.info('[BackupExecutor] Dumped the database data to IPFS node and returned with array of CIDs')
@@ -201,18 +202,20 @@ class RestoreExecutor(ExecutorBase):
         super().__init__(user_did, client, 'restore', **kwargs)
 
     def execute(self):
+        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '0')  # 100-based
+
         # only get the content
         request_metadata = self.owner.get_vault_data_cid_from_backup_node(self.user_did)
-        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '50')  # 100-based
+        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '40')  # 100-based
         logging.info('[RestoreExecutor] Success to get request metadata from the backup node.')
 
         # direct download database packages and restore to mongodb
         self.owner.restore_database_by_dump_files(request_metadata)
-        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '70')  # 100-based
+        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '60')  # 100-based
         logging.info("[RestoreExecutor] Success to restore the dump files of the user's database.")
 
         self.__class__.handle_cids_in_local_ipfs(request_metadata, contain_databases=False)
-        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '90')  # 100-based
+        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '80')  # 100-based
         logging.info('[RestoreExecutor] Success to pin files CIDs.')
 
         self.__class__.update_vault_usage_by_metadata(self.user_did, request_metadata)
@@ -225,6 +228,8 @@ class BackupServerExecutor(ExecutorBase):
         self.req = req
 
     def execute(self):
+        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '50')  # 100-based
+
         # request_metadata already pinned to ipfs node
         request_metadata = self.owner.get_server_request_metadata(self.user_did, self.req)
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '60')  # 100-based

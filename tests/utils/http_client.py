@@ -84,8 +84,13 @@ class TokenCache:
             token = f.read()
 
         # remove if expired
-        jwt = JWT.parse(token)
-        if jwt.get_expiration() < int(datetime.datetime.now().timestamp()):
+        try:
+            jwt = JWT.parse(token)
+            if jwt.get_expiration() < int(datetime.datetime.now().timestamp()):
+                os.unlink(token_file)
+                return None
+        except:
+            # expired with exception
             os.unlink(token_file)
             return None
 

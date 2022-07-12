@@ -45,14 +45,17 @@ class HttpClient:
         r = self.get(url, access_token, is_body=False, stream=True)
         fm.write_file_by_response(r, file_path, is_temp=True)
 
-    def post(self, url, access_token, body, is_json=True, is_body=True, success_code=201, **kwargs):
+    def post(self, url, access_token, body, is_json=True, is_body=True, success_code=201, timeout=None, **kwargs):
         try:
             headers = dict()
             if access_token:
                 headers["Authorization"] = "token " + access_token
             if is_json:
                 headers['Content-Type'] = 'application/json'
-            r = requests.post(url, headers=headers, json=body, timeout=self.timeout, **kwargs) \
+
+            timeout_ = timeout if timeout is not None else self.timeout
+
+            r = requests.post(url, headers=headers, json=body, timeout=timeout_, **kwargs) \
                 if is_json else requests.post(url, headers=headers, data=body, timeout=self.timeout, **kwargs)
             self.__check_status_code(r, success_code)
             return r.json() if is_body else r

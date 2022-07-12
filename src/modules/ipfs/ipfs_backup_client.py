@@ -215,7 +215,7 @@ class IpfsBackupClient:
 
         req = self.__get_request_doc(user_did)
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_BACKUP,
-                       req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False)
+                       req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False, timeout=90)
 
     def get_vault_data_cid_from_backup_node(self, user_did):
         """

@@ -214,6 +214,8 @@ class FileManager:
             return False
 
     def ipfs_unpin_cid(self, cid):
+        logging.info(f'[fm.ipfs_unpin_cid] Try to unpin {cid} in backup node.')
+
         if not self.ipfs_local_exist_cid(cid):
             return
 

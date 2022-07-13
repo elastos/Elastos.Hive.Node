@@ -136,7 +136,7 @@ class ExecutorBase(threading.Thread):
         # pin or unpin files
         if contain_files and request_metadata.get('files'):
             for f in request_metadata.get('files'):
-                if only_files_ref:
+                if not only_files_ref:
                     execute_pin_unpin(f['cid'])
 
                 cid_ref = IpfsCidRef(f['cid'])
@@ -170,7 +170,7 @@ class BackupExecutor(ExecutorBase):
 
         cid, sha256, size, request_metadata = self.generate_root_backup_cid(database_cids, file_cids, filedata_size)
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '35')  # 100-based
-        logging.info('[BackupExecutor] Generated the root backup CID to vault data.')
+        logging.info(f'[BackupExecutor] Generated the root backup CID to vault data, request_metadata, {request_metadata}')
 
         self.owner.send_root_backup_cid_to_backup_node(self.user_did, cid, sha256, size, self.is_force)
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '50')  # 100-based
@@ -193,7 +193,7 @@ class BackupExecutor(ExecutorBase):
         except Exception as e:
             raise e
         finally:
-            # clean this side cids
+            # clean client side cids
             super().handle_cids_in_local_ipfs(request_metadata, root_cid=cid, contain_databases=True, contain_files=False, is_unpin=True)
 
 
@@ -231,7 +231,9 @@ class BackupServerExecutor(ExecutorBase):
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '50')  # 100-based
 
         # request_metadata already pinned to ipfs node
+
         request_metadata = self.owner.get_server_request_metadata(self.user_did, self.req)
+        logging.info(f'[BackupServerExecutor] request_metadata: {request_metadata}')
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '60')  # 100-based
         logging.info('[BackupServerExecutor] Success to get request metadata.')
 

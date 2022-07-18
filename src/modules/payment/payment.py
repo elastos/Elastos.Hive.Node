@@ -72,7 +72,8 @@ class Payment(metaclass=Singleton):
         try:
             order_info = self.order_contract.get_order(contract_order_id)
         except Exception as e:
-            raise InvalidParameterException(f'Failed get order info from contract: {str(e)}, {traceback.format_exc()}')
+            raise InvalidParameterException(f'Failed get order info from contract( maybe invalid order id '
+                                            f'or the order not generated successfully ): {str(e)}, {traceback.format_exc()}')
 
         order = self.__verify_contract_order(order_info)
 

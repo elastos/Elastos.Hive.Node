@@ -140,7 +140,7 @@ class Order:
 
 class OrderManager:
     def __init__(self):
-        self.ela_address = hive_setting.PAYMENT_ADDRESS
+        self.ela_address = hive_setting.PAYMENT_RECEIVING_ADDRESS
         self.mcli = MongodbClient()
         self.vault_manager = VaultManager()
         self.backup_manager = BackupManager()

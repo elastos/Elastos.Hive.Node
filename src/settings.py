@@ -90,8 +90,8 @@ class HiveSetting:
         return self.env_config('PAYMENT_ENABLED', default='True', cast=bool)
 
     @property
-    def PAYMENT_PATH(self):
-        path = self.env_config('PAYMENT_PATH', default='./payment_config.json', cast=str)
+    def PAYMENT_CONFIG_PATH(self):
+        path = self.env_config('PAYMENT_CONFIG_PATH', default='./payment_config.json', cast=str)
         if path.startswith('/'):
             return path
         return os.path.join(BASE_DIR, path)
@@ -105,8 +105,8 @@ class HiveSetting:
         return self.env_config('PAYMENT_CONTRACT_ADDRESS', default='', cast=str)
 
     @property
-    def PAYMENT_ADDRESS(self):
-        return self.env_config('PAYMENT_ADDRESS', default='EN9YK69ScA6WFgVQW3UZcmSRLSCStaU2pQ', cast=str)
+    def PAYMENT_RECEIVING_ADDRESS(self):
+        return self.env_config('PAYMENT_RECEIVING_ADDRESS', default='EN9YK69ScA6WFgVQW3UZcmSRLSCStaU2pQ', cast=str)
 
     @property
     def ATLAS_ENABLED(self):

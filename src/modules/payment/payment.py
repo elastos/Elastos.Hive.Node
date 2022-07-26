@@ -22,7 +22,7 @@ from src.modules.payment.order_contract import OrderContract
 
 class Payment(metaclass=Singleton):
     def __init__(self):
-        self.ela_address = hive_setting.PAYMENT_ADDRESS
+        self.ela_address = hive_setting.PAYMENT_RECEIVING_ADDRESS
         self.auth = Auth()
         self.vault_subscription = None
         self.vault_manager = VaultManager()

@@ -11,7 +11,7 @@ from src.utils.http_exception import OrderNotFoundException
 from src.utils_v1.payment.payment_config import PaymentConfig
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.subscription.vault import VaultManager
-from src.modules.subscription.backup import BackupManager
+from src.modules.backup.backup import BackupManager
 
 
 class Receipt:

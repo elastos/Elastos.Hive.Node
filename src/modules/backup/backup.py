@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.database.mongodb_client import MongodbClient, Dotdict
 from src.utils_v1.constants import VAULT_BACKUP_SERVICE_USING, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME
 from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID
@@ -8,23 +8,23 @@ from src.utils.http_exception import BackupNotFoundException
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 
-class Backup:
+class Backup(Dotdict):
     """ Represent a backup service which can be used to save backup data. """
 
-    def __init__(self, doc):
-        self.doc = doc
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def get_plan(self):
         return PaymentConfig.get_backup_plan(self.get_plan_name())
 
     def get_plan_name(self):
-        return self.doc[VAULT_BACKUP_SERVICE_USING]
+        return self[VAULT_BACKUP_SERVICE_USING]
 
     def is_expired(self):
         return 0 < self.get_end_time() < datetime.now().timestamp()
 
     def get_end_time(self):
-        return self.doc[VAULT_BACKUP_SERVICE_END_TIME]
+        return self[VAULT_BACKUP_SERVICE_END_TIME]
 
 
 class BackupManager:
@@ -36,16 +36,16 @@ class BackupManager:
         if not backups:
             raise BackupNotFoundException()
 
-        return list(map(lambda d: Backup(d), backups))
+        return list(map(lambda doc: Backup(**doc), backups))
 
     def get_backup_count(self) -> int:
         col = self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER)
         return col.count({})
 
-    def get_backup(self, user_did):
+    def get_backup(self, user_did) -> Backup:
         """ Get the backup for user or raise not-found exception. """
         backup = self.__only_get_backup(user_did)
-        return self.try_to_downgrade_to_free(user_did, backup)
+        return self.__try_to_downgrade_to_free(user_did, backup)
 
     def __only_get_backup(self, user_did):
         """ common method to all other method in this class """
@@ -54,7 +54,7 @@ class BackupManager:
         doc = col.find_one({USR_DID: user_did})
         if not doc:
             raise BackupNotFoundException()
-        return Backup(doc)
+        return Backup(**doc)
 
     def upgrade(self, user_did, plan: dict, backup=None):
         if not backup:
@@ -73,7 +73,7 @@ class BackupManager:
         col = self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER)
         col.update_one(filter_, {'$set': update})
 
-    def try_to_downgrade_to_free(self, user_did, backup: Backup):
+    def __try_to_downgrade_to_free(self, user_did, backup: Backup) -> Backup:
         if PaymentConfig.is_free_plan(backup.get_plan_name()):
             return backup
 

@@ -2,7 +2,9 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
+from src.utils.http_exception import PricePlanNotFoundException
 from src.settings import hive_setting
 
 
@@ -31,7 +33,7 @@ class PaymentConfig:
 
     @staticmethod
     def get_free_vault_plan():
-        return PaymentConfig.get_pricing_plan("Free")
+        return PaymentConfig.get_vault_plan("Free")
 
     @staticmethod
     def is_free_plan(name: str):
@@ -54,7 +56,7 @@ class PaymentConfig:
         return PaymentConfig.config_info["paymentSettings"]["wait_tx_timeout"]
 
     @staticmethod
-    def get_pricing_plan(name):
+    def get_vault_plan(name) -> Optional[dict]:
         if "pricingPlans" not in PaymentConfig.config_info:
             return None
 
@@ -107,3 +109,28 @@ class PaymentConfig:
         remain_days = PaymentConfig.get_current_plan_remain_days(src_plan, src_end_timestamp, dst_plan)
         end_time = -1 if dst_plan['serviceDays'] <= 0 else now + (dst_plan['serviceDays'] + remain_days) * 24 * 60 * 60
         return now, int(end_time)
+
+    @staticmethod
+    def get_price_plans(subscription, name):
+        all_plans = PaymentConfig.get_all_package_info()
+        result = {'version': all_plans.get('version', '1.0')}
+
+        def filter_plans_by_name(plans):
+            if not name:
+                return plans
+            return list(filter(lambda p: p.get('name') == name, plans))
+
+        if subscription == 'all':
+            result['backupPlans'] = filter_plans_by_name(all_plans.get('backupPlans', []))
+            result['pricingPlans'] = filter_plans_by_name(all_plans.get('pricingPlans', []))
+            if not result['backupPlans'] and not result['pricingPlans']:
+                raise PricePlanNotFoundException()
+        elif subscription == 'vault':
+            result['pricingPlans'] = filter_plans_by_name(all_plans.get('pricingPlans', []))
+            if not result['pricingPlans']:
+                raise PricePlanNotFoundException()
+        elif subscription == 'backup':
+            result['backupPlans'] = filter_plans_by_name(all_plans.get('backupPlans', []))
+            if not result['backupPlans']:
+                raise PricePlanNotFoundException()
+        return result

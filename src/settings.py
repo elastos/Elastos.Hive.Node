@@ -52,7 +52,7 @@ class HiveSetting:
     def get_temp_dir(self):
         return self.DATA_STORE_PATH + '/.temp'
 
-    def get_user_did_path(self, user_did):
+    def get_user_did_path(self, user_did) -> Path:
         """ get the path of the user did """
         path = Path(self.VAULTS_BASE_DIR)
 

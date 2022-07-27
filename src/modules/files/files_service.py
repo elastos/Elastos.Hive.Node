@@ -10,12 +10,10 @@ from pathlib import Path
 from flask import g
 
 from src.modules.files.file_metadata import FileMetadataManager
+from src.modules.files.ipfs_client import IpfsClient
 from src.modules.files.local_file import LocalFile
-from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
-    COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, USR_DID
+from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
-from src.utils.db_client import cli
-from src.utils.file_manager import fm
 from src.modules.files.ipfs_cid_ref import IpfsCidRef
 from src.modules.subscription.vault import VaultManager
 
@@ -32,6 +30,7 @@ class IpfsFiles:
         """
         self.vault_manager = VaultManager()
         self.file_manager = FileMetadataManager()
+        self.ipfs_client = IpfsClient()
 
     def upload_file(self, path, is_public: bool, script_name: str):
         """ :v2 API: """
@@ -103,30 +102,25 @@ class IpfsFiles:
         """
         self.vault_manager.get_vault(g.usr_did)
 
+        def get_out_file_info(file_doc):
+            return {
+                'name': file_doc[COL_IPFS_FILES_PATH],
+                'is_file': file_doc[COL_IPFS_FILES_IS_FILE],
+                'size': file_doc[SIZE],
+            }
+
         docs = self.list_folder_with_path(g.usr_did, g.app_did, path)
         return {
-            'value': list(map(lambda d: self.__get_list_file_info_by_doc(d), docs))
+            'value': list(map(lambda d: get_out_file_info(d), docs))
         }
 
-    def list_folder_with_path(self, user_did, app_did, path):
+    def list_folder_with_path(self, user_did, app_did, folder_path):
         """ list files by folder with path, empty string means root path
 
         'public' for v1
         """
-        col_filter = {USR_DID: user_did, APP_DID: app_did}
-        if path:
-            # if specify the path, it will find the files start with folder name
-            folder_path = path if path[len(path) - 1] == '/' else f'{path}/'
-            col_filter[COL_IPFS_FILES_PATH] = {
-                '$regex': f'^{folder_path}'
-            }
 
-        docs = cli.find_many(user_did, app_did, COL_IPFS_FILES, col_filter, throw_exception=False)
-        if not docs and path:
-            # root path always exists
-            raise FileNotFoundException(f'The directory {path} does not exist.')
-
-        return docs
+        return self.file_manager.get_all_metadatas(user_did, app_did, folder_path)
 
     def get_properties(self, path):
         """ :v2 API: """
@@ -169,7 +163,7 @@ class IpfsFiles:
         """
         # upload to the temporary file and then to IPFS node.
         temp_file = LocalFile.generate_tmp_file()
-        fm.write_file_by_request_stream(temp_file)
+        LocalFile.write_file_by_request_stream(temp_file)
         return self.upload_file_from_local(user_did, app_did, path, temp_file, is_public=is_public)
 
     def upload_file_from_local(self, user_did, app_did, path: str, local_path: Path, is_public=False, only_import=False, **kwargs):
@@ -193,57 +187,33 @@ class IpfsFiles:
         :return None
         """
         # upload the file to ipfs node.
-        cid = fm.ipfs_upload_file_from_path(local_path)
-        cid_ref, increased_size = IpfsCidRef(cid), 0
+        new_cid, increased_size = self.ipfs_client.upload_file(local_path), 0
 
         # insert or update file metadata.
-        doc = self.get_file_metadata(user_did, app_did, path, throw_exception=False)
-        if not doc:
-            doc = self.__insert_file_metadata(user_did, app_did, path, local_path, cid, **kwargs)
-            cid_ref.increase()
-            increased_size = doc[SIZE]
-        elif doc[COL_IPFS_FILES_IPFS_CID] != cid:
-            new_size = self.__update_file_metadata(user_did, app_did, path, local_path, cid, **kwargs)
-            cid_ref.increase()
-            IpfsCidRef(doc[COL_IPFS_FILES_IPFS_CID]).decrease()
-            increased_size = new_size - doc[SIZE]
+        old_metadata = self.get_file_metadata(user_did, app_did, path, throw_exception=False)
+
+        sha256, size = LocalFile.get_sha256(local_path.as_posix()), local_path.stat().st_size
+        new_metadata = self.file_manager.add_metadata(user_did, app_did, local_path.as_posix(), sha256, size, new_cid)  # add new or update exist one
+        if not old_metadata:
+            IpfsCidRef(new_cid).increase()
+            increased_size = size
+        elif old_metadata[COL_IPFS_FILES_IPFS_CID] != new_cid:
+            IpfsCidRef(new_cid).increase()
+            IpfsCidRef(old_metadata[COL_IPFS_FILES_IPFS_CID]).decrease()
+            increased_size = new_metadata[SIZE] - old_metadata[SIZE]
 
         if increased_size and not only_import:
             self.vault_manager.update_user_files_size(user_did, increased_size)
 
         # cache the uploaded file.
-        cache_file = fm.ipfs_get_cache_root(user_did) / cid
+        cache_file = LocalFile.get_cid_cache_dir(user_did, need_create=True) / new_cid
         if not cache_file.exists():
             if only_import:
                 shutil.copy(local_path.as_posix(), cache_file.as_posix())
             else:
                 shutil.move(local_path.as_posix(), cache_file.as_posix())
 
-        return cid
-
-    def __insert_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, cid: str, **kwargs):
-        metadata = {
-            USR_DID: user_did,
-            APP_DID: app_did,
-            COL_IPFS_FILES_PATH: rel_path,
-            COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(file_path),
-            COL_IPFS_FILES_IS_FILE: True,
-            SIZE: file_path.stat().st_size,
-            COL_IPFS_FILES_IPFS_CID: cid,
-        }
-        result = cli.insert_one(user_did, app_did, COL_IPFS_FILES, metadata, create_on_absence=True, **kwargs)
-        logging.info(f'[ipfs-files] Add a new file {rel_path}')
-        return metadata
-
-    def __update_file_metadata(self, user_did, app_did, rel_path: str, file_path: Path, cid: str, **kwargs):
-        col_filter = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: rel_path}
-        size = file_path.stat().st_size
-        updated_metadata = {'$set': {COL_IPFS_FILES_SHA256: fm.get_file_content_sha256(file_path),
-                            SIZE: size,
-                            COL_IPFS_FILES_IPFS_CID: cid}}
-        result = cli.update_one(user_did, app_did, COL_IPFS_FILES, col_filter, updated_metadata, is_extra=True, **kwargs)
-        logging.info(f'[ipfs-files] The existing file with {rel_path} has been updated')
-        return size
+        return new_cid
 
     def delete_file_metadata(self, user_did, app_did, rel_path, cid):
         """ 'public' for upgrading files service from v1 to v2 (local -> ipfs) """
@@ -264,12 +234,12 @@ class IpfsFiles:
         :return:
         """
         metadata = self.get_file_metadata(user_did, app_did, path)
-        cached_file = fm.ipfs_get_cache_root(user_did) / metadata[COL_IPFS_FILES_IPFS_CID]
+        cached_file = LocalFile.get_cid_cache_dir(user_did) / metadata[COL_IPFS_FILES_IPFS_CID]
         if not cached_file.exists():
-            fm.ipfs_download_file_to_path(metadata[COL_IPFS_FILES_IPFS_CID], cached_file)
-        return fm.get_response_by_file_path(cached_file)
+            self.ipfs_client.download_file(metadata[COL_IPFS_FILES_IPFS_CID], cached_file)
+        return LocalFile.get_download_response(cached_file)
 
-    def move_copy_file(self, user_did, app_did, src_path, dst_path, is_copy=False):
+    def move_copy_file(self, user_did, app_did, src_path: str, dst_path: str, is_copy=False):
         """ Move/Copy file with the following steps:
             1. Check source file existing and file with destination name existing. If not, then
             2. Move or copy file;
@@ -284,51 +254,34 @@ class IpfsFiles:
         :param is_copy: True means copy file, else move.
         :return: Json data of the response.
         """
-        src_filter = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: src_path}
-        dst_filter = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: dst_path}
-        src_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, src_filter)
-        dst_doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, dst_filter)
-        if not src_doc:
+
+        # check two file paths
+        src_metadata = self.file_manager.get_metadata(user_did, app_did, src_path)
+        dst_metadata = self.file_manager.get_metadata(user_did, app_did, src_path)
+        if not src_metadata:
             raise FileNotFoundException(f'The source file {src_path} not found, impossible to move/copy.')
-        if dst_doc:
+        if dst_metadata:
             raise AlreadyExistsException(f'A file with destnation name {dst_path} already exists, impossible to move/copy')
 
+        # do copy or move
         if is_copy:
-            metadata = {
-                USR_DID: user_did,
-                APP_DID: app_did,
-                COL_IPFS_FILES_PATH: dst_path,
-                COL_IPFS_FILES_SHA256: src_doc[COL_IPFS_FILES_SHA256],
-                COL_IPFS_FILES_IS_FILE: True,
-                SIZE: src_doc[SIZE],
-                COL_IPFS_FILES_IPFS_CID: src_doc[COL_IPFS_FILES_IPFS_CID],
-            }
-            IpfsCidRef(src_doc[COL_IPFS_FILES_IPFS_CID]).increase()
-            cli.insert_one(user_did, app_did, COL_IPFS_FILES, metadata)
-            self.vault_manager.update_user_files_size(user_did, src_doc[SIZE])
+            self.file_manager.add_metadata(user_did, app_did, dst_path,
+                                           src_metadata[COL_IPFS_FILES_SHA256], src_metadata[SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID])
+            IpfsCidRef(src_metadata[COL_IPFS_FILES_IPFS_CID]).increase()
+            self.vault_manager.update_user_files_size(user_did, src_metadata[SIZE])
         else:
-            cli.update_one(user_did, app_did, COL_IPFS_FILES, src_filter,
-                           {'$set': {COL_IPFS_FILES_PATH: dst_path}}, is_extra=True)
+            self.file_manager.move_metadata(user_did, app_did, src_path, dst_path)
+
         return {
             'name': dst_path
         }
 
-    def __get_list_file_info_by_doc(self, file_doc):
-        return {
-            'name': file_doc[COL_IPFS_FILES_PATH],
-            'is_file': file_doc[COL_IPFS_FILES_IS_FILE],
-            'size': file_doc[SIZE],
-        }
-
     def get_file_metadata(self, user_did, app_did, path: str, throw_exception=True):
         """ 'public' for v1, scripting service """
-        col_filter = {USR_DID: user_did,
-                      APP_DID: app_did,
-                      COL_IPFS_FILES_PATH: path}
-        metadata = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter,
-                                create_on_absence=True, throw_exception=throw_exception)
-        if not metadata:
+        try:
+            return self.file_manager.get_metadata(user_did, app_did, path)
+        except FileNotFoundException as e:
             if throw_exception:
-                raise FileNotFoundException(f"File '{path}' not found")
-            return None
-        return metadata
+                raise e
+            else:
+                return None

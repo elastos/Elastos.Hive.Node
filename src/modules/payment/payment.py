@@ -15,7 +15,7 @@ from src.utils.singleton import Singleton
 from src.utils_v1.payment.payment_config import PaymentConfig
 from src.modules.auth.auth import Auth
 from src.modules.subscription.vault import VaultManager
-from src.modules.subscription.backup import BackupManager
+from src.modules.backup.backup import BackupManager
 from src.modules.payment.order import OrderManager, Order
 from src.modules.payment.order_contract import OrderContract
 

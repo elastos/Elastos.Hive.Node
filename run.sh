@@ -229,6 +229,6 @@ case "$1" in
         stop
         ;;
     *)
-    echo "Usage: run.sh {docker|direct|test}"
+    echo "Usage: run.sh {setup|direct|docker|test|test_v1|test_v2|stop}"
     exit 1
 esac

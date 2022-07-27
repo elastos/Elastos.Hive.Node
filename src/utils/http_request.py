@@ -9,11 +9,20 @@ import typing
 from flask import request, g
 from werkzeug.routing import BaseConverter
 
-from src.utils.http_exception import InvalidParameterException, NotImplementedException
+from src.utils.http_exception import InvalidParameterException
+
+
+class FileFolderPath(BaseConverter):
+    """ support read empty folder path, based on PathConverter """
+    regex = r'[0-9a-zA-Z_/.]*'
+    weight = 200
+    part_isolating = False
 
 
 class RegexConverter(BaseConverter):
-    """ Support regex on url match """
+    """ Support regex on url match
+    @deprecated
+    """
     def __init__(self, url_map, *items):
         super().__init__(url_map)
         self.regex = items[0]

@@ -13,7 +13,7 @@ from sentry_sdk import capture_exception
 from src.settings import hive_setting
 from src.utils.executor import init_executor, update_vault_databases_usage_task
 from src.utils.http_exception import HiveException, InternalServerErrorException, UnauthorizedException
-from src.utils.http_request import RegexConverter
+from src.utils.http_request import RegexConverter, FileFolderPath
 from src.utils.http_response import HiveApi
 from src.utils.sentry_error import init_sentry_hook
 from src.utils.auth_token import TokenParser
@@ -30,6 +30,7 @@ CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')
 
 
 app = Flask('Hive Node V2')
+app.url_map.converters['folder_path'] = FileFolderPath
 app.url_map.converters['regex'] = RegexConverter
 api = HiveApi(app, prefix='/api/v2')
 

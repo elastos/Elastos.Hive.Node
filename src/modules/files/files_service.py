@@ -9,13 +9,14 @@ from pathlib import Path
 
 from flask import g
 
+from src.modules.files.file_metadata import FileMetadataManager
+from src.modules.files.local_file import LocalFile
 from src.utils.consts import COL_IPFS_FILES, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, \
     COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, USR_DID
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
-from src.utils_v1.common import gene_temp_file_name
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
-from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
+from src.modules.files.ipfs_cid_ref import IpfsCidRef
 from src.modules.subscription.vault import VaultManager
 
 
@@ -30,6 +31,7 @@ class IpfsFiles:
         4. The CID to the block data on IPFS would be managed as the field of metadata in the collection.
         """
         self.vault_manager = VaultManager()
+        self.file_manager = FileMetadataManager()
 
     def upload_file(self, path, is_public: bool, script_name: str):
         """ :v2 API: """
@@ -66,22 +68,18 @@ class IpfsFiles:
 
     def delete_file_with_path(self, user_did, app_did, path, check_exist=False):
         """ 'public' for v1 """
-        col_filter = {USR_DID: user_did,
-                      APP_DID: app_did,
-                      COL_IPFS_FILES_PATH: path}
-        doc = cli.find_one(user_did, app_did, COL_IPFS_FILES, col_filter, throw_exception=False)
-        if not doc:
+        try:
+            metadata = self.file_manager.get_metadata(user_did, app_did, path)
+        except FileNotFoundException as e:
             if check_exist:
-                raise FileNotFoundException(f'The file {path} does not exist.')
+                raise e
             else:
                 return
 
-        cache_file = fm.ipfs_get_cache_root(user_did) / doc[COL_IPFS_FILES_IPFS_CID]
-        if cache_file.exists():
-            cache_file.unlink()
-
-        self.delete_file_metadata(user_did, app_did, path, doc[COL_IPFS_FILES_IPFS_CID])
-        self.vault_manager.update_user_files_size(user_did, 0 - doc[SIZE])
+        # do real remove
+        LocalFile.remove_ipfs_cache_file(user_did, metadata[COL_IPFS_FILES_IPFS_CID])
+        self.file_manager.delete_metadata(user_did, app_did, path, metadata[COL_IPFS_FILES_IPFS_CID])
+        self.vault_manager.update_user_files_size(user_did, 0 - metadata[SIZE])
 
     def move_file(self, src_path, dst_path):
         """ :v2 API: """
@@ -170,7 +168,7 @@ class IpfsFiles:
         :return: None
         """
         # upload to the temporary file and then to IPFS node.
-        temp_file = gene_temp_file_name()
+        temp_file = LocalFile.generate_tmp_file()
         fm.write_file_by_request_stream(temp_file)
         return self.upload_file_from_local(user_did, app_did, path, temp_file, is_public=is_public)
 
@@ -249,12 +247,7 @@ class IpfsFiles:
 
     def delete_file_metadata(self, user_did, app_did, rel_path, cid):
         """ 'public' for upgrading files service from v1 to v2 (local -> ipfs) """
-        col_filter = {USR_DID: user_did,
-                      APP_DID: app_did,
-                      COL_IPFS_FILES_PATH: rel_path}
-        result = cli.delete_one(user_did, app_did, COL_IPFS_FILES, col_filter, is_check_exist=False)
-        if result['deleted_count'] > 0 and cid:
-            IpfsCidRef(cid).decrease()
+        self.file_manager.delete_metadata(user_did, app_did, rel_path, cid)
         logging.info(f'[ipfs-files] Remove an existing file {rel_path}')
 
     def download_file_with_path(self, user_did, app_did, path: str):

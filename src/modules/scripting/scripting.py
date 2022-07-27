@@ -13,7 +13,7 @@ from src import hive_setting
 from src.utils_v1.constants import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.files.files_service import IpfsFiles
 from src.modules.subscription.vault import VaultManager
 from src.modules.scripting.executable import Executable, get_populated_value_with_params, validate_exists
 

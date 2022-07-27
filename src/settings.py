@@ -49,6 +49,18 @@ class HiveSetting:
             return path
         return os.path.join(BASE_DIR, path)
 
+    def get_temp_dir(self):
+        return self.DATA_STORE_PATH + '/.temp'
+
+    def get_user_did_path(self, user_did):
+        """ get the path of the user did """
+        path = Path(self.VAULTS_BASE_DIR)
+
+        def did_tail_part(did):
+            return did.split(":")[2]
+
+        return (path if path.is_absolute() else path.resolve()) / did_tail_part(user_did)
+
     @property
     def VAULTS_BASE_DIR(self):
         return self.DATA_STORE_PATH + '/vaults'

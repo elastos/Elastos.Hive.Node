@@ -4,7 +4,7 @@ from src.utils_v1.constants import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTI
     SCRIPTING_EXECUTABLE_CALLER_APP_DID, SCRIPTING_EXECUTABLE_PARAMS, SCRIPTING_EXECUTABLE_TYPE_COUNT
 from src.utils.http_exception import NotImplementedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.files.files_service import IpfsFiles
 from src.modules.subscription.vault import VaultManager
 
 

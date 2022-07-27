@@ -9,7 +9,7 @@ import logging
 import sys
 from pathlib import Path
 
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.files.files_service import IpfsFiles
 from src.upgrade2V2.gen_files_metadata import get_vaults_root, get_files_metadata_file, generate_app_files_root
 from src.utils.file_manager import fm
 

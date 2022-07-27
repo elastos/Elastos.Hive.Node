@@ -5,6 +5,7 @@ The view of subscription module.
 """
 from flask_restful import Resource
 
+from src import PaymentConfig
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import RV
 from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
@@ -97,7 +98,7 @@ class VaultPricePlan(Resource):
         subscription = RV.get_args().get_opt('subscription', str, 'all')
         name = RV.get_args().get_opt('name', str, None)
 
-        return self.vault_subscription.get_price_plans(subscription, name)
+        return PaymentConfig.get_price_plans(subscription, name)
 
 
 class VaultInfo(Resource):

@@ -229,7 +229,7 @@ class IpfsBackupClient:
                              req[BACKUP_REQUEST_TARGET_TOKEN])
         request_metadata = fm.ipfs_download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
 
-        if request_metadata['vault_size'] > fm.get_vault_max_size(user_did):
+        if request_metadata['vault_size'] > self.vault_manager.get_vault(user_did).get_storage_quota():
             raise InsufficientStorageException('No enough space to restore, please upgrade the vault and try again.')
         return request_metadata
 

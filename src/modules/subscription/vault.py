@@ -112,14 +112,22 @@ class VaultManager:
             }
         }
 
-        cli = self.mcli.get_management_collection(VAULT_SERVICE_COL)
-        cli.update_one(filter_, update, upsert=True)
+        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
+        col.update_one(filter_, update, upsert=True)
 
         return self.__only_get_vault(user_did)
 
     def get_vault_count(self) -> int:
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
         return col.count({})
+
+    def get_all_vaults(self) -> list:
+        """ get all vaults in this node. """
+        vaults = self.mcli.get_management_collection(VAULT_SERVICE_COL).find_many({})
+        if not vaults:
+            raise VaultNotFoundException()
+
+        return list(map(lambda d: Vault(**d), vaults))
 
     def get_vault(self, user_did) -> Vault:
         """ Get the vault for user or raise not-found exception.
@@ -182,8 +190,8 @@ class VaultManager:
         self.drop_vault_data(user_did)
 
         filter_ = {VAULT_SERVICE_DID: user_did}
-        cli = self.mcli.get_management_collection(VAULT_SERVICE_COL)
-        cli.delete_one(filter_)
+        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
+        col.delete_one(filter_)
 
     def recalculate_user_databases_size(self, user_did: str):
         """ Update all databases used size in vault """

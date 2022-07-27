@@ -31,6 +31,13 @@ class BackupManager:
     def __init__(self):
         self.mcli = MongodbClient()
 
+    def get_all_backups(self):
+        backups = self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER).find_many({})
+        if not backups:
+            raise BackupNotFoundException()
+
+        return list(map(lambda d: Backup(d), backups))
+
     def get_backup_count(self) -> int:
         col = self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER)
         return col.count({})

@@ -10,13 +10,14 @@ from src.modules.database.mongodb_client import MongodbClient
 from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
 from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.subscription.subscription import VaultSubscription
+from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
     BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER, USR_DID, BACKUP_REQUEST_STATE_SUCCESS
 from src.utils.db_client import cli
 from src.utils.file_manager import fm
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
-    InsufficientStorageException, NotImplementedException
+    InsufficientStorageException, NotImplementedException, VaultNotFoundException
 from src.utils_v1.constants import DID_INFO_DB_NAME, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
     VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE
@@ -30,6 +31,7 @@ class IpfsBackupServer:
         self.auth = Auth()
         self.mcli = MongodbClient()
         self.user_manager = UserManager()
+        self.vault_manager = VaultManager()
 
     def promotion(self):
         """ This processing is just like restore the vault:
@@ -41,8 +43,14 @@ class IpfsBackupServer:
         5. restore all user databases.
         """
         doc = self.find_backup_request(g.usr_did, throw_exception=True)
-        self.vault.get_checked_vault(g.usr_did, is_not_exist_raise=False)
-        vault = self.vault.create_vault(g.usr_did, self.vault.get_price_plan('vault', 'Free'), is_upgraded=True)
+
+        try:
+            self.vault_manager.get_vault(g.usr_did)
+            raise AlreadyExistsException('The vault already exists.')
+        except VaultNotFoundException as e:
+            pass
+
+        vault = self.vault_manager.create_vault(g.usr_did, PaymentConfig.get_vault_plan('Free'), is_upgraded=True)
         request_metadata = self.get_server_request_metadata(g.usr_did, doc, is_promotion=True,
                                                             vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
 

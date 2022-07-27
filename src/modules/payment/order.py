@@ -54,7 +54,7 @@ class Order:
 
     def get_plan(self) -> t.Optional[dict]:
         name = self.doc[COL_ORDERS_PRICING_NAME]
-        return PaymentConfig.get_pricing_plan(name) if self.is_for_vault() else PaymentConfig.get_backup_plan(name)
+        return PaymentConfig.get_vault_plan(name) if self.is_for_vault() else PaymentConfig.get_backup_plan(name)
 
     def set_contract_order_id(self, contract_order_id):
         self.doc[COL_ORDERS_CONTRACT_ORDER_ID] = contract_order_id

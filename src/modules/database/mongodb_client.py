@@ -318,4 +318,4 @@ class MongodbClient:
         database = self.__get_database(name)
 
         # count size by command: https://www.mongodb.com/docs/v4.4/reference/command/dbStats/
-        return database.command('dbstats')['totalSize']
+        return int(database.command('dbstats')['totalSize'])

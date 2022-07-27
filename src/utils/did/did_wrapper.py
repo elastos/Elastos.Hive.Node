@@ -382,8 +382,8 @@ class DIDStore:
         """
         dids = []
 
-        @ffi.callback("int(struct DID *, void *)")
-        def did_callback(did, context):
+        @ffi.def_extern()
+        def ListDIDsCallback(did, context):
             # INFO: contains a terminating signal by a did with None.
             if did:
                 did_str = ffi.new('char[64]')
@@ -394,7 +394,7 @@ class DIDStore:
             return 0
 
         filter_has_private_keys = 1
-        ret_value = lib.DIDStore_ListDIDs(self.store, filter_has_private_keys, did_callback, ffi.NULL)
+        ret_value = lib.DIDStore_ListDIDs(self.store, filter_has_private_keys, lib.ListDIDsCallback, ffi.NULL)
         if ret_value != 0:
             raise ElaDIDException(ElaError.get_from_method())
 

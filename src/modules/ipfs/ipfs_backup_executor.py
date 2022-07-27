@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime
 
 from src.modules.ipfs.backup_server_client import BackupServerClient
-from src.modules.ipfs.ipfs_cid_ref import IpfsCidRef
+from src.modules.files.ipfs_cid_ref import IpfsCidRef
 from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID, BACKUP_REQUEST_STATE_PROCESS, BACKUP_REQUEST_TARGET_HOST, \
     BACKUP_REQUEST_TARGET_TOKEN

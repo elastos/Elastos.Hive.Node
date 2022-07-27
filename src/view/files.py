@@ -5,7 +5,7 @@ The view of ipfs module for files and scripting.
 """
 from flask_restful import Resource
 
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.files.files_service import IpfsFiles
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import rqargs
 from src.utils.http_response import response_stream

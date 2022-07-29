@@ -146,7 +146,7 @@ class IpfsFiles:
             'hash': metadata[COL_IPFS_FILES_SHA256]
         }
 
-    def upload_file_with_path(self, user_did, app_did, path: str, is_public: bool = False):
+    def upload_file_with_path(self, user_did, app_did, file_path: str, is_public: bool = False):
         """ The routine to process the file uploading:
             1. Receive the content of uploaded file and cache it a temp file;
             2. Add this file onto IPFS node and return with CID;
@@ -157,16 +157,16 @@ class IpfsFiles:
 
         :param user_did: the user did
         :param app_did: the application did
-        :param path: the file relative path, not None
+        :param file_path: the file relative path, not None
         :param is_public: True, any user can access the file content.
         :return: None
         """
         # upload to the temporary file and then to IPFS node.
         temp_file = LocalFile.generate_tmp_file()
         LocalFile.write_file_by_request_stream(temp_file)
-        return self.upload_file_from_local(user_did, app_did, path, temp_file, is_public=is_public)
+        return self.upload_file_from_local(user_did, app_did, file_path, temp_file, is_public=is_public)
 
-    def upload_file_from_local(self, user_did, app_did, path: str, local_path: Path, is_public=False, only_import=False, **kwargs):
+    def upload_file_from_local(self, user_did, app_did, file_path: str, local_path: Path, is_public=False, only_import=False, **kwargs):
         """ Upload file to ipfs node from local file.
         1. 'only_import' and 'kwargs' is only for v1 relating script.
 
@@ -178,9 +178,9 @@ class IpfsFiles:
 
         'public' for upgrading files service from v1 to v2 (local -> ipfs)
 
-        :param user_did:
-        :param app_did:
-        :param path:
+        :param user_did: user did
+        :param app_did: application did
+        :param file_path: file path
         :param local_path: the uploading based file.
         :param is_public: True, any user can access the file content.
         :param only_import: Just import the file to ipfs node, keep the local file and not increase the file storage usage size.
@@ -190,10 +190,10 @@ class IpfsFiles:
         new_cid, increased_size = self.ipfs_client.upload_file(local_path), 0
 
         # insert or update file metadata.
-        old_metadata = self.get_file_metadata(user_did, app_did, path, throw_exception=False)
+        old_metadata = self.get_file_metadata(user_did, app_did, file_path, throw_exception=False)
 
         sha256, size = LocalFile.get_sha256(local_path.as_posix()), local_path.stat().st_size
-        new_metadata = self.file_manager.add_metadata(user_did, app_did, local_path.as_posix(), sha256, size, new_cid)  # add new or update exist one
+        new_metadata = self.file_manager.add_metadata(user_did, app_did, file_path, sha256, size, new_cid)  # add new or update exist one
         if not old_metadata:
             IpfsCidRef(new_cid).increase()
             increased_size = size
@@ -257,11 +257,11 @@ class IpfsFiles:
 
         # check two file paths
         src_metadata = self.file_manager.get_metadata(user_did, app_did, src_path)
-        dst_metadata = self.file_manager.get_metadata(user_did, app_did, src_path)
-        if not src_metadata:
-            raise FileNotFoundException(f'The source file {src_path} not found, impossible to move/copy.')
-        if dst_metadata:
-            raise AlreadyExistsException(f'A file with destnation name {dst_path} already exists, impossible to move/copy')
+        try:
+            dst_metadata = self.file_manager.get_metadata(user_did, app_did, dst_path)
+            raise AlreadyExistsException(f'The destination file {dst_path} already exists, impossible to {"copy" if is_copy else "move"}.')
+        except FileNotFoundException:
+            pass
 
         # do copy or move
         if is_copy:

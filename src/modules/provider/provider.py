@@ -20,7 +20,6 @@ from src.utils_v1.constants import VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USIN
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_USE_STORAGE
 from src.utils.consts import USR_DID
 from src.utils.http_exception import ForbiddenException, ReceiptNotFoundException
-from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
 from src.modules.payment.order import OrderManager
 
 
@@ -28,7 +27,6 @@ class Provider:
     def __init__(self):
         self.owner_did, self.credential = Provider.get_verified_owner_did()
         logging.info(f'Owner DID: {self.owner_did}')
-        self.backup_server = IpfsBackupServer()
         self.order_manager = OrderManager()
         self.vault_manager = VaultManager()
         self.backup_manager = BackupManager()

@@ -1,17 +1,14 @@
 import logging
-import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 from flask_executor import Executor
-from sentry_sdk import capture_exception
 
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
-from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
+from src.modules.backup.backup_client import BackupClient
+from src.modules.backup.backup_server import BackupServer
 from src.modules.subscription.vault import VaultManager
 from src.utils import hive_job
-from src.utils.db_client import cli
 from src.utils.scheduler import count_vault_storage_really
 from src.utils_v1.constants import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST
 
@@ -66,7 +63,7 @@ def retry_backup_when_reboot_task():
     1. handle all backup request in the vault node.
     2. handle all backup request in the backup node.
     """
-    client, server = IpfsBackupClient(), IpfsBackupServer()
+    client, server = BackupClient(), BackupServer()
     client.retry_backup_request()
     server.retry_backup_request()
 

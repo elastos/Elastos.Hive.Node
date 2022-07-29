@@ -7,8 +7,8 @@ from flask import g
 from src.modules.auth.auth import Auth
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
-from src.modules.ipfs.ipfs_backup_executor import ExecutorBase, BackupServerExecutor
+from src.modules.backup.backup_client import BackupClient
+from src.modules.backup.backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.subscription.subscription import VaultSubscription
 from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \
@@ -24,10 +24,10 @@ from src.utils_v1.constants import DID_INFO_DB_NAME, \
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 
-class IpfsBackupServer:
+class BackupServer:
     def __init__(self):
         self.vault = VaultSubscription()
-        self.client = IpfsBackupClient()
+        self.client = BackupClient()
         self.auth = Auth()
         self.mcli = MongodbClient()
         self.user_manager = UserManager()

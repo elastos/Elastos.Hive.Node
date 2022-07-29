@@ -42,12 +42,12 @@ from src.utils.file_manager import fm
 from src.modules.auth.auth import Auth
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.ipfs.backup_server_client import BackupServerClient
-from src.modules.ipfs.ipfs_backup_executor import BackupExecutor, RestoreExecutor
+from src.modules.backup.backup_server_client import BackupServerClient
+from src.modules.backup.backup_executor import BackupExecutor, RestoreExecutor
 from src.modules.subscription.vault import VaultManager
 
 
-class IpfsBackupClient:
+class BackupClient:
     def __init__(self):
         self.auth = Auth()
         self.http = HttpClient()
@@ -236,18 +236,18 @@ class IpfsBackupClient:
     def restore_database_by_dump_files(self, request_metadata):
         databases = request_metadata['databases']
         if not databases:
-            logging.info('[IpfsBackupClient] No user databases dump files, skip.')
+            logging.info('[BackupClient] No user databases dump files, skip.')
             return
         for d in databases:
             temp_file = gene_temp_file_name()
             msg = fm.ipfs_download_file_to_path(d['cid'], temp_file, is_proxy=True, sha256=d['sha256'], size=d['size'])
             if msg:
-                logging.error(f'[IpfsBackupClient] Failed to download dump file for database {d["name"]}.')
+                logging.error(f'[BackupClient] Failed to download dump file for database {d["name"]}.')
                 temp_file.unlink()
                 raise BadRequestException(msg)
             restore_mongodb_from_full_path(temp_file)
             temp_file.unlink()
-            logging.info(f'[IpfsBackupClient] Success to restore the dump file for database {d["name"]}.')
+            logging.info(f'[BackupClient] Success to restore the dump file for database {d["name"]}.')
 
     def retry_backup_request(self):
         """ retry unfinished backup&restore action when node rebooted """
@@ -262,11 +262,11 @@ class IpfsBackupClient:
             # only handle the state BACKUP_REQUEST_STATE_INPROGRESS
 
             user_did = req[USR_DID]
-            logging.info(f"[IpfsBackupClient] Found unfinished request({user_did}), retry.")
+            logging.info(f"[BackupClient] Found unfinished request({user_did}), retry.")
 
             if req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_BACKUP:
                 BackupExecutor(user_did, self, req, start_delay=30).start()
             elif req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_RESTORE:
                 RestoreExecutor(user_did, self, start_delay=30).start()
             else:
-                logging.error(f'[IpfsBackupClient] Unknown action({req.get(BACKUP_REQUEST_ACTION)}), skip.')
+                logging.error(f'[BackupClient] Unknown action({req.get(BACKUP_REQUEST_ACTION)}), skip.')

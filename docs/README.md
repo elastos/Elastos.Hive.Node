@@ -12,9 +12,7 @@ Then install the packages for document generation:
 
 ```shell script
 $ source .venv/bin/activate
-$ pip install -U sphinx
-$ pip install sphinxcontrib_httpdomain
-$ pip install sphinx-rtd-theme
+$ pip install sphinx sphinxcontrib_httpdomain sphinx-rtd-theme werkzeug==2.1.2
 ```
 
 #### Generate the document

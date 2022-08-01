@@ -395,6 +395,63 @@ which will help caller debug the errors.
         }
     }
 
+400 Bad Request
+---------------
+
+Internal code list:
+
+    - 1, invalid parameter
+    - 2, backup is in progress
+    - 3, eladid.so error
+
+401 Unauthorized
+----------------
+
+No internal code defined
+
+403 Forbidden
+-------------
+
+Internal code list:
+
+    - 1, vault frozen
+
+
+404 Not Found
+-------------
+
+Internal code list:
+
+    - 1, vault not found
+    - 2, backup service not found
+    - 3, script not found
+    - 4, collection not found
+    - 5, pricing plan not found
+    - 6, file not found
+    - 7, order not found
+    - 8, receipt not found
+    - 9, application not found
+
+455 Already Exists
+------------------
+
+No internal code defined
+
+500 Internal Server Error
+-------------------------
+
+No internal code defined
+
+501 Not Implemented Error
+-------------------------
+
+No internal code defined
+
+507 Insufficient Storage
+------------------------
+
+No internal code defined
+
 Appendix B: Collections
 =======================
 

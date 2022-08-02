@@ -24,7 +24,7 @@ class HiveSetting:
 
     @property
     def ESC_RESOLVER_URL(self):
-        return self.env_config('ESC_RESOLVER_URL', default='https://api.elastos.io/ela', cast=str)
+        return self.env_config('ESC_RESOLVER_URL', default='https://api.elastos.io/eth', cast=str)
 
     @property
     def SERVICE_DID(self):
@@ -95,10 +95,6 @@ class HiveSetting:
         if path.startswith('/'):
             return path
         return os.path.join(BASE_DIR, path)
-
-    @property
-    def PAYMENT_CONTRACT_URL(self):
-        return self.env_config('PAYMENT_CONTRACT_URL', default='', cast=str)
 
     @property
     def PAYMENT_CONTRACT_ADDRESS(self):

@@ -18,6 +18,7 @@ from src.utils.http_exception import BadRequestException, AlreadyExistsException
 
 class DatabaseClient:
     def __init__(self):
+        """ @deprecated """
         self.mongodb_uri = hive_setting.MONGODB_URL
         self.connection = None
 

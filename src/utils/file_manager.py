@@ -28,6 +28,7 @@ from src.utils.http_exception import BadRequestException, VaultNotFoundException
 
 class FileManager:
     def __init__(self):
+        """ @deprecated """
         self._http = None
         self.ipfs_url = hive_setting.IPFS_NODE_URL
         self.ipfs_gateway_url = hive_setting.IPFS_GATEWAY_URL

@@ -171,7 +171,7 @@ class IpfsFiles:
         :return: None
         """
         # upload to the temporary file and then to IPFS node.
-        temp_file = LocalFile.generate_tmp_file()
+        temp_file = LocalFile.generate_tmp_file_path()
         LocalFile.write_file_by_request_stream(temp_file)
         return self.upload_file_from_local(user_did, app_did, file_path, temp_file, is_encrypt, encrypt_method)
 

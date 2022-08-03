@@ -28,23 +28,22 @@ import typing as t
 
 from flask import g
 
+from src.modules.files.ipfs_client import IpfsClient
 from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
     URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, \
     COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2
-from src.utils_v1.common import gene_temp_file_name
-from src.utils_v1.did_mongo_db_resource import dump_mongodb_to_full_path, restore_mongodb_from_full_path
 from src.utils.http_exception import BadRequestException, InsufficientStorageException
+from src.modules.files.local_file import LocalFile
 from src.utils.http_client import HttpClient
-from src.utils.file_manager import fm
 from src.modules.auth.auth import Auth
 from src.modules.auth.user import UserManager
+from src.modules.subscription.vault import VaultManager
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.backup.backup_server_client import BackupServerClient
-from src.modules.backup.backup_executor import BackupExecutor, RestoreExecutor
-from src.modules.subscription.vault import VaultManager
+from src.modules.backup.backup_executor import BackupClientExecutor, RestoreExecutor
 
 
 class BackupClient:
@@ -54,6 +53,7 @@ class BackupClient:
         self.mcli = MongodbClient()
         self.user_manager = UserManager()
         self.vault_manager = VaultManager()
+        self.ipfs_client = IpfsClient()
 
     def get_state(self):
         """ :v2 API: """
@@ -92,7 +92,7 @@ class BackupClient:
         credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
         client = self.__validate_remote_state(credential_info['targetHost'], credential, is_force, is_restore=False)
         req = self.__save_request_doc(g.usr_did, credential_info, client.get_token(), is_restore=False)
-        BackupExecutor(g.usr_did, self, req, is_force=is_force).start()
+        BackupClientExecutor(g.usr_did, self, req, is_force=is_force).start()
 
     def restore(self, credential, is_force):
         """
@@ -168,9 +168,9 @@ class BackupClient:
         self.mcli.get_management_collection(COL_IPFS_BACKUP_CLIENT).update_one(filter_, update)
 
     def dump_database_data_to_backup_cids(self, user_did, process_callback=t.Optional[t.Callable[[int, int], None]]):
-        """
-        Each application holds its database under same user did.
-        The steps to dump each database data to each application under the specific did:
+        """ Each application holds its databases under the same user did.
+        The steps to dump each database data to each application is under the specific user did and application did:
+
         - dump the specific database to a snapshot file;
         - upload this snapshot file into IPFS node
         """
@@ -181,27 +181,20 @@ class BackupClient:
                 process_callback(i + 1, length)
 
             d = {
-                'path': gene_temp_file_name(),
+                'path': LocalFile.generate_tmp_file_path(),
                 'name': names[i]
             }
             # dump the database data to snapshot file.
-            dump_mongodb_to_full_path(d['name'], d['path'])
+            LocalFile.dump_mongodb_to_full_path(d['name'], d['path'])
 
             # upload this snapshot file onto IPFS node.
-            d['cid'] = fm.ipfs_upload_file_from_path(d['path'])
-            d['sha256'] = fm.get_file_content_sha256(d['path'])
+            d['cid'] = self.ipfs_client.upload_file(d['path'])
+            d['sha256'] = LocalFile.get_sha256(d['path'].as_posix())
             d['size'] = d['path'].stat().st_size
             d['path'].unlink()
 
             metadata_list.append(d)
         return metadata_list
-
-    def get_files_data_as_backup_cids(self, user_did):
-        """
-        All files data of the vault have been uploaded to IPFS node and save with array of cids.
-        The method here is to get array of cids to save it as json document then.
-        """
-        return fm.get_file_cid_metadatas(user_did)
 
     def send_root_backup_cid_to_backup_node(self, user_did, cid, sha256, size, is_force):
         """
@@ -227,7 +220,7 @@ class BackupClient:
         req = self.__get_request_doc(user_did)
         data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])
-        request_metadata = fm.ipfs_download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
+        request_metadata = self.ipfs_client.download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
 
         if request_metadata['vault_size'] > self.vault_manager.get_vault(user_did).get_storage_quota():
             raise InsufficientStorageException('No enough space to restore, please upgrade the vault and try again.')
@@ -239,13 +232,13 @@ class BackupClient:
             logging.info('[BackupClient] No user databases dump files, skip.')
             return
         for d in databases:
-            temp_file = gene_temp_file_name()
-            msg = fm.ipfs_download_file_to_path(d['cid'], temp_file, is_proxy=True, sha256=d['sha256'], size=d['size'])
+            temp_file = LocalFile.generate_tmp_file_path()
+            msg = self.ipfs_client.download_file(d['cid'], temp_file, is_proxy=True, sha256=d['sha256'], size=d['size'])
             if msg:
                 logging.error(f'[BackupClient] Failed to download dump file for database {d["name"]}.')
                 temp_file.unlink()
                 raise BadRequestException(msg)
-            restore_mongodb_from_full_path(temp_file)
+            LocalFile.restore_mongodb_from_full_path(temp_file)
             temp_file.unlink()
             logging.info(f'[BackupClient] Success to restore the dump file for database {d["name"]}.')
 
@@ -265,7 +258,7 @@ class BackupClient:
             logging.info(f"[BackupClient] Found unfinished request({user_did}), retry.")
 
             if req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_BACKUP:
-                BackupExecutor(user_did, self, req, start_delay=30).start()
+                BackupClientExecutor(user_did, self, req, start_delay=30).start()
             elif req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_RESTORE:
                 RestoreExecutor(user_did, self, start_delay=30).start()
             else:

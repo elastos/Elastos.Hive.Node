@@ -1,6 +1,8 @@
+import json
 from pathlib import Path
 
 from src import hive_setting
+from src.utils.http_exception import BadRequestException
 from src.modules.files.local_file import LocalFile
 
 
@@ -36,3 +38,14 @@ class IpfsClient:
             cid_sha256 = LocalFile.get_sha256(file_path.as_posix())
             if sha256 != cid_sha256:
                 return f'Failed to get file content with cid {cid}, sha256 {sha256, cid_sha256}'
+
+    def download_file_content(self, cid, is_proxy=False, sha256=None, size=None) -> dict:
+        temp_file = LocalFile.generate_tmp_file_path()
+        msg = self.download_file(cid, temp_file, is_proxy=is_proxy, sha256=sha256, size=size)
+        if msg:
+            temp_file.unlink()
+            raise BadRequestException(msg)
+        with temp_file.open() as f:
+            metadata = json.load(f)
+        temp_file.unlink()
+        return metadata

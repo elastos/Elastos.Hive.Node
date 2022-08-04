@@ -15,7 +15,7 @@ from src.utils_v1.common import did_tail_part
 
 def create_db_client():
     """ Create the instance of the MongoClient by the setting MONGO_TYPE. """
-    return MongoClient(hive_setting.MONGODB_URI)
+    return MongoClient(hive_setting.MONGODB_URL)
 
 
 def convert_oid(query, update=False):
@@ -186,7 +186,7 @@ def get_save_mongo_db_path(did):
 
 def dump_mongodb_to_full_path(db_name, full_path: Path):
     try:
-        line2 = f'mongodump --uri="{hive_setting.MONGODB_URI}" -d {db_name} --archive="{full_path.as_posix()}"'
+        line2 = f'mongodump --uri="{hive_setting.MONGODB_URL}" -d {db_name} --archive="{full_path.as_posix()}"'
         subprocess.check_output(line2, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise BadRequestException(f'Failed to dump database {db_name}: {e.output}')
@@ -199,7 +199,7 @@ def restore_mongodb_from_full_path(full_path: Path):
     try:
         # https://www.mongodb.com/docs/database-tools/mongorestore/#cmdoption--drop
         # --drop: drop collections before restore, but does not drop collections that are not in the backup.
-        line2 = f'mongorestore --uri="{hive_setting.MONGODB_URI}" --drop --archive="{full_path.as_posix()}"'
+        line2 = f'mongorestore --uri="{hive_setting.MONGODB_URL}" --drop --archive="{full_path.as_posix()}"'
         subprocess.check_output(line2, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise BadRequestException(f'Failed to load database by {full_path.as_posix()}: {e.output}')

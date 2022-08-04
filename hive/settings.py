@@ -29,8 +29,8 @@ class HiveSetting:
         return self.env_config('ESC_RESOLVER_URL', default='https://api.elastos.io/ela', cast=str)
 
     @property
-    def SERVICE_DID(self):
-        return self.env_config('SERVICE_DID', default='', cast=str)
+    def SERVICE_DID_PRIVATE_KEY(self):
+        return self.env_config('SERVICE_DID_PRIVATE_KEY', default='', cast=str)
 
     @property
     def PASSPHRASE(self):
@@ -83,8 +83,8 @@ class HiveSetting:
         return self.env_config('PAYMENT_RECEIVING_ADDRESS', default='EN9YK69ScA6WFgVQW3UZcmSRLSCStaU2pQ', cast=str)
 
     @property
-    def MONGODB_URI(self):
-        return self.env_config('MONGODB_URI', default='mongodb://hive-mongo:27017', cast=str)
+    def MONGODB_URL(self):
+        return self.env_config('MONGODB_URL', default='mongodb://hive-mongo:27017', cast=str)
 
     @property
     def VERSION(self):

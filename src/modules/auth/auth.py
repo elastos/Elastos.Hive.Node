@@ -26,7 +26,7 @@ from src.utils.singleton import Singleton
 class Auth(Entity, metaclass=Singleton):
     def __init__(self):
         Entity.__init__(self, "hive.auth", passphrase=hive_setting.PASSPHRASE, storepass=hive_setting.PASSWORD,
-                        from_file=True, file_content=hive_setting.SERVICE_DID)
+                        from_file=True, file_content=hive_setting.SERVICE_DID_PRIVATE_KEY)
         self.http = HttpClient()
         self.mcli = MongodbClient()
         self.user_manager = UserManager()

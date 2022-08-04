@@ -221,7 +221,7 @@ class MongodbClient:
     """
 
     def __init__(self):
-        self.mongodb_uri = hive_setting.MONGODB_URI
+        self.mongodb_uri = hive_setting.MONGODB_URL
         self.connection = None
 
     def __get_connection(self):

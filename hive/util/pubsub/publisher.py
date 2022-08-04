@@ -16,7 +16,7 @@ def pub_setup_channel(pub_did, pub_appid, channel_name):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
@@ -42,7 +42,7 @@ def pub_remove_channel(pub_did, pub_appid, channel_name):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
@@ -65,7 +65,7 @@ def pub_get_channel(pub_did, pub_appid, channel_name):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
@@ -83,7 +83,7 @@ def pub_get_pub_channels(pub_did, pub_appid):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
@@ -103,7 +103,7 @@ def pub_get_sub_channels(sub_did, sub_appid):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
@@ -127,7 +127,7 @@ def pub_add_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
@@ -155,7 +155,7 @@ def pub_remove_subscribe(pub_did, pub_appid, channel_name, sub_did, sub_appid):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
@@ -171,7 +171,7 @@ def pub_get_subscriber(pub_did, pub_appid, channel_name, sub_did, sub_appid):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]
@@ -189,7 +189,7 @@ def pub_get_subscriber_list(pub_did, pub_appid, channel_name):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db = connection[DID_INFO_DB_NAME]
     col = db[PUB_CHANNEL_COLLECTION]

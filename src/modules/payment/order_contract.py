@@ -1,3 +1,4 @@
+import logging
 import os
 import json
 import typing as t
@@ -15,6 +16,7 @@ class OrderContract:
         self.url = hive_setting.ESC_RESOLVER_URL
         self.address = Web3.toChecksumAddress(hive_setting.PAYMENT_CONTRACT_ADDRESS)
         assert self.url and self.address and 'Please set payment url and address on the .env file.'
+        logging.info(f'Payment contract config: contract resolver url, {self.url}, contract address, {self.address}')
         with open(os.path.join(BASE_DIR, 'order_abi.json')) as f:
             self.abi = json.load(f)
 

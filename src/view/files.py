@@ -18,9 +18,10 @@ class ReadingOperation(Resource):
     @response_stream
     def get(self, path):
         """ Download/get the properties of/get the hash of the file, list the files of the folder.
-        Download the content of the file by path if no URL parameter.
 
         .. :quickref: 04 Files; Download/properties/hash/list
+
+        Download the content of the file by path if no URL parameter.
 
         **Request**:
 
@@ -71,11 +72,13 @@ class ReadingOperation(Resource):
             {
                 “value”: [{
                     “name”: “<path/to/res>”
-                    “is_file”: false,
-                    “size”: <Integer>
+                    “is_file”: true,
+                    “size”: <int>,
+                    "is_encrypt": false,
+                    "encrypt_method": ""
                 }, {
                     “name”: “<path/to/dir>”
-                    “is_file”: true
+                    “is_file”: false
                 }]
             }
 
@@ -112,9 +115,11 @@ class ReadingOperation(Resource):
             {
                 “name”: <path/to/res>,
                 “is_file”: <true: file, false: folder>,
-                “size”: <size>,
-                “created”: <created timestamp>
-                “updated”: <updated timestamp>
+                “size”: <int>,
+                "is_encrypt": false,
+                "encrypt_method": "",
+                “created”: <timestamp>,
+                “updated”: <timestamp>
             }
 
         **Response Error**:
@@ -307,7 +312,7 @@ class WritingOperation(Resource):
             if is_encrypt and not encrypt_method:
                 raise InvalidParameterException("MUST provide 'encrypt_method' when 'is_encrypt' is true.")
 
-            return self.ipfs_files.upload_file(path, is_public, script_name)
+            return self.ipfs_files.upload_file(path, is_public, script_name, is_encrypt, encrypt_method)
 
         if path == dst_path:
             raise InvalidParameterException(f'The source file {path} can be copied to a target file with the same name')

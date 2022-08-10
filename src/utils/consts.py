@@ -70,6 +70,8 @@ COL_IPFS_FILES_PATH = 'path'
 COL_IPFS_FILES_SHA256 = 'sha256'
 COL_IPFS_FILES_IS_FILE = 'is_file'
 COL_IPFS_FILES_IPFS_CID = 'ipfs_cid'
+COL_IPFS_FILES_IS_ENCRYPT = 'is_encrypt'
+COL_IPFS_FILES_ENCRYPT_METHOD = 'encrypt_method'
 
 COL_IPFS_CID_REF = 'ipfs_cid_ref'
 

@@ -1,4 +1,5 @@
-from src.utils.consts import USR_DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID
+from src.utils.consts import USR_DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, \
+    COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, COL_IPFS_FILES_ENCRYPT_METHOD
 from src.utils.http_exception import FileNotFoundException
 from src.modules.files.ipfs_cid_ref import IpfsCidRef
 from src.modules.database.mongodb_client import MongodbClient, Dotdict
@@ -45,7 +46,7 @@ class FileMetadataManager:
 
         return FileMetadata(**doc)
 
-    def add_metadata(self, user_did, app_did, rel_path: str, sha256: str, size: int, cid: str):
+    def add_metadata(self, user_did, app_did, rel_path: str, sha256: str, size: int, cid: str, is_encrypt: bool, encrypt_method: str):
         """ add or update the file metadata """
         filter_ = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: rel_path}
         update = {'$set': {
@@ -53,6 +54,8 @@ class FileMetadataManager:
             COL_IPFS_FILES_IS_FILE: True,
             SIZE: size,
             COL_IPFS_FILES_IPFS_CID: cid,
+            COL_IPFS_FILES_IS_ENCRYPT: is_encrypt,  # added from v2.9
+            COL_IPFS_FILES_ENCRYPT_METHOD: encrypt_method,  # added from v2.9
         }}
         self.__get_col(user_did, app_did).update_one(filter_, update, upsert=True)
 

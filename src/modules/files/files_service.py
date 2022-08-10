@@ -12,7 +12,8 @@ from flask import g
 from src.modules.files.file_metadata import FileMetadataManager
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.files.local_file import LocalFile
-from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID
+from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, \
+    COL_IPFS_FILES_ENCRYPT_METHOD
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
 from src.modules.files.ipfs_cid_ref import IpfsCidRef
 from src.modules.subscription.vault import VaultManager
@@ -32,14 +33,17 @@ class IpfsFiles:
         self.file_manager = FileMetadataManager()
         self.ipfs_client = IpfsClient()
 
-    def upload_file(self, path, is_public: bool, script_name: str):
+    def upload_file(self, path, is_public: bool, script_name: str, is_encrypt: bool, encrypt_method: str):
         """ :v2 API: """
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
-        cid = self.upload_file_with_path(g.usr_did, g.app_did, path, is_public=is_public)
+        cid = self.upload_file_with_path(g.usr_did, g.app_did, path, is_encrypt, encrypt_method)
+
+        # anonymous share to any users
         if is_public:
             from src.modules.scripting.scripting import Scripting
             Scripting().set_script_for_anonymous_file(script_name, path)
+
         return {
             'name': path,
             'cid': cid if is_public else ''
@@ -102,11 +106,13 @@ class IpfsFiles:
         """
         self.vault_manager.get_vault(g.usr_did)
 
-        def get_out_file_info(file_doc):
+        def get_out_file_info(metadata):
             return {
-                'name': file_doc[COL_IPFS_FILES_PATH],
-                'is_file': file_doc[COL_IPFS_FILES_IS_FILE],
-                'size': file_doc[SIZE],
+                'name': metadata[COL_IPFS_FILES_PATH],
+                'is_file': metadata[COL_IPFS_FILES_IS_FILE],
+                'size': metadata[SIZE],
+                'is_encrypt': metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False),
+                'encrypt_method': metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''),
             }
 
         docs = self.list_folder_with_path(g.usr_did, g.app_did, path)
@@ -131,6 +137,8 @@ class IpfsFiles:
             'name': metadata[COL_IPFS_FILES_PATH],
             'is_file': metadata[COL_IPFS_FILES_IS_FILE],
             'size': int(metadata[SIZE]),
+            'is_encrypt': metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False),
+            'encrypt_method': metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''),
             'created': int(metadata['created']),
             'updated': int(metadata['modified']),
         }
@@ -146,7 +154,7 @@ class IpfsFiles:
             'hash': metadata[COL_IPFS_FILES_SHA256]
         }
 
-    def upload_file_with_path(self, user_did, app_did, file_path: str, is_public: bool = False):
+    def upload_file_with_path(self, user_did, app_did, file_path: str, is_encrypt, encrypt_method):
         """ The routine to process the file uploading:
             1. Receive the content of uploaded file and cache it a temp file;
             2. Add this file onto IPFS node and return with CID;
@@ -158,15 +166,16 @@ class IpfsFiles:
         :param user_did: the user did
         :param app_did: the application did
         :param file_path: the file relative path, not None
-        :param is_public: True, any user can access the file content.
+        :param is_encrypt
+        :param encrypt_method
         :return: None
         """
         # upload to the temporary file and then to IPFS node.
         temp_file = LocalFile.generate_tmp_file()
         LocalFile.write_file_by_request_stream(temp_file)
-        return self.upload_file_from_local(user_did, app_did, file_path, temp_file, is_public=is_public)
+        return self.upload_file_from_local(user_did, app_did, file_path, temp_file, is_encrypt, encrypt_method)
 
-    def upload_file_from_local(self, user_did, app_did, file_path: str, local_path: Path, is_public=False, only_import=False, **kwargs):
+    def upload_file_from_local(self, user_did, app_did, file_path: str, local_path: Path, is_encrypt, encrypt_method, only_import=False):
         """ Upload file to ipfs node from local file.
         1. 'only_import' and 'kwargs' is only for v1 relating script.
 
@@ -182,8 +191,9 @@ class IpfsFiles:
         :param app_did: application did
         :param file_path: file path
         :param local_path: the uploading based file.
-        :param is_public: True, any user can access the file content.
         :param only_import: Just import the file to ipfs node, keep the local file and not increase the file storage usage size.
+        :param is_encrypt
+        :param encrypt_method
         :return None
         """
         # upload the file to ipfs node.
@@ -192,8 +202,9 @@ class IpfsFiles:
         # insert or update file metadata.
         old_metadata = self.get_file_metadata(user_did, app_did, file_path, throw_exception=False)
 
+        # add new or update exist one
         sha256, size = LocalFile.get_sha256(local_path.as_posix()), local_path.stat().st_size
-        new_metadata = self.file_manager.add_metadata(user_did, app_did, file_path, sha256, size, new_cid)  # add new or update exist one
+        new_metadata = self.file_manager.add_metadata(user_did, app_did, file_path, sha256, size, new_cid, is_encrypt, encrypt_method)
         if not old_metadata:
             IpfsCidRef(new_cid).increase()
             increased_size = size

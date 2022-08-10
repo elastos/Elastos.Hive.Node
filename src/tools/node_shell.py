@@ -2,7 +2,7 @@
 """
 Debug tools shell
 
-$ python -m src.tools.node_shell
+$ python -m src.tools.node_shell database-name <user_did> <app_did>
 """
 
 import click

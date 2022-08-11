@@ -220,7 +220,7 @@ class BackupClient:
         req = self.__get_request_doc(user_did)
         data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])
-        request_metadata = self.ipfs_client.download_file_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
+        request_metadata = self.ipfs_client.download_file_json_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
 
         if request_metadata['vault_size'] > self.vault_manager.get_vault(user_did).get_storage_quota():
             raise InsufficientStorageException('No enough space to restore, please upgrade the vault and try again.')

@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 from src import hive_setting
@@ -39,7 +40,7 @@ class IpfsClient:
             if sha256 != cid_sha256:
                 return f'Failed to get file content with cid {cid}, sha256 {sha256, cid_sha256}'
 
-    def download_file_content(self, cid, is_proxy=False, sha256=None, size=None) -> dict:
+    def download_file_json_content(self, cid, is_proxy=False, sha256=None, size=None) -> dict:
         temp_file = LocalFile.generate_tmp_file_path()
         msg = self.download_file(cid, temp_file, is_proxy=is_proxy, sha256=sha256, size=size)
         if msg:
@@ -49,3 +50,43 @@ class IpfsClient:
             metadata = json.load(f)
         temp_file.unlink()
         return metadata
+
+    def cid_pin(self, cid):
+        # INFO: IPFS does not support that one node directly pin file from other node.
+        logging.info(f'[fm.ipfs_pin_cid] Try to pin {cid} to the local IPFS node.')
+
+        # download the file to local
+        temp_file = LocalFile.generate_tmp_file_path()
+        self.download_file(cid, temp_file, is_proxy=True)
+
+        logging.info(f'[fm.ipfs_pin_cid] Download file OK.')
+
+        # then upload the file to local IPFS node.
+        self.upload_file(temp_file)
+
+        logging.info(f'[fm.ipfs_pin_cid] Upload file OK.')
+
+        # clean the local file.
+        size = temp_file.stat().st_size
+        temp_file.unlink()
+        return size
+
+    def cid_unpin(self, cid):
+        logging.info(f'[fm.ipfs_unpin_cid] Try to unpin {cid} in backup node.')
+
+        if not self.cid_exists(cid):
+            return
+
+        try:
+            response = self.http.post(self.ipfs_url + f'/api/v0/pin/rm?arg=/ipfs/{cid}&recursive=true', None, None, is_body=False, success_code=200)
+        except BadRequestException as e:
+            # skip this error
+            if 'not pinned or pinned indirectly' not in e.msg:
+                raise e
+
+    def cid_exists(self, cid):
+        try:
+            response = self.http.post(f'{self.ipfs_url}/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
+            return True
+        except BadRequestException as e:
+            return False

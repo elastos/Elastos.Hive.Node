@@ -375,9 +375,6 @@ class MoveFile(Resource):
             raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
         dst_path = RV.get_args().get('to', str)
-        if not dst_path:
-            raise InvalidParameterException('The path MUST be provided.')
-
         if path == dst_path:
             raise InvalidParameterException(f'The source file {path} can be moved to a target file with the same name')
 

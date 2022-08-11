@@ -154,7 +154,7 @@ class IpfsFiles:
             'hash': metadata[COL_IPFS_FILES_SHA256]
         }
 
-    def upload_file_with_path(self, user_did, app_did, file_path: str, is_encrypt, encrypt_method):
+    def upload_file_with_path(self, user_did, app_did, file_path: str, is_encrypt=False, encrypt_method=''):
         """ The routine to process the file uploading:
             1. Receive the content of uploaded file and cache it a temp file;
             2. Add this file onto IPFS node and return with CID;
@@ -175,7 +175,7 @@ class IpfsFiles:
         LocalFile.write_file_by_request_stream(temp_file)
         return self.upload_file_from_local(user_did, app_did, file_path, temp_file, is_encrypt, encrypt_method)
 
-    def upload_file_from_local(self, user_did, app_did, file_path: str, local_path: Path, is_encrypt, encrypt_method, only_import=False):
+    def upload_file_from_local(self, user_did, app_did, file_path: str, local_path: Path, is_encrypt=False, encrypt_method='', only_import=False):
         """ Upload file to ipfs node from local file.
         1. 'only_import' and 'kwargs' is only for v1 relating script.
 

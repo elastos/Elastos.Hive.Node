@@ -10,12 +10,12 @@ from datetime import datetime
 from src.modules.backup.backup_server_client import BackupServerClient
 from src.modules.files.file_metadata import FileMetadataManager
 from src.modules.files.ipfs_cid_ref import IpfsCidRef
+from src.modules.files.ipfs_client import IpfsClient
+from src.modules.files.local_file import LocalFile
 from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID, BACKUP_REQUEST_STATE_PROCESS, BACKUP_REQUEST_TARGET_HOST, \
     BACKUP_REQUEST_TARGET_TOKEN
-from src.utils.file_manager import fm
 from src.utils.http_exception import HiveException, BadRequestException
-from src.utils_v1.common import gene_temp_file_name
 
 
 class ExecutorBase(threading.Thread):
@@ -74,13 +74,12 @@ class ExecutorBase(threading.Thread):
             "create_time": datetime.now().timestamp(),
         }
 
-        temp_file = gene_temp_file_name()
+        temp_file = LocalFile.generate_tmp_file_path()
         with temp_file.open('w') as f:
             json.dump(data, f)
 
-        sha256 = fm.get_file_content_sha256(temp_file)
-        size = temp_file.stat().st_size
-        cid = fm.ipfs_upload_file_from_path(temp_file)
+        sha256, size = LocalFile.get_sha256(temp_file.as_posix()), temp_file.stat().st_size
+        cid = IpfsClient().upload_file(temp_file)
         temp_file.unlink()
         return cid, sha256, size, data
 
@@ -116,7 +115,10 @@ class ExecutorBase(threading.Thread):
         :param only_files_ref: Only increase & decrease the cid ref count of the files.
         """
 
-        execute_pin_unpin = fm.ipfs_pin_cid if not is_unpin else fm.ipfs_unpin_cid
+        client = IpfsClient()
+
+        def execute_pin_unpin(cid):
+            client.cid_pin(cid) if not is_unpin else client.cid_unpin(cid)
 
         # pin or unpin the cid of request_metadata
         if root_cid:

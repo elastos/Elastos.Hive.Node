@@ -277,7 +277,8 @@ class IpfsFiles:
         # do copy or move
         if is_copy:
             self.file_manager.add_metadata(user_did, app_did, dst_path,
-                                           src_metadata[COL_IPFS_FILES_SHA256], src_metadata[SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID])
+                                           src_metadata[COL_IPFS_FILES_SHA256], src_metadata[SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID],
+                                           src_metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False), src_metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''))
             IpfsCidRef(src_metadata[COL_IPFS_FILES_IPFS_CID]).increase()
             self.vault_manager.update_user_files_size(user_did, src_metadata[SIZE])
         else:

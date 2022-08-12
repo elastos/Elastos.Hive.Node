@@ -33,6 +33,7 @@ app = Flask('Hive Node V2')
 app.url_map.converters['folder_path'] = FileFolderPath
 app.url_map.converters['regex'] = RegexConverter
 api = HiveApi(app, prefix='/api/v2')
+api_hivehub = HiveApi(app, prefix='')
 
 
 @app.before_request
@@ -115,11 +116,12 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     PaymentConfig.init_config()
 
     # init v1 APIs
-    hive.main.init_app(app, mode)
+    # hive.main.init_app(app, mode)
 
     if mode != HIVE_MODE_TEST:
         # init v2 APIs
-        view.init_app(api)
+        # view.init_app(api)
+        view.init_hivehub_backend(api_hivehub)
 
         logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
         logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')

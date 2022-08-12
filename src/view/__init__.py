@@ -5,7 +5,7 @@ from flask_restful import Api
 
 from src import hive_setting
 from src.utils.consts import URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, URL_SERVER_INTERNAL_STATE
-from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider
+from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider, hivehub
 
 
 def init_app(api: Api):
@@ -81,3 +81,13 @@ def init_app(api: Api):
         api.add_resource(payment.Receipts, '/payment/receipt', endpoint='payment.receipts')
 
     logging.getLogger('v2_init').info('leave init_app')
+
+
+def init_hivehub_backend(api: Api):
+    logging.getLogger('v2_init').info('enter init_hivehub_backend')
+
+    # hivehub
+    api.add_resource(hivehub.GetNodes, '/api/hivehub/nodes', endpoint='hivehub.get_nodes')
+    api.add_resource(hivehub.AddNode, '/api/hivehub/node', endpoint='hivehub.add_node')
+
+    logging.getLogger('v2_init').info('leave init_hivehub_backend')

@@ -97,7 +97,7 @@ class LocalFile:
         LocalFile.__write_to_file(file_path, receiving_data, use_temp=use_temp)
 
     @staticmethod
-    def __write_to_file(file_path: Path, on_receiving_data: typing.Callable[[Path], ...], use_temp=False):
+    def __write_to_file(file_path: Path, on_receiving_data: typing.Callable[[Path], None], use_temp=False):
         # create base folder
         LocalFile.create_dir_if_not_exists(file_path.parent)
 
@@ -125,7 +125,7 @@ class LocalFile:
     @staticmethod
     def dump_mongodb_to_full_path(db_name, full_path: Path):
         try:
-            line2 = f'mongodump --uri="{hive_setting.MONGODB_URI}" -d {db_name} --archive="{full_path.as_posix()}"'
+            line2 = f'mongodump --uri="{hive_setting.MONGODB_URL}" -d {db_name} --archive="{full_path.as_posix()}"'
             subprocess.check_output(line2, shell=True, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             raise BadRequestException(f'Failed to dump database {db_name}: {e.output}')
@@ -138,7 +138,7 @@ class LocalFile:
         try:
             # https://www.mongodb.com/docs/database-tools/mongorestore/#cmdoption--drop
             # --drop: drop collections before restore, but does not drop collections that are not in the backup.
-            line2 = f'mongorestore --uri="{hive_setting.MONGODB_URI}" --drop --archive="{full_path.as_posix()}"'
+            line2 = f'mongorestore --uri="{hive_setting.MONGODB_URL}" --drop --archive="{full_path.as_posix()}"'
             subprocess.check_output(line2, shell=True, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             raise BadRequestException(f'Failed to load database by {full_path.as_posix()}: {e.output}')

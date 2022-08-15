@@ -71,12 +71,12 @@ class BackupManager:
             VAULT_BACKUP_SERVICE_END_TIME: int(end_time)
         }}
 
-        self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER).update_one(filter_, update, contains_extra=True)
+        self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER).update_one(filter_, update, contains_extra=True, upsert=True)
         return self.get_backup(user_did)
 
     def update_backup(self, user_did, update):
         filter_ = {USR_DID: user_did}
-        self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER).update_one(filter_, update, contains_extra=True)
+        self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER).update_one(filter_, {'$set': update}, contains_extra=True)
 
     def upgrade(self, user_did, plan: dict, backup=None):
         if not backup:

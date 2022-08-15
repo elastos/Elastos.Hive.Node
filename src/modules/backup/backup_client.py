@@ -47,6 +47,8 @@ from src.modules.backup.backup_executor import BackupClientExecutor, RestoreExec
 
 
 class BackupClient:
+    """ Represents the backup client on the vault node side. """
+
     def __init__(self):
         self.auth = Auth()
         self.http = HttpClient()

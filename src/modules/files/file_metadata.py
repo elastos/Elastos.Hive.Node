@@ -1,3 +1,5 @@
+import logging
+
 from src.utils.consts import USR_DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, \
     COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, COL_IPFS_FILES_ENCRYPT_METHOD
 from src.utils.http_exception import FileNotFoundException
@@ -20,7 +22,7 @@ class FileMetadataManager:
         return self.mcli.get_user_collection(user_did, app_did, COL_IPFS_FILES, create_on_absence=True)
 
     def get_all_metadatas(self, user_did, app_did, folder_dir: str = None):
-        """ get files metadata under folder 'path'
+        """ Get files metadata under folder 'path'. Get all application files if folder_dir not specified.
 
         raise FileNotFoundException if no files under sub-folder which means sub-folder does not exist.
         """

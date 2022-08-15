@@ -1,7 +1,10 @@
 import hashlib
+import os
+import platform
 import random
 import shutil
 import subprocess
+import typing
 from datetime import datetime
 from pathlib import Path
 
@@ -67,39 +70,46 @@ class LocalFile:
         return sha.hexdigest()
 
     @staticmethod
-    def write_file_by_request_stream(file_path: Path):
-        """ used when upload file to this node """
+    def write_file_by_request_stream(file_path: Path, use_temp=False):
+        """ used when download file """
 
-        # create base folder
-        LocalFile.create_dir_if_not_exists(file_path.parent)
+        def receiving_data(path: Path):
+            with open(path.as_posix(), "bw") as f:
+                while True:
+                    chunk = request.stream.read(CHUNK_SIZE)
+                    if len(chunk) == 0:
+                        break
+                    f.write(chunk)
 
-        # write stream to temporary file
-        temp_file = LocalFile.generate_tmp_file_path()
-
-        with open(temp_file.as_posix(), "bw") as f:
-            while True:
-                chunk = request.stream.read(CHUNK_SIZE)
-                if len(chunk) == 0:
-                    break
-                f.write(chunk)
-
-        # move temp file to target path
-        if file_path.exists():
-            file_path.unlink()
-        shutil.move(temp_file.as_posix(), file_path.as_posix())
+        LocalFile.__write_to_file(file_path, receiving_data, use_temp=use_temp)
 
     @staticmethod
-    def write_file_by_response(response, file_path: Path):
+    def write_file_by_response(response, file_path: Path, use_temp=False):
         """ used when download file by url """
 
+        def receiving_data(path: Path):
+            with open(path.as_posix(), 'bw') as f:
+                f.seek(0)
+                for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                    if chunk:
+                        f.write(chunk)
+
+        LocalFile.__write_to_file(file_path, receiving_data, use_temp=use_temp)
+
+    @staticmethod
+    def __write_to_file(file_path: Path, on_receiving_data: typing.Callable[[Path], ...], use_temp=False):
         # create base folder
         LocalFile.create_dir_if_not_exists(file_path.parent)
 
-        with open(file_path.as_posix(), 'bw') as f:
-            f.seek(0)
-            for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
-                if chunk:
-                    f.write(chunk)
+        # download file.
+        if use_temp:
+            temp_file = LocalFile.generate_tmp_file_path()
+            on_receiving_data(temp_file)
+            if file_path.exists():
+                file_path.unlink()
+            shutil.move(temp_file.as_posix(), file_path.as_posix())
+        else:
+            on_receiving_data(file_path)
 
     @staticmethod
     def get_download_response(file_path: Path):
@@ -132,3 +142,35 @@ class LocalFile:
             subprocess.check_output(line2, shell=True, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             raise BadRequestException(f'Failed to load database by {full_path.as_posix()}: {e.output}')
+
+    @staticmethod
+    def get_files_recursively(root_dir: Path):
+        files = []
+
+        def get_files(dir_path: Path, result: list):
+            for file in dir_path.iterdir():
+                if file.is_dir():
+                    get_files(file, result)
+                elif file.is_file():
+                    result.append(file)
+
+        get_files(root_dir, files)
+        return files
+
+    @staticmethod
+    def get_file_ctime(path_to_file: str):
+        """
+        Try to get the date that a file was created, falling back to when it was
+        last modified if that isn't possible.
+        See http://stackoverflow.com/a/39501288/1709587 for explanation.
+        """
+        if platform.system() == 'Windows':
+            return os.path.getctime(path_to_file)
+        else:
+            stat = os.stat(path_to_file)
+            try:
+                return stat.st_birthtime
+            except AttributeError:
+                # We're probably on Linux. No easy way to get creation dates here,
+                # so we'll settle for when its content was last modified.
+                return stat.st_mtime

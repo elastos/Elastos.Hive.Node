@@ -19,7 +19,7 @@ import logging
 import sys
 from pathlib import Path
 
-from src.utils.file_manager import fm
+from src.modules.files.local_file import LocalFile
 
 
 skip_file_names = ['.DS_Store', ]
@@ -44,9 +44,9 @@ def generate_app_files_root(vaults_root: Path, user_did, app_did):
 def get_file_info(relative_dir_name, file: Path):
     return {
         'path': f'{relative_dir_name}/{file.name}' if relative_dir_name else file.name,
-        'sha256': fm.get_file_content_sha256(file),
+        'sha256': LocalFile.get_sha256(file.as_posix()),
         'size': file.stat().st_size,
-        'created': fm.get_file_ctime(file.as_posix()),
+        'created': LocalFile.get_file_ctime(file.as_posix()),
         'modified': file.stat().st_mtime
     }
 

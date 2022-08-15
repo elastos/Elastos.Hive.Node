@@ -56,8 +56,6 @@ class BackupServer:
 
         # INFO: if free vault can not hold the backup data, then let it go
         #       or user can not promote again anymore.
-        # if request_metadata['vault_size'] > fm.get_vault_max_size(g.usr_did):
-        #     raise InsufficientStorageException("No enough space to restore vault data")
 
         self.client.restore_database_by_dump_files(request_metadata)
         ExecutorBase.handle_cids_in_local_ipfs(request_metadata, contain_databases=False, only_files_ref=True)

@@ -82,7 +82,7 @@ def query_hash(did, app_did, name):
         err["status_code"], err["description"] = NOT_FOUND, "file not exists"
         return data, err
 
-    # INFO: to get sha256 by full path, use fm.get_file_content_sha256()
+    # INFO: to get sha256 by full path, use class LocalFile
     buf_size = 65536  # lets read stuff in 64kb chunks!
     sha = hashlib.sha256()
     with full_path_name.open('rb') as f:

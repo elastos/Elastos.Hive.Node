@@ -55,18 +55,18 @@ class IpfsClient:
         """ Pin file from ipfs proxy to the local node. """
 
         # INFO: IPFS does not support that one node directly pin file from other node.
-        logging.info(f'[fm.ipfs_pin_cid] Try to pin {cid} to the local IPFS node.')
+        logging.info(f'[IpfsClient.cid_pin] Try to pin {cid} to the local IPFS node.')
 
         # download the file to local
         temp_file = LocalFile.generate_tmp_file_path()
         self.download_file(cid, temp_file, is_proxy=True)
 
-        logging.info(f'[fm.ipfs_pin_cid] Download file OK.')
+        logging.info(f'[IpfsClient.cid_pin] Download file OK.')
 
         # then upload the file to local IPFS node.
         self.upload_file(temp_file)
 
-        logging.info(f'[fm.ipfs_pin_cid] Upload file OK.')
+        logging.info(f'[IpfsClient.cid_pin] Upload file OK.')
 
         # clean the local file.
         size = temp_file.stat().st_size
@@ -74,7 +74,7 @@ class IpfsClient:
         return size
 
     def cid_unpin(self, cid):
-        logging.info(f'[fm.ipfs_unpin_cid] Try to unpin {cid} in backup node.')
+        logging.info(f'[IpfsClient.cid_unpin] Try to unpin {cid} in backup node.')
 
         if not self.cid_exists(cid):
             return

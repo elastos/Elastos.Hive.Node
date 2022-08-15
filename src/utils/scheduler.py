@@ -9,13 +9,13 @@ from datetime import datetime
 
 from flask_apscheduler import APScheduler
 
-from src.modules.auth.user import UserManager
-from src.modules.database.mongodb_client import MongodbClient
-from src.modules.subscription.vault import VaultManager
-from src.utils import hive_job
-from src.utils.file_manager import fm
 from src.utils_v1.common import get_temp_path
 from src.utils_v1.constants import VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_MODIFY_TIME
+from src.utils import hive_job
+from src.modules.auth.user import UserManager
+from src.modules.database.mongodb_client import MongodbClient
+from src.modules.files.local_file import LocalFile
+from src.modules.subscription.vault import VaultManager
 
 scheduler = APScheduler()
 
@@ -63,7 +63,7 @@ def clean_temp_files_job():
 
     temp_path = get_temp_path()
     valid_timestamp = time.time() - 6 * 3600
-    files = fm.get_files_recursively(temp_path)
+    files = LocalFile.get_files_recursively(temp_path)
     for f in files:
         if f.stat().st_mtime < valid_timestamp:
             f.unlink()

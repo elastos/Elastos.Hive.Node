@@ -8,7 +8,7 @@ from pathlib import Path
 
 import requests
 
-from src.utils.file_manager import fm
+from src.modules.files.local_file import LocalFile
 from src.utils.http_exception import BadRequestException, HiveException
 
 
@@ -43,7 +43,7 @@ class HttpClient:
 
     def get_to_file(self, url, access_token, file_path: Path):
         r = self.get(url, access_token, is_body=False, stream=True)
-        fm.write_file_by_response(r, file_path, is_temp=True)
+        LocalFile.write_file_by_response(r, file_path, use_temp=True)
 
     def post(self, url, access_token, body, is_json=True, is_body=True, success_code=201, timeout=None, **kwargs):
         try:
@@ -67,10 +67,6 @@ class HttpClient:
     def post_file(self, url, access_token, file_path: str):
         with open(file_path, 'rb') as f:
             self.post(url, access_token, body=f, is_json=False, is_body=False)
-
-    def post_to_file(self, url, access_token, file_path: Path, body=None, is_temp=False):
-        r = self.post(url, access_token, body, is_json=False, is_body=False, stream=True)
-        fm.write_file_by_response(r, file_path, is_temp)
 
     def post_to_pickle_data(self, url, access_token, body=None):
         r = self.post(url, access_token, body, is_json=False, is_body=False, stream=True)

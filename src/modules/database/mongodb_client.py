@@ -216,9 +216,7 @@ class MongodbCollection:
 
 
 class MongodbClient:
-    """ Used to connect mongodb and is a helper class for all mongo database operation.
-    This class is used to replace class `src.utils.db_client.DatabaseClient`.
-    """
+    """ Used to connect mongodb and is a helper class for all mongo database operation. """
 
     def __init__(self):
         self.mongodb_uri = hive_setting.MONGODB_URL

@@ -30,7 +30,7 @@ class IpfsBackupTestCase(unittest.TestCase):
     def setUpClass(cls):
         SubscriptionTestCase().test06_vault_unsubscribe()
 
-    def check_result(self, failed_message=None):
+    def check_result(self):
         # waiting for the backup process to end
         max_timestamp = time.time() + 60
         while time.time() < max_timestamp:
@@ -39,13 +39,10 @@ class IpfsBackupTestCase(unittest.TestCase):
 
             self.assertTrue('result' in r.json())
             if r.json()['result'] == 'failed':
-                if failed_message is not None:
-                    self.assertIn(failed_message, r.json()["message"])
+                self.assertTrue(False, f'Backup & restore failed: {r.json()["message"]}')
                 test_log(f'failed with message: {r.json()["message"]}')
                 break
             elif r.json()['result'] == 'success':
-                if failed_message is not None:
-                    self.assertTrue(False, 'result state should not be successful')
                 test_log(f'backup or restore successfully')
                 break
 

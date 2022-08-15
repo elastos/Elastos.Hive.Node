@@ -16,16 +16,14 @@ class IpfsBackupTestCase(unittest.TestCase):
         self.cli = HttpClient(f'/api/v2')
         self.backup_cli = HttpClient(f'/api/v2', is_backup_node=True)
 
-    @staticmethod
-    def _unsubscribe_vault_on_backup_node():
-        HttpClient(f'/api/v2', is_backup_node=True).delete('/subscription/vault')
-
     @classmethod
     def setUpClass(cls):
+        # subscribe the vault
         HttpClient(f'/api/v2').put('/subscription/vault')
 
     def test01_subscribe(self):
         response = self.backup_cli.put('/subscription/backup')
+        self.assertIn(response.status_code, [200, 455])
 
     def test02_get_info(self):
         response = self.backup_cli.get('/subscription/backup')
@@ -60,7 +58,7 @@ class IpfsBackupTestCase(unittest.TestCase):
     @unittest.skip
     def test06_promotion(self):
         # PREPARE: backup and remove the vault for local test.
-        self.__class__._unsubscribe_vault_on_backup_node()
+        self.backup_cli.delete('/subscription/vault')
         # do promotion.
         r = self.backup_cli.post('/backup/promotion')
         self.assertEqual(r.status_code, 201)
@@ -71,7 +69,7 @@ class IpfsBackupTestCase(unittest.TestCase):
     def test07_unsubscribe(self):
         response = self.backup_cli.delete('/subscription/backup')
         self.assertEqual(response.status_code, 204)
-        self.__class__._unsubscribe_vault_on_backup_node()
+        self.backup_cli.delete('/subscription/vault')
 
 
 if __name__ == '__main__':

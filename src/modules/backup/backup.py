@@ -2,14 +2,14 @@ from datetime import datetime
 
 from src.modules.database.mongodb_client import MongodbClient, Dotdict
 from src.utils_v1.constants import VAULT_BACKUP_SERVICE_USING, \
-    VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME
+    VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, VAULT_BACKUP_SERVICE_USE_STORAGE
 from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID
 from src.utils.http_exception import BackupNotFoundException
 from src.utils_v1.payment.payment_config import PaymentConfig
 
 
 class Backup(Dotdict):
-    """ Represent a backup service which can be used to save backup data. """
+    """ Represent a backup service which can be used to save backup data on the backup node side. """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -28,6 +28,8 @@ class Backup(Dotdict):
 
 
 class BackupManager:
+    """ Run on the backup node side. """
+
     def __init__(self):
         self.mcli = MongodbClient()
 
@@ -56,6 +58,26 @@ class BackupManager:
             raise BackupNotFoundException()
         return Backup(**doc)
 
+    def create_backup(self, user_did, price_plan):
+        now = int(datetime.now().timestamp())
+        end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
+
+        filter_ = {USR_DID: user_did}
+        update = {"$setOnInsert": {
+            VAULT_BACKUP_SERVICE_USING: price_plan['name'],
+            VAULT_BACKUP_SERVICE_MAX_STORAGE: price_plan["maxStorage"] * 1024 * 1024,
+            VAULT_BACKUP_SERVICE_USE_STORAGE: 0,
+            VAULT_BACKUP_SERVICE_START_TIME: now,
+            VAULT_BACKUP_SERVICE_END_TIME: int(end_time)
+        }}
+
+        self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER).update_one(filter_, update, contains_extra=True)
+        return self.get_backup(user_did)
+
+    def update_backup(self, user_did, update):
+        filter_ = {USR_DID: user_did}
+        self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER).update_one(filter_, update, contains_extra=True)
+
     def upgrade(self, user_did, plan: dict, backup=None):
         if not backup:
             backup = self.get_backup(user_did)
@@ -83,3 +105,8 @@ class BackupManager:
         # downgrade now
         self.upgrade(user_did, PaymentConfig.get_free_backup_plan(), backup=backup)
         return self.__only_get_backup(user_did)
+
+    def remove_backup(self, user_did):
+        filter_ = {USR_DID: user_did}
+
+        self.mcli.get_management_collection(COL_IPFS_BACKUP_SERVER).delete_one(filter_)

@@ -52,6 +52,8 @@ class IpfsClient:
         return metadata
 
     def cid_pin(self, cid):
+        """ Pin file from ipfs proxy to the local node. """
+
         # INFO: IPFS does not support that one node directly pin file from other node.
         logging.info(f'[fm.ipfs_pin_cid] Try to pin {cid} to the local IPFS node.')
 

@@ -258,6 +258,22 @@ class IpfsScriptingTestCase(unittest.TestCase):
 
         self.__register_call_delete_script(script_name, script_body, call_body, call_response_checker)
 
+    def test02_count_with_invalid_run_params(self):
+        script_name, executable_name = 'ipfs_database_count', 'database_count'
+        script_body = {'executable': {
+            'name': executable_name,
+            'type': 'count',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author'}
+            }
+        }}
+        call_body = {"params": "invalid params data type"}
+
+        self.__register_script(script_name, script_body, expect_status=HttpCode.OK, anonymous=False)
+        self.__call_script(script_name, call_body, expect_status=HttpCode.BAD_REQUEST, anonymous=False, need_context=False)
+        self.delete_script(script_name)
+
     def test02_find(self):
         script_name, executable_name = 'ipfs_database_find', 'database_find'
         script_body = {'executable': {

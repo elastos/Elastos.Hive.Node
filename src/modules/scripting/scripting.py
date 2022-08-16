@@ -10,7 +10,7 @@ from flask import request, g
 from bson import ObjectId
 
 from src import hive_setting
-from src.utils_v1.constants import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
+from src.utils.consts import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.files.files_service import IpfsFiles

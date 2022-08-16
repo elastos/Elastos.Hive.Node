@@ -13,7 +13,7 @@ from flask_rangerequest import RangeRequest
 
 from src import hive_setting
 from src.utils.http_exception import BadRequestException
-from src.utils_v1.constants import CHUNK_SIZE
+from src.utils.consts import CHUNK_SIZE
 
 
 class LocalFile:

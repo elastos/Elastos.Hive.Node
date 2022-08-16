@@ -10,7 +10,7 @@ from src.modules.backup.backup_server import BackupServer
 from src.modules.subscription.vault import VaultManager
 from src.utils import hive_job
 from src.utils.scheduler import count_vault_storage_really
-from src.utils_v1.constants import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST
+from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST
 
 executor = Executor()
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor

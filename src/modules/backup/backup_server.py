@@ -10,7 +10,7 @@ from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, B
     VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
     InsufficientStorageException, NotImplementedException, VaultNotFoundException
-from src.utils_v1.payment.payment_config import PaymentConfig
+from src.utils.payment_config import PaymentConfig
 from src.modules.auth.auth import Auth
 from src.modules.auth.user import UserManager
 from src.modules.backup.backup import BackupManager

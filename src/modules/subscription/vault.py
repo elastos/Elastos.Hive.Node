@@ -8,7 +8,7 @@ from src.utils.consts import COL_IPFS_FILES, IS_UPGRADED, VAULT_SERVICE_MAX_STOR
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_LATEST_ACCESS_TIME
 from src.utils.http_exception import VaultNotFoundException, CollectionNotFoundException, VaultFrozenException
-from src.utils_v1.payment.payment_config import PaymentConfig
+from src.utils.payment_config import PaymentConfig
 
 
 class Vault(Dotdict):

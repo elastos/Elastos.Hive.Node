@@ -6,10 +6,10 @@ Scheduler tasks for the hive node.
 import logging
 import time
 from datetime import datetime
+from pathlib import Path
 
 from flask_apscheduler import APScheduler
 
-from src.utils_v1.common import get_temp_path
 from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_MODIFY_TIME
 from src.utils import hive_job
 from src.modules.auth.user import UserManager
@@ -61,7 +61,7 @@ def count_vault_storage_job():
 def clean_temp_files_job():
     """ Delete all temporary files created before 12 hours. """
 
-    temp_path = get_temp_path()
+    temp_path = Path(hive_setting.get_temp_dir())
     valid_timestamp = time.time() - 6 * 3600
     files = LocalFile.get_files_recursively(temp_path)
     for f in files:
@@ -75,7 +75,8 @@ def clean_temp_files_job():
 
 if __name__ == '__main__':
     # init logger
-    from src import create_app
+    from src import create_app, hive_setting
+
     create_app()
 
     # sync_app_dids()

@@ -12,7 +12,7 @@ from flask import g
 from src import hive_setting
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, ReceiptNotFoundException
 from src.utils.singleton import Singleton
-from src.utils_v1.payment.payment_config import PaymentConfig
+from src.utils.payment_config import PaymentConfig
 from src.modules.auth.auth import Auth
 from src.modules.subscription.vault import VaultManager
 from src.modules.backup.backup import BackupManager

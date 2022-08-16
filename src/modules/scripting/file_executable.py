@@ -1,8 +1,7 @@
 import jwt
 
 from src import hive_setting
-from src.utils_v1.constants import SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256
+from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from src.modules.scripting.executable import Executable
 from src.modules.scripting.scripting import Script
 

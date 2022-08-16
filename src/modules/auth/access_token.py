@@ -1,7 +1,7 @@
 import uuid
 
 from src.modules.database.mongodb_client import MongodbClient
-from src.utils_v1.constants import DID_INFO_REGISTER_COL, DID_INFO_NONCE, APP_INSTANCE_DID, USER_DID, APP_ID, DID_INFO_TOKEN, DID_INFO_TOKEN_EXPIRED
+from src.utils.consts import DID_INFO_REGISTER_COL, DID_INFO_NONCE, APP_INSTANCE_DID, USER_DID, APP_ID, DID_INFO_TOKEN, DID_INFO_TOKEN_EXPIRED
 
 
 class AccessToken:

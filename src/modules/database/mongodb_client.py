@@ -8,7 +8,7 @@ from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from src import hive_setting
-from src.utils_v1.constants import DID_INFO_DB_NAME
+from src.utils.consts import DID_INFO_DB_NAME
 from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException, BadRequestException
 
 _T = typing.TypeVar('_T', dict, list, tuple)

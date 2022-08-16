@@ -15,10 +15,9 @@ from src import hive_setting
 from src.modules.backup.backup import BackupManager
 from src.modules.subscription.vault import VaultManager
 from src.utils.did.did_wrapper import Credential
-from src.utils_v1.constants import VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, \
+from src.utils.consts import USR_DID, VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, \
     VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_BACKUP_SERVICE_USING, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_USE_STORAGE
-from src.utils.consts import USR_DID
 from src.utils.http_exception import ForbiddenException, ReceiptNotFoundException
 from src.modules.payment.order import OrderManager
 

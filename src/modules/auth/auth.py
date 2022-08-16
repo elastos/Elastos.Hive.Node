@@ -8,7 +8,7 @@ import logging
 import os
 from datetime import datetime
 
-from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED, DID_INFO_REGISTER_COL, DID_INFO_NONCE
+from src.utils.consts import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED, DID_INFO_REGISTER_COL, DID_INFO_NONCE
 from src.utils.http_exception import InvalidParameterException, BadRequestException
 from src import hive_setting
 from src.utils.did.did_wrapper import Credential, DIDDocument, DID, JWT, Presentation

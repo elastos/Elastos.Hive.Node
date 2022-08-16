@@ -10,7 +10,7 @@ from datetime import datetime
 from flask_apscheduler import APScheduler
 
 from src.utils_v1.common import get_temp_path
-from src.utils_v1.constants import VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_MODIFY_TIME
+from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_MODIFY_TIME
 from src.utils import hive_job
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient

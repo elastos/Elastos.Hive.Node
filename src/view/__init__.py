@@ -89,5 +89,6 @@ def init_hivehub_backend(api: Api):
     # hivehub
     api.add_resource(hivehub.GetNodes, '/api/hivehub/nodes', endpoint='hivehub.get_nodes')
     api.add_resource(hivehub.AddNode, '/api/hivehub/node', endpoint='hivehub.add_node')
+    api.add_resource(hivehub.RemoveNode, '/api/hivehub/node', endpoint='hivehub.remove_node')
 
     logging.getLogger('v2_init').info('leave init_hivehub_backend')

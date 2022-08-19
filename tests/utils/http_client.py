@@ -301,7 +301,7 @@ class HttpClient:
         return requests.patch(self.get_full_url(relative_url), headers=self.__get_headers(need_token=need_token), json=body)
 
     @_log_http_request
-    def delete(self, relative_url, body=None, is_json=False):
+    def delete(self, relative_url, body=None, is_json=False, need_token=True):
         if not is_json:
-            return requests.delete(self.get_full_url(relative_url), headers=self.__get_headers(is_json=False), data=body)
-        return requests.delete(self.get_full_url(relative_url), headers=self.__get_headers(), json=body)
+            return requests.delete(self.get_full_url(relative_url), headers=self.__get_headers(is_json=False, need_token=need_token), data=body)
+        return requests.delete(self.get_full_url(relative_url), headers=self.__get_headers(need_token=need_token), json=body)

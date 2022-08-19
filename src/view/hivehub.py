@@ -16,6 +16,9 @@ class GetNodes(Resource):
     def get(self):
         """ query nodes by nid(_id) or owner_did
 
+        example:
+            ?nid=<nid>&owner_did=<owner_did>
+
         return: {
             "nodes": [{
                 "nid": "jlaksjdflkjasdlkfj001",
@@ -84,5 +87,5 @@ class RemoveNode(Resource):
 
         """
 
-        node = RV.get_args().get('nid', str)
+        nid = RV.get_args().get('nid', str)
         return self.hivehub.remove_node(nid)

@@ -25,8 +25,10 @@ class HiveHub:
                                      create_on_absence=True, throw_exception=False)
 
         def node_mapper(n):
-            n['_id'] = str(n['_id'])
+            id_ = n.pop('_id')
+            n['nid'] = str(id_)
             return n
+
         return {
             'nodes': list(map(node_mapper, nodes))
         }
@@ -34,3 +36,6 @@ class HiveHub:
     def add_node(self, node):
         return cli.insert_one_origin(DID_INFO_DB_NAME, HIVE_HUB_NODES, node,
                                      create_on_absence=True, is_extra=False)
+
+    def remove_node(self, nid):
+        cli.delete_one_origin(DID_INFO_DB_NAME, HIVE_HUB_NODES, {'_id': ObjectId(nid)}, is_check_exist=False)

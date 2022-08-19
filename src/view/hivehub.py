@@ -55,7 +55,6 @@ class AddNode(Resource):
 
         example: {
             "node": {
-                "nid": "jlaksjdflkjasdlkfj001",
                 "name": "hive node 节点A",
                 "created": "2021-11-09 21:00:32",
                 "ip": "192.115.24.2",
@@ -66,7 +65,24 @@ class AddNode(Resource):
                 "remark": <remark str>
             }
         }
+
         """
 
         node = RV.get_body().get('node', dict)
         return self.hivehub.add_node(node)
+
+
+class RemoveNode(Resource):
+    def __init__(self):
+        self.hivehub = HiveHub()
+
+    def delete(self):
+        """ Remove the node with nid.
+
+        example:
+            ?nid=jlaksjdflkjasdlkfj001
+
+        """
+
+        node = RV.get_args().get('nid', str)
+        return self.hivehub.remove_node(nid)

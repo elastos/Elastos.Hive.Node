@@ -162,8 +162,8 @@ def get_dict(json_data: typing.Any, parent_name: str = None):
     """ parent name is "a.b.c", then return dict json_data["a"]["b"]["c"] """
 
     # value MUST be dict
-    if not json_data or not isinstance(json_data, dict):
-        raise InvalidParameterException(f'Invalid Parameter: "{json_data}" MUST be dictionary')
+    if not isinstance(json_data, dict):
+        raise InvalidParameterException(f'Invalid Parameter: The value "{json_data}" MUST be dictionary')
 
     # parent_name is like 'a.b.c'
     if parent_name:

@@ -112,9 +112,9 @@ class MongodbCollection:
         options = {k: v for k, v in kwargs.items() if k in ("upsert", "bypass_document_validation")}
 
         if only_one:
-            result = self.col.update_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **options)
+            result = self.col.update_one(self.convert_oid(filter_) if filter_ else {}, self.convert_oid(update), **options)
         else:
-            result = self.col.update_many(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **options)
+            result = self.col.update_many(self.convert_oid(filter_) if filter_ else {}, self.convert_oid(update), **options)
         return {
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,

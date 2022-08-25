@@ -125,6 +125,11 @@ class DatabaseTestCase(unittest.TestCase):
         response = self.cli.patch(f'/db/collection/{self.collection_name}')
         RA(response).assert_status(400)
 
+    def test03_update_with_empty_filter(self):
+        # just update the field 'modified'
+        response = self.cli.patch(f'/db/collection/{self.collection_name}', body={'filter': {}, 'update': {}})
+        RA(response).assert_status(200)
+
     def test03_update_with_updateone(self):
         def update(count):
             response = self.cli.patch(f'/db/collection/{self.collection_name}?updateone=true', body={

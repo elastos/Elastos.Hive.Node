@@ -252,7 +252,7 @@ class Auth(Entity, metaclass=Singleton):
         def filed_check(names):
             for name in names:
                 if name not in info or not info[name]:
-                    return None, "The credentialSubject's '" + name + "' isn't exist or not valid."
+                    return None, "The credentialSubject's '" + name + "' doesn't exist or not valid."
 
         # Use new defined fields
         if 'HiveBackupCredential' in types:
@@ -287,14 +287,14 @@ class Auth(Entity, metaclass=Singleton):
             return None, "Invalid backup credential type."
 
         if "issuer" not in vc_json or vc_json['issuer'] != user_did:
-            return None, "The credential issuer isn't exist."
+            return None, "The credential issuer doesn't exist or not the user did."
 
         if "credentialSubject" not in vc_json:
-            return None, "The credentialSubject isn't exist."
+            return None, "The credentialSubject doesn't exist."
         credential_subject = vc_json["credentialSubject"]
 
         if "id" not in credential_subject or credential_subject['id'] != super().get_did_string():
-            return None, "The credentialSubject's id isn't exist or not the hive node did."
+            return None, "The credentialSubject's id doesn't exist or not the hive node did."
 
         Auth.__fix_credential_info_with_latest_backup(credential_subject, vc_json['type'], expect_fields)
 

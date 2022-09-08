@@ -50,8 +50,8 @@ class ExecutorBase(threading.Thread):
         pass
 
     def generate_root_backup_cid(self, database_cids, files_cids, total_file_size):
-        """
-        Create a json doc containing basic root informations:
+        """ Create a json doc containing basic root informations:
+
         - database data DIDs;
         - files data DIDs;
         - total amount of vault data;
@@ -77,6 +77,8 @@ class ExecutorBase(threading.Thread):
         temp_file = LocalFile.generate_tmp_file_path()
         with temp_file.open('w') as f:
             json.dump(data, f)
+
+        # TODO: encrypt the backup metadata by curve25519.
 
         sha256, size = LocalFile.get_sha256(temp_file.as_posix()), temp_file.stat().st_size
         cid = IpfsClient().upload_file(temp_file)
@@ -209,7 +211,7 @@ class RestoreExecutor(ExecutorBase):
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '0')  # 100-based
 
         # only get the content
-        request_metadata = self.owner.get_vault_data_cid_from_backup_node(self.user_did)
+        request_metadata = self.owner.get_request_metadata_from_backup_node(self.user_did)
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '40')  # 100-based
         logging.info('[RestoreExecutor] Success to get request metadata from the backup node.')
 

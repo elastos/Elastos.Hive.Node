@@ -1,10 +1,23 @@
 import json
 import logging
+import typing as t
 from pathlib import Path
 
 from src import hive_setting
 from src.utils.http_exception import BadRequestException
 from src.modules.files.local_file import LocalFile
+
+
+def try_three_times(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
+    """ try to call http related method 3 times. """
+    def wrapper(*args, **kwargs):
+        i, count = 1, 3
+        while i <= count:
+            try:
+                return f(*args, **kwargs)
+            except Exception as e:
+                i += 1
+    return wrapper
 
 
 class IpfsClient:
@@ -25,6 +38,7 @@ class IpfsClient:
         json_data = self.http.post(self.ipfs_url + '/api/v0/add', None, None, is_json=False, files=files, success_code=200)
         return json_data['Hash']
 
+    @try_three_times
     def download_file(self, cid, file_path: Path, is_proxy=False, sha256=None, size=None):
         url = self.ipfs_gateway_url if is_proxy else self.ipfs_url
         response = self.http.post(f'{url}/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)

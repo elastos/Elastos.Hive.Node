@@ -56,3 +56,7 @@ class CipherTestCase(unittest.TestCase):
         cipher1: Cipher = self.user_did_doc.create_curve25519_cipher(self.identifier, self.security_code, hive_setting.PASSWORD, False, pk2)
         cipher2: Cipher = self.user_did_doc2.create_curve25519_cipher(self.identifier, self.security_code, hive_setting.PASSWORD, False, pk1)
         check_ciphers(cipher1, cipher2)
+
+        # encrypt and decrypt on the same side.
+        check_ciphers(cipher1, cipher1)
+        check_ciphers(cipher2, cipher2)

@@ -189,6 +189,8 @@ class BackupClient:
             # dump the database data to snapshot file.
             LocalFile.dump_mongodb_to_full_path(d['name'], d['path'])
 
+            # TODO: encrypt the database file here with random private key.
+
             # upload this snapshot file onto IPFS node.
             d['cid'] = self.ipfs_client.upload_file(d['path'])
             d['sha256'] = LocalFile.get_sha256(d['path'].as_posix())
@@ -212,7 +214,7 @@ class BackupClient:
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_BACKUP,
                        req[BACKUP_REQUEST_TARGET_TOKEN], body, is_json=True, is_body=False, timeout=90)
 
-    def get_vault_data_cid_from_backup_node(self, user_did):
+    def get_request_metadata_from_backup_node(self, user_did):
         """
         When restoring vault data from a specific backup node, it will condcut the following steps:
         - get the root cid to recover vault data;
@@ -223,6 +225,8 @@ class BackupClient:
         data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_RESTORE,
                              req[BACKUP_REQUEST_TARGET_TOKEN])
         request_metadata = self.ipfs_client.download_file_json_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
+
+        # TODO: download metadata to file and decrypt the content.
 
         if request_metadata['vault_size'] > self.vault_manager.get_vault(user_did).get_storage_quota():
             raise InsufficientStorageException('No enough space to restore, please upgrade the vault and try again.')
@@ -240,6 +244,9 @@ class BackupClient:
                 logging.error(f'[BackupClient] Failed to download dump file for database {d["name"]}.')
                 temp_file.unlink()
                 raise BadRequestException(msg)
+
+            # TODO: decrypt the database dump file here.
+
             LocalFile.restore_mongodb_from_full_path(temp_file)
             temp_file.unlink()
             logging.info(f'[BackupClient] Success to restore the dump file for database {d["name"]}.')

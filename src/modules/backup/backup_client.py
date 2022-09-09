@@ -1,28 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-The entrance for ipfs-backup module.
-
-The definition of the request metadata:
-{
-    "databases": [{
-        "name":
-        "sha256":
-        "cid":
-        "size":
-    }],
-    "files": [{
-        "sha256":
-        "cid":
-        "size":
-        "count":
-    }],
-    "user_did":
-    "vault_size":
-    "vault_package_size":
-    "create_time":
-}
+The entrance for ipfs-backup module on the vault side.
 """
+import json
 import logging
 import typing as t
 
@@ -119,10 +100,11 @@ class BackupClient:
     def __validate_remote_state(self, target_host, credential, is_force, is_restore):
         """ also do connectivity check """
         client = BackupServerClient(target_host, credential)
-        remote_action, remote_state, _ = client.get_state()
 
         # if is_force, skip check.
         if not is_force:
+            remote_action, remote_state, _, _ = client.get_state()
+
             if is_restore and (remote_action != BACKUP_REQUEST_ACTION_BACKUP and remote_state != BACKUP_REQUEST_STATE_SUCCESS):
                 raise BadRequestException('No latest successful backup data on the backup server.')
 
@@ -214,7 +196,8 @@ class BackupClient:
         body = {'cid': cid,
                 'sha256': sha256,
                 'size': size,
-                'is_force': is_force}
+                'is_force': is_force,
+                'public_key': self.auth.get_curve25519_public_key()}
 
         req = self.__get_request_doc(user_did)
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_BACKUP,
@@ -228,21 +211,31 @@ class BackupClient:
           to the files and database data on IPFS network.
         """
         req = self.__get_request_doc(user_did)
-        data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_RESTORE,
+        data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_RESTORE
+                             + f'?public_key={self.auth.get_curve25519_public_key()}',
                              req[BACKUP_REQUEST_TARGET_TOKEN])
-        request_metadata = self.ipfs_client.download_file_json_content(data['cid'], is_proxy=True, sha256=data['sha256'], size=data['size'])
 
-        # TODO: download metadata to file and decrypt the content.
+        tmp_file = LocalFile.generate_tmp_file_path()
+        self.ipfs_client.download_file(data['cid'], tmp_file, is_proxy=True, sha256=data['sha256'], size=data['size'])
+
+        try:
+            plain_path = Encryption.decrypt_file_with_curve25519(tmp_file, data['public_key'])
+            tmp_file.unlink()
+            with open(plain_path, 'r') as f:
+                request_metadata = json.load(f)
+        except Exception as e:
+            raise BadRequestException('Failed to decrypt the metadata for restoring on the vault node.')
 
         if request_metadata['vault_size'] > self.vault_manager.get_vault(user_did).get_storage_quota():
             raise InsufficientStorageException('No enough space to restore, please upgrade the vault and try again.')
         return request_metadata
 
     def restore_database_by_dump_files(self, request_metadata):
-        databases = request_metadata['databases']
+        databases, secret_key, nonce = request_metadata['databases'], request_metadata['encryption']['secret_key'], request_metadata['encryption']['nonce']
         if not databases:
             logging.info('[BackupClient] No user databases dump files, skip.')
             return
+
         for d in databases:
             temp_file = LocalFile.generate_tmp_file_path()
             msg = self.ipfs_client.download_file(d['cid'], temp_file, is_proxy=True, sha256=d['sha256'], size=d['size'])
@@ -251,10 +244,11 @@ class BackupClient:
                 temp_file.unlink()
                 raise BadRequestException(msg)
 
-            # TODO: decrypt the database dump file here.
-
-            LocalFile.restore_mongodb_from_full_path(temp_file)
+            plain_path = Encryption(secret_key, nonce).decrypt_file(temp_file)
             temp_file.unlink()
+
+            LocalFile.restore_mongodb_from_full_path(plain_path)
+            plain_path.unlink()
             logging.info(f'[BackupClient] Success to restore the dump file for database {d["name"]}.')
 
     def retry_backup_request(self):

@@ -36,9 +36,9 @@ class Encryption:
         return dst_full_path
 
     @staticmethod
-    def encrypt_file_with_curve25519(src_full_path: Path, dst_full_path: Path):
+    def encrypt_file_with_curve25519(src_full_path: Path, other_side_public_key: str) -> Path:
         pass
 
     @staticmethod
-    def decrypt_file_with_curve25519(src_full_path: Path, dst_full_path: Path):
+    def decrypt_file_with_curve25519(src_full_path: Path, other_side_public_key: str) -> Path:
         pass

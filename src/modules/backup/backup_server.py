@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
+import json
 import logging
 
 from flask import g
 
+from src.modules.backup.encryption import Encryption
+from src.modules.files.local_file import LocalFile
 from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
     BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER, USR_DID, BACKUP_REQUEST_STATE_SUCCESS, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
-    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE
+    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE, BKSERVER_REQ_PUBLIC_KEY
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
     InsufficientStorageException, NotImplementedException, VaultNotFoundException
 from src.utils.payment_config import PaymentConfig
@@ -61,18 +64,24 @@ class BackupServer:
         ExecutorBase.handle_cids_in_local_ipfs(request_metadata, contain_databases=False, only_files_ref=True)
         ExecutorBase.update_vault_usage_by_metadata(g.usr_did, request_metadata)
 
-    def internal_backup(self, cid, sha256, size, is_force):
+    def internal_backup(self, cid, sha256, size, is_force, public_key):
+        # check currently whether it is in progress.
         backup = self.backup_manager.get_backup(g.usr_did)
         if not is_force and backup.get(BKSERVER_REQ_STATE) == BACKUP_REQUEST_STATE_PROCESS:
             raise BadRequestException('Failed because backup is in processing.')
+
+        # pin the request metadata to local ipfs node.
         self.ipfs_client.cid_pin(cid)
+
+        # recode the request and run the executor.
         update = {
             BKSERVER_REQ_ACTION: BACKUP_REQUEST_ACTION_BACKUP,
             BKSERVER_REQ_STATE: BACKUP_REQUEST_STATE_PROCESS,
             BKSERVER_REQ_STATE_MSG: '50',  # start from 50%
             BKSERVER_REQ_CID: cid,
             BKSERVER_REQ_SHA256: sha256,
-            BKSERVER_REQ_SIZE: size
+            BKSERVER_REQ_SIZE: size,
+            BKSERVER_REQ_PUBLIC_KEY: public_key
         }
         self.backup_manager.update_backup(g.usr_did, update)
         BackupServerExecutor(g.usr_did, self, self.backup_manager.get_backup(g.usr_did)).start()
@@ -82,10 +91,11 @@ class BackupServer:
         return {
             'state': backup.get(BKSERVER_REQ_ACTION),  # None or backup
             'result': backup.get(BKSERVER_REQ_STATE),
-            'message': backup.get(BKSERVER_REQ_STATE_MSG)
+            'message': backup.get(BKSERVER_REQ_STATE_MSG),
+            'public_key': self.auth.get_curve25519_public_key()
         }
 
-    def internal_restore(self):
+    def internal_restore(self, public_key):
         backup = self.backup_manager.get_backup(g.usr_did)
 
         # BKSERVER_REQ_ACTION: None, means not backup called; 'backup', backup called, and can be three states.
@@ -105,11 +115,26 @@ class BackupServer:
         if not backup.get(BKSERVER_REQ_CID):
             raise BadRequestException(f'Cannot execute restore because invalid data cid "{backup.get(BKSERVER_REQ_CID)}".')
 
+        # decrypt and encrypt the metadata.
+        try:
+            tmp_file = LocalFile.generate_tmp_file_path()
+            self.ipfs_client.download_file(backup.get(BKSERVER_REQ_CID), tmp_file)
+
+            plain_path = Encryption.decrypt_file_with_curve25519(tmp_file, backup.get(BKSERVER_REQ_PUBLIC_KEY))
+            cipher_path = Encryption.encrypt_file_with_curve25519(plain_path, public_key)
+            self.ipfs_client.upload_file(cipher_path)
+            cipher_path.unlink()
+            plain_path.unlink()
+            tmp_file.unlink()
+        except Exception as e:
+            raise BadRequestException(f'Failed to prepare restore metadata on the backup node: {e}')
+
         # backup data is valid, go on
         return {
             'cid': backup.get(BKSERVER_REQ_CID),
             'sha256': backup.get(BKSERVER_REQ_SHA256),
             'size': backup.get(BKSERVER_REQ_SIZE),
+            'public_key': self.auth.get_curve25519_public_key()
         }
 
     # the flowing is for the executors.
@@ -140,8 +165,18 @@ class BackupServer:
         return request_metadata
 
     def __get_verified_request_metadata(self, user_did, req):
-        cid, sha256, size = req.get(BKSERVER_REQ_CID), req.get(BKSERVER_REQ_SHA256), req.get(BKSERVER_REQ_SIZE)
-        return self.ipfs_client.download_file_json_content(cid, is_proxy=True, sha256=sha256, size=size)
+        cid, sha256, size, public_key = req.get(BKSERVER_REQ_CID), req.get(BKSERVER_REQ_SHA256), req.get(BKSERVER_REQ_SIZE), req.get(BKSERVER_REQ_PUBLIC_KEY)
+
+        tmp_file = LocalFile.generate_tmp_file_path()
+        self.ipfs_client.download_file(cid, tmp_file, is_proxy=True, sha256=sha256, size=size)
+
+        plain_path = Encryption.decrypt_file_with_curve25519(tmp_file, public_key)
+        tmp_file.unlink()
+
+        with open(plain_path, 'r') as f:
+            metadata = json.load(f)
+        plain_path.unlink()
+        return metadata
 
     # ipfs-subscription
 

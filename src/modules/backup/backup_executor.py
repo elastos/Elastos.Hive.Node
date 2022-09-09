@@ -50,7 +50,7 @@ class ExecutorBase(threading.Thread):
         # INFO: override this.
         pass
 
-    def generate_root_backup_cid(self, database_cids, files_cids, total_file_size):
+    def generate_root_backup_cid(self, database_cids, files_cids, total_file_size, encryption: Encryption):
         """ Create a json doc containing basic root informations:
 
         - database data DIDs;
@@ -60,7 +60,9 @@ class ExecutorBase(threading.Thread):
         - create timestamp.
         """
 
+        secret_key, nonce = encryption.get_private_key()
         data = {
+            'version': '1.0',
             'databases': [{'name': d['name'],
                            'sha256': d['sha256'],
                            'cid': d['cid'],
@@ -73,17 +75,23 @@ class ExecutorBase(threading.Thread):
             "vault_size": self.vault_manager.get_vault(self.user_did).get_storage_usage(),
             "backup_size": sum([d['size'] for d in database_cids]) + total_file_size,
             "create_time": datetime.now().timestamp(),
+            "encryption": {
+                "secret_key": secret_key,
+                "nonce": nonce
+            }
         }
 
         temp_file = LocalFile.generate_tmp_file_path()
         with temp_file.open('w') as f:
             json.dump(data, f)
 
-        # TODO: encrypt the backup metadata by curve25519.
-
-        sha256, size = LocalFile.get_sha256(temp_file.as_posix()), temp_file.stat().st_size
-        cid = IpfsClient().upload_file(temp_file)
+        _, _, _, public_key = BackupServerClient.get_state_by_user_did(self.user_did)
+        encryption_path = Encryption.encrypt_file_with_curve25519(temp_file, public_key)
         temp_file.unlink()
+
+        sha256, size = LocalFile.get_sha256(encryption_path.as_posix()), encryption_path.stat().st_size
+        cid = IpfsClient().upload_file(encryption_path)
+        encryption_path.unlink()
         return cid, sha256, size, data
 
     @staticmethod
@@ -177,7 +185,7 @@ class BackupClientExecutor(ExecutorBase):
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '25')  # 100-based
         logging.info('[BackupExecutor] Got an array of CIDs to file data')
 
-        cid, sha256, size, request_metadata = self.generate_root_backup_cid(database_cids, file_cids, filedata_size)
+        cid, sha256, size, request_metadata = self.generate_root_backup_cid(database_cids, file_cids, filedata_size, encryption)
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '35')  # 100-based
         logging.info(f'[BackupExecutor] Generated the root backup CID to vault data, request_metadata, {request_metadata}')
 
@@ -189,7 +197,7 @@ class BackupClientExecutor(ExecutorBase):
         try:
             client = BackupServerClient(self.req[BACKUP_REQUEST_TARGET_HOST], token=self.req[BACKUP_REQUEST_TARGET_TOKEN])
             while True:
-                remote_action, remote_state, remote_msg = client.get_state()
+                remote_action, remote_state, remote_msg, _ = client.get_state()
 
                 if remote_state == BACKUP_REQUEST_STATE_PROCESS:
                     self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, remote_msg)  # 100-based

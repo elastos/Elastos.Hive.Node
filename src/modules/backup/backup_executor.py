@@ -8,6 +8,7 @@ import traceback
 from datetime import datetime
 
 from src.modules.backup.backup_server_client import BackupServerClient
+from src.modules.backup.encryption import Encryption
 from src.modules.files.file_metadata import FileMetadataManager
 from src.modules.files.ipfs_cid_ref import IpfsCidRef
 from src.modules.files.ipfs_client import IpfsClient
@@ -164,9 +165,11 @@ class BackupClientExecutor(ExecutorBase):
             percent = str(int(15 * (index - 1) / total))
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, percent)
 
+        encryption = Encryption()
+
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '0')  # 100-based
 
-        database_cids = self.owner.dump_database_data_to_backup_cids(self.user_did, callback_dump_databases)
+        database_cids = self.owner.dump_database_data_to_backup_cids(self.user_did, encryption, callback_dump_databases)
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '15')  # 100-based
         logging.info('[BackupExecutor] Dumped the database data to IPFS node and returned with array of CIDs')
 

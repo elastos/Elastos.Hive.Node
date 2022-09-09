@@ -4,6 +4,8 @@
 Testing file for the about module.
 """
 import unittest
+import nacl.secret
+import nacl.utils
 
 from src.utils.did.did_wrapper import DIDDocument, Cipher, CipherDecryptionStream, CipherEncryptionStream
 from src.settings import hive_setting
@@ -20,7 +22,7 @@ class CipherTestCase(unittest.TestCase):
         self.user_did_doc: DIDDocument = HttpClient(f'/api/v2').remote_resolver.user_did.doc
         self.user_did_doc2: DIDDocument = HttpClient(f'/api/v2').remote_resolver.user_did2.doc
 
-    # @unittest.skip
+    @unittest.skip
     def test_encryption(self):
         def assert_buffer_equal(buf1, buf2):
             self.assertEqual(len(buf1), len(buf2))
@@ -51,12 +53,21 @@ class CipherTestCase(unittest.TestCase):
         cipher: Cipher = self.user_did_doc.create_cipher(self.identifier, self.security_code, hive_setting.PASSWORD)
         check_ciphers(cipher, cipher)
 
-        pk1 = bytearray.fromhex('60257db4c5f26c9c5fa2f1f46b812abf01515af38d5e9d1cd5ed6f1507b6c661')
-        pk2 = bytearray.fromhex('e4938b32ccaeb3c869a5f9e67425205b05d4a66583a5638fe37242aaeff7992f')
-        cipher1: Cipher = self.user_did_doc.create_curve25519_cipher(self.identifier, self.security_code, hive_setting.PASSWORD, False, pk2)
-        cipher2: Cipher = self.user_did_doc2.create_curve25519_cipher(self.identifier, self.security_code, hive_setting.PASSWORD, False, pk1)
-        check_ciphers(cipher1, cipher2)
+        cipher1: Cipher = self.user_did_doc.create_curve25519_cipher(self.identifier, self.security_code, hive_setting.PASSWORD, False)
+        cipher2: Cipher = self.user_did_doc2.create_curve25519_cipher(self.identifier, self.security_code, hive_setting.PASSWORD, False)
+        cipher1.set_other_side_public_key(cipher2.get_curve25519_public_key())
+        cipher2.set_other_side_public_key(cipher1.get_curve25519_public_key())
 
-        # encrypt and decrypt on the same side.
-        check_ciphers(cipher1, cipher1)
-        check_ciphers(cipher2, cipher2)
+        check_ciphers(cipher1, cipher2)
+        check_ciphers(cipher2, cipher1)
+
+    @unittest.skip
+    def test_pynacl(self):
+        message = b"The president will be exiting through the lower levels"
+        key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
+        box = nacl.secret.SecretBox(key)
+        nonce = nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE)
+
+        encrypted = box.encrypt(message, nonce)
+        plaintext = box.decrypt(encrypted.ciphertext, nonce)
+        self.assertEqual(plaintext, message)

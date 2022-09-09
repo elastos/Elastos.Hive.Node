@@ -326,9 +326,8 @@ class DIDDocument:
 
         return Cipher(ffi.gc(cipher, lib.DIDDocument_Cipher_Destroy))
 
-    def create_curve25519_cipher(self, identifier, security_code, storepass, is_server, other_side_public_key) -> 'Cipher':
-        cipher = lib.DIDDocument_CreateCurve25519Cipher(self.doc, identifier.encode(), security_code, storepass.encode(),
-                                                        is_server, ffi.from_buffer(other_side_public_key))
+    def create_curve25519_cipher(self, identifier, security_code, storepass, is_server) -> 'Cipher':
+        cipher = lib.DIDDocument_CreateCurve25519Cipher(self.doc, identifier.encode(), security_code, storepass.encode(), is_server)
         if not cipher:
             raise ElaDIDException(ElaError.get_from_method('Can not get the curve25519 cipher'))
 
@@ -338,6 +337,11 @@ class DIDDocument:
 class Cipher:
     def __init__(self, cipher):
         self.cipher = cipher
+
+    def set_other_side_public_key(self, key):
+        success = lib.Cipher_SetOtherSidePublicKey(self.cipher, ffi.from_buffer(key))
+        if not success:
+            raise ElaDIDException(ElaError.get_from_method('Can not set other side public key'))
 
     def encrypt(self, data, nonce):
         length = ffi.new("unsigned int *")
@@ -368,6 +372,22 @@ class Cipher:
             raise ElaDIDException(ElaError.get_from_method('Can not create the decryption stream.'))
 
         return CipherDecryptionStream(ffi.gc(stream, lib.DID_FreeMemory))
+
+    def get_ed25519_public_key(self):
+        length = ffi.new("unsigned int *")
+        key = lib.Cipher_GetEd25519PublicKey(self.cipher, length)
+        if not key:
+            raise ElaDIDException(ElaError.get_from_method('Can not get the ed25519 public key.'))
+
+        return ffi.buffer(key, length[0])
+
+    def get_curve25519_public_key(self):
+        length = ffi.new("unsigned int *")
+        key = lib.Cipher_GetCurve25519PublicKey(self.cipher, length)
+        if not key:
+            raise ElaDIDException(ElaError.get_from_method('Can not get the curve25519 public key.'))
+
+        return ffi.buffer(key, length[0])
 
 
 class CipherEncryptionStream:

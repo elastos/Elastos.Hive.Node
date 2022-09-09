@@ -28,6 +28,7 @@ import typing as t
 
 from flask import g
 
+from src.modules.backup.encryption import Encryption
 from src.modules.files.ipfs_client import IpfsClient
 from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE, BACKUP_REQUEST_STATE, BACKUP_REQUEST_STATE_PROCESS, \
@@ -169,7 +170,7 @@ class BackupClient:
 
         self.mcli.get_management_collection(COL_IPFS_BACKUP_CLIENT).update_one(filter_, update)
 
-    def dump_database_data_to_backup_cids(self, user_did, process_callback=t.Optional[t.Callable[[int, int], None]]):
+    def dump_database_data_to_backup_cids(self, user_did, encryption: Encryption, process_callback=t.Optional[t.Callable[[int, int], None]]):
         """ Each application holds its databases under the same user did.
         The steps to dump each database data to each application is under the specific user did and application did:
 
@@ -189,13 +190,18 @@ class BackupClient:
             # dump the database data to snapshot file.
             LocalFile.dump_mongodb_to_full_path(d['name'], d['path'])
 
-            # TODO: encrypt the database file here with random private key.
+            # encrypt the dump file.
+            try:
+                encrypt_path = encryption.encrypt_file(d['path'])
+            except:
+                raise BadRequestException(f'Can not encrypt the dump file for the database {names[i]}.')
+            d['path'].unlink()
 
             # upload this snapshot file onto IPFS node.
-            d['cid'] = self.ipfs_client.upload_file(d['path'])
-            d['sha256'] = LocalFile.get_sha256(d['path'].as_posix())
-            d['size'] = d['path'].stat().st_size
-            d['path'].unlink()
+            d['cid'] = self.ipfs_client.upload_file(encrypt_path)
+            d['sha256'] = LocalFile.get_sha256(encrypt_path.as_posix())
+            d['size'] = encrypt_path.stat().st_size
+            encrypt_path.unlink()
 
             metadata_list.append(d)
         return metadata_list

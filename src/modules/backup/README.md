@@ -41,10 +41,10 @@ Request Body:
     
 Response Body:
     {
-        "state": backup.get(BKSERVER_REQ_ACTION),  # None or backup
-        "result": backup.get(BKSERVER_REQ_STATE),
-        "message": backup.get(BKSERVER_REQ_STATE_MSG),
-        "public_key": self.auth.get_curve25519_public_key()
+        "state": <action>,
+        "result": <state>,
+        "message": <error message>,
+        "public_key": <public key for encryption>
     }
 ```
 

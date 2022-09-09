@@ -42,7 +42,7 @@ class Entity:
 
     def load_did_to_store(self, file_content: str, passphrase: str):
         try:
-            file_content_str = base58.b58decode(file_content).decode('utf8')
+            file_content_str = base58.b58decode(bytes(file_content, 'utf8')).decode('utf8')
         except Exception as e:
             raise RuntimeError(f'get_verified_owner_did: invalid value of NODE_CREDENTIAL')
 
@@ -91,9 +91,6 @@ class Entity:
 
     def get_did_string(self) -> str:
         return self.did_str
-
-    def get_curve25519_public_key(self):
-        return base58.b58encode(self.doc.create_curve25519_cipher().get_curve25519_public_key()).decode('utf8')
 
     def create_credential(self, type_, props, owner_did: DID = None) -> Credential:
         did = owner_did if owner_did else self.did

@@ -4,9 +4,13 @@
 Testing file for the about module.
 """
 import unittest
+
+import base58
 import nacl.secret
 import nacl.utils
 
+from src.modules.backup.encryption import Encryption
+from src.modules.files.local_file import LocalFile
 from src.utils.did.did_wrapper import DIDDocument, Cipher, CipherDecryptionStream, CipherEncryptionStream
 from src.settings import hive_setting
 from tests.utils.http_client import HttpClient
@@ -62,6 +66,22 @@ class CipherTestCase(unittest.TestCase):
         check_ciphers(cipher2, cipher1)
 
     @unittest.skip
+    def test_encryption2(self):
+        message = b'hello world' * 1000
+        tmp_file = LocalFile.generate_tmp_file_path()
+        with open(tmp_file, 'wb') as f:
+            f.write(message)
+
+        pk_client = pk_server = Encryption.get_service_did_public_key(False)
+        cipher_path = Encryption.encrypt_file_with_curve25519(tmp_file, pk_client, True)
+        plain_path = Encryption.decrypt_file_with_curve25519(cipher_path, pk_server, False)
+
+        with open(plain_path, 'rb') as f:
+            plain_data = f.read()
+
+        self.assertEqual(message, plain_data)
+
+    @unittest.skip
     def test_pynacl(self):
         message = b"The president will be exiting through the lower levels"
         key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
@@ -71,3 +91,14 @@ class CipherTestCase(unittest.TestCase):
         encrypted = box.encrypt(message, nonce)
         plaintext = box.decrypt(encrypted.ciphertext, nonce)
         self.assertEqual(plaintext, message)
+
+    @unittest.skip
+    def test_ffi_buffer(self):
+        cipher1: Cipher = self.user_did_doc.create_curve25519_cipher(self.identifier, self.security_code, hive_setting.PASSWORD, False)
+        data = bytes(cipher1.get_curve25519_public_key())
+        # key bytes -> base58 bytes -> str
+        encode_data = base58.b58encode(data).decode('utf8')
+        # str -> base58 bytes -> key bytes
+        decode_data = base58.b58decode(bytes(encode_data, 'utf8'))
+        print(data, encode_data, decode_data)
+        self.assertEqual(data, decode_data)

@@ -187,7 +187,7 @@ class BackupClientExecutor(ExecutorBase):
 
         cid, sha256, size, request_metadata = self.generate_root_backup_cid(database_cids, file_cids, filedata_size, encryption)
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '35')  # 100-based
-        logging.info(f'[BackupExecutor] Generated the root backup CID to vault data, request_metadata, {request_metadata}')
+        logging.info(f'[BackupExecutor] Generated the root backup CID to vault data, request_metadata, {request_metadata}, cid, {cid}')
 
         self.owner.send_root_backup_cid_to_backup_node(self.user_did, cid, sha256, size, self.is_force)
         self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, '50')  # 100-based
@@ -210,8 +210,9 @@ class BackupClientExecutor(ExecutorBase):
         except Exception as e:
             raise e
         finally:
-            # clean client side cids
-            super().handle_cids_in_local_ipfs(request_metadata, root_cid=cid, contain_databases=True, contain_files=False, is_unpin=True)
+            if 'http://localhost' not in self.req[BACKUP_REQUEST_TARGET_HOST]:  # for local dev
+                # clean client side cids
+                super().handle_cids_in_local_ipfs(request_metadata, root_cid=cid, contain_databases=True, contain_files=False, is_unpin=True)
 
 
 class RestoreExecutor(ExecutorBase):

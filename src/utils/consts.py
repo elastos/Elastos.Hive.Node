@@ -183,6 +183,7 @@ BKSERVER_REQ_STATE_MSG = 'req_state_msg'
 BKSERVER_REQ_CID = 'req_cid'
 BKSERVER_REQ_SHA256 = 'req_sha256'
 BKSERVER_REQ_SIZE = 'req_size'
+BKSERVER_REQ_PUBLIC_KEY = 'public_key'
 
 # @deprecated
 URL_BACKUP_SERVICE = '/api/v2/internal_backup/service'

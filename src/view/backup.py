@@ -201,7 +201,8 @@ class ServerInternalBackup(Resource):
         return self.backup_server.internal_backup(params.get_str('cid')[0],
                                                   params.get_str('sha256')[0],
                                                   params.get_int('size')[0],
-                                                  params.get_bool('is_force')[0])
+                                                  params.get_bool('is_force')[0],
+                                                  params.get_str('public_key')[0])
 
 
 class ServerInternalState(Resource):
@@ -217,4 +218,4 @@ class ServerInternalRestore(Resource):
         self.backup_server = BackupServer()
 
     def get(self):
-        return self.backup_server.internal_restore()
+        return self.backup_server.internal_restore(rqargs.get_str('public_key')[0])

@@ -120,8 +120,8 @@ class BackupServer:
             tmp_file = LocalFile.generate_tmp_file_path()
             self.ipfs_client.download_file(backup.get(BKSERVER_REQ_CID), tmp_file)
 
-            plain_path = Encryption.decrypt_file_with_curve25519(tmp_file, backup.get(BKSERVER_REQ_PUBLIC_KEY))
-            cipher_path = Encryption.encrypt_file_with_curve25519(plain_path, public_key)
+            plain_path = Encryption.decrypt_file_with_curve25519(tmp_file, backup.get(BKSERVER_REQ_PUBLIC_KEY), True)
+            cipher_path = Encryption.encrypt_file_with_curve25519(plain_path, public_key, True)
             self.ipfs_client.upload_file(cipher_path)
             cipher_path.unlink()
             plain_path.unlink()
@@ -170,7 +170,7 @@ class BackupServer:
         tmp_file = LocalFile.generate_tmp_file_path()
         self.ipfs_client.download_file(cid, tmp_file, is_proxy=True, sha256=sha256, size=size)
 
-        plain_path = Encryption.decrypt_file_with_curve25519(tmp_file, public_key)
+        plain_path = Encryption.decrypt_file_with_curve25519(tmp_file, public_key, True)
         tmp_file.unlink()
 
         with open(plain_path, 'r') as f:

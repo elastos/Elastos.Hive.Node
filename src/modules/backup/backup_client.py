@@ -219,7 +219,7 @@ class BackupClient:
         self.ipfs_client.download_file(data['cid'], tmp_file, is_proxy=True, sha256=data['sha256'], size=data['size'])
 
         try:
-            plain_path = Encryption.decrypt_file_with_curve25519(tmp_file, data['public_key'])
+            plain_path = Encryption.decrypt_file_with_curve25519(tmp_file, data['public_key'], False)
             tmp_file.unlink()
             with open(plain_path, 'r') as f:
                 request_metadata = json.load(f)

@@ -86,7 +86,7 @@ class ExecutorBase(threading.Thread):
             json.dump(data, f)
 
         _, _, _, public_key = BackupServerClient.get_state_by_user_did(self.user_did)
-        encryption_path = Encryption.encrypt_file_with_curve25519(temp_file, public_key)
+        encryption_path = Encryption.encrypt_file_with_curve25519(temp_file, public_key, False)
         temp_file.unlink()
 
         sha256, size = LocalFile.get_sha256(encryption_path.as_posix()), encryption_path.stat().st_size

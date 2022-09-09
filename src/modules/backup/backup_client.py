@@ -175,8 +175,8 @@ class BackupClient:
             # encrypt the dump file.
             try:
                 encrypt_path = encryption.encrypt_file(d['path'])
-            except:
-                raise BadRequestException(f'Can not encrypt the dump file for the database {names[i]}.')
+            except Exception as e:
+                raise BadRequestException(f'Can not encrypt the dump file for the database {names[i]}: {e}')
             d['path'].unlink()
 
             # upload this snapshot file onto IPFS node.
@@ -197,7 +197,7 @@ class BackupClient:
                 'sha256': sha256,
                 'size': size,
                 'is_force': is_force,
-                'public_key': self.auth.get_curve25519_public_key()}
+                'public_key': Encryption.get_service_did_public_key(False)}
 
         req = self.__get_request_doc(user_did)
         self.http.post(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_BACKUP,
@@ -212,7 +212,7 @@ class BackupClient:
         """
         req = self.__get_request_doc(user_did)
         data = self.http.get(req[BACKUP_REQUEST_TARGET_HOST] + URL_V2 + URL_SERVER_INTERNAL_RESTORE
-                             + f'?public_key={self.auth.get_curve25519_public_key()}',
+                             + f'?public_key={Encryption.get_service_did_public_key(False)}',
                              req[BACKUP_REQUEST_TARGET_TOKEN])
 
         tmp_file = LocalFile.generate_tmp_file_path()

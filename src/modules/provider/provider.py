@@ -33,7 +33,7 @@ class Provider:
     @staticmethod
     def get_verified_owner_did():
         try:
-            credential = base58.b58decode(hive_setting.NODE_CREDENTIAL).decode('utf8')
+            credential = base58.b58decode(bytes(hive_setting.NODE_CREDENTIAL, 'utf8')).decode('utf8')
         except:
             raise RuntimeError(f'get_verified_owner_did: invalid value of NODE_CREDENTIAL')
         info, err_msg = Provider._get_verifiable_credential_info(credential)

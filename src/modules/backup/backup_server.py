@@ -92,7 +92,7 @@ class BackupServer:
             'state': backup.get(BKSERVER_REQ_ACTION),  # None or backup
             'result': backup.get(BKSERVER_REQ_STATE),
             'message': backup.get(BKSERVER_REQ_STATE_MSG),
-            'public_key': self.auth.get_curve25519_public_key()
+            'public_key': Encryption.get_service_did_public_key(True)
         }
 
     def internal_restore(self, public_key):
@@ -134,7 +134,7 @@ class BackupServer:
             'cid': backup.get(BKSERVER_REQ_CID),
             'sha256': backup.get(BKSERVER_REQ_SHA256),
             'size': backup.get(BKSERVER_REQ_SIZE),
-            'public_key': self.auth.get_curve25519_public_key()
+            'public_key': Encryption.get_service_did_public_key(True)
         }
 
     # the flowing is for the executors.

@@ -12,10 +12,10 @@ from flask import g
 from src import hive_setting
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, ReceiptNotFoundException
 from src.utils.singleton import Singleton
-from src.utils_v1.payment.payment_config import PaymentConfig
+from src.utils.payment_config import PaymentConfig
 from src.modules.auth.auth import Auth
 from src.modules.subscription.vault import VaultManager
-from src.modules.subscription.backup import BackupManager
+from src.modules.backup.backup import BackupManager
 from src.modules.payment.order import OrderManager, Order
 from src.modules.payment.order_contract import OrderContract
 
@@ -38,7 +38,7 @@ class Payment(metaclass=Singleton):
 
     def get_version(self):
         """ :v2 API: """
-        return {'version': self._get_vault_subscription().get_price_plans_version()}
+        return {'version': PaymentConfig.get_version()}
 
     def place_order(self, subscription: str, pricing_name: str):
         """ Place a new order for upgrade user's vault.
@@ -50,7 +50,7 @@ class Payment(metaclass=Singleton):
         """
         if subscription == Order.SUBSCRIPTION_VAULT:
             self.vault_manager.get_vault(g.usr_did)
-            plan = PaymentConfig.get_pricing_plan(pricing_name)
+            plan = PaymentConfig.get_vault_plan(pricing_name)
         else:
             self.backup_manager.get_backup(g.usr_did)
             plan = PaymentConfig.get_backup_plan(pricing_name)

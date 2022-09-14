@@ -100,7 +100,7 @@ class HivePubsubTestCase(unittest.TestCase):
             uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
-            connection = MongoClient(hive_setting.MONGODB_URI)
+            connection = MongoClient(hive_setting.MONGODB_URL)
 
         db = connection[DID_INFO_DB_NAME]
         col = db[PUB_CHANNEL_COLLECTION]
@@ -115,7 +115,7 @@ class HivePubsubTestCase(unittest.TestCase):
             uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
-            connection = MongoClient(hive_setting.MONGODB_URI)
+            connection = MongoClient(hive_setting.MONGODB_URL)
 
         db = connection[DID_INFO_DB_NAME]
         col = db[SUB_MESSAGE_COLLECTION]

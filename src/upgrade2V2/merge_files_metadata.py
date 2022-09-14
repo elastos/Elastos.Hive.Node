@@ -9,9 +9,10 @@ import logging
 import sys
 from pathlib import Path
 
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.files.file_metadata import FileMetadataManager
+from src.modules.files.files_service import IpfsFiles
 from src.upgrade2V2.gen_files_metadata import get_vaults_root, get_files_metadata_file, generate_app_files_root
-from src.utils.file_manager import fm
+from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, SIZE, COL_IPFS_FILES_IPFS_CID
 
 
 def init_app_files_metadata(vaults_root, user_did, app_did, files: list):
@@ -58,15 +59,28 @@ def calculate_changed_files(cur_files, dst_files):
 
 def update_app_files_metadata(vaults_root, user_did, app_did, files: list):
     logging.info(f'enter update file metadata for {user_did}, {app_did}.')
-    files_root = generate_app_files_root(vaults_root, user_did, app_did)
-    ipfs_files = IpfsFiles()
-    cur_files = fm.get_app_file_metadatas(user_did, app_did)
+
+    cur_files = FileMetadataManager().get_all_metadatas(user_did, app_did)
+    if not cur_files:
+        return
+
+    cur_files = list(map(lambda doc: {
+                "path": doc[COL_IPFS_FILES_PATH],
+                "sha256": doc[COL_IPFS_FILES_SHA256],
+                "size": doc[SIZE],
+                "cid": doc[COL_IPFS_FILES_IPFS_CID],
+                "created": doc['created'],
+                "modified": doc['modified']
+            }, cur_files))
+
+    ipfs_files, files_root = IpfsFiles(), generate_app_files_root(vaults_root, user_did, app_did)
     update_files, delete_files = calculate_changed_files(cur_files, files)
     for file in update_files:
         ipfs_files.upload_file_from_local(user_did, app_did, file['path'], files_root / file['path'],
                                           only_import=True, created=file['created'], modified=file['modified'])
     for file in delete_files:
         ipfs_files.delete_file_metadata(user_did, app_did, file['path'], file['cid'])
+
     logging.info(f'leave update file metadata for {user_did}, {app_did}.')
 
 

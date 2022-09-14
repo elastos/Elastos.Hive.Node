@@ -5,9 +5,10 @@ The view of subscription module.
 """
 from flask_restful import Resource
 
+from src import PaymentConfig
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import RV
-from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
+from src.modules.backup.backup_server import BackupServer
 from src.modules.subscription.subscription import VaultSubscription
 
 
@@ -97,7 +98,7 @@ class VaultPricePlan(Resource):
         subscription = RV.get_args().get_opt('subscription', str, 'all')
         name = RV.get_args().get_opt('name', str, None)
 
-        return self.vault_subscription.get_price_plans(subscription, name)
+        return PaymentConfig.get_price_plans(subscription, name)
 
 
 class VaultInfo(Resource):
@@ -359,7 +360,7 @@ class VaultUnsubscribe(Resource):
 
 class BackupInfo(Resource):
     def __init__(self):
-        self.backup_server = IpfsBackupServer()
+        self.backup_server = BackupServer()
 
     def get(self):
         """ Get the information of the owned backup service.
@@ -409,7 +410,7 @@ class BackupInfo(Resource):
 
 class BackupSubscribe(Resource):
     def __init__(self):
-        self.backup_server = IpfsBackupServer()
+        self.backup_server = BackupServer()
 
     def put(self):
         """ Subscribe to a remote backup service on the specific hive node.
@@ -458,7 +459,7 @@ class BackupSubscribe(Resource):
 
 class BackupActivateDeactivate(Resource):
     def __init__(self):
-        self.backup_server = IpfsBackupServer()
+        self.backup_server = BackupServer()
 
     def post(self):
         op = RV.get_args().get('op', str)
@@ -472,7 +473,7 @@ class BackupActivateDeactivate(Resource):
 
 class BackupUnsubscribe(Resource):
     def __init__(self):
-        self.backup_server = IpfsBackupServer()
+        self.backup_server = BackupServer()
 
     def delete(self):
         """ Unsubscribe from the remote backup service on a specific hive node.

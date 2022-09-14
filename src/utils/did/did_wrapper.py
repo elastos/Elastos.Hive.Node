@@ -11,7 +11,7 @@ from src.utils.http_exception import ElaDIDException
 """
 The wrapper for eladid.so
 
-1. Replace lib.Mnemonic_Free() with lib.free() when lib.free() is ready.
+1. Replace lib.Mnemonic_Free() with lib.DID_FreeMemory.
 """
 
 
@@ -318,6 +318,121 @@ class DIDDocument:
         if expire == 0:
             raise ElaDIDException(ElaError.get_from_method())
         return expire
+
+    def create_cipher(self, identifier, security_code, storepass) -> 'Cipher':
+        cipher = lib.DIDDocument_CreateCipher(self.doc, identifier.encode(), security_code, storepass.encode())
+        if not cipher:
+            raise ElaDIDException(ElaError.get_from_method('Can not get the cipher'))
+
+        return Cipher(ffi.gc(cipher, lib.DIDDocument_Cipher_Destroy))
+
+    def create_curve25519_cipher(self, identifier, security_code, storepass, is_server) -> 'Cipher':
+        cipher = lib.DIDDocument_CreateCurve25519Cipher(self.doc, identifier.encode(), security_code, storepass.encode(), is_server)
+        if not cipher:
+            raise ElaDIDException(ElaError.get_from_method('Can not get the curve25519 cipher'))
+
+        return Cipher(ffi.gc(cipher, lib.DIDDocument_Cipher_Destroy))
+
+
+class Cipher:
+    def __init__(self, cipher):
+        self.cipher = cipher
+
+    def set_other_side_public_key(self, key):
+        success = lib.Cipher_SetOtherSidePublicKey(self.cipher, ffi.from_buffer(key))
+        if not success:
+            raise ElaDIDException(ElaError.get_from_method('Can not set other side public key'))
+
+    def encrypt(self, data, nonce):
+        length = ffi.new("unsigned int *")
+        cipher_data = lib.Cipher_Encrypt(self.cipher, ffi.from_buffer(data), len(data), ffi.from_buffer(nonce), length)
+        if not cipher_data:
+            raise ElaDIDException(ElaError.get_from_method('Can not encrypt the data.'))
+
+        return ffi.buffer(ffi.gc(cipher_data, lib.DID_FreeMemory), length[0])
+
+    def decrypt(self, data, nonce):
+        length = ffi.new("unsigned int *")
+        clear_data = lib.Cipher_Decrypt(self.cipher, ffi.from_buffer(data), len(data), ffi.from_buffer(nonce), length)
+        if not clear_data:
+            raise ElaDIDException(ElaError.get_from_method('Can not decrypt the data.'))
+
+        return ffi.buffer(ffi.gc(clear_data, lib.DID_FreeMemory), length[0])
+
+    def create_encryption_stream(self):
+        stream = lib.Cipher_EncryptionStream_Create(self.cipher)
+        if not stream:
+            raise ElaDIDException(ElaError.get_from_method('Can not create the encryption stream.'))
+
+        return CipherEncryptionStream(ffi.gc(stream, lib.DID_FreeMemory))
+
+    def create_decryption_stream(self, header):
+        stream = lib.Cipher_DecryptionStream_Create(self.cipher, ffi.from_buffer(header))
+        if not stream:
+            raise ElaDIDException(ElaError.get_from_method('Can not create the decryption stream.'))
+
+        return CipherDecryptionStream(ffi.gc(stream, lib.DID_FreeMemory))
+
+    def get_ed25519_public_key(self):
+        length = ffi.new("unsigned int *")
+        key = lib.Cipher_GetEd25519PublicKey(self.cipher, length)
+        if not key:
+            raise ElaDIDException(ElaError.get_from_method('Can not get the ed25519 public key.'))
+
+        return ffi.buffer(key, length[0])
+
+    def get_curve25519_public_key(self):
+        length = ffi.new("unsigned int *")
+        key = lib.Cipher_GetCurve25519PublicKey(self.cipher, length)
+        if not key:
+            raise ElaDIDException(ElaError.get_from_method('Can not get the curve25519 public key.'))
+
+        return ffi.buffer(key, length[0])
+
+
+class CipherEncryptionStream:
+    def __init__(self, stream):
+        self.stream = stream
+
+    def header(self):
+        length = ffi.new("unsigned int *")
+        header = lib.Cipher_EncryptionStream_Header(self.stream, length)
+        if not header:
+            raise ElaDIDException(ElaError.get_from_method('Can not decrypt the data.'))
+
+        return ffi.buffer(header, length[0])
+
+    def push(self, data, is_final):
+        length = ffi.new("unsigned int *")
+        cipher_data = lib.Cipher_EncryptionStream_Push(self.stream, ffi.from_buffer(data), len(data), is_final, length)
+        if not cipher_data:
+            raise ElaDIDException(ElaError.get_from_method('Can not push the data.'))
+
+        return ffi.buffer(ffi.gc(cipher_data, lib.DID_FreeMemory), length[0])
+
+
+class CipherDecryptionStream:
+    def __init__(self, stream):
+        self.stream = stream
+
+    @staticmethod
+    def header_len():
+        return lib.Cipher_DecryptionStream_GetHeaderLen()
+
+    @staticmethod
+    def extra_encryption_size():
+        return lib.Cipher_DecryptionStream_GetExtraEncryptSize()
+
+    def pull(self, data):
+        length = ffi.new("unsigned int *")
+        clear_data = lib.Cipher_DecryptionStream_Pull(self.stream, ffi.from_buffer(data), len(data), length)
+        if not clear_data:
+            raise ElaDIDException(ElaError.get_from_method('Can not decrypt the data.'))
+
+        return ffi.buffer(ffi.gc(clear_data, lib.DID_FreeMemory), length[0])
+
+    def is_complete(self):
+        return lib.Cipher_DecryptionStream_IsComplete(self.stream)
 
 
 class RootIdentity:

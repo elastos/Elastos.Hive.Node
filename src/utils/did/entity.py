@@ -8,8 +8,8 @@ import base58
 from src.utils.consts import DID
 from src.utils.http_exception import BadRequestException, HiveException
 from src.settings import hive_setting
-from src.utils_v1.common import gene_temp_file_name
 from src.utils.did.did_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder
+from src.modules.files.local_file import LocalFile
 
 
 class Entity:
@@ -42,11 +42,11 @@ class Entity:
 
     def load_did_to_store(self, file_content: str, passphrase: str):
         try:
-            file_content_str = base58.b58decode(file_content).decode('utf8')
+            file_content_str = base58.b58decode(bytes(file_content, 'utf8')).decode('utf8')
         except Exception as e:
             raise RuntimeError(f'get_verified_owner_did: invalid value of NODE_CREDENTIAL')
 
-        file_path = gene_temp_file_name()
+        file_path = LocalFile.generate_tmp_file_path()
         with open(file_path, 'w') as f:
             ret_val = f.write(file_content_str)
             f.flush()

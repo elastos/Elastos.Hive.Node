@@ -174,6 +174,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         with VaultFreezer() as _:
             response = self.cli.get(f'/files/{self.src_file_name}?comp=metadata')
             RA(response).assert_status(HttpCode.OK)
+            RA(response).body().assert_equal('name', self.src_file_name)
 
         self.__check_remote_file_exist(self.src_file_name)
 
@@ -212,6 +213,34 @@ class IpfsFilesTestCase(unittest.TestCase):
     def test08_delete_file_invalid_parameter(self):
         response = self.cli.delete('/files/')
         self.assertEqual(response.status_code, 405)
+
+    def test09_sdk_encrypt(self):
+        # upload file with encrypt information.
+        file_name, file_content = self.src_file_name, self.src_file_content.encode()
+        response = self.cli.put(f'/files/{file_name}?is_encrypt=true&encrypt_method=user_did', file_content, is_json=False)
+        self.assertEqual(response.status_code, 200)
+
+        # check on list file API.
+        response = self.cli.get(f'/files/?comp=children')
+        RA(response).assert_status(200)
+        files = RA(response).body().get('value', list)
+        self.assertGreaterEqual(len(files), 1)
+        files = list(filter(lambda f: f['name'] == file_name, files))
+        self.assertEqual(len(files), 1)
+        file = files[0]
+        self.assertEqual(file['is_encrypt'], True)
+        self.assertEqual(file['encrypt_method'], 'user_did')
+
+        # check on file property.
+        response = self.cli.get(f'/files/{file_name}?comp=metadata')
+        RA(response).assert_status(HttpCode.OK)
+        RA(response).body().assert_equal('name', file_name)
+        RA(response).body().assert_equal('is_encrypt', True)
+        RA(response).body().assert_equal('encrypt_method', 'user_did')
+
+        # delete file
+        response = self.cli.delete(f'/files/{file_name}')
+        self.assertEqual(response.status_code, 204)
 
     def __check_remote_file_exist(self, file_name):
         response = self.cli.get(f'/files/{file_name}?comp=metadata')

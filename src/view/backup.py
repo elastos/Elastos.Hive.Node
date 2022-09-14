@@ -5,15 +5,15 @@ The view of ipfs-backup module for file saving and viewing.
 """
 from flask_restful import Resource
 
-from src.modules.ipfs.ipfs_backup_client import IpfsBackupClient
-from src.modules.ipfs.ipfs_backup_server import IpfsBackupServer
+from src.modules.backup.backup_client import BackupClient
+from src.modules.backup.backup_server import BackupServer
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import params, rqargs
 
 
 class State(Resource):
     def __init__(self):
-        self.backup_client = IpfsBackupClient()
+        self.backup_client = BackupClient()
 
     def get(self):
         """ Get the status of the backup processing.
@@ -52,7 +52,7 @@ class State(Resource):
 
 class BackupRestore(Resource):
     def __init__(self):
-        self.backup_client = IpfsBackupClient()
+        self.backup_client = BackupClient()
 
     def post(self):
         """ Backup or restore the data of the vault service.
@@ -147,7 +147,7 @@ class BackupRestore(Resource):
 
 class ServerPromotion(Resource):
     def __init__(self):
-        self.backup_server = IpfsBackupServer()
+        self.backup_server = BackupServer()
 
     def post(self):
         """ Promote a backup service to the vault service on backup node.
@@ -195,18 +195,19 @@ class ServerPromotion(Resource):
 
 class ServerInternalBackup(Resource):
     def __init__(self):
-        self.backup_server = IpfsBackupServer()
+        self.backup_server = BackupServer()
 
     def post(self):
         return self.backup_server.internal_backup(params.get_str('cid')[0],
                                                   params.get_str('sha256')[0],
                                                   params.get_int('size')[0],
-                                                  params.get_bool('is_force')[0])
+                                                  params.get_bool('is_force')[0],
+                                                  params.get_str('public_key')[0])
 
 
 class ServerInternalState(Resource):
     def __init__(self):
-        self.backup_server = IpfsBackupServer()
+        self.backup_server = BackupServer()
 
     def get(self):
         return self.backup_server.internal_backup_state()
@@ -214,7 +215,7 @@ class ServerInternalState(Resource):
 
 class ServerInternalRestore(Resource):
     def __init__(self):
-        self.backup_server = IpfsBackupServer()
+        self.backup_server = BackupServer()
 
     def get(self):
-        return self.backup_server.internal_restore()
+        return self.backup_server.internal_restore(rqargs.get_str('public_key')[0])

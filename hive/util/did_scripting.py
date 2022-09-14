@@ -6,14 +6,14 @@ from hive.main.hive_file import HiveFile
 from hive.settings import hive_setting
 from hive.util.constants import SCRIPTING_EXECUTABLE_CALLER_DID, SCRIPTING_EXECUTABLE_PARAMS, \
     SCRIPTING_EXECUTABLE_CALLER_APP_DID, VAULT_ACCESS_R, VAULT_ACCESS_WR, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from hive.util.did_file_info import query_properties, query_hash, query_upload_get_filepath
+from hive.util.did_file_info import query_upload_get_filepath
 from hive.util.did_mongo_db_resource import populate_options_find_many, \
     query_insert_one, query_find_many, populate_options_insert_one, populate_options_count_documents, \
     query_count_documents, populate_options_update_one, query_update_one, query_delete_one, get_collection, \
     get_mongo_database_size
-from hive.util.error_code import BAD_REQUEST, SUCCESS
+from hive.util.error_code import SUCCESS
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.files.files_service import IpfsFiles
 from src.utils.consts import COL_IPFS_FILES_SHA256
 from hive.util.v2_adapter import v2_wrapper
 

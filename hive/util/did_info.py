@@ -13,7 +13,7 @@ def add_did_nonce_to_db(app_instance_did, nonce, expired):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     did_dic = {APP_INSTANCE_DID: app_instance_did, DID_INFO_NONCE: nonce, DID_INFO_NONCE_EXPIRED: expired}
@@ -25,7 +25,7 @@ def update_nonce_of_did_info(app_instance_did, nonce, expired):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID_INFO_NONCE: nonce}
@@ -38,7 +38,7 @@ def update_did_info_by_app_instance_did(app_instance_did, nonce, expired):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {APP_INSTANCE_DID: app_instance_did}
@@ -51,7 +51,7 @@ def update_token_of_did_info(did, app_id, app_instance_did, nonce, token, expire
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {APP_INSTANCE_DID: app_instance_did, DID_INFO_NONCE: nonce}
@@ -65,7 +65,7 @@ def get_all_did_info():
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     infos = col.find()
@@ -77,7 +77,7 @@ def delete_did_info(did, app_id):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID: did, APP_ID: app_id}
@@ -89,7 +89,7 @@ def get_all_did_info_by_did(did):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID: did}
@@ -102,7 +102,7 @@ def get_did_info_by_nonce(nonce):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID_INFO_NONCE: nonce}
@@ -114,7 +114,7 @@ def get_did_info_by_app_instance_did(app_instance_did):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {APP_INSTANCE_DID: app_instance_did}
@@ -126,7 +126,7 @@ def get_did_info_by_did_appid(did, app_id):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID: did, APP_ID: app_id}
@@ -139,7 +139,7 @@ def save_token_to_db(did, app_id, token, expired):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID: did, APP_ID: app_id}
@@ -157,7 +157,7 @@ def get_did_info_by_token(token):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db = connection[DID_INFO_DB_NAME]
     col = db[DID_INFO_REGISTER_COL]
     query = {DID_INFO_TOKEN: token}
@@ -169,7 +169,7 @@ def get_collection(did, app_id, collection):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
     col = db[collection]

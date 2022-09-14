@@ -1,10 +1,8 @@
 import copy
-import os
 import logging
 
 import jwt
 from bson import ObjectId
-from flask import request
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
@@ -17,7 +15,6 @@ from hive.util.constants import SCRIPTING_SCRIPT_COLLECTION, \
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_DOWNLOADABLE, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, VAULT_ACCESS_WR, VAULT_ACCESS_R, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
-from hive.util.did_file_info import filter_path_root, query_upload_get_filepath, query_download
 from hive.util.did_mongo_db_resource import gene_mongo_db_name, \
     get_collection, get_mongo_database_size, query_delete_one, convert_oid
 from hive.util.did_scripting import check_json_param, run_executable_find, run_condition, run_executable_insert, \
@@ -27,7 +24,7 @@ from hive.util.did_scripting import check_json_param, run_executable_find, run_c
 from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SUCCESS
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
 from hive.util.server_response import ServerResponse
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.files.files_service import IpfsFiles
 from hive.util.v2_adapter import v2_wrapper
 
 
@@ -45,7 +42,7 @@ class HiveScripting:
             uri = hive_setting.MONGO_URI
             connection = MongoClient(uri)
         else:
-            connection = MongoClient(hive_setting.MONGODB_URI)
+            connection = MongoClient(hive_setting.MONGODB_URL)
 
         db_name = gene_mongo_db_name(did, app_id)
         db = connection[db_name]

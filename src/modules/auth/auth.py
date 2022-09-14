@@ -8,16 +8,16 @@ import logging
 import os
 from datetime import datetime
 
+from src.utils.consts import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED, DID_INFO_REGISTER_COL, DID_INFO_NONCE
+from src.utils.http_exception import InvalidParameterException, BadRequestException
 from src import hive_setting
-from src.modules.auth.user import UserManager
-from src.modules.database.mongodb_client import MongodbClient
-from src.utils.http_request import RequestData
-from src.utils_v1.constants import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED, DID_INFO_REGISTER_COL, DID_INFO_NONCE
 from src.utils.did.did_wrapper import Credential, DIDDocument, DID, JWT, Presentation
 from src.utils.did.entity import Entity
-from src.utils_v1.did_info import create_nonce, get_auth_info_by_nonce, update_token_of_did_info
+from src.utils.http_request import RequestData
 from src.utils.http_client import HttpClient
-from src.utils.http_exception import InvalidParameterException, BadRequestException
+from src.modules.auth.access_token import AccessToken
+from src.modules.auth.user import UserManager
+from src.modules.database.mongodb_client import MongodbClient
 
 from src.utils.consts import URL_SIGN_IN, URL_BACKUP_AUTH, URL_V2
 from src.utils.singleton import Singleton
@@ -26,9 +26,10 @@ from src.utils.singleton import Singleton
 class Auth(Entity, metaclass=Singleton):
     def __init__(self):
         Entity.__init__(self, "hive.auth", passphrase=hive_setting.PASSPHRASE, storepass=hive_setting.PASSWORD,
-                        from_file=True, file_content=hive_setting.SERVICE_DID)
+                        from_file=True, file_content=hive_setting.SERVICE_DID_PRIVATE_KEY)
         self.http = HttpClient()
         self.mcli = MongodbClient()
+        self.access_token = AccessToken()
         self.user_manager = UserManager()
         logging.info(f'Service DID V2: {self.get_did_string()}')
 
@@ -59,7 +60,7 @@ class Auth(Entity, metaclass=Singleton):
 
     def __save_nonce_to_db(self, app_instance_did: str):
         """ return nonce and 3 minutes expire time """
-        nonce, expire_time = create_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
+        nonce, expire_time = AccessToken.create_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
         try:
             filter_ = {APP_INSTANCE_DID: app_instance_did}
             update = {
@@ -86,7 +87,7 @@ class Auth(Entity, metaclass=Singleton):
         access_token = super().create_jwt_token('AccessToken', info["id"], info["expTime"], 'props', json.dumps(props), claim_json=False)
 
         try:
-            update_token_of_did_info(info["userDid"], info["appDid"], info["id"], info["nonce"], access_token, info["expTime"])
+            self.access_token.update_auth_info(info["userDid"], info["appDid"], info["id"], info["nonce"], access_token, info["expTime"])
         except Exception as e:
             # update to temporary auth collection, so failed can skip
             logging.info(f'Update access token to auth collection failed: {e}')
@@ -119,7 +120,7 @@ class Auth(Entity, metaclass=Singleton):
 
         # presentation check nonce
 
-        auth_info = get_auth_info_by_nonce(presentation.get_nonce())
+        auth_info = self.access_token.get_auth_info_by_nonce(presentation.get_nonce())
         if not auth_info:
             raise InvalidParameterException('Can not get presentation nonce information from database.')
 
@@ -243,7 +244,7 @@ class Auth(Entity, metaclass=Singleton):
 
     def get_ownership_presentation(self, credential: str):
         vc = Credential.from_json(credential)
-        vp_json = self.create_presentation_str(vc, create_nonce(), super().get_did_string())
+        vp_json = self.create_presentation_str(vc, AccessToken.create_nonce(), super().get_did_string())
         return json.loads(vp_json)
 
     @staticmethod
@@ -251,7 +252,7 @@ class Auth(Entity, metaclass=Singleton):
         def filed_check(names):
             for name in names:
                 if name not in info or not info[name]:
-                    return None, "The credentialSubject's '" + name + "' isn't exist or not valid."
+                    return None, "The credentialSubject's '" + name + "' doesn't exist or not valid."
 
         # Use new defined fields
         if 'HiveBackupCredential' in types:
@@ -286,14 +287,14 @@ class Auth(Entity, metaclass=Singleton):
             return None, "Invalid backup credential type."
 
         if "issuer" not in vc_json or vc_json['issuer'] != user_did:
-            return None, "The credential issuer isn't exist."
+            return None, "The credential issuer doesn't exist or not the user did."
 
         if "credentialSubject" not in vc_json:
-            return None, "The credentialSubject isn't exist."
+            return None, "The credentialSubject doesn't exist."
         credential_subject = vc_json["credentialSubject"]
 
         if "id" not in credential_subject or credential_subject['id'] != super().get_did_string():
-            return None, "The credentialSubject's id isn't exist or not the hive node did."
+            return None, "The credentialSubject's id doesn't exist or not the hive node did."
 
         Auth.__fix_credential_info_with_latest_backup(credential_subject, vc_json['type'], expect_fields)
 

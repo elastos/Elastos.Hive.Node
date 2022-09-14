@@ -5,9 +5,9 @@ The view of ipfs module for files and scripting.
 """
 from flask_restful import Resource
 
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.files.files_service import IpfsFiles
 from src.utils.http_exception import InvalidParameterException
-from src.utils.http_request import rqargs
+from src.utils.http_request import RV
 from src.utils.http_response import response_stream
 
 
@@ -18,9 +18,10 @@ class ReadingOperation(Resource):
     @response_stream
     def get(self, path):
         """ Download/get the properties of/get the hash of the file, list the files of the folder.
-        Download the content of the file by path if no URL parameter.
 
         .. :quickref: 04 Files; Download/properties/hash/list
+
+        Download the content of the file by path if no URL parameter.
 
         **Request**:
 
@@ -71,11 +72,13 @@ class ReadingOperation(Resource):
             {
                 “value”: [{
                     “name”: “<path/to/res>”
-                    “is_file”: false,
-                    “size”: <Integer>
+                    “is_file”: true,
+                    “size”: <int>,
+                    "is_encrypt": false,
+                    "encrypt_method": ""
                 }, {
                     “name”: “<path/to/dir>”
-                    “is_file”: true
+                    “is_file”: false
                 }]
             }
 
@@ -112,9 +115,11 @@ class ReadingOperation(Resource):
             {
                 “name”: <path/to/res>,
                 “is_file”: <true: file, false: folder>,
-                “size”: <size>,
-                “created”: <created timestamp>
-                “updated”: <updated timestamp>
+                “size”: <int>,
+                "is_encrypt": false,
+                "encrypt_method": "",
+                “created”: <timestamp>,
+                “updated”: <timestamp>
             }
 
         **Response Error**:
@@ -170,7 +175,7 @@ class ReadingOperation(Resource):
 
         """
 
-        component, _ = rqargs.get_str('comp')
+        component = RV.get_args().get_opt('comp', str, '')
         if not path and component != 'children':
             raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
@@ -250,9 +255,12 @@ class WritingOperation(Resource):
 
         .. sourcecode:: http
 
-            public=<true|false>    # whether the file uploaded can be access anonymously.
-            script_name=<string>   # script name used to set up for downloading by scripting module. the script can be run without params.
-                                   # the executable name of the script is the same as the script name.
+            public=<true|false>         # [optional] Whether the file uploaded can be access anonymously. Default is 'false'.
+            script_name=<string>        # [optional] A script name used to set up for downloading by scripting module. the script can be run without params.
+                                        # The executable name of the script is the same as the script name.
+                                        # Default is empty string.
+            is_encrypt=<true|false>     # [optional] Whether the content of the file has been encrypted by hive sdk. Default is 'false'.
+            encrypt_method=<string>     # [optional] The way to encrypt. Default is empty string.
 
         **Response OK**:
 
@@ -294,16 +302,21 @@ class WritingOperation(Resource):
         if not path:
             raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
-        dst_path, _ = rqargs.get_str('dest')
+        dst_path = RV.get_args().get_opt('dest', str, '')
         if not dst_path:
-            is_public, msg = rqargs.get_bool('public', False)
-            script_name, msg = rqargs.get_str('script_name', '')
+            is_public, script_name = RV.get_args().get_opt('public', bool, False), RV.get_args().get_opt('script_name', str, '')
             if is_public and not script_name:
-                raise InvalidParameterException('MUST provide script name when public is true.')
-            return self.ipfs_files.upload_file(path, is_public, script_name)
+                raise InvalidParameterException("MUST provide 'script_name' when 'public' is true.")
+
+            is_encrypt, encrypt_method = RV.get_args().get_opt('is_encrypt', bool, False), RV.get_args().get_opt('encrypt_method', str, '')
+            if is_encrypt and not encrypt_method:
+                raise InvalidParameterException("MUST provide 'encrypt_method' when 'is_encrypt' is true.")
+
+            return self.ipfs_files.upload_file(path, is_public, script_name, is_encrypt, encrypt_method)
 
         if path == dst_path:
-            raise InvalidParameterException(f'The source file {path} can be copied to a target file with same name')
+            raise InvalidParameterException(f'The source file {path} can be copied to a target file with the same name')
+
         return self.ipfs_files.copy_file(path, dst_path)
 
 
@@ -361,11 +374,10 @@ class MoveFile(Resource):
         if not path:
             raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
-        dst_path, _ = rqargs.get_str('to')
-        if not dst_path:
-            raise InvalidParameterException('The path MUST be provided.')
+        dst_path = RV.get_args().get('to', str)
         if path == dst_path:
-            raise InvalidParameterException(f'The source file {path} can be moved to a target file with same name')
+            raise InvalidParameterException(f'The source file {path} can be moved to a target file with the same name')
+
         return self.ipfs_files.move_file(path, dst_path)
 
 

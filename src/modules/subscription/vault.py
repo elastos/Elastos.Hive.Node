@@ -4,12 +4,11 @@ from datetime import datetime
 from src import hive_setting
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient, Dotdict
-from src.utils.consts import COL_IPFS_FILES
-from src.utils.http_exception import InsufficientStorageException, VaultNotFoundException, CollectionNotFoundException, VaultFrozenException
-from src.utils_v1.constants import VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
+from src.utils.consts import COL_IPFS_FILES, IS_UPGRADED, VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_LATEST_ACCESS_TIME
-from src.utils_v1.payment.payment_config import PaymentConfig
+from src.utils.http_exception import VaultNotFoundException, CollectionNotFoundException, VaultFrozenException
+from src.utils.payment_config import PaymentConfig
 
 
 class Vault(Dotdict):
@@ -51,7 +50,7 @@ class Vault(Dotdict):
         return self
 
     def get_plan(self):
-        return PaymentConfig.get_pricing_plan(self.pricing_using)
+        return PaymentConfig.get_vault_plan(self.pricing_using)
 
     def get_plan_name(self):
         return self.pricing_using
@@ -92,9 +91,42 @@ class VaultManager:
         self.mcli = MongodbClient()
         self.user_manager = UserManager()
 
+    def create_vault(self, user_did, price_plan: dict, is_upgraded=False) -> Vault:
+        now = datetime.now().timestamp()  # seconds in UTC
+        # end time is timestamp or -1 (no end time)
+        end_time = -1 if price_plan['serviceDays'] == -1 else now + price_plan['serviceDays'] * 24 * 60 * 60
+
+        filter_ = {VAULT_SERVICE_DID: user_did}
+        update = {
+            '$set': {
+               VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,  # unit: byte (MB on v1, checked by 1024 * 1024)
+               VAULT_SERVICE_FILE_USE_STORAGE: 0,  # unit: byte
+               VAULT_SERVICE_DB_USE_STORAGE: 0,  # unit: byte
+               IS_UPGRADED: is_upgraded,  # True, the vault is from the promotion.
+               VAULT_SERVICE_START_TIME: now,
+               VAULT_SERVICE_END_TIME: end_time,
+               VAULT_SERVICE_MODIFY_TIME: now,
+               VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
+               VAULT_SERVICE_PRICING_USING: price_plan['name']
+            }
+        }
+
+        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
+        col.update_one(filter_, update, upsert=True)
+
+        return self.__only_get_vault(user_did)
+
     def get_vault_count(self) -> int:
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
         return col.count({})
+
+    def get_all_vaults(self) -> list:
+        """ get all vaults in this node. """
+        vaults = self.mcli.get_management_collection(VAULT_SERVICE_COL).find_many({})
+        if not vaults:
+            raise VaultNotFoundException()
+
+        return list(map(lambda d: Vault(**d), vaults))
 
     def get_vault(self, user_did) -> Vault:
         """ Get the vault for user or raise not-found exception.
@@ -112,7 +144,7 @@ class VaultManager:
         # try to revert to free package plan
         return self.__try_to_downgrade_to_free(user_did, vault)
 
-    def __only_get_vault(self, user_did):
+    def __only_get_vault(self, user_did) -> Vault:
         """ common method to all other method in this class """
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
 
@@ -153,6 +185,13 @@ class VaultManager:
         self.upgrade(user_did, PaymentConfig.get_free_vault_plan(), vault=vault)
         return self.__only_get_vault(user_did)
 
+    def remove_vault(self, user_did):
+        self.drop_vault_data(user_did)
+
+        filter_ = {VAULT_SERVICE_DID: user_did}
+        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
+        col.delete_one(filter_)
+
     def recalculate_user_databases_size(self, user_did: str):
         """ Update all databases used size in vault """
         # Get all application DIDs of user DID, then get their sizes.
@@ -161,7 +200,7 @@ class VaultManager:
 
         self.update_user_databases_size(user_did, size, is_reset=True)
 
-    def get_user_database_size(self, user_did, app_did):
+    def get_user_database_size(self, user_did, app_did) -> int:
         return self.mcli.get_user_database_size(user_did, app_did)
 
     def update_user_databases_size(self, user_did, size: int, is_reset=False):
@@ -230,7 +269,7 @@ class VaultManager:
             self.mcli.drop_user_database(user_did, app_did)
 
     def count_app_files_total_size(self, user_did, app_did) -> int:
-        """ only for batch 'count_vault_storage_job' """
+        """ for batch 'count_vault_storage_job' and count files occupation """
         if not self.mcli.exists_user_database(user_did, app_did):
             return 0
 

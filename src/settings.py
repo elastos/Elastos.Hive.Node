@@ -24,11 +24,11 @@ class HiveSetting:
 
     @property
     def ESC_RESOLVER_URL(self):
-        return self.env_config('ESC_RESOLVER_URL', default='https://api.elastos.io/ela', cast=str)
+        return self.env_config('ESC_RESOLVER_URL', default='https://api.elastos.io/eth', cast=str)
 
     @property
-    def SERVICE_DID(self):
-        return self.env_config('SERVICE_DID', default='', cast=str)
+    def SERVICE_DID_PRIVATE_KEY(self):
+        return self.env_config('SERVICE_DID_PRIVATE_KEY', default='', cast=str)
 
     @property
     def PASSPHRASE(self):
@@ -48,6 +48,18 @@ class HiveSetting:
         if path.startswith('/'):
             return path
         return os.path.join(BASE_DIR, path)
+
+    def get_temp_dir(self):
+        return self.DATA_STORE_PATH + '/.temp'
+
+    def get_user_did_path(self, user_did) -> Path:
+        """ get the path of the user did """
+        path = Path(self.VAULTS_BASE_DIR)
+
+        def did_tail_part(did):
+            return did.split(":")[2]
+
+        return (path if path.is_absolute() else path.resolve()) / did_tail_part(user_did)
 
     @property
     def VAULTS_BASE_DIR(self):
@@ -97,10 +109,6 @@ class HiveSetting:
         return os.path.join(BASE_DIR, path)
 
     @property
-    def PAYMENT_CONTRACT_URL(self):
-        return self.env_config('PAYMENT_CONTRACT_URL', default='', cast=str)
-
-    @property
     def PAYMENT_CONTRACT_ADDRESS(self):
         return self.env_config('PAYMENT_CONTRACT_ADDRESS', default='', cast=str)
 
@@ -113,8 +121,8 @@ class HiveSetting:
         return self.env_config('ATLAS_ENABLED', default='False', cast=bool)
 
     @property
-    def MONGODB_URI(self):
-        return self.env_config('MONGODB_URI', default='mongodb://hive-mongo:27017', cast=str)
+    def MONGODB_URL(self):
+        return self.env_config('MONGODB_URL', default='mongodb://hive-mongo:27017', cast=str)
 
     @property
     def IPFS_NODE_URL(self):

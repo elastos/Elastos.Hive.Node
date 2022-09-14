@@ -10,10 +10,10 @@ from flask import request, g
 from bson import ObjectId
 
 from src import hive_setting
-from src.utils_v1.constants import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
+from src.utils.consts import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.ipfs.ipfs_files import IpfsFiles
+from src.modules.files.files_service import IpfsFiles
 from src.modules.subscription.vault import VaultManager
 from src.modules.scripting.executable import Executable, get_populated_value_with_params, validate_exists
 
@@ -206,7 +206,7 @@ class Script:
         # Keeping the script name and running data is enough
         self.name = script_name
         self.context = Context(run_data.get('context', None) if run_data else None)
-        self.params = run_data.get('params', None) if run_data else None
+        self.params = run_data.get('params', None) if run_data else {}
 
         # for file uploading and downloading
         self.anonymous_app = self.anonymous_user = False
@@ -231,6 +231,10 @@ class Script:
             return
 
         Context.validate_data(json_data.get('context', None))
+
+        # params check
+        if 'params' in json_data and not isinstance(json_data['params'], dict):
+            raise InvalidParameterException("params MUST be a dictionary.")
 
     def execute(self):
         """

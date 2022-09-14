@@ -8,7 +8,7 @@ from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from src import hive_setting
-from src.utils_v1.constants import DID_INFO_DB_NAME
+from src.utils.consts import DID_INFO_DB_NAME
 from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException, BadRequestException
 
 _T = typing.TypeVar('_T', dict, list, tuple)
@@ -112,9 +112,9 @@ class MongodbCollection:
         options = {k: v for k, v in kwargs.items() if k in ("upsert", "bypass_document_validation")}
 
         if only_one:
-            result = self.col.update_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **options)
+            result = self.col.update_one(self.convert_oid(filter_) if filter_ else {}, self.convert_oid(update), **options)
         else:
-            result = self.col.update_many(self.convert_oid(filter_) if filter_ else None, self.convert_oid(update), **options)
+            result = self.col.update_many(self.convert_oid(filter_) if filter_ else {}, self.convert_oid(update), **options)
         return {
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,
@@ -216,12 +216,10 @@ class MongodbCollection:
 
 
 class MongodbClient:
-    """ Used to connect mongodb and is a helper class for all mongo database operation.
-    This class is used to replace class `src.utils.db_client.DatabaseClient`.
-    """
+    """ Used to connect mongodb and is a helper class for all mongo database operation. """
 
     def __init__(self):
-        self.mongodb_uri = hive_setting.MONGODB_URI
+        self.mongodb_uri = hive_setting.MONGODB_URL
         self.connection = None
 
     def __get_connection(self):
@@ -318,4 +316,4 @@ class MongodbClient:
         database = self.__get_database(name)
 
         # count size by command: https://www.mongodb.com/docs/v4.4/reference/command/dbStats/
-        return database.command('dbstats')['totalSize']
+        return int(database.command('dbstats')['totalSize'])

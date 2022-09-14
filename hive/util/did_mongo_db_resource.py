@@ -171,7 +171,7 @@ def get_collection(did, app_id, collection):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db_name = gene_mongo_db_name(did, app_id)
     db = connection[db_name]
@@ -186,7 +186,7 @@ def delete_mongo_database(did, app_id):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     db_name = gene_mongo_db_name(did, app_id)
     connection.drop_database(db_name)
@@ -198,7 +198,7 @@ def get_mongo_database_size(user_did, app_did):
         uri = hive_setting.MONGO_URI
         connection = MongoClient(uri)
     else:
-        connection = MongoClient(hive_setting.MONGODB_URI)
+        connection = MongoClient(hive_setting.MONGODB_URL)
 
     # get user's database
     db_name = gene_mongo_db_name(user_did, app_did)
@@ -226,7 +226,7 @@ def export_mongo_db(did, app_id):
         if not create_full_path_dir(save_path):
             return False
     db_name = gene_mongo_db_name(did, app_id)
-    line2 = 'mongodump --uri "%s" -d %s -o %s' % (hive_setting.MONGODB_URI, db_name, save_path)
+    line2 = 'mongodump --uri "%s" -d %s -o %s' % (hive_setting.MONGODB_URL, db_name, save_path)
     subprocess.call(line2, shell=True)
     return True
 
@@ -235,7 +235,7 @@ def import_mongo_db(did):
     save_path = get_save_mongo_db_path(did)
     if not save_path.exists():
         return False
-    line2 = 'mongorestore --uri "%s" --drop %s' % (hive_setting.MONGODB_URI, save_path)
+    line2 = 'mongorestore --uri "%s" --drop %s' % (hive_setting.MONGODB_URL, save_path)
     subprocess.call(line2, shell=True)
     return True
 

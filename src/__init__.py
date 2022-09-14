@@ -18,8 +18,8 @@ from src.utils.http_response import HiveApi
 from src.utils.sentry_error import init_sentry_hook
 from src.utils.auth_token import TokenParser
 from src.utils.did.did_init import init_did_backend
-from src.utils_v1.constants import HIVE_MODE_PROD, HIVE_MODE_TEST
-from src.utils_v1.payment.payment_config import PaymentConfig
+from src.utils.consts import HIVE_MODE_PROD, HIVE_MODE_TEST
+from src.utils.payment_config import PaymentConfig
 from src import view
 
 import hive.settings

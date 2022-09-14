@@ -33,7 +33,7 @@ class About:
     def get_node_info(self):
         from src.modules.auth.user import UserManager
         from src.modules.subscription.vault import VaultManager
-        from src.modules.subscription.backup import BackupManager
+        from src.modules.backup.backup import BackupManager
 
         owner_did, credential = Provider.get_verified_owner_did()
         auth = Auth()

@@ -11,7 +11,7 @@ import nacl.utils
 
 from src.modules.backup.encryption import Encryption
 from src.modules.files.local_file import LocalFile
-from src.utils.did.did_wrapper import DIDDocument, Cipher, CipherDecryptionStream, CipherEncryptionStream
+from src.utils.did.eladid_wrapper import DIDDocument, Cipher, CipherDecryptionStream, CipherEncryptionStream
 from src.settings import hive_setting
 from tests.utils.http_client import HttpClient
 from tests import init_test

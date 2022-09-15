@@ -6,7 +6,7 @@ Testing file for the about module.
 import json
 import unittest
 
-from src.utils.did.did_wrapper import Presentation
+from src.utils.did.eladid_wrapper import Presentation
 from tests.utils.http_client import HttpClient
 from tests import init_test
 

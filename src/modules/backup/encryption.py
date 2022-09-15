@@ -6,7 +6,7 @@ import nacl.utils
 
 from src import hive_setting
 from src.modules.auth import auth
-from src.utils.did.did_wrapper import CipherDecryptionStream
+from src.utils.did.eladid_wrapper import CipherDecryptionStream
 from src.utils.http_exception import BadRequestException
 
 

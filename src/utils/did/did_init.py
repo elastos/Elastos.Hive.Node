@@ -4,7 +4,7 @@ from src.utils.did.eladid import ffi, lib
 
 from src.settings import hive_setting
 from src.utils.http_exception import ElaDIDException
-from src.utils.did.did_wrapper import ElaError, DID, DIDDocument, JWTBuilder
+from src.utils.did.eladid_wrapper import ElaError, DID, DIDDocument, JWTBuilder
 
 
 @ffi.def_extern()

@@ -9,7 +9,7 @@ from src.modules.auth.user import UserManager
 from src.utils.consts import URL_V2, URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_STATE, \
     URL_SERVER_INTERNAL_RESTORE, URL_V1, USER_DID, APP_ID, APP_INSTANCE_DID
 from src.modules.auth.auth import Auth
-from src.utils.did.did_wrapper import JWT
+from src.utils.did.eladid_wrapper import JWT
 
 
 def __get_token_details(token, is_internal):

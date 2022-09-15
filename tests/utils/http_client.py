@@ -8,7 +8,7 @@ import requests
 
 from src.utils.did.entity import Entity
 from src.utils.singleton import Singleton
-from src.utils.did.did_wrapper import JWT, Credential, DID
+from src.utils.did.eladid_wrapper import JWT, Credential, DID
 from tests import test_log
 from tests.utils.resp_asserter import RA
 

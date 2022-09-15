@@ -15,7 +15,7 @@ from src.modules.database.mongodb_client import MongodbClient
 from src.modules.payment.order import OrderManager
 from src.modules.subscription.vault import VaultManager
 from src.utils.consts import VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_PRICING_USING
-from src.utils.did.did_wrapper import DID, DIDDocument
+from src.utils.did.eladid_wrapper import DID, DIDDocument
 from src.utils.payment_config import PaymentConfig
 from src.utils.http_exception import BadRequestException, ApplicationNotFoundException
 from src.utils.singleton import Singleton

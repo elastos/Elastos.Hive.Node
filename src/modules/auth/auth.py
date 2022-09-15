@@ -11,7 +11,7 @@ from datetime import datetime
 from src.utils.consts import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED, DID_INFO_REGISTER_COL, DID_INFO_NONCE
 from src.utils.http_exception import InvalidParameterException, BadRequestException
 from src import hive_setting
-from src.utils.did.did_wrapper import Credential, DIDDocument, DID, JWT, Presentation
+from src.utils.did.eladid_wrapper import Credential, DIDDocument, DID, JWT, Presentation
 from src.utils.did.entity import Entity
 from src.utils.http_request import RequestData
 from src.utils.http_client import HttpClient

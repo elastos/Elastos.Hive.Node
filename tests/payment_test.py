@@ -8,7 +8,7 @@ import unittest
 from datetime import datetime
 
 from src.modules.payment.order_contract import OrderContract
-from src.utils.did.did_wrapper import JWT
+from src.utils.did.eladid_wrapper import JWT
 from tests.utils.http_client import HttpClient
 from tests import init_test, test_log
 from tests.utils.resp_asserter import RA, DictAsserter

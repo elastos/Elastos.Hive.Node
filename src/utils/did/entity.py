@@ -8,7 +8,7 @@ import base58
 from src.utils.consts import DID
 from src.utils.http_exception import BadRequestException, HiveException
 from src.settings import hive_setting
-from src.utils.did.did_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder
+from src.utils.did.eladid_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder
 from src.modules.files.local_file import LocalFile
 
 
@@ -30,7 +30,7 @@ class Entity:
             assert mnemonic, 'Entity.__init__: mnemonic must provide.'
             self.did, self.doc = self.init_did_from_mnemonic(mnemonic, passphrase, need_resolve)
         self.did_str = str(self.did)
-        self.issuer: Issuer = self.did_store.create_issuer(self.did)
+        self.issuer: Issuer = Issuer.create(self.did, None, self.did_store)
 
     def init_did_from_file(self, file_content: str, passphrase: str) -> (DID, DIDDocument):
         try:

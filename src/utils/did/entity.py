@@ -8,7 +8,7 @@ import base58
 from src.utils.consts import DID
 from src.utils.http_exception import BadRequestException, HiveException
 from src.settings import hive_setting
-from src.utils.did.eladid_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder
+from src.utils.did.eladid_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder, Presentation
 from src.modules.files.local_file import LocalFile
 
 
@@ -94,14 +94,15 @@ class Entity:
 
     def create_credential(self, type_, props, owner_did: DID = None) -> Credential:
         did = owner_did if owner_did else self.did
-        return self.issuer.create_credential_by_string(did, self.name, type_, props, self.doc.get_expires())
+        return self.issuer.create_credential_by_string(self.did_store, did, self.name, type_, props, self.doc.get_expires())
 
     def create_presentation_str(self, vc: Credential, nonce: str, realm: str) -> str:
-        return self.did_store.create_presentation(self.did, 'jwtvp', nonce, realm, vc).to_json()
+        return Presentation.create(self.did_store, self.did, 'jwtvp', nonce, realm, vc).to_json()
 
     def create_vp_token(self, vp_json, subject, hive_did: str, expire: typing.Optional[int]) -> str:
         return self.create_jwt_token(subject, hive_did, expire, 'presentation', vp_json)
 
-    def create_jwt_token(self, subject: str, audience_did_str: str, expire: typing.Optional[int], claim_key: str, claim_value: any, claim_json: bool = True) -> str:
-        builder: JWTBuilder = self.did_store.get_jwt_builder(self.doc)
-        return builder.create_token(subject, audience_did_str, expire, claim_key, claim_value, claim_json=claim_json)
+    def create_jwt_token(self, subject: str, audience_did_str: str, expire: typing.Optional[int],
+                         claim_key: str, claim_value: any, claim_json: bool = True) -> str:
+        builder: JWTBuilder = self.doc.get_jwt_builder()
+        return builder.create_token(subject, audience_did_str, expire, claim_key, claim_value, store=self.did_store, claim_json=claim_json)

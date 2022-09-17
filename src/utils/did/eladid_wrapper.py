@@ -1,5 +1,7 @@
+import json
 import typing
 import typing as t
+from datetime import datetime
 from enum import Enum
 
 from .eladid import lib, ffi
@@ -390,7 +392,7 @@ class CredentialBiography:
 
 
 class RootIdentity:
-    def __init__(self, store, identity):
+    def __init__(self, store: 'DIDStore', identity):
         self.store = store
         self.identity = identity
 
@@ -550,7 +552,9 @@ class DIDDocument:
 
     @staticmethod
     def from_json(doc_str: str) -> 'DIDDocument':
-        return DIDDocument(_obj_call('DIDDocument_FromJson', doc_str.encode(), release_name='DIDDocument_Destroy'))
+        # BUGBUG
+        # return DIDDocument(_obj_call('DIDDocument_FromJson', doc_str.encode(), release_name='DIDDocument_Destroy'))
+        return DIDDocument(_obj_call('DIDDocument_FromJson', doc_str.encode()))
 
     def to_json(self, normalized: bool = True) -> str:
         return _str_call('DIDDocument_ToJson', self.doc, normalized, release_name=_DEFAULT_MEMORY_FREE_NAME)
@@ -726,7 +730,8 @@ class DIDDocument:
     def get_proof_signature(self, index: int):
         return _str_call('DIDDocument_GetProofSignature', self.doc, index)
 
-    # /* DID_API */ JWTBuilder *DIDDocument_GetJwtBuilder(DIDDocument *document);
+    def get_jwt_builder(self) -> 'JWTBuilder':
+        return JWTBuilder(_obj_call('DIDDocument_GetJwtBuilder', self.doc, release_name='JWTBuilder_Destroy'))
 
     # /*DID_API*/ JWSParser *DIDDocument_GetJwsParser(DIDDocument *document);
 
@@ -939,6 +944,12 @@ class DIDDocumentBuilder:
         _int_call('DIDDocumentBuilder_SetMultisig', self.builder, multi_sig)
 
 
+class CredentialProperty:
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+
+
 class Credential:
     def __init__(self, vc):
         self.vc = vc
@@ -1050,16 +1061,28 @@ class Issuer:
         self.issuer = issuer
 
     @staticmethod
-    def create(did: DID, sign_key: typing.Optional[DIDURL], store: 'DIDStore'):
-        return _obj_call('Issuer_Create', did.did, sign_key.url if sign_key is not None else ffi.NULL, store.store, release_name='Issuer_Destroy')
+    def create(did: DID, sign_key: typing.Optional[DIDURL], store: 'DIDStore') -> 'Issuer':
+        return Issuer(_obj_call('Issuer_Create', did.did, sign_key.url if sign_key is not None else ffi.NULL,
+                                store.store, release_name='Issuer_Destroy'))
 
-    # def create_credential(self, owner: DID, credid: DIDURL):
-    #     ...
-    # /* DID_API */ Credential *Issuer_CreateCredential(Issuer *issuer, DID *owner, DIDURL *credid,
-    #         const char **types, size_t typesize, Property *subject, int size,
+    def create_credential(self, owner: DID, credid: DIDURL, type_: str, props: list[CredentialProperty]) -> Credential:
+        # BUGBUG: can not simplify to one line.
+        type0 = ffi.new("char[]", type_.encode())
+        types = ffi.new("char **", type0)
+        props_c = ffi.new("struct Property[]", len(props))
+        for i in range(len(props)):
+            props_c[i].key, props_c[i].value = props[i].key, props[i].value
+        return Credential(_obj_call('Issuer_CreateCredential', self.issuer, owner.did, credid.url, types, 1,
+                                    props_c, len(props), release_name='Credential_Destroy'))
 
-    # /* DID_API */ Credential *Issuer_CreateCredentialByString(Issuer *issuer, DID *owner,
-    #         DIDURL *credid, const char **types, size_t typesize, const char *subject,
+    def create_credential_by_string(self, store: 'DIDStore', owner: 'DID', fragment: str, type_: str,
+                                    props: dict, expire: int) -> Credential:
+        # BUGBUG: can not simplify to one line.
+        type0 = ffi.new("char[]", type_.encode())
+        types = ffi.new("char **", type0)
+        return Credential(_obj_call('Issuer_CreateCredentialByString', self.issuer, owner.did, DIDURL.create_from_did(owner, fragment).url,
+                                    types, 1, json.dumps(props).encode(), expire, store.storepass,
+                                    release_name='Credential_Destroy'))
 
     def get_signer(self):
         return DID(_obj_call('Issuer_GetSigner', self.issuer))
@@ -1074,12 +1097,12 @@ class DIDStore:
         self.store = DIDStore.__open(dir_path)
 
     def get_root_identity(self, mnemonic: str, passphrase: str) -> RootIdentity:
-        identity = RootIdentity.create(self, mnemonic, passphrase, overwrite=True)
+        id_ = RootIdentity.create_id(mnemonic, passphrase)
 
-        if self.contains_root_identity(identity.identity):
-            return self.load_root_identity(identity.identity)
+        if self.contains_root_identity(id_):
+            return self.load_root_identity(id_)
 
-        return RootIdentity.create(self, mnemonic, passphrase, overwrite=True)
+        return RootIdentity.create(self, mnemonic, passphrase, True)
 
     @staticmethod
     def __open(dir_path: str):
@@ -1092,7 +1115,7 @@ class DIDStore:
         return _int_call('DIDStore_ContainsRootIdentities', self.store) == 1
 
     def load_root_identity(self, id_: str) -> RootIdentity:
-        return RootIdentity(self.store, _obj_call('DIDStore_LoadRootIdentity', id_.encode()))
+        return RootIdentity(self, _obj_call('DIDStore_LoadRootIdentity', self.store, id_.encode()))
 
     def delete_root_identity(self, id_: str) -> bool:
         return _bool_call('DIDStore_DeleteRootIdentity', self.store, id_.encode())
@@ -1228,13 +1251,13 @@ class Presentation:
         self.vp = vp
 
     @staticmethod
-    def create_presentation(store: DIDStore, did: DID, fragment: str, nonce: str, realm: str, vc: Credential) -> 'Presentation':
+    def create(store: DIDStore, did: DID, fragment: str, nonce: str, realm: str, vc: Credential) -> 'Presentation':
         # INFO: It is not supported to combine to a single line.
         type0 = ffi.new("char[]", "VerifiablePresentation".encode())
         types = ffi.new("char **", type0)
-        did_url, sign_key = DIDURL.create_from_did(did.did, fragment), ffi.NULL
-        return Presentation(_obj_call('Presentation_Create', did_url, did.did, types, 1, nonce.encode(), realm.encode(), sign_key, store.store, store.storepass,
-                            1, vc.vc, release_name='Presentation_Destroy'))
+        did_url, sign_key = DIDURL.create_from_did(did, fragment), ffi.NULL
+        return Presentation(_obj_call('Presentation_Create', did_url.url, did.did, types, 1, nonce.encode(), realm.encode(), sign_key,
+                                      store.store, store.storepass, 1, vc.vc, release_name='Presentation_Destroy'))
 
     # /*DID_API*/ Presentation *Presentation_CreateByCredentials(DIDURL *id, DID *holder,
     #         const char **types, size_t size, const char *nonce, const char *realm,
@@ -1300,26 +1323,62 @@ class JWTBuilder:
         """
         _void_call('JWTParser_SetAllowedClockSkewSeconds', seconds)
 
-    # def get_jwt_builder(self, doc: DIDDocument) -> JWTBuilder:
-    #     builder = ElaError.check_not_exists(lib.DIDDocument_GetJwtBuilder(doc.doc))
-    #     return JWTBuilder(self, ffi.gc(builder, lib.JWTBuilder_Destroy))
+    def set_header(self, attr: str, value: str) -> 'JWTBuilder':
+        _bool_call('JWTBuilder_SetHeader', self.builder, attr.encode(), value.encode())
+        return self
 
-    # def create_token(self, subject: str, audience_did_str: str, expire: int, claim_key: str, claim_value: any, claim_json: bool = True) -> str:
-    #     ticks, sign_key = int(datetime.now().timestamp()), ffi.NULL
-    #     lib.JWTBuilder_SetHeader(self.builder, "type".encode(), "JWT".encode())
-    #     lib.JWTBuilder_SetHeader(self.builder, "version".encode(), "1.0".encode())
-    #     lib.JWTBuilder_SetSubject(self.builder, subject.encode())
-    #     lib.JWTBuilder_SetAudience(self.builder, audience_did_str.encode())
-    #     lib.JWTBuilder_SetIssuedAt(self.builder, ticks)
-    #     lib.JWTBuilder_SetExpiration(self.builder, ticks + expire)
-    #     lib.JWTBuilder_SetNotBefore(self.builder, ticks)
-    #     if claim_json:
-    #         lib.JWTBuilder_SetClaimWithJson(self.builder, claim_key.encode(), claim_value.encode())
-    #     else:
-    #         lib.JWTBuilder_SetClaim(self.builder, claim_key.encode(), claim_value.encode())
-    #     ElaError.check_not_equals_0(lib.JWTBuilder_Sign(self.builder, sign_key, self.store.storepass), prompt='sign')
-    #     c_token = ElaError.check_not_exists(lib.JWTBuilder_Compact(self.builder), prompt='compact')
-    #     return ffi.string(ffi.gc(c_token, _DEFAULT_MEMORY_FREE)).decode()
+    def set_subject(self, subject: str) -> 'JWTBuilder':
+        _bool_call('JWTBuilder_SetSubject', self.builder, subject.encode())
+        return self
+
+    def set_audience(self, audience: str) -> 'JWTBuilder':
+        _bool_call('JWTBuilder_SetAudience', self.builder, audience.encode())
+        return self
+
+    def set_issue_at(self, iat: int) -> 'JWTBuilder':
+        _bool_call('JWTBuilder_SetIssuedAt', self.builder, iat)
+        return self
+
+    def set_expiration(self, expiration: int) -> 'JWTBuilder':
+        _bool_call('JWTBuilder_SetExpiration', self.builder, expiration)
+        return self
+
+    def set_not_before(self, nbf: int) -> 'JWTBuilder':
+        _bool_call('JWTBuilder_SetNotBefore', self.builder, nbf)
+        return self
+
+    def set_claim_with_json(self, key: str, json: str) -> 'JWTBuilder':
+        _bool_call('JWTBuilder_SetClaimWithJson', self.builder, key.encode(), json.encode())
+        return self
+
+    def set_claim(self, key: str, value: str) -> 'JWTBuilder':
+        _bool_call('JWTBuilder_SetClaim', self.builder, key.encode(), value.encode())
+        return self
+
+    def sign(self, key_id: typing.Optional[DIDURL], store: DIDStore) -> 'JWTBuilder':
+        _int_call('JWTBuilder_Sign', self.builder, key_id.url if key_id is not None else ffi.NULL, store.storepass)
+        return self
+
+    def compact(self) -> str:
+        return _str_call('JWTBuilder_Compact', self.builder, release_name=_DEFAULT_MEMORY_FREE_NAME)
+
+    def create_token(self, subject: str, audience_did_str: str, expire: typing.Optional[int], claim_key: str, claim_value: any,
+                     store: DIDStore = None, claim_json: bool = True) -> str:
+        ticks, sign_key = int(datetime.now().timestamp()), None
+        self.set_header('type', 'JWT')\
+            .set_header('version', '1.0')\
+            .set_subject(subject)\
+            .set_audience(audience_did_str)\
+            .set_issue_at(ticks)\
+            .set_not_before(ticks)
+        if expire is not None:
+            self.set_expiration(expire)
+        if claim_json:
+            self.set_claim_with_json(claim_key, claim_value)
+        else:
+            self.set_claim(claim_key, claim_value)
+        self.sign(sign_key, store)
+        return self.compact()
 
     # TODO:
 

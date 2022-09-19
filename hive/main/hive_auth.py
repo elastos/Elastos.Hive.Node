@@ -7,7 +7,7 @@ from datetime import datetime
 import os
 
 from src.utils.did.eladid import ffi, lib
-from src.utils.did.did_wrapper import Credential
+from src.utils.did.eladid_wrapper import Credential
 from src.modules.auth.user import UserManager
 
 from hive.util.did.v1_entity import V1Entity

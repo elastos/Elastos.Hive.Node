@@ -4,7 +4,7 @@ from datetime import datetime
 from io import BytesIO
 
 from src.utils.did.eladid import ffi, lib
-from src.utils.did.did_wrapper import Credential, DID
+from src.utils.did.eladid_wrapper import Credential, DID
 
 from hive.util.constants import DID_INFO_TOKEN
 from hive.util.did.v1_entity import V1Entity
@@ -39,7 +39,7 @@ class DIDApp(V1Entity):
 
     def issue_backup_auth(self, hive1_did, host, hive2_did):
         props = {'sourceDID': hive1_did, 'targetHost': host, 'targetDID': hive2_did}
-        return super().create_credential('BackupCredential', props, owner_did=DID.from_string(hive1_did)).vc
+        return super().create_credential('BackupCredential', props, owner_did=DID.create_from_str(hive1_did)).vc
 
 
 class DApp(V1Entity):

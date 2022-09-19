@@ -1,3 +1,4 @@
+import traceback
 import typing
 
 from src.modules.database.mongodb_client import MongodbClient
@@ -34,7 +35,7 @@ class BackupServerClient:
             return body['state'], body['result'], body['message'], body['public_key']
         except Exception as e:
             # backup service not exists
-            raise BadRequestException(f'Failed to get the status from the backup server: {str(e)}')
+            raise BadRequestException(f'Failed to get the status from the backup server: {str(e)}, {traceback.format_exc()}, {traceback.format_stack()}')
 
     @staticmethod
     def __get_request_doc(user_did):

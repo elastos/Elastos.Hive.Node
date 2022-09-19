@@ -478,18 +478,18 @@ class Cipher:
     def __init__(self, cipher):
         self.cipher = cipher
 
-    def set_other_side_public_key(self, key):
+    def set_other_side_public_key(self, key: bytes):
         _bool_call('Cipher_SetOtherSidePublicKey', self.cipher, ffi.from_buffer(key))
 
-    def encrypt(self, data, nonce):
+    def encrypt(self, data: bytes, nonce: bytes) -> bytes:
         length = ffi.new("unsigned int *")
         cipher_data = _obj_call('Cipher_Encrypt', self.cipher, ffi.from_buffer(data), len(data), ffi.from_buffer(nonce), length)
-        return ffi.buffer(_get_gc_obj(cipher_data, _DEFAULT_MEMORY_FREE_NAME), length[0])
+        return bytes(ffi.buffer(_get_gc_obj(cipher_data, _DEFAULT_MEMORY_FREE_NAME), length[0]))
 
-    def decrypt(self, data, nonce):
+    def decrypt(self, data: bytes, nonce: bytes) -> bytes:
         length = ffi.new("unsigned int *")
         clear_data = _obj_call('Cipher_Decrypt', self.cipher, ffi.from_buffer(data), len(data), ffi.from_buffer(nonce), length)
-        return ffi.buffer(_get_gc_obj(clear_data, _DEFAULT_MEMORY_FREE_NAME), length[0])
+        return bytes(ffi.buffer(_get_gc_obj(clear_data, _DEFAULT_MEMORY_FREE_NAME), length[0]))
 
     def create_encryption_stream(self):
         return CipherEncryptionStream(_obj_call('Cipher_EncryptionStream_Create', self.cipher,
@@ -499,30 +499,30 @@ class Cipher:
         return CipherDecryptionStream(_obj_call('Cipher_DecryptionStream_Create', self.cipher, ffi.from_buffer(header),
                                                 release_name=_DEFAULT_MEMORY_FREE_NAME))
 
-    def get_ed25519_public_key(self):
+    def get_ed25519_public_key(self) -> bytes:
         length = ffi.new("unsigned int *")
         key = _obj_call('Cipher_GetEd25519PublicKey', self.cipher, length)
-        return ffi.buffer(key, length[0])
+        return bytes(ffi.buffer(key, length[0]))
 
-    def get_curve25519_public_key(self):
+    def get_curve25519_public_key(self) -> bytes:
         length = ffi.new("unsigned int *")
         key = _obj_call('Cipher_GetCurve25519PublicKey', self.cipher, length)
-        return ffi.buffer(key, length[0])
+        return bytes(ffi.buffer(key, length[0]))
 
 
 class CipherEncryptionStream:
     def __init__(self, stream):
         self.stream = stream
 
-    def header(self):
+    def header(self) -> bytes:
         length = ffi.new("unsigned int *")
         header = _obj_call('Cipher_EncryptionStream_Header', self.stream, length)
-        return ffi.buffer(header, length[0])
+        return bytes(ffi.buffer(header, length[0]))
 
-    def push(self, data, is_final):
+    def push(self, data: bytes, is_final) -> bytes:
         length = ffi.new("unsigned int *")
         cipher_data = _obj_call('Cipher_EncryptionStream_Push', self.stream, ffi.from_buffer(data), len(data), is_final, length)
-        return ffi.buffer(_get_gc_obj(cipher_data, _DEFAULT_MEMORY_FREE_NAME), length[0])
+        return bytes(ffi.buffer(_get_gc_obj(cipher_data, _DEFAULT_MEMORY_FREE_NAME), length[0]))
 
 
 class CipherDecryptionStream:
@@ -537,10 +537,10 @@ class CipherDecryptionStream:
     def extra_encryption_size():
         return _int_call('Cipher_DecryptionStream_GetExtraEncryptSize', fail_val=None)
 
-    def pull(self, data):
+    def pull(self, data: bytes) -> bytes:
         length = ffi.new("unsigned int *")
         clear_data = _obj_call('Cipher_DecryptionStream_Pull', self.stream, ffi.from_buffer(data), len(data), length)
-        return ffi.buffer(_get_gc_obj(clear_data, _DEFAULT_MEMORY_FREE_NAME), length[0])
+        return bytes(ffi.buffer(_get_gc_obj(clear_data, _DEFAULT_MEMORY_FREE_NAME), length[0]))
 
     def is_complete(self):
         return _bool_call('Cipher_DecryptionStream_IsComplete', self.stream)

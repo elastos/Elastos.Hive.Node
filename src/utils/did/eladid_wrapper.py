@@ -101,7 +101,7 @@ class DID:
         self.did = did
 
     @staticmethod
-    def create_from(did_str: str) -> 'DID':
+    def create_from_str(did_str: str) -> 'DID':
         return DID(_obj_call('DID_FromString', did_str.encode(), release_name='DID_Destroy'))
 
     @staticmethod
@@ -208,7 +208,7 @@ class DIDURL:
         self.url = url
 
     @staticmethod
-    def create_from(id_str: str, context: 'DID') -> 'DIDURL':
+    def create_from_str(id_str: str, context: 'DID') -> 'DIDURL':
         return DIDURL(_obj_call('DIDURL_FromString', id_str.encode(), context.did, release_name='DIDURL_Destroy'))
 
     @staticmethod
@@ -705,12 +705,12 @@ class DIDDocument:
         _int_call('DIDDocument_VerifyDigest', self.doc, key_id.url, store.storepass, sig.encode(), digest.encode(), size)
 
     def create_cipher(self, identifier, security_code, storepass) -> 'Cipher':
-        return _obj_call('DIDDocument_CreateCipher', self.doc, identifier.encode(), security_code, storepass.encode(),
-                         release_name='DIDDocument_Cipher_Destroy')
+        return Cipher(_obj_call('DIDDocument_CreateCipher', self.doc, identifier.encode(), security_code, storepass.encode(),
+                                release_name='DIDDocument_Cipher_Destroy'))
 
     def create_curve25519_cipher(self, identifier, security_code, storepass, is_server) -> 'Cipher':
-        return _obj_call('DIDDocument_CreateCurve25519Cipher', self.doc, identifier.encode(), security_code, storepass.encode(), is_server,
-                         release_name='DIDDocument_Cipher_Destroy')
+        return Cipher(_obj_call('DIDDocument_CreateCurve25519Cipher', self.doc, identifier.encode(), security_code, storepass.encode(), is_server,
+                                release_name='DIDDocument_Cipher_Destroy'))
 
     def get_metadata(self):
         return DIDMetadata(_obj_call('DIDDocument_GetMetadata', self.doc))

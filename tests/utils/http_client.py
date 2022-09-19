@@ -26,7 +26,7 @@ class UserDID(Entity):
 
     def issue_backup_auth(self, host_did: str, backup_url, backup_did) -> Credential:
         props = {'sourceHiveNodeDID': host_did, 'targetHiveNodeDID': backup_did, 'targetNodeURL': backup_url}
-        return super().create_credential('HiveBackupCredential', props, owner_did=DID.from_string(host_did))
+        return super().create_credential('HiveBackupCredential', props, owner_did=DID.create_from_str(host_did))
 
     def get_owner_credential(self, owner_did: DID) -> str:
         vc: Credential = super().create_credential('HiveNodeOwnerCredential', {}, owner_did=owner_did)

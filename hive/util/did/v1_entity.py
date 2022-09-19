@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from src.utils.did.did_wrapper import ElaError
+from src.utils.did.eladid_wrapper import ElaError
 from src.utils.did.entity import Entity
 
 

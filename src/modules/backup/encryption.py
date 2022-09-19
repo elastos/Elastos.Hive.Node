@@ -54,7 +54,7 @@ class Encryption:
     @staticmethod
     def get_service_did_public_key(is_server: bool):
         public_key = Encryption.__get_cipher(is_server).get_curve25519_public_key()
-        return base58.b58encode(bytes(public_key)).decode('utf8')
+        return base58.b58encode(public_key).decode('utf8')
 
     @staticmethod
     def encrypt_file_with_curve25519(src_full_path: Path, other_side_public_key: str, is_server: bool) -> Path:
@@ -65,14 +65,14 @@ class Encryption:
 
         with open(src_full_path, 'rb') as sf:
             with open(dst_full_path, 'wb') as df:  # header + encrypted data
-                df.write(bytes(stream.header()))
+                df.write(stream.header())
                 while remain > 0:
                     data = sf.read(min(remain, Encryption.TRUNK_SIZE))
                     if not data:
                         break
 
                     cipher_data = stream.push(data, remain - len(data) <= 0)
-                    df.write(bytes(cipher_data))
+                    df.write(cipher_data)
 
                     remain -= len(data)
 
@@ -98,7 +98,7 @@ class Encryption:
                         break
 
                     plain_data = stream.pull(data)
-                    df.write(bytes(plain_data))
+                    df.write(plain_data)
 
                     remain -= len(data)
 

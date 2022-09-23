@@ -8,6 +8,7 @@ import json
 from flask_restful import Resource
 
 from src.modules.scripting.scripting import Scripting
+from src.utils.http_exception import InvalidParameterException
 from src.utils.http_response import response_stream
 
 
@@ -345,11 +346,21 @@ class CallScriptUrl(Resource):
             HTTP/1.1 403 Forbidden
 
         """
-        target_did, target_app_did = None, None
+        if '@' not in context_str:
+            raise InvalidParameterException('Invalid context')
+
         parts = context_str.split('@')
-        if len(parts) == 2 and parts[0] and parts[1]:
-            target_did, target_app_did = parts[0], parts[1]
-        return self.scripting.run_script_url(script_name, target_did, target_app_did, json.loads(params))
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            raise InvalidParameterException('Invalid context.')
+
+        target_did, target_app_did = parts[0], parts[1]
+
+        try:
+            params_json = json.loads(params)
+        except:
+            raise InvalidParameterException('Invalid params')
+
+        return self.scripting.run_script_url(script_name, target_did, target_app_did, params_json)
 
 
 class UploadFile(Resource):

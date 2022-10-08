@@ -57,6 +57,7 @@ def before_request():
     # Only do access token checking for v2 APIs.
     try:
         TokenParser().parse()
+        # request.full_path already contains args.
         logging.getLogger('BEFORE REQUEST').info(f'enter {request.full_path}, {request.method}, '
                                                  f'user_did={g.usr_did}, app_did={g.app_did}, app_ins_did={g.app_ins_did}')
     except UnauthorizedException as e:
@@ -72,10 +73,13 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    # log response details
-    data_str = str(response.json)
-    data_str = data_str[:500] if data_str else ''
-    logging.getLogger('AFTER REQUEST').info(f'leave {request.full_path}, {request.method}, status={response.status_code}, data={data_str}')
+    # log response details. request.full_path already contains args.
+    json_str, content_len = None, response.content_length
+    if response.json:
+        json_str = str(response.json)
+        json_str = json_str[:500] if json_str else ''
+    logging.getLogger('AFTER REQUEST').info(f'leave {request.full_path}, {request.method}, '
+                                            f'status={response.status_code}, json_str={json_str}, content_len={content_len}')
 
     # update vault database usage
     if hasattr(g, 'usr_did') and g.usr_did:

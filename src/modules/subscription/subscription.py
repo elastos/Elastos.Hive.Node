@@ -14,7 +14,8 @@ from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.payment.order import OrderManager
 from src.modules.subscription.vault import VaultManager
-from src.utils.consts import VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_PRICING_USING
+from src.utils.consts import VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_PRICING_USING, COL_APPLICATION_APP_DID, \
+    COL_APPLICATION_ACCESS_COUNT, COL_APPLICATION_ACCESS_AMOUNT, COL_APPLICATION_ACCESS_LAST_TIME
 from src.utils.did.eladid_wrapper import DID, DIDDocument
 from src.utils.payment_config import PaymentConfig
 from src.utils.http_exception import BadRequestException, ApplicationNotFoundException
@@ -92,10 +93,10 @@ class VaultSubscription(metaclass=Singleton):
 
         :v2 API: """
 
-        app_dids = self.user_manager.get_apps(g.usr_did)
+        apps = self.user_manager.get_app_docs(g.usr_did)
 
-        def get_app_detail(user_did, app_did):
-            info = {}
+        def get_app_detail(user_did, app):
+            app_did, info = app[COL_APPLICATION_APP_DID], {}
             try:
                 info = VaultSubscription.__get_appdid_info_by_did(app_did)
             except Exception as e:
@@ -109,10 +110,13 @@ class VaultSubscription(metaclass=Singleton):
                 "user_did": user_did,
                 "app_did": app_did,
                 "used_storage_size": int(self.vault_manager.count_app_files_total_size(user_did, app_did)
-                                         + self.vault_manager.get_user_database_size(user_did, app_did))
+                                         + self.vault_manager.get_user_database_size(user_did, app_did)),
+                "access_count": app.get(COL_APPLICATION_ACCESS_COUNT, 0),
+                "access_amount": app.get(COL_APPLICATION_ACCESS_AMOUNT, 0),
+                "access_last_time": app.get(COL_APPLICATION_ACCESS_LAST_TIME, -1),
             }
 
-        results = list(filter(lambda b: b is not None, map(lambda app_did: get_app_detail(g.usr_did, app_did), app_dids)))
+        results = list(filter(lambda b: b is not None, map(lambda app: get_app_detail(g.usr_did, app), apps)))
         if not results:
             raise ApplicationNotFoundException()
 

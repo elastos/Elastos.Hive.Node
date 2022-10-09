@@ -186,7 +186,10 @@ class VaultAppStates(Resource):
                     "redirect_url": <str>,
                     "user_did": <str>,
                     "app_did": <str>,
-                    "used_storage_size": <int>
+                    "used_storage_size": <int>,
+                    "access_count": <int>,
+                    "access_amount": <int>,
+                    "access_last_time": <int>
                 }]
             }
 

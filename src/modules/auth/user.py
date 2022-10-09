@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
 
+import bson
+
 from src.modules.database.mongodb_client import MongodbClient
 from src.utils.consts import COL_APPLICATION_USR_DID, COL_APPLICATION_APP_DID, COL_APPLICATION_STATE, COL_APPLICATION_STATE_NORMAL, COL_APPLICATION, \
     COL_APPLICATION_DATABASE_NAME, APP_ID, USER_DID, DID_INFO_REGISTER_COL, COL_APPLICATION_ACCESS_COUNT, COL_APPLICATION_ACCESS_AMOUNT, \
@@ -81,12 +83,12 @@ class UserManager:
             COL_APPLICATION_APP_DID: app_did,
         }
 
-        update = {'$set': {COL_APPLICATION_ACCESS_LAST_TIME: datetime.now().timestamp()}}
+        update = {'$set': {COL_APPLICATION_ACCESS_LAST_TIME: int(datetime.now().timestamp())}}
         inc = {}
         if access_count > 0:
             inc[COL_APPLICATION_ACCESS_COUNT] = access_count
         if data_amount > 0:
-            inc[COL_APPLICATION_ACCESS_AMOUNT] = data_amount
+            inc[COL_APPLICATION_ACCESS_AMOUNT] = bson.Int64(data_amount)
         if inc:
             update['$inc'] = inc
 

@@ -1,8 +1,10 @@
 import logging
+from datetime import datetime
 
 from src.modules.database.mongodb_client import MongodbClient
 from src.utils.consts import COL_APPLICATION_USR_DID, COL_APPLICATION_APP_DID, COL_APPLICATION_STATE, COL_APPLICATION_STATE_NORMAL, COL_APPLICATION, \
-    COL_APPLICATION_DATABASE_NAME, APP_ID, USER_DID, DID_INFO_REGISTER_COL
+    COL_APPLICATION_DATABASE_NAME, APP_ID, USER_DID, DID_INFO_REGISTER_COL, COL_APPLICATION_ACCESS_COUNT, COL_APPLICATION_ACCESS_AMOUNT, \
+    COL_APPLICATION_ACCESS_LAST_TIME
 
 
 class UserManager:
@@ -14,18 +16,16 @@ class UserManager:
 
         @deprecated Only for syncing app_dids from DID_INFO_REGISTER_COL to COL_APPLICATION
         """
-        col = self.mcli.get_management_collection(DID_INFO_REGISTER_COL)
         # INFO: Must check the existence of some fields
         filter_ = {
             APP_ID: {'$exists': True},
             '$and': [{USER_DID: {'$exists': True}}, {USER_DID: user_did}]
         }
-        docs = col.find_many(filter_)
+        docs = self.mcli.get_management_collection(DID_INFO_REGISTER_COL).find_many(filter_)
         return list(set(map(lambda d: d[APP_ID], docs)))
 
     def get_user_count(self):
-        col = self.mcli.get_management_collection(COL_APPLICATION)
-        return len(col.distinct(USER_DID))
+        return len(self.mcli.get_management_collection(COL_APPLICATION).distinct(USER_DID))
 
     def get_app_docs(self, user_did) -> list:
         """ get all application information by user did"""
@@ -37,8 +37,7 @@ class UserManager:
             COL_APPLICATION_USR_DID: user_did,
         }
 
-        col = self.mcli.get_management_collection(COL_APPLICATION)
-        return col.find_many(filter_)
+        return self.mcli.get_management_collection(COL_APPLICATION).find_many(filter_)
 
     def get_apps(self, user_did) -> list:
         """ get all application DIDs of the user did """
@@ -68,8 +67,30 @@ class UserManager:
             COL_APPLICATION_DATABASE_NAME: self.mcli.get_user_database_name(user_did, app_did),
             COL_APPLICATION_STATE: COL_APPLICATION_STATE_NORMAL}}
 
-        col = self.mcli.get_management_collection(COL_APPLICATION)
-        col.update_one(filter_, update, contains_extra=True, upsert=True)
+        self.mcli.get_management_collection(COL_APPLICATION).update_one(filter_, update, contains_extra=True, upsert=False)
+
+    def update_access(self, user_did, app_did, access_count: int = 0, data_amount: int = 0):
+        """ Update access information for the user's application. """
+
+        if not user_did or not app_did:
+            logging.getLogger('UserManager').error(f'Skip update_access() by invalid user_did({user_did}) or app_did({app_did})')
+            return
+
+        filter_ = {
+            COL_APPLICATION_USR_DID: user_did,
+            COL_APPLICATION_APP_DID: app_did,
+        }
+
+        update = {'$set': {COL_APPLICATION_ACCESS_LAST_TIME: datetime.now().timestamp()}}
+        inc = {}
+        if access_count > 0:
+            inc[COL_APPLICATION_ACCESS_COUNT] = access_count
+        if data_amount > 0:
+            inc[COL_APPLICATION_ACCESS_AMOUNT] = data_amount
+        if inc:
+            update['$inc'] = inc
+
+        self.mcli.get_management_collection(COL_APPLICATION).update_one(filter_, update, contains_extra=True, upsert=False)
 
     def remove_user(self, user_did):
         """ remove all applications of the user did """
@@ -81,5 +102,4 @@ class UserManager:
             COL_APPLICATION_USR_DID: user_did,
         }
 
-        col = self.mcli.get_management_collection(COL_APPLICATION)
-        col.delete_many(filter_)
+        self.mcli.get_management_collection(COL_APPLICATION).delete_many(filter_)

@@ -242,6 +242,9 @@ class Script:
         """
         self.context.check_target_dids()
 
+        # record context for update_application_access_task()
+        g.script_context = self.context
+
         script_data = self.context.get_script_data(self.name)
         if not script_data:
             raise BadRequestException(f"Can't get the script with name '{self.name}'")
@@ -346,7 +349,7 @@ class Scripting:
     def __handle_transaction(self, transaction_id, is_download=False):
         """ Do real uploading or downloading for caller """
         # check by transaction id from request body
-        row_id, target_did, target_app_did = Scripting.__parse_transaction_id(transaction_id)
+        row_id, target_did, target_app_did = Scripting.parse_transaction_id(transaction_id)
 
         col_filter = {"_id": ObjectId(row_id)}
         col = self.mcli.get_user_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, create_on_absence=True)
@@ -385,9 +388,17 @@ class Scripting:
         return self.__handle_transaction(transaction_id, is_download=True)
 
     @staticmethod
-    def __parse_transaction_id(transaction_id):
+    def parse_transaction_id(transaction_id):
         try:
             trans = jwt.decode(transaction_id, hive_setting.PASSWORD, algorithms=['HS256'])
-            return trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
         except Exception as e:
             raise InvalidParameterException(f"Invalid transaction id '{transaction_id}'")
+
+        if not trans or not isinstance(trans, dict):
+            raise InvalidParameterException(f"Invalid transaction id '{transaction_id}', {trans}.")
+
+        row_id, target_did, target_app_did = trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
+        if not row_id or not target_did or not target_app_did:
+            raise InvalidParameterException(f"Invalid transaction id '{transaction_id}': {[row_id, target_did, target_app_did]}.")
+
+        return row_id, target_did, target_app_did

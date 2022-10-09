@@ -117,6 +117,9 @@ COL_APPLICATION = 'application'
 COL_APPLICATION_USR_DID = USR_DID
 COL_APPLICATION_APP_DID = APP_DID
 COL_APPLICATION_DATABASE_NAME = 'database_name'
+COL_APPLICATION_ACCESS_COUNT = 'access_count'
+COL_APPLICATION_ACCESS_AMOUNT = 'access_amount'  # data in and out from app data API
+COL_APPLICATION_ACCESS_LAST_TIME = 'access_last_time'
 COL_APPLICATION_STATE = STATE
 # extra: 'created' and 'modified'
 COL_APPLICATION_STATE_NORMAL = 'normal'

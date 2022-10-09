@@ -2,11 +2,13 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from flask_executor import Executor
+from flask import g
 
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.backup.backup_client import BackupClient
 from src.modules.backup.backup_server import BackupServer
+from src.modules.scripting.scripting import Scripting
 from src.modules.subscription.vault import VaultManager
 from src.utils import hive_job
 from src.utils.scheduler import count_vault_storage_really
@@ -15,6 +17,59 @@ from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TES
 executor = Executor()
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
 pool = ThreadPoolExecutor(1)
+
+
+@executor.job
+@hive_job('update_vault_databases_usage', 'executor')
+def update_application_access_task(user_did: str, app_did: str, request, response):
+    user_manager, full_url = UserManager(), request.full_path
+    request_len = request.content_length if request.content_length else 0
+    response_len = response.content_length if response.content_length else 0
+    total_len = request_len + response_len
+
+    # record latest vault access time, include v1, v2 and database, files
+    access_start_urls = [
+        '/api/v1/db',
+        '/api/v1/files',
+        # '/api/v1/scripting', // not support, skip
+        '/api/v2/vault/db',
+        '/api/v2/vault/files',
+        # '/api/v2/vault/scripting',
+    ]
+
+    need_update = any([full_url.startswith(url) for url in access_start_urls])
+    if need_update:
+        user_manager.update_access(user_did, app_did, 1, total_len)
+        return
+
+    # handle v2 scripting module.
+    scripting_stream_url = '/api/v2/vault/scripting/stream/'
+    if full_url.startswith(scripting_stream_url):
+        # download or upload by the transaction id of the script.
+        transaction_id = full_url[len(scripting_stream_url):]
+        if not transaction_id:
+            return
+
+        try:
+            row_id, target_did, target_app_did = Scripting.parse_transaction_id(transaction_id)
+            user_manager.update_access(target_did, target_app_did, 1, total_len)
+        except:
+            return
+
+    scripting_url = '/api/v2/vault/scripting/'
+    if full_url.startswith(scripting_url):
+        # register or unregister a script
+        is_register = request.method.upper() == 'GET' and '/' not in full_url[len(scripting_url):]
+        is_unregister = request.method.upper() == 'DELETE'
+        if is_register or is_unregister:
+            user_manager.update_access(user_did, app_did, 1, total_len)
+            return
+
+        # run script or run by url
+        if not hasattr(g, 'script_context') or not g.script_context:
+            return
+
+        user_manager.update_access(g.script_context.target_did, g.script_context.target_app_did, 1, total_len)
 
 
 @executor.job

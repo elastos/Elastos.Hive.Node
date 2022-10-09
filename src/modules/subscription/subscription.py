@@ -67,6 +67,9 @@ class VaultSubscription(metaclass=Singleton):
         # archive orders as orders are important information.
         self.order_manager.archive_orders_receipts(g.usr_did)
 
+        # remove applications.
+        self.user_manager.remove_user(g.usr_did)
+
         # remove the data and info. of the vault.
         self.vault_manager.remove_vault(g.usr_did)
 

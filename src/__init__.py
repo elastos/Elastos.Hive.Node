@@ -84,7 +84,7 @@ def after_request(response):
     if hasattr(g, 'usr_did') and g.usr_did:
         update_vault_databases_usage_task.submit(g.usr_did, request.full_path)
 
-        if hasattr(g, 'app_did') and g.app_did:
+        if 200 <= response.status_code < 300 and hasattr(g, 'app_did') and g.app_did:
             update_application_access_task.submit(g.usr_did, g.app_did, request, response)
 
     return response

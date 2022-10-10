@@ -31,12 +31,21 @@ class About:
         }
 
     def get_node_info(self):
+        import shutil
+        import psutil
+
         from src.modules.auth.user import UserManager
         from src.modules.subscription.vault import VaultManager
         from src.modules.backup.backup import BackupManager
 
+        def get_last_access_time():
+            vaults = VaultManager().get_all_vaults()
+            return max(list(map(lambda v: v.get_latest_access_time(), vaults)))
+
         owner_did, credential = Provider.get_verified_owner_did()
         auth = Auth()
+        memory, storage = psutil.virtual_memory(), shutil.disk_usage("/")
+
         return {
             "service_did": auth.did_str,
             "owner_did": owner_did,
@@ -49,4 +58,9 @@ class About:
             "user_count": UserManager().get_user_count(),
             "vault_count": VaultManager().get_vault_count(),
             "backup_count": BackupManager().get_backup_count(),
+            "latest_access_time": get_last_access_time(),
+            "memory_used": memory.available,
+            "memory_total": memory.total,
+            "storage_used": storage.used,
+            "storage_total": storage.total
         }

@@ -107,6 +107,11 @@ class NodeInfo(Resource):
                 "user_count": <int>,
                 "vault_count": <int>,
                 "backup_count": <int>,
+                "latest_access_time": <int>,
+                "memory_used": <int>,
+                "memory_total": <int>,
+                "storage_used": <int>,
+                "storage_total": <int>
             }
 
         **Response Error**:

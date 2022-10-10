@@ -49,15 +49,20 @@ class Provider:
 
         self.__check_auth_owner_id()
 
-        vaults = self.vault_manager.get_all_vaults()
-        return {
-            "vaults": list(map(lambda v: {
+        def vault_mapper(v):
+            result = {
                 "pricing_using": v[VAULT_SERVICE_PRICING_USING],
                 "max_storage": v[VAULT_SERVICE_MAX_STORAGE],
                 "file_use_storage": v[VAULT_SERVICE_FILE_USE_STORAGE],
                 "db_use_storage": v[VAULT_SERVICE_DB_USE_STORAGE],
                 "user_did": v[VAULT_SERVICE_DID],
-            }, vaults))
+            }
+            result.update(self.vault_manager.get_access_statistics(g.usr_did))
+            return result
+
+        vaults = self.vault_manager.get_all_vaults()
+        return {
+            "vaults": list(map(lambda v: vault_mapper(v), vaults))
         }
 
     def get_backups(self):

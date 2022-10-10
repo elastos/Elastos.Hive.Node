@@ -62,7 +62,7 @@ class Vault(Dotdict):
         return self.end_time
 
     def get_latest_access_time(self):
-        return int(self.latest_access_time) if hasattr(self, VAULT_SERVICE_LATEST_ACCESS_TIME) else -1
+        return int(self.latest_access_time) if hasattr(self, VAULT_SERVICE_LATEST_ACCESS_TIME) and self.latest_access_time else -1
 
 
 class AppSpaceDetector:

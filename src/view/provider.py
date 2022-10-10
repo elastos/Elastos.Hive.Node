@@ -38,6 +38,9 @@ class Vaults(Resource):
                     "file_use_storage": <int>,
                     "db_use_storage": <int>,
                     "user_did": <str>,
+                    "access_count": <int>,
+                    "access_amount": <int>,
+                    "access_last_time": <int>
                 }]
             }
 

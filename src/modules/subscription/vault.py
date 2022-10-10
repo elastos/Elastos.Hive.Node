@@ -61,6 +61,9 @@ class Vault(Dotdict):
     def get_end_time(self):
         return self.end_time
 
+    def get_latest_access_time(self):
+        return int(self.latest_access_time) if hasattr(self, VAULT_SERVICE_LATEST_ACCESS_TIME) else -1
+
 
 class AppSpaceDetector:
     """ can only detect the database space size changes
@@ -282,17 +285,18 @@ class VaultManager:
             return 0
 
     def get_access_statistics(self, user_did):
-        apps = self.user_manager.get_app_docs(user_did)
-        if not apps:
-            return {
-                'access_count': 0,
-                'access_amount': 0,
-                'access_last_time': -1
-            }
+        access_count, access_amount, access_last_time = 0, 0, -1
+        try:
+            vault = self.get_vault(user_did)
+            access_last_time = vault.get_latest_access_time()
+        except VaultNotFoundException as e:
+            pass
 
-        access_count = sum(list(map(lambda app: app.get('access_count', 0), apps)))
-        access_amount = sum(list(map(lambda app: app.get('access_amount', 0), apps)))
-        access_last_time = max(list(map(lambda app: app.get('access_last_time', -1), apps)))
+        apps = self.user_manager.get_app_docs(user_did)
+        if apps:
+            access_count = sum(list(map(lambda app: app.get('access_count', 0), apps)))
+            access_amount = sum(list(map(lambda app: app.get('access_amount', 0), apps)))
+
         return {
             'access_count': access_count,
             'access_amount': access_amount,

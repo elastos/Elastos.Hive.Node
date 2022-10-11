@@ -333,6 +333,12 @@ class VaultUnsubscribe(Resource):
 
         .. :quickref: 02 Subscription; Vault Unsubscribe
 
+        **URL Parameters**:
+
+        .. sourcecode:: http
+
+            force=<true|false> # true: delete all data of the vault permanently.
+
         **Request**:
 
         .. sourcecode:: http
@@ -356,7 +362,9 @@ class VaultUnsubscribe(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        return self.vault_subscription.unsubscribe()
+        force = RV.get_args().get_opt('force', bool, False)
+
+        return self.vault_subscription.unsubscribe(force)
 
 
 ###############################################################################

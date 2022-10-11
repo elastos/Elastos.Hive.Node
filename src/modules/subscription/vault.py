@@ -6,7 +6,8 @@ from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient, Dotdict
 from src.utils.consts import COL_IPFS_FILES, IS_UPGRADED, VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, \
-    VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_LATEST_ACCESS_TIME
+    VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_LATEST_ACCESS_TIME, \
+    VAULT_SERVICE_STATE_REMOVED
 from src.utils.http_exception import VaultNotFoundException, CollectionNotFoundException, VaultFrozenException
 from src.utils.payment_config import PaymentConfig
 
@@ -101,16 +102,20 @@ class VaultManager:
 
         filter_ = {VAULT_SERVICE_DID: user_did}
         update = {
-            '$set': {
-               VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,  # unit: byte (MB on v1, checked by 1024 * 1024)
-               VAULT_SERVICE_FILE_USE_STORAGE: 0,  # unit: byte
-               VAULT_SERVICE_DB_USE_STORAGE: 0,  # unit: byte
-               IS_UPGRADED: is_upgraded,  # True, the vault is from the promotion.
-               VAULT_SERVICE_START_TIME: now,
-               VAULT_SERVICE_END_TIME: end_time,
+            '$set': {  # for update and insert
                VAULT_SERVICE_MODIFY_TIME: now,
                VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
-               VAULT_SERVICE_PRICING_USING: price_plan['name']
+            },
+            '$setOnInsert': {  # only for insert
+                VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,  # unit: byte (MB on v1, checked by 1024 * 1024)
+                VAULT_SERVICE_FILE_USE_STORAGE: 0,  # unit: byte
+                VAULT_SERVICE_DB_USE_STORAGE: 0,  # unit: byte
+                IS_UPGRADED: is_upgraded,  # True, the vault is from the promotion.
+                VAULT_SERVICE_START_TIME: now,
+                VAULT_SERVICE_END_TIME: end_time,
+                # VAULT_SERVICE_MODIFY_TIME: now,
+                # VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
+                VAULT_SERVICE_PRICING_USING: price_plan['name']
             }
         }
 
@@ -152,7 +157,7 @@ class VaultManager:
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
 
         doc = col.find_one({VAULT_SERVICE_DID: user_did})
-        if not doc:
+        if not doc or doc[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_REMOVED:
             raise VaultNotFoundException()
         return Vault(**doc)
 
@@ -188,12 +193,22 @@ class VaultManager:
         self.upgrade(user_did, PaymentConfig.get_free_vault_plan(), vault=vault)
         return self.__only_get_vault(user_did)
 
-    def remove_vault(self, user_did):
-        self.drop_vault_data(user_did)
+    def remove_vault(self, user_did, force):
+        self.drop_vault_data(user_did, force)
 
         filter_ = {VAULT_SERVICE_DID: user_did}
-        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
-        col.delete_one(filter_)
+        if force:
+            # remove applications.
+            self.user_manager.remove_user(user_did)
+
+            # remove the vault.
+            self.mcli.get_management_collection(VAULT_SERVICE_COL).delete_one(filter_)
+        else:
+            self.mcli.get_management_collection(VAULT_SERVICE_COL).update_one(filter_, {
+                '$set': {
+                    VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_REMOVED
+                }
+            })
 
     def recalculate_user_databases_size(self, user_did: str):
         """ Update all databases used size in vault """
@@ -258,7 +273,7 @@ class VaultManager:
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
         col.update_one(filter_, update, contains_extra=False)
 
-    def drop_vault_data(self, user_did):
+    def drop_vault_data(self, user_did, force):
         """ drop all data belong to user, include files and databases """
 
         # remove local user's vault folder
@@ -266,10 +281,11 @@ class VaultManager:
         if path.exists():
             shutil.rmtree(path)
 
-        # remove all databases belong to user's vault
-        app_dids = self.user_manager.get_apps(user_did)
-        for app_did in app_dids:
-            self.mcli.drop_user_database(user_did, app_did)
+        if force:
+            # remove all databases belong to user's vault
+            app_dids = self.user_manager.get_apps(user_did)
+            for app_did in app_dids:
+                self.mcli.drop_user_database(user_did, app_did)
 
     def count_app_files_total_size(self, user_did, app_did) -> int:
         """ for batch 'count_vault_storage_job' and count files occupation """

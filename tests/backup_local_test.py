@@ -34,7 +34,7 @@ class IpfsBackupTestCase(unittest.TestCase):
         self.assertIn(response.status_code, [200, 455])
 
     def vault_unsubscribe(self):
-        response = self.cli.delete('/subscription/vault')
+        response = self.cli.delete('/subscription/vault?force=true')
         self.assertIn(response.status_code, [204, 404])
 
     def backup_subscribe(self):

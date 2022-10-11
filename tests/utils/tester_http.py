@@ -1,7 +1,7 @@
 class HttpCode:
     OK = 200
-    CREATED = 201
-    NO_CONTENT = 204
+    CREATED = 201  # POST
+    NO_CONTENT = 204  # DELETE
 
     BAD_REQUEST = 400
     UNAUTHORIZED = 401

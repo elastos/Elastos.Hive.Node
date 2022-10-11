@@ -58,7 +58,7 @@ class IpfsBackupTestCase(unittest.TestCase):
     @unittest.skip
     def test06_promotion(self):
         # PREPARE: backup and remove the vault for local test.
-        self.backup_cli.delete('/subscription/vault')
+        self.backup_cli.delete('/subscription/vault?force=true')
         # do promotion.
         r = self.backup_cli.post('/backup/promotion')
         self.assertEqual(r.status_code, 201)
@@ -69,7 +69,7 @@ class IpfsBackupTestCase(unittest.TestCase):
     def test07_unsubscribe(self):
         response = self.backup_cli.delete('/subscription/backup')
         self.assertEqual(response.status_code, 204)
-        self.backup_cli.delete('/subscription/vault')
+        self.backup_cli.delete('/subscription/vault?force=true')
 
 
 if __name__ == '__main__':

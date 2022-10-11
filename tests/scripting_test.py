@@ -65,7 +65,7 @@ class IpfsScriptingTestCase(unittest.TestCase):
         # subscribe for user_did
         HttpClient(f'/api/v2').put('/subscription/vault')
         # unsubscribe for caller_did whose vault is not necessary.
-        HttpClient(f'/api/v2', is_did2=True).delete('/subscription/vault')
+        HttpClient(f'/api/v2', is_did2=True).delete('/subscription/vault?force=true')
         # the collection for database script testing.
         HttpClient(f'/api/v2/vault').put(f'/db/collections/{cls.collection_name}')
 

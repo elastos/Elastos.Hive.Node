@@ -61,20 +61,18 @@ class VaultSubscription(metaclass=Singleton):
 
         return info
 
-    def unsubscribe(self):
+    def unsubscribe(self, force):
         """ :v2 API: """
         vault = self.vault_manager.get_vault(g.usr_did)
 
-        logging.debug(f'start remove the vault of the user {g.usr_did}, _id, {str(vault["_id"])}')
+        logging.debug(f'start remove the vault of the user={g.usr_did}, _id={str(vault["_id"])}, force={force}')
 
-        # archive orders as orders are important information.
-        self.order_manager.archive_orders_receipts(g.usr_did)
-
-        # remove applications.
-        self.user_manager.remove_user(g.usr_did)
+        if force:
+            # archive orders as orders are important information.
+            self.order_manager.archive_orders_receipts(g.usr_did)
 
         # remove the data and info. of the vault.
-        self.vault_manager.remove_vault(g.usr_did)
+        self.vault_manager.remove_vault(g.usr_did, force)
 
     def activate(self):
         """ :v2 API: """

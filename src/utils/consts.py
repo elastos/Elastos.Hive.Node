@@ -33,6 +33,7 @@ VAULT_SERVICE_STATE = "state"
 
 VAULT_SERVICE_STATE_RUNNING = "running"  # read and write
 VAULT_SERVICE_STATE_FREEZE = "freeze"  # read, but not write
+VAULT_SERVICE_STATE_REMOVED = "removed"  # soft unsubscribe
 
 VAULT_SERVICE_LATEST_ACCESS_TIME = "latest_access_time"  # for access checking on database, files, scripting.
 # constants of db end

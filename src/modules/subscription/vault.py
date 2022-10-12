@@ -103,8 +103,8 @@ class VaultManager:
         filter_ = {VAULT_SERVICE_DID: user_did}
         update = {
             '$set': {  # for update and insert
-               VAULT_SERVICE_MODIFY_TIME: now,
-               VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
+                VAULT_SERVICE_MODIFY_TIME: now,
+                VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING
             },
             '$setOnInsert': {  # only for insert
                 VAULT_SERVICE_MAX_STORAGE: int(price_plan["maxStorage"]) * 1024 * 1024,  # unit: byte (MB on v1, checked by 1024 * 1024)
@@ -115,13 +115,12 @@ class VaultManager:
                 VAULT_SERVICE_END_TIME: end_time,
                 # VAULT_SERVICE_MODIFY_TIME: now,
                 # VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_RUNNING,
-                VAULT_SERVICE_PRICING_USING: price_plan['name']
+                VAULT_SERVICE_PRICING_USING: price_plan['name'],
+                VAULT_SERVICE_LATEST_ACCESS_TIME: -1
             }
         }
 
-        col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
-        col.update_one(filter_, update, upsert=True)
-
+        self.mcli.get_management_collection(VAULT_SERVICE_COL).update_one(filter_, update, upsert=True)
         return self.__only_get_vault(user_did)
 
     def get_vault_count(self) -> int:

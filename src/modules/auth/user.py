@@ -27,7 +27,7 @@ class UserManager:
         return list(set(map(lambda d: d[APP_ID], docs)))
 
     def get_user_count(self):
-        return len(self.mcli.get_management_collection(COL_APPLICATION).distinct(USER_DID))
+        return len(self.mcli.get_management_collection(COL_APPLICATION).distinct(COL_APPLICATION_USR_DID))
 
     def get_app_docs(self, user_did) -> list:
         """ get all application information by user did"""
@@ -65,11 +65,11 @@ class UserManager:
             COL_APPLICATION_APP_DID: app_did,
         }
 
-        update = {'$set': {
+        update = {'$setOnInsert': {
             COL_APPLICATION_DATABASE_NAME: self.mcli.get_user_database_name(user_did, app_did),
             COL_APPLICATION_STATE: COL_APPLICATION_STATE_NORMAL}}
 
-        self.mcli.get_management_collection(COL_APPLICATION).update_one(filter_, update, contains_extra=True, upsert=False)
+        self.mcli.get_management_collection(COL_APPLICATION).update_one(filter_, update, contains_extra=True, upsert=True)
 
     def update_access(self, user_did, app_did, access_count: int = 0, data_amount: int = 0):
         """ Update access information for the user's application. """

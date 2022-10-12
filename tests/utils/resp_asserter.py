@@ -29,19 +29,24 @@ class DictAsserter(unittest.TestCase, dict):
             self.assertEqual(self[key], dst_value)
 
     def assert_in(self, key, targets: list):
-        self.assertIsNotNone(targets, 'assert_equal: "targets" should not be None')
+        self.assertIsNotNone(targets, 'assert_in: "targets" should not be None')
         self.assertIn(key, self)
         self.assertTrue(self[key] in targets)
 
     def assert_less(self, key, dst_value):
-        self.assertIsNotNone(dst_value, 'assert_equal: "dst_value" should not be None')
+        self.assertIsNotNone(dst_value, 'assert_less: "dst_value" should not be None')
         self.assert_type(key, type(dst_value))
         self.assertLess(self[key], dst_value)
 
     def assert_greater(self, key, dst_value):
-        self.assertIsNotNone(dst_value, 'assert_equal: "dst_value" should not be None')
+        self.assertIsNotNone(dst_value, 'assert_greater: "dst_value" should not be None')
         self.assert_type(key, type(dst_value))
         self.assertGreater(self[key], dst_value)
+
+    def assert_greater_equal(self, key, dst_value):
+        self.assertIsNotNone(dst_value, 'assert_greater_equal: "dst_value" should not be None')
+        self.assert_type(key, type(dst_value))
+        self.assertGreaterEqual(self[key], dst_value)
 
     def assert_true(self, key, t=dict):
         self.assert_type(key, t)

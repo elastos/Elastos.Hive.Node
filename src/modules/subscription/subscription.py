@@ -41,7 +41,7 @@ class VaultSubscription(metaclass=Singleton):
         plan = PaymentConfig.get_vault_plan('Free')
         return self.__get_vault_info(self.vault_manager.create_vault(g.usr_did, plan))
 
-    def __get_vault_info(self, vault, files_used=False, extra_info=False):
+    def __get_vault_info(self, vault, files_used=False):
         info = {
             'service_did': self.auth.get_did_string(),
             'pricing_plan': vault[VAULT_SERVICE_PRICING_USING],
@@ -51,14 +51,13 @@ class VaultSubscription(metaclass=Singleton):
             'end_time': int(vault[VAULT_SERVICE_END_TIME]),
             'created': int(vault[VAULT_SERVICE_START_TIME]),
             'updated': int(vault[VAULT_SERVICE_MODIFY_TIME]),
+            'app_count': len(self.user_manager.get_apps(g.usr_did))
         }
 
         if files_used:
             info['files_used'] = vault.get_files_usage()
 
-        if extra_info:
-            info.update(self.vault_manager.get_access_statistics(g.usr_did))
-
+        info.update(self.vault_manager.get_access_statistics(g.usr_did))
         return info
 
     def unsubscribe(self, force):
@@ -90,7 +89,7 @@ class VaultSubscription(metaclass=Singleton):
         :param files_used for files usage testing
         """
         vault = self.vault_manager.get_vault(g.usr_did)
-        return self.__get_vault_info(vault, files_used, extra_info=True)
+        return self.__get_vault_info(vault, files_used)
 
     def get_app_stats(self):
         """ List the applications belongs to this vault.

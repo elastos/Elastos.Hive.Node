@@ -21,6 +21,7 @@ class SubscriptionTestCase(unittest.TestCase):
     def test01_vault_subscribe(self):
         response = self.cli.put('/subscription/vault')
         self.assertIn(response.status_code, [200, 455])
+        RA(response).body().assert_greater_equal('app_count', 1)
 
     def test02_vault_activate(self):
         response = self.cli.post('/subscription/vault?op=activation')
@@ -31,6 +32,7 @@ class SubscriptionTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(isinstance(response.json(), dict))
         test_log(f'vault info: {response.json()}')
+        RA(response).body().assert_greater_equal('app_count', 1)
 
     def test04_vault_get_app_stats(self):
         response = self.cli.get('/subscription/vault/app_stats')

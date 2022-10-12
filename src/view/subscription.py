@@ -129,12 +129,13 @@ class VaultInfo(Resource):
             {
                 "service_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
                 "pricing_plan": "Rookie",
-                "storage_quota: 524288000,
+                "storage_quota": 524288000,
                 "storage_used": 20,
                 "start_time": <the epoch time>,
                 "end_time": <the epoch time>,
                 "created": <the epoch time>,
                 "updated": <the epoch time>,
+                "app_count": <int>,
                 "access_count": <int>,
                 "access_amount": <int>,
                 "access_last_time": <int>
@@ -258,7 +259,11 @@ class VaultSubscribe(Resource):
                 "start_time": <the epoch time>,
                 "end_time": <the epoch time>,
                 "created": <the epoch time>,
-                "updated": <the epoch time>
+                "updated": <the epoch time>,
+                "app_count": <int>,
+                "access_count": <int>,
+                "access_amount": <int>,
+                "access_last_time": <int>
             }
 
         **Response Error**:

@@ -11,14 +11,16 @@ from flask import g
 from src.utils.http_request import RequestData
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.subscription.vault import VaultManager
+from src.modules.database.database_metadata import DatabaseMetadataManager
 
 
 class Database:
     def __init__(self):
         self.mcli = MongodbClient()
         self.vault_manager = VaultManager()
+        self.dmm = DatabaseMetadataManager()
 
-    def create_collection(self, collection_name):
+    def create_collection(self, collection_name, is_encrypt, encrypt_method):
         """ Create collection by name
 
         :v2 API:
@@ -26,6 +28,7 @@ class Database:
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         self.mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
+        self.dmm.add(g.usr_did, g.app_did, collection_name, is_encrypt, encrypt_method)
         return {'name': collection_name}
 
     def delete_collection(self, collection_name):
@@ -34,7 +37,7 @@ class Database:
         :v2 API:
         """
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
-
+        self.dmm.delete(g.usr_did, g.app_did, collection_name)
         self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
 
     def __get_collection(self, collection_name):
@@ -95,4 +98,9 @@ class Database:
     def __do_internal_find(self, collection_name, filter_, options):
         col = self.__get_collection(collection_name)
         docs = col.find_many(filter_, **options)
-        return {"items": [c for c in json.loads(json_util.dumps(docs))]}
+        metadata = self.dmm.get(g.usr_did, g.app_did, collection_name)
+        return {
+            'items': [c for c in json.loads(json_util.dumps(docs))],
+            'is_encrypt': metadata['is_encrypt'] if metadata else False,
+            'encrypt_method': metadata['encrypt_method'] if metadata else '',
+        }

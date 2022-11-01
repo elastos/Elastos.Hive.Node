@@ -610,6 +610,24 @@ This common collection keeps the backup information in the backup node.
         "req_state_msg": <str>
     }
 
+database_metadata
+-----------------
+
+This user collection keeps the metadata info. of the user collections.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "user_did": <str>,
+        "app_did": <str>,
+        "name": <str>,
+        "is_encrypt": <bool>,
+        "encrypt_method": <str>,
+        "created": <timestamp: float>,
+        "modified": <timestamp: float>
+    }
+
 ipfs_files
 ----------
 
@@ -626,6 +644,8 @@ This user collection keeps the metadata of the files.
         "is_file": <bool>
         "size": <int>,
         "ipfs_cid": <int>,
+        "is_encrypt": <bool>,
+        "encrypt_method": <str>,
         "created": <timestamp: float>,
         "modified": <timestamp: float>
     }

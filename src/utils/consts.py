@@ -148,6 +148,7 @@ COL_RECEIPTS_ORDER_ID = 'order_id'
 COL_RECEIPTS_PAID_DID = 'paid_did'
 # order end
 
+# ipfs_files
 COL_IPFS_FILES = 'ipfs_files'
 COL_IPFS_FILES_PATH = 'path'
 COL_IPFS_FILES_SHA256 = 'sha256'
@@ -155,8 +156,20 @@ COL_IPFS_FILES_IS_FILE = 'is_file'
 COL_IPFS_FILES_IPFS_CID = 'ipfs_cid'
 COL_IPFS_FILES_IS_ENCRYPT = 'is_encrypt'
 COL_IPFS_FILES_ENCRYPT_METHOD = 'encrypt_method'
+# end of ipfs_files
 
+# ipfs_cid_ref
 COL_IPFS_CID_REF = 'ipfs_cid_ref'
+# end of ipfs_cid_ref
+
+# database_metadata
+COL_DATABASE_METADATA = 'database_metadata'
+COL_DATABASE_METADATA_USR_DID = USR_DID
+COL_DATABASE_METADATA_APP_DID = APP_DID
+COL_DATABASE_METADATA_NAME = 'name'
+COL_DATABASE_METADATA_IS_ENCRYPT = 'is_encrypt'
+COL_DATABASE_METADATA_ENCRYPT_METHOD = 'encrypt_method'
+# end of database_metadata
 
 COL_IPFS_BACKUP_CLIENT = 'ipfs_backup_client'
 COL_IPFS_BACKUP_SERVER = 'ipfs_backup_server'

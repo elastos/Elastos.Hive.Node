@@ -290,11 +290,10 @@ class MongodbClient:
     def get_user_collection_names(self, user_did: str, app_did: str):
         database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
         names = database.list_collection_names()
-        return filter(lambda n: n in self.MANAGED_USER_COLLECTIONS, names)
+        return filter(lambda n: n not in self.MANAGED_USER_COLLECTIONS, names)
 
     def is_internal_collection(self, user_did: str, app_did: str, col_name: str):
-        database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
-        return col_name in database.list_collection_names()
+        return col_name in self.MANAGED_USER_COLLECTIONS
 
     def create_user_collection(self, user_did, app_did, col_name) -> MongodbCollection:
         database_name = MongodbClient.get_user_database_name(user_did, app_did)

@@ -1,3 +1,5 @@
+from flask import g
+
 from src.utils.consts import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_EXECUTABLE_TYPE_INSERT, \
     SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
     SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_CALLER_DID, \
@@ -162,6 +164,9 @@ class Executable:
                                  SCRIPTING_EXECUTABLE_TYPE_UPDATE,
                                  SCRIPTING_EXECUTABLE_TYPE_DELETE]:
             validate_exists(json_data['body'], ['collection'])
+
+            if MongodbClient().is_internal_collection(g.usr_did, g.app_did, json_data['body']['collection']):
+                raise InvalidParameterException(f"No permission to set the operation on the collection {json_data['body']['collection']}")
 
             if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_INSERT:
                 validate_exists(json_data['body'], ['document'])

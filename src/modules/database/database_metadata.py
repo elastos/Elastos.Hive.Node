@@ -7,6 +7,11 @@ class DatabaseMetadataManager:
     def __init__(self):
         self.mcli = MongodbClient()
 
+    def sync_all(self, user_did, app_did):
+        names = self.mcli.get_user_collection_names(user_did, app_did)
+        for name in names:
+            self.add(user_did, app_did, name, False, '')
+
     def add(self, user_did, app_did, collection_name, is_encrypt, encrypt_method):
         filter_ = {
             COL_DATABASE_METADATA_USR_DID: user_did,
@@ -36,3 +41,6 @@ class DatabaseMetadataManager:
             COL_DATABASE_METADATA_NAME: collection_name,
         }
         return self.mcli.get_user_collection(user_did, app_did, COL_DATABASE_METADATA, create_on_absence=True).find_one(filter_)
+
+    def get_all(self, user_did, app_did):
+        return self.mcli.get_user_collection(user_did, app_did, COL_DATABASE_METADATA, create_on_absence=True).find_many({})

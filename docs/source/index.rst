@@ -17,7 +17,7 @@ Summary
     subscription.vault_subscribe, subscription.vault_unsubscribe, subscription.vault_info, subscription.vault_app_states,
     subscription.vault_activate_deactivate,
     subscription.backup_subscribe, subscription.backup_unsubscribe, subscription.backup_info, subscription.vault_price_plan,
-    database.create_collection, database.delete_collection, database.insert_or_count,
+    database.get_collections, database.create_collection, database.delete_collection, database.insert_or_count,
     database.update, database.delete, database.find, database.query,
     files.reading_operation, files.writing_operation, files.move_file, files.delete_file,
     scripting.register_script, scripting.call_script, scripting.call_script_url,
@@ -127,6 +127,13 @@ get pricing plans
 ===========
 
 based on mongodb.
+
+get collections
+---------------
+
+.. autoflask:: src:get_docs_app()
+  :undoc-static:
+  :endpoints: database.get_collections
 
 create collection
 -----------------

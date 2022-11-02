@@ -20,6 +20,7 @@ class DatabaseTestCase(unittest.TestCase):
         init_test()
         self.cli = HttpClient(f'/api/v2/vault')
         self.collection_name = 'test_collection'
+        self.encrypt_collection = 'encrypt_collection'
         self.name_not_exist = 'name_not_exist_collection'
 
     @classmethod
@@ -36,6 +37,52 @@ class DatabaseTestCase(unittest.TestCase):
         RA(response).assert_status(200, 455)
         if response.status_code == 200:
             RA(response).body().assert_equal('name', self.collection_name)
+
+    def test01_create_internal_collection(self):
+        response = self.cli.put(f'/db/collections/database_metadata')
+        RA(response).assert_status(400)
+
+    def test01_create_encrypt_collection(self):
+        # create
+        response = self.cli.put(f'/db/collections/{self.encrypt_collection}', {
+            'is_encrypt': True,
+            'encrypt_method': 'curve25519'
+        })
+        RA(response).assert_status(200, 455)
+
+        # list
+        response = self.cli.get(f'/db/collections')
+        RA(response).assert_status(200)
+        cols = RA(response).body().get('collections', list)
+        self.assertGreaterEqual(len(cols), 1)
+        cols = list(filter(lambda c: c['name'] == self.encrypt_collection, cols))
+        self.assertEqual(len(cols), 1)
+        self.assertEqual(cols[0]['is_encrypt'], True)
+        self.assertEqual(cols[0]['encrypt_method'], 'curve25519')
+
+        # insert
+        response = self.cli.post(f'/db/collection/{self.encrypt_collection}', body={
+            'document': [self.__create_doc(i + 1) for i in range(2)]
+        })
+        RA(response).assert_status(201)
+
+        # find
+        response = self.cli.get(f'/db/{self.encrypt_collection}' + '?filter={"author":"Alice"}')
+        RA(response).assert_status(200)
+        RA(response).body().assert_equal('is_encrypt', True)
+        RA(response).body().assert_equal('encrypt_method', 'curve25519')
+
+        # delete
+        response = self.cli.delete(f'/db/{self.encrypt_collection}')
+        RA(response).assert_status(204)
+
+    def test02_list_collections(self):
+        response = self.cli.get(f'/db/collections')
+        RA(response).assert_status(200)
+        cols = RA(response).body().get('collections', list)
+        self.assertGreaterEqual(len(cols), 1)
+        cols = list(filter(lambda c: c['name'] == self.collection_name, cols))
+        self.assertEqual(len(cols), 1)
 
     def __create_doc(self, index):
         return {'author': 'Alice',

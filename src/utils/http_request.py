@@ -338,10 +338,13 @@ class RV:
     """
 
     @staticmethod
-    def get_body(parent_name: str = None):
+    def get_body(parent_name: str = None, optional=False):
         """ get body args in dict """
         if not hasattr(g, 'body'):
             body = request.get_json(force=True, silent=True)
+            if not body and optional:
+                body = {}
+
             if not isinstance(body, dict):
                 raise InvalidParameterException('Invalid request body: MUST be dictionary')
             g.body = RequestData(**body)

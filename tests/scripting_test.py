@@ -197,6 +197,24 @@ class IpfsScriptingTestCase(unittest.TestCase):
         response = self.cli.delete(f'/scripting/{script_name}')
         RA(response).assert_status(expect_status)
 
+    def test01_register_internal_collection(self):
+        script_name, executable_name = 'ipfs_database_insert', 'database_insert'
+        script_body = {"executable": {
+            "name": executable_name,
+            "type": "insert",
+            "body": {
+                "collection": 'scripts',
+                "document": {
+                    "author": "$params.author",  # key of 'find'
+                    "content": "$params.content",
+                    "words_count": "$params.words_count"
+                },
+                "options": {
+                    "bypass_document_validation": False
+                }
+            }}}
+        self.__register_script(script_name, script_body, expect_status=400)
+
     def test01_insert(self):
         """ test insert and insert """
         script_name, executable_name = 'ipfs_database_insert', 'database_insert'

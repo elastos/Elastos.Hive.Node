@@ -115,8 +115,8 @@ class CreateCollection(Resource):
         """
 
         collection_name = RV.get_value('collection_name', collection_name, str)
-        is_encrypt = RV.get_body().get_opt('is_encrypt', bool, False)
-        encrypt_method = RV.get_body().get_opt('encrypt_method', str, '')
+        is_encrypt = RV.get_body(optional=True).get_opt('is_encrypt', bool, False)
+        encrypt_method = RV.get_body(optional=True).get_opt('encrypt_method', str, '')
 
         if is_encrypt and not encrypt_method:
             raise InvalidParameterException('Invalid encrypt_method when is_encrypt is True')

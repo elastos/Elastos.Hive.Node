@@ -27,7 +27,7 @@ class Database:
         :v2 API:
         """
         if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
-            raise InvalidParameterException(f'No permission to operate the collection {collection_name}')
+            raise InvalidParameterException(f'No permission to create the collection {collection_name}')
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
@@ -41,7 +41,7 @@ class Database:
         :v2 API:
         """
         if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
-            raise InvalidParameterException(f'No permission to operate the collection {collection_name}')
+            raise InvalidParameterException(f'No permission to delete the collection {collection_name}')
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
         self.dmm.delete(g.usr_did, g.app_did, collection_name)
@@ -53,11 +53,14 @@ class Database:
         docs = self.dmm.get_all(g.usr_did, g.app_did)
         if not docs:
             raise CollectionNotFoundException()
-        return map(lambda d: {
-            'name': d['name'],
-            'is_encrypt': d['is_encrypt'],
-            'encrypt_method': d['encrypt_method']
-        }, docs)
+
+        return {
+            'collections': list(map(lambda d: {
+                'name': d['name'],
+                'is_encrypt': d['is_encrypt'],
+                'encrypt_method': d['encrypt_method']
+            }, docs))
+        }
 
     def __get_collection(self, collection_name):
         if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):

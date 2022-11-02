@@ -8,6 +8,7 @@ from bson import json_util
 
 from flask import g
 
+from src.utils.http_exception import InvalidParameterException, CollectionNotFoundException
 from src.utils.http_request import RequestData
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.subscription.vault import VaultManager
@@ -25,6 +26,9 @@ class Database:
 
         :v2 API:
         """
+        if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
+            raise InvalidParameterException(f'No permission to operate the collection {collection_name}')
+
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         self.mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
@@ -36,11 +40,29 @@ class Database:
 
         :v2 API:
         """
+        if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
+            raise InvalidParameterException(f'No permission to operate the collection {collection_name}')
+
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
         self.dmm.delete(g.usr_did, g.app_did, collection_name)
         self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
 
+    def get_collections(self):
+        """ v2 API """
+        self.dmm.sync_all(g.usr_did, g.app_did)
+        docs = self.dmm.get_all(g.usr_did, g.app_did)
+        if not docs:
+            raise CollectionNotFoundException()
+        return map(lambda d: {
+            'name': d['name'],
+            'is_encrypt': d['is_encrypt'],
+            'encrypt_method': d['encrypt_method']
+        }, docs)
+
     def __get_collection(self, collection_name):
+        if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
+            raise InvalidParameterException(f'No permission to operate the collection {collection_name}')
+
         return self.mcli.get_user_collection(g.usr_did, g.app_did, collection_name)
 
     @staticmethod

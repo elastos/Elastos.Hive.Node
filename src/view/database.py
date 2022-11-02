@@ -9,6 +9,60 @@ from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import RV
 
 
+class GetCollection(Resource):
+    def __init__(self):
+        self.database = Database()
+
+    def get(self):
+        """ Get all collections created by user.
+
+        .. :quickref: 03 Database; Get collections
+
+        **Request**:
+
+        .. sourcecode:: http
+
+            None
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+
+        .. code-block:: json
+
+            {
+                “collections”: [
+                    "name": <str>,
+                    "is_encrypt": <bool>,
+                    "encrypt_method": <str>
+                ]
+            }
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 400 Bad Request
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
+        .. sourcecode:: http
+
+            HTTP/1.1 404 Not Found
+
+        """
+
+        return self.database.get_collections()
+
+
 class CreateCollection(Resource):
     def __init__(self):
         self.database = Database()

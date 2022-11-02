@@ -29,6 +29,7 @@ def init_app(api: Api):
     api.add_resource(subscription.BackupUnsubscribe, '/subscription/backup', endpoint='subscription.backup_unsubscribe')
 
     # database service
+    api.add_resource(database.GetCollection, '/vault/db/collections', endpoint='database.get_collections')
     api.add_resource(database.CreateCollection, '/vault/db/collections/<collection_name>', endpoint='database.create_collection')
     api.add_resource(database.DeleteCollection, '/vault/db/<collection_name>', endpoint='database.delete_collection')
     api.add_resource(database.InsertOrCount, '/vault/db/collection/<collection_name>', endpoint='database.insert_or_count')

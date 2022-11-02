@@ -218,6 +218,8 @@ class MongodbCollection:
 class MongodbClient:
     """ Used to connect mongodb and is a helper class for all mongo database operation. """
 
+    MANAGED_USER_COLLECTIONS = ['database_metadata', 'ipfs_files', 'scripts', 'scripts_temptx']
+
     def __init__(self):
         self.mongodb_uri = hive_setting.MONGODB_URL
         self.connection = None
@@ -284,6 +286,15 @@ class MongodbClient:
             else:
                 raise CollectionNotFoundException(f'Can not find collection {col_name}')
         return MongodbCollection(database[col_name], is_management=False)
+
+    def get_user_collection_names(self, user_did: str, app_did: str):
+        database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
+        names = database.list_collection_names()
+        return filter(lambda n: n in self.MANAGED_USER_COLLECTIONS, names)
+
+    def is_internal_collection(self, user_did: str, app_did: str, col_name: str):
+        database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
+        return col_name in database.list_collection_names()
 
     def create_user_collection(self, user_did, app_did, col_name) -> MongodbCollection:
         database_name = MongodbClient.get_user_database_name(user_did, app_did)

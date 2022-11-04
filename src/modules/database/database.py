@@ -49,6 +49,8 @@ class Database:
 
     def get_collections(self):
         """ v2 API """
+        self.vault_manager.get_vault(g.usr_did)
+
         self.dmm.sync_all(g.usr_did, g.app_did)
         docs = self.dmm.get_all(g.usr_did, g.app_did)
         if not docs:

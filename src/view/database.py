@@ -9,7 +9,7 @@ from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import RV
 
 
-class GetCollection(Resource):
+class GetCollections(Resource):
     def __init__(self):
         self.database = Database()
 

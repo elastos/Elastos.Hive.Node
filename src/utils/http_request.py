@@ -311,7 +311,7 @@ class RV:
         value = RV.get_body().get('executable').get('type', str)
         value = RV.get_body().get('executable').get('output', bool)
 
-        # get optional
+        # get optional, optional means no key provided or provide the right value.
         value = RV.get_body().get_opt('executable')
         value = RV.get_body().get_opt('collection_name', str)
         value = RV.get_body().get_opt('allowAnonymousUser', bool)

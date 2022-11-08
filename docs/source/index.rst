@@ -657,6 +657,23 @@ This user collection keeps the metadata of the files.
         "modified": <timestamp: float>
     }
 
+anonymous_files
+---------------
+
+This user collection keeps the files which can be accessed anonymously.
+
+.. code-block:: json
+
+    {
+        "_id": ObjectId,
+        "user_did": <str>,
+        "app_did": <str>,
+        "name": <str>,
+        "cid": <int>,
+        "created": <timestamp: float>,
+        "modified": <timestamp: float>
+    }
+
 scripts
 -------
 

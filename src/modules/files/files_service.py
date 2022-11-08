@@ -16,6 +16,7 @@ from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPF
     COL_IPFS_FILES_ENCRYPT_METHOD
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
 from src.modules.files.ipfs_cid_ref import IpfsCidRef
+from src.modules.files.anonymous_files import AnonymousFiles
 from src.modules.subscription.vault import VaultManager
 
 
@@ -32,8 +33,9 @@ class IpfsFiles:
         self.vault_manager = VaultManager()
         self.file_manager = FileMetadataManager()
         self.ipfs_client = IpfsClient()
+        self.anonymous_files = AnonymousFiles()
 
-    def upload_file(self, path, is_public: bool, script_name: str, is_encrypt: bool, encrypt_method: str):
+    def upload_file(self, path, is_public: bool, is_encrypt: bool, encrypt_method: str):
         """ :v2 API: """
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
@@ -41,8 +43,9 @@ class IpfsFiles:
 
         # anonymous share to any users
         if is_public:
-            from src.modules.scripting.scripting import Scripting
-            Scripting().set_script_for_anonymous_file(script_name, path)
+            self.anonymous_files.add(g.usr_did, g.app_did, path, cid)
+        else:
+            self.anonymous_files.delete(g.usr_did, g.app_did, path)
 
         return {
             'name': path,
@@ -67,6 +70,7 @@ class IpfsFiles:
         """
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
+        self.anonymous_files.delete(g.usr_did, g.app_did, path)
         self.delete_file_with_path(g.usr_did, g.app_did, path, check_exist=True)
 
     def delete_file_with_path(self, user_did, app_did, path, check_exist=False):
@@ -88,6 +92,7 @@ class IpfsFiles:
         """ :v2 API: """
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
+        self.anonymous_files.delete(g.usr_did, g.app_did, src_path)
         return self.move_copy_file(g.usr_did, g.app_did, src_path, dst_path)
 
     def copy_file(self, src_path, dst_path):

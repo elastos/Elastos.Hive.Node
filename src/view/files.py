@@ -256,9 +256,8 @@ class WritingOperation(Resource):
         .. sourcecode:: http
 
             public=<true|false>         # [optional] Whether the file uploaded can be access anonymously. Default is 'false'.
-            script_name=<string>        # [optional] A script name used to set up for downloading by scripting module. the script can be run without params.
-                                        # The executable name of the script is the same as the script name.
-                                        # Default is empty string.
+                                        #            If true, user can access this file anonymously with script '__anonymous_files__'
+                                        #            and 'path' parameter.
             is_encrypt=<true|false>     # [optional] Whether the content of the file has been encrypted by hive sdk. Default is 'false'.
             encrypt_method=<string>     # [optional] The way to encrypt. Default is empty string.
 
@@ -304,15 +303,13 @@ class WritingOperation(Resource):
 
         dst_path = RV.get_args().get_opt('dest', str, '')
         if not dst_path:
-            is_public, script_name = RV.get_args().get_opt('public', bool, False), RV.get_args().get_opt('script_name', str, '')
-            if is_public and not script_name:
-                raise InvalidParameterException("MUST provide 'script_name' when 'public' is true.")
+            is_public = RV.get_args().get_opt('public', bool, False)
 
             is_encrypt, encrypt_method = RV.get_args().get_opt('is_encrypt', bool, False), RV.get_args().get_opt('encrypt_method', str, '')
             if is_encrypt and not encrypt_method:
                 raise InvalidParameterException("MUST provide 'encrypt_method' when 'is_encrypt' is true.")
 
-            return self.ipfs_files.upload_file(path, is_public, script_name, is_encrypt, encrypt_method)
+            return self.ipfs_files.upload_file(path, is_public, is_encrypt, encrypt_method)
 
         if path == dst_path:
             raise InvalidParameterException(f'The source file {path} can be copied to a target file with the same name')

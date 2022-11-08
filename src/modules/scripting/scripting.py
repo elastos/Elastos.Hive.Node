@@ -10,7 +10,7 @@ from flask import request, g
 from bson import ObjectId
 
 from src import hive_setting
-from src.utils.consts import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
+from src.utils.consts import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_ANONYMOUS_FILES
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.files.files_service import IpfsFiles
@@ -287,24 +287,34 @@ class Scripting:
 
         return self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
 
-    def set_script_for_anonymous_file(self, script_name: str, file_path: str):
-        """ set script for uploading public file on files service
+    def set_anonymous_file_script(self, script_name: str):
+        """ set global script for uploading public file on files service
 
         Note: database size changing has been checked by uploading file.
         """
-        json_data = {
+        filter_ = {'name': script_name}
+        update = {'$setOnInsert': {
+            "condition": {
+                'name': 'verify_user_permission',
+                'type': 'queryHasResults',
+                'body': {
+                    'collection': COL_ANONYMOUS_FILES,
+                    'filter': {'name': '$params.path'}
+                }
+            },
             "executable": {
                 "output": True,
                 "name": script_name,
                 "type": "fileDownload",
                 "body": {
-                    "path": file_path
+                    "path": "$params.path"
                 }
             },
             "allowAnonymousUser": True,
             "allowAnonymousApp": True
-        }
-        self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
+        }}
+        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        return col.update_one(filter_, update, contains_extra=True, upsert=True)
 
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
         fix_dollar_keys_recursively(json_data)

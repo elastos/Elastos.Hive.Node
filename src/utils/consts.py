@@ -171,6 +171,14 @@ COL_DATABASE_METADATA_IS_ENCRYPT = 'is_encrypt'
 COL_DATABASE_METADATA_ENCRYPT_METHOD = 'encrypt_method'
 # end of database_metadata
 
+# anonymous_files
+COL_ANONYMOUS_FILES = 'anonymous_files'
+COL_ANONYMOUS_FILES_USR_DID = USR_DID
+COL_ANONYMOUS_FILES_APP_DID = APP_DID
+COL_ANONYMOUS_FILES_NAME = 'name'
+COL_ANONYMOUS_FILES_CID = 'cid'
+# end of anonymous_files
+
 COL_IPFS_BACKUP_CLIENT = 'ipfs_backup_client'
 COL_IPFS_BACKUP_SERVER = 'ipfs_backup_server'
 

@@ -157,34 +157,19 @@ class IpfsScriptingTestCase(unittest.TestCase):
         normal_check(anonymous=False)
         normal_check(anonymous=True)
 
-    def call_and_execute_transaction(self, script_name, executable_name,
-                                     path: t.Optional[str] = None, is_download=True, download_content=None, anonymous=False):
-        """ Call uploading or downloading script and run relating transaction.
+    def verify_anonymous_file(self, script_name, executable_name, path, content):
+        """ Verify the anonymous file which uploaded by files service.
 
-        Also, for files service testing.
-
-        :path: used for 'params', default is 'self.file_name'
-        :is_download: True, download file, else upload file.
-        :download_content: for files service.
+        This is only for files service testing.
         """
         # call the script for uploading or downloading
-        body = self.__call_script(script_name, {"params": {"path": path if path else self.file_name}}, anonymous=anonymous)
+        body = self.__call_script(script_name, {"params": {"path": path}}, anonymous=True)
         body.get(executable_name).assert_true('transaction_id', str)
 
         # call relating transaction
-        if is_download:
-            response = self.cli2.get(f'/scripting/stream/{body[executable_name]["transaction_id"]}', need_token=not anonymous)
-        else:
-            response = self.cli2.put(f'/scripting/stream/{body[executable_name]["transaction_id"]}',
-                                     self.file_content.encode(), is_json=False, need_token=not anonymous)
+        response = self.cli2.get(f'/scripting/stream/{body[executable_name]["transaction_id"]}', need_token=False)
         RA(response).assert_status(200)
-
-        # check the result
-        if is_download:
-            RA(response).text_equal(download_content if download_content else self.file_content)
-        else:
-            # nothing returned
-            pass
+        RA(response).text_equal(content)
 
     def delete_script(self, script_name: str, expect_status=204):
         """ delete a script

@@ -218,7 +218,8 @@ class MongodbCollection:
 class MongodbClient:
     """ Used to connect mongodb and is a helper class for all mongo database operation. """
 
-    MANAGED_USER_COLLECTIONS = ['database_metadata', 'ipfs_files', 'scripts', 'scripts_temptx']
+    # The collections used by node to manage cannot be operated by user.
+    MANAGED_USER_COLLECTIONS = ['database_metadata', 'ipfs_files', 'anonymous_files', 'scripts', 'scripts_temptx']
 
     def __init__(self):
         self.mongodb_uri = hive_setting.MONGODB_URL

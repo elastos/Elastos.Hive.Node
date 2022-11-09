@@ -50,7 +50,7 @@ def init_app(api: Api):
     api.add_resource(scripting.CallScriptUrl, '/vault/scripting/<script_name>/<context_str>/<params>', endpoint='scripting.call_script_url')
     api.add_resource(scripting.UploadFile, '/vault/scripting/stream/<transaction_id>', endpoint='scripting.upload_file')
     api.add_resource(scripting.DownloadFile, '/vault/scripting/stream/<transaction_id>', endpoint='scripting.download_file')
-    api.add_resource(scripting.DeleteScript, '/vault/scripting/<script_name>', endpoint='scripting.delete_script')
+    api.add_resource(scripting.UnregisterScript, '/vault/scripting/<script_name>', endpoint='scripting.unregister_script')
 
     # backup service
     api.add_resource(backup.State, '/vault/content', endpoint='backup.state')

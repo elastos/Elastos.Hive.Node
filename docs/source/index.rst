@@ -21,7 +21,7 @@ Summary
     database.update, database.delete, database.find, database.query,
     files.reading_operation, files.writing_operation, files.move_file, files.delete_file,
     scripting.register_script, scripting.call_script, scripting.call_script_url,
-    scripting.delete_script, scripting.upload_file, scripting.download_file,
+    scripting.unregister_script, scripting.upload_file, scripting.download_file,
     backup.state, backup.backup_restore, backup.server_promotion,
     payment.version, payment.place_order, payment.settle_order, payment.orders, payment.receipts,
     node.version, node.commit_id, node.info,
@@ -248,7 +248,7 @@ unregister script
 
 .. autoflask:: src:get_docs_app()
   :undoc-static:
-  :endpoints: scripting.delete_script
+  :endpoints: scripting.unregister_script
 
 upload file
 -----------

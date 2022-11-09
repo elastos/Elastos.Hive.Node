@@ -176,15 +176,15 @@ class RegisterScript(Resource):
         - fileHash
 
         """
-        return self.scripting.set_script(script_name)
+        return self.scripting.register_script(script_name)
 
 
-class DeleteScript(Resource):
+class UnregisterScript(Resource):
     def __init__(self):
         self.scripting = Scripting()
 
     def delete(self, script_name):
-        """ Remove the script by the script name and the script can not be called anymore.
+        """ Unregister the script by the script name and the script can not be called anymore.
 
         .. :quickref: 05 Scripting; Unregister
 
@@ -219,7 +219,7 @@ class DeleteScript(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        return self.scripting.delete_script(script_name)
+        return self.scripting.unregister_script(script_name)
 
 
 class CallScript(Resource):

@@ -3,14 +3,12 @@ from src.utils.consts import COL_ANONYMOUS_FILES_USR_DID, COL_ANONYMOUS_FILES_AP
 
 
 class AnonymousFiles:
-    SCRIPT_NAME = '__anonymous_files__'
-
     def __init__(self):
         self.mcli = MongodbClient()
 
     def add(self, user_did, app_did, name, cid):
         from src.modules.scripting.scripting import Scripting
-        Scripting().set_anonymous_file_script(AnonymousFiles.SCRIPT_NAME)
+        Scripting().set_anonymous_file_script()
 
         filter_ = {
             COL_ANONYMOUS_FILES_USR_DID: user_did,

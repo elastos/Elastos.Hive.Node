@@ -101,8 +101,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         scripting_test = IpfsScriptingTestCase()
         scripting_test.verify_anonymous_file(script_name, script_name, self.src_public_name, self.src_public_content)
 
-        # clean the script and the file.
-        scripting_test.delete_script(script_name)
+        # clean the file.
         self.__delete_file(self.src_public_name)
 
     def test01_upload_file_invalid_parameter(self):

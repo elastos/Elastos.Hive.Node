@@ -347,16 +347,12 @@ class Scripting:
 
     def run_script(self, script_name):
         """ :v2 API: """
-        Scripting.check_internal_script(script_name)
-
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
         return Script(script_name, json_data, scripting=self).execute()
 
     def run_script_url(self, script_name, target_did, target_app_did, params):
         """ :v2 API: """
-        Scripting.check_internal_script(script_name)
-
         json_data = {
             'params': params
         }

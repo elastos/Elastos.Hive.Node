@@ -272,14 +272,23 @@ class Script:
 
 
 class Scripting:
+    ANONYMOUS_FILE_SCRIPT = '__anonymous_files__'
+
     def __init__(self):
         self.files = None
         self.ipfs_files = IpfsFiles()
         self.vault_manager = VaultManager()
         self.mcli = MongodbClient()
 
-    def set_script(self, script_name):
+    @staticmethod
+    def check_internal_script(script_name):
+        if script_name == Scripting.ANONYMOUS_FILE_SCRIPT:
+            raise InvalidParameterException(f'No permission to operate script {script_name}')
+
+    def register_script(self, script_name):
         """ :v2 API: """
+        Scripting.check_internal_script(script_name)
+
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         json_data = request.get_json(force=True, silent=True)
@@ -287,11 +296,12 @@ class Scripting:
 
         return self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
 
-    def set_anonymous_file_script(self, script_name: str):
-        """ set global script for uploading public file on files service
+    def set_anonymous_file_script(self):
+        """ Set global script for uploading public file on files service
 
         Note: database size changing has been checked by uploading file.
         """
+        script_name = Scripting.ANONYMOUS_FILE_SCRIPT
         filter_ = {'name': script_name}
         update = {'$setOnInsert': {
             "condition": {
@@ -323,8 +333,10 @@ class Scripting:
         col = self.mcli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
         return col.replace_one({"name": script_name}, json_data)
 
-    def delete_script(self, script_name):
+    def unregister_script(self, script_name):
         """ :v2 API: """
+        Scripting.check_internal_script(script_name)
+
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
         col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
@@ -335,12 +347,16 @@ class Scripting:
 
     def run_script(self, script_name):
         """ :v2 API: """
+        Scripting.check_internal_script(script_name)
+
         json_data = request.get_json(force=True, silent=True)
         Script.validate_run_data(json_data)
         return Script(script_name, json_data, scripting=self).execute()
 
     def run_script_url(self, script_name, target_did, target_app_did, params):
         """ :v2 API: """
+        Scripting.check_internal_script(script_name)
+
         json_data = {
             'params': params
         }

@@ -82,8 +82,8 @@ class IpfsFilesTestCase(unittest.TestCase):
         upload_file(file_name, file_content)
 
     def test01_upload_public_file(self):
-        script_name = self.src_public_name.split(".")[0]
-        response = self.cli.put(f'/files/{self.src_public_name}?public=true&script_name={script_name}',
+        script_name = '__anonymous_files__'
+        response = self.cli.put(f'/files/{self.src_public_name}?public=true',
                                 self.src_public_content.encode(), is_json=False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('name'), self.src_public_name)
@@ -99,7 +99,7 @@ class IpfsFilesTestCase(unittest.TestCase):
         # check fileDownload script
         from tests.scripting_test import IpfsScriptingTestCase
         scripting_test = IpfsScriptingTestCase()
-        scripting_test.call_and_execute_transaction(script_name, script_name, download_content=self.src_public_content)
+        scripting_test.verify_anonymous_file(script_name, script_name, self.src_public_name, self.src_public_content)
 
         # clean the script and the file.
         scripting_test.delete_script(script_name)

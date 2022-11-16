@@ -45,19 +45,19 @@ class VaultPricePlan(Resource):
                         amount": 0,
                             "currency": "ELA",
                         "maxStorage": 500,
-                        "name": "Free",
+                        "name": "Basic",
                         "serviceDays": -1
                     }, {
                         "amount": 1.5,
                         "currency": "ELA",
                         "maxStorage": 2000,
-                        "name": "Rookie",
+                        "name": "Standard",
                          "serviceDays": 30
                     }, {
                         "amount": 3,
                          "currency": "ELA",
                         "maxStorage": 5000,
-                        "name": "Advanced",
+                        "name": "Premium",
                         "serviceDays": 30
                     }],
 
@@ -65,19 +65,19 @@ class VaultPricePlan(Resource):
                     "amount": 0,
                     "currency": "ELA",
                     "maxStorage": 500,
-                    "name": "Free",
+                    "name": "Basic",
                     "serviceDays": -1
                 }, {
                     "amount": 2.5,
                     "currency": "ELA",
                     "maxStorage": 2000,
-                    "name": "Rookie",
+                    "name": "Standard",
                     "serviceDays": 30
                 }, {
                      "amount": 5,
                     "currency": "ELA",
                     "maxStorage": 5000,
-                    "name": "Advanced",
+                    "name": "Premium",
                     "serviceDays": 30
                 }],
                 "version": "1.0"
@@ -128,7 +128,7 @@ class VaultInfo(Resource):
 
             {
                 "service_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
-                "pricing_plan": "Rookie",
+                "pricing_plan": "Standard",
                 "storage_quota": 524288000,
                 "storage_used": 20,
                 "start_time": <the epoch time>,
@@ -404,7 +404,7 @@ class BackupInfo(Resource):
 
             {
                  "service_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
-                 "pricing_plan": "Rookie",
+                 "pricing_plan": "Standard",
                  "storage_quota": 500，
                  "storage_used": 20,
                  "start_time": 1602236316, // epoch time.
@@ -453,7 +453,7 @@ class BackupSubscribe(Resource):
 
             {
                  "service_did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
-                 "pricing_plan": "Rookie",
+                 "pricing_plan": "Standard",
                  "storage_quota": 500，
                  "storage_used": 20,
                  "start_time": 1602236316, // epoch time.

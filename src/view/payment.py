@@ -65,7 +65,7 @@ class PlaceOrder(Resource):
 
             {
                "subscription": <vault | backup>,
-               "pricing_name": "Rookie"
+               "pricing_name": "Standard"
             }
 
         **Response OK**:
@@ -79,7 +79,7 @@ class PlaceOrder(Resource):
             {
                 "interim_orderid": "<ObjectId str>",  // internal order id on hive node
                 "subscription": "vault",
-                "pricing_plan": "Rookie",
+                "pricing_plan": "Standard",
                 "paying_did": "did:elastos:iWFAUYhTa35c1f3335iCJvihZHx6q******",
                 "payment_amount": 15,  // ELA
                 "create_time": 1600073834,
@@ -171,7 +171,7 @@ class SettleOrder(Resource):
                 "receipt_id": “<ObjectId str>”,
                 "order_id": 1234,
                 "subscription": "vault",
-                "pricing_plan": "Rookie",
+                "pricing_plan": "Standard",
                 "payment_amount": "5",  // ELA
                 "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEH******”,
                 "create_time": 1600073834,
@@ -199,7 +199,7 @@ class SettleOrder(Resource):
                         "receipt_id": "<ObjectId str>",
                         "order_id": 445,
                         "subscription": "vault",
-                        "pricing_plan": "Rookie",
+                        "pricing_plan": "Standard",
                         "paid_did": "did:elastos:iWFAUYhTa35c1f3335iCJvihZHx6******",  // the did who paid for the order.
                         "payment_amount": 15,  // ELA
                         "create_time": 1600073834,
@@ -258,7 +258,7 @@ class Orders(Resource):
                "orders": [{
                     "order_id": 1234,
                     "subscription": "vault",
-                    "pricing_plan": "Rookie",
+                    "pricing_plan": "Standard",
                     "paying_did": "did:elastos:iWFAUYhTa35c1f3335iCJvihZHx6q******",
                     "payment_amount": "5",  // ELA
                     "create_time": 1600073834,
@@ -322,7 +322,7 @@ class Receipts(Resource):
                     "receipt_id": “<ObjectId str>”,
                     "order_id": 1234,
                     "subscription": "vault",
-                    "pricing_plan": "Rookie",
+                    "pricing_plan": "Standard",
                     "payment_amount": "5",  // ELA
                     "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEH******”,
                     "create_time": 1600073834,

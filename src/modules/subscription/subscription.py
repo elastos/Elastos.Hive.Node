@@ -38,7 +38,7 @@ class VaultSubscription(metaclass=Singleton):
     def subscribe(self):
         """ :v2 API: """
 
-        plan = PaymentConfig.get_vault_plan('Free')
+        plan = PaymentConfig.get_free_vault_plan()
         return self.__get_vault_info(self.vault_manager.create_vault(g.usr_did, plan))
 
     def __get_vault_info(self, vault, files_used=False):

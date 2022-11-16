@@ -52,7 +52,7 @@ class Provider:
         def vault_mapper(v):
             result = {
                 "pricing_using": v[VAULT_SERVICE_PRICING_USING],
-                "max_storage": v[VAULT_SERVICE_MAX_STORAGE],
+                "max_storage": v.get_storage_quota(),
                 "file_use_storage": v[VAULT_SERVICE_FILE_USE_STORAGE],
                 "db_use_storage": v[VAULT_SERVICE_DB_USE_STORAGE],
                 "user_did": v[VAULT_SERVICE_DID],

@@ -17,7 +17,7 @@ from hive.util.did_file_info import get_dir_size, get_vault_path
 from hive.util.did_mongo_db_resource import gene_mongo_db_name
 from hive.util.payment.payment_config import PaymentConfig
 
-VAULT_BACKUP_SERVICE_FREE_STATE = "Free"
+VAULT_BACKUP_SERVICE_FREE_STATE = "Basic"
 
 
 def setup_vault_backup_service(did, max_storage, service_days, backup_name=VAULT_BACKUP_SERVICE_FREE_STATE):

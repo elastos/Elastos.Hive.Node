@@ -33,15 +33,15 @@ class PaymentConfig:
 
     @staticmethod
     def get_free_vault_plan():
-        return PaymentConfig.get_vault_plan("Free")
+        return PaymentConfig.get_vault_plan("Basic")
 
     @staticmethod
     def is_free_plan(name: str):
-        return name == 'Free'
+        return name == 'Basic'
 
     @staticmethod
     def get_free_backup_plan():
-        return PaymentConfig.get_backup_plan("Free")
+        return PaymentConfig.get_backup_plan("Basic")
 
     @staticmethod
     def get_payment_address():

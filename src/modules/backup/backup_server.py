@@ -53,7 +53,7 @@ class BackupServer:
         except VaultNotFoundException as e:
             pass
 
-        vault = self.vault_manager.create_vault(g.usr_did, PaymentConfig.get_vault_plan('Free'), is_upgraded=True)
+        vault = self.vault_manager.create_vault(g.usr_did, PaymentConfig.get_free_vault_plan(), is_upgraded=True)
         request_metadata = self.get_server_request_metadata(g.usr_did, backup, is_promotion=True,
                                                             vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
 

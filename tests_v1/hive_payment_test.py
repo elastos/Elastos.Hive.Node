@@ -81,7 +81,7 @@ class HivePaymentTestCase(unittest.TestCase):
         service_col = db[VAULT_SERVICE_COL]
         service_col.delete_many(query)
 
-        package_info = PaymentConfig.get_pricing_plan("Rookie")
+        package_info = PaymentConfig.get_pricing_plan("Standard")
         self.assertNotEqual(package_info, None)
         # init some cancel order to test cancel order txid use in new order
         order_dic = {VAULT_ORDER_DID: self.did,
@@ -123,7 +123,7 @@ class HivePaymentTestCase(unittest.TestCase):
         service_col = db[VAULT_SERVICE_COL]
         service_col.delete_many(query)
 
-        package_info = PaymentConfig.get_backup_plan("Rookie")
+        package_info = PaymentConfig.get_backup_plan("Standard")
         self.assertNotEqual(package_info, None)
         # init some cancel order to test cancel order txid use in new order
         order_dic = {VAULT_ORDER_DID: self.did,
@@ -213,7 +213,7 @@ class HivePaymentTestCase(unittest.TestCase):
     def test_1_1_get_vault_backup_pricing_plan(self):
         logging.getLogger("").debug("\nRunning test_1_1_get_vault_backup_package_info")
         r, s = self.parse_response(
-            self.test_client.get('api/v1/payment/vault_backup_plan?name=Rookie', headers=self.auth)
+            self.test_client.get('api/v1/payment/vault_backup_plan?name=Standard', headers=self.auth)
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
@@ -221,7 +221,7 @@ class HivePaymentTestCase(unittest.TestCase):
     def test_1_1_get_vault_pricing_plan(self):
         logging.getLogger("").debug("\nRunning test_1_1_get_vault_pricing_plan")
         r, s = self.parse_response(
-            self.test_client.get('api/v1/payment/vault_pricing_plan?name=Rookie', headers=self.auth)
+            self.test_client.get('api/v1/payment/vault_pricing_plan?name=Standard', headers=self.auth)
         )
         self.assert200(s)
         self.assertEqual(r["_status"], "OK")
@@ -238,7 +238,7 @@ class HivePaymentTestCase(unittest.TestCase):
         logging.getLogger("").debug("\nRunning test_2_create_package_order")
 
         package = {
-            "pricing_name": "Rookie"
+            "pricing_name": "Standard"
         }
 
         r, s = self.parse_response(
@@ -317,15 +317,15 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assert_service_vault_info(None)
         test_common.setup_test_vault(self.did)
         now = datetime.utcnow().timestamp()
-        self.change_service(now - 24 * 60 * 60, now - 1, 5000, "Rookie")
+        self.change_service(now - 24 * 60 * 60, now - 1, 5000, "Standard")
         count_vault_storage_job()
-        self.assert_service_vault_info("Rookie")
+        self.assert_service_vault_info("Standard")
         inc_vault_file_use_storage_byte(self.did, 910000000)
         update_vault_db_use_storage_byte(self.did, 910000000)
         r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
         self.assertEqual(r, SUCCESS)
         proc_expire_vault_job()
-        self.assert_service_vault_info("Free")
+        self.assert_service_vault_info("Basic")
         r, msg = can_access_vault(self.did, VAULT_ACCESS_R)
         self.assertEqual(r, SUCCESS)
         r, msg = can_access_vault(self.did, VAULT_ACCESS_WR)
@@ -335,7 +335,7 @@ class HivePaymentTestCase(unittest.TestCase):
         logging.getLogger("").debug("\nRunning test_2_create_package_order")
 
         package = {
-            "backup_name": "Rookie"
+            "backup_name": "Standard"
         }
 
         r, s = self.parse_response(
@@ -378,7 +378,7 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
 
         check_wait_order_tx_job()
-        self.assert_service_vault_backup_info("Rookie")
+        self.assert_service_vault_backup_info("Standard")
 
         r, s = self.parse_response(
             self.test_client.post('/api/v1/service/vault_backup/create',
@@ -399,7 +399,7 @@ class HivePaymentTestCase(unittest.TestCase):
         logging.getLogger("").debug("\nRunning test_2_create_package_order")
 
         package = {
-            "backup_name": "Rookie"
+            "backup_name": "Standard"
         }
 
         r, s = self.parse_response(
@@ -436,7 +436,7 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
 
         check_wait_order_tx_job()
-        self.assert_service_vault_backup_info("Rookie")
+        self.assert_service_vault_backup_info("Standard")
 
     def assert_service_vault_backup_info(self, state):
         r, s = self.parse_response(
@@ -450,7 +450,7 @@ class HivePaymentTestCase(unittest.TestCase):
         logging.getLogger("").debug("\nRunning test_2_create_package_order")
 
         package = {
-            "backup_name": "Rookie"
+            "backup_name": "Standard"
         }
 
         r, s = self.parse_response(
@@ -487,7 +487,7 @@ class HivePaymentTestCase(unittest.TestCase):
         self.assertEqual(r["_status"], "OK")
 
         check_wait_order_tx_job()
-        self.assert_service_vault_backup_info("Rookie")
+        self.assert_service_vault_backup_info("Standard")
         r, s = self.parse_response(
             self.test_client.post('/api/v1/service/vault_backup/create',
                                   headers=self.auth)

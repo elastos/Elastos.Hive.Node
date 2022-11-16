@@ -42,21 +42,21 @@ return:
         "amount": 0,
         "currency": "ELA",
         "maxStorage": 500,
-        "name": "Free",
+        "name": "Basic",
         "serviceDays": -1
         },
         {
         "amount": 1.5,
         "currency": "ELA",
         "maxStorage": 2000,
-        "name": "Rookie",
+        "name": "Standard",
         "serviceDays": 30
         },
         {
         "amount": 3,
         "currency": "ELA",
         "maxStorage": 5000,
-        "name": "Advanced",
+        "name": "Premium",
         "serviceDays": 30
         }
         ],
@@ -70,21 +70,21 @@ return:
         "amount": 0,
         "currency": "ELA",
         "maxStorage": 500,
-        "name": "Free",
+        "name": "Basic",
         "serviceDays": -1
         },
         {
         "amount": 2.5,
         "currency": "ELA",
         "maxStorage": 2000,
-        "name": "Rookie",
+        "name": "Standard",
         "serviceDays": 30
         },
         {
         "amount": 5,
         "currency": "ELA",
         "maxStorage": 5000,
-        "name": "Advanced",
+        "name": "Premium",
         "serviceDays": 30
         }
         ],
@@ -105,14 +105,14 @@ error code:
 ## Get vault service pricing plan by name
 ```YAML
 HTTP: GET 
-URL: api/v1/payment/vault_pricing_plan?name=Rookie
+URL: api/v1/payment/vault_pricing_plan?name=Standard
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:
     Success:
         {
             "_status": "OK",
-            "name": "Rookie",
+            "name": "Standard",
             "maxStorage": 2000,
             "serviceDays": 30,
             "amount": 2.5,
@@ -135,14 +135,14 @@ error code:
 ## Get vault backup service pricing plan by name
 ```YAML
 HTTP: GET 
-URL: api/v1/payment/vault_backup_plan?name=Rookie
+URL: api/v1/payment/vault_backup_plan?name=Standard
 Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 return:
     Success:
         {
             "_status": "OK",
-            "name": "Rookie",
+            "name": "Standard",
             "maxStorage": 2000,
             "serviceDays": 30,
             "amount": 2.5,
@@ -170,11 +170,11 @@ Authorization: "token 38b8c2c1093dd0fec383a9d9ac940515"
 Content-Type: "application/json"
 data: 
     {
-      "pricing_name": "Rookie",
+      "pricing_name": "Standard",
     } 
     to create a vault service order
     {
-      "backup_name": "Rookie",
+      "backup_name": "Standard",
     } 
     to create a vault backup service order
 
@@ -249,7 +249,7 @@ return:
                 "did":"did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP",
                 "app_id":"appid",
                 "pricing_info":{
-                    "name": "Rookie",
+                    "name": "Standard",
                     "maxStorage": 2000,
                     "serviceDays": 30,
                     "amount": 2.5,
@@ -295,7 +295,7 @@ return:
                     "did":"did:elastos:ioLFi22fodmFUAFKia6uTV2W8Jz9vEcQyP",
                     "app_id":"appid",
                     "pricing_info":{
-                        "name": "Rookie",
+                        "name": "Standard",
                         "maxStorage": 2000,
                         "serviceDays": 30,
                         "amount": 2.5,

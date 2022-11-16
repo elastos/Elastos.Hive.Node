@@ -117,7 +117,7 @@ return:
                 "modify_time": 1602236316,
                 "start_time": 1602236316,
                 "end_time": 1604914928,
-                "pricing_using": "Rookie", // vault plan
+                "pricing_using": "Standard", // vault plan
                 "state": "running" // running, freeze
             }
         }
@@ -175,7 +175,7 @@ return:
             "vault_service_info":
             { 
                 "did": "did:elastos:ij8krAVRJitZKJmcCufoLHQjq7Mef3ZjTN",
-                "backup_using": "Rookie",// backup plan
+                "backup_using": "Standard",// backup plan
                 "max_storage": 500, // Max 500 Mb backup storage size
                 "use_storage": 10, // have used 100 Mb backup storage size
                 "modify_time": 1602236316,

@@ -39,8 +39,8 @@ VAULT_SERVICE_LATEST_ACCESS_TIME = "latest_access_time"  # for access checking o
 # constants of db end
 
 # for backup server collection
-VAULT_BACKUP_SERVICE_COL = "vault_backup_service"
-VAULT_BACKUP_SERVICE_USING = "backup_using"  # pricing_name
+VAULT_BACKUP_SERVICE_COL = "vault_backup_service"  # collection name only for v1
+VAULT_BACKUP_SERVICE_USING = "backup_using"  # pricing name
 VAULT_BACKUP_SERVICE_MAX_STORAGE = "max_storage"
 VAULT_BACKUP_SERVICE_USE_STORAGE = "use_storage"
 VAULT_BACKUP_SERVICE_START_TIME = "start_time"

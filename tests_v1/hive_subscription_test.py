@@ -47,7 +47,7 @@ class SubscriptionTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = json.loads(response.get_data())
         self.assertEqual(body["_status"], "OK")
-        self.assertEqual(body["vault_service_info"][VAULT_SERVICE_PRICING_USING], 'Free')
+        self.assertEqual(body["vault_service_info"][VAULT_SERVICE_PRICING_USING], 'Basic')
 
     def test03_remove_vault(self):
         test_log("\nRunning test_2_0_remove_vault")

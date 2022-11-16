@@ -16,7 +16,7 @@ from hive.util.error_code import NOT_FOUND, LOCKED, NOT_ENOUGH_SPACE, SUCCESS, M
 from hive.util.payment.payment_config import PaymentConfig
 from hive.util.payment.vault_backup_service_manage import get_vault_backup_service
 
-VAULT_SERVICE_FREE = "Free"
+VAULT_SERVICE_FREE = "Basic"
 VAULT_SERVICE_STATE_RUNNING = "running"
 VAULT_SERVICE_STATE_FREEZE = "freeze"
 

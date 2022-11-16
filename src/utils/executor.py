@@ -12,7 +12,8 @@ from src.modules.scripting.scripting import Scripting
 from src.modules.subscription.vault import VaultManager
 from src.utils import hive_job
 from src.utils.scheduler import count_vault_storage_really
-from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST
+from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST, VAULT_SERVICE_PRICING_USING, COL_IPFS_BACKUP_SERVER, \
+    VAULT_BACKUP_SERVICE_USING, COL_ORDERS, COL_ORDERS_PRICING_NAME, COL_RECEIPTS
 
 executor = Executor()
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
@@ -145,7 +146,39 @@ def sync_app_dids_task():
 
 @hive_job('count_vault_storage_executor', tag='executor')
 def count_vault_storage_task():
+    """ Recount the usage size of all vaults.
+
+    @deprecated This will be removed later.
+    """
     count_vault_storage_really()
+
+
+@hive_job('count_vault_storage_executor', tag='executor')
+def rename_pricing_name():
+    """ Rename pricing name: Free, Rookie, Advanced -> Basic, Standard, Premium
+
+    - vault service
+    - backup service
+    - payment service: order and receipt
+
+    @deprecated This will be removed later.
+    """
+    mcli = MongodbClient()
+
+    def update_pricing_plan_name(collection_name, field):
+        filter_, update_ = {field: "Free"}, {"$set": {field: "Basic"}}
+        mcli.get_management_collection(collection_name).update_many(filter_, update_, contains_extra=False)
+        filter_, update_ = {field: "Rookie"}, {"$set": {field: "Standard"}}
+        mcli.get_management_collection(collection_name).update_many(filter_, update_, contains_extra=False)
+        filter_, update_ = {field: "Advanced"}, {"$set": {field: "Premium"}}
+        mcli.get_management_collection(collection_name).update_many(filter_, update_, contains_extra=False)
+
+    update_pricing_plan_name(VAULT_SERVICE_COL, VAULT_SERVICE_PRICING_USING)
+    update_pricing_plan_name(COL_IPFS_BACKUP_SERVER, VAULT_BACKUP_SERVICE_USING)
+    update_pricing_plan_name(COL_ORDERS, COL_ORDERS_PRICING_NAME)
+    update_pricing_plan_name(COL_RECEIPTS, COL_ORDERS_PRICING_NAME)
+
+    logging.info('rename_pricing_name() done !!!')
 
 
 def init_executor(app, mode):
@@ -159,3 +192,4 @@ def init_executor(app, mode):
         pool.submit(retry_backup_when_reboot_task)
         pool.submit(sync_app_dids_task)
         pool.submit(count_vault_storage_task)
+        pool.submit(rename_pricing_name)

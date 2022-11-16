@@ -80,7 +80,7 @@ class SubscriptionTestCase(unittest.TestCase):
         RA(response).assert_status(HttpCode.NO_CONTENT)
 
     def test10_price_plan(self):
-        response = self.cli.get('/subscription/pricing_plan?subscription=all&name=Free')
+        response = self.cli.get('/subscription/pricing_plan?subscription=all&name=Basic')
         self.assertEqual(response.status_code, 200)
         self.assertTrue('backupPlans' in response.json())
         self.assertTrue('pricingPlans' in response.json())

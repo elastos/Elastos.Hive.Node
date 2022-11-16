@@ -150,7 +150,7 @@ class FilledOrders(Resource):
                     "receipt_id": “<ObjectId str>”,
                     "order_id": 1234,
                     "subscription": "vault",
-                    "pricing_plan": "Rookie",
+                    "pricing_plan": "Standard",
                     "payment_amount": "5",  // ELA
                     "paid_did": "did:elastos:insTmxdDDuS9wHHfeYD1h5C2onEH******”,
                     "create_time": 1600073834,

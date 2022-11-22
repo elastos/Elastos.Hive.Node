@@ -70,7 +70,7 @@ class FilePropertiesExecutable(FileExecutable):
 
         path = self.get_populated_path()
 
-        doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), path)
+        doc = self.files_service.v1_get_file_metadata(self.get_target_did(), self.get_target_app_did(), path)
         return self.get_result_data({
             "type": "file" if doc[COL_IPFS_FILES_IS_FILE] else "folder",
             "name": path,
@@ -86,5 +86,5 @@ class FileHashExecutable(FileExecutable):
     def execute(self):
         self.vault_manager.get_vault(self.get_target_did())
 
-        doc = self.ipfs_files.get_file_metadata(self.get_target_did(), self.get_target_app_did(), self.get_populated_path())
+        doc = self.files_service.v1_get_file_metadata(self.get_target_did(), self.get_target_app_did(), self.get_populated_path())
         return self.get_result_data({"SHA256": doc[COL_IPFS_FILES_SHA256]})

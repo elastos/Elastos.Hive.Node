@@ -13,7 +13,7 @@ from src import hive_setting
 from src.utils.consts import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_ANONYMOUS_FILES, SCRIPT_ANONYMOUS_FILE
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.files.files_service import IpfsFiles
+from src.modules.files.files_service import FilesService
 from src.modules.subscription.vault import VaultManager
 from src.modules.scripting.executable import Executable, get_populated_value_with_params, validate_exists
 
@@ -278,7 +278,7 @@ class Script:
 class Scripting:
     def __init__(self):
         self.files = None
-        self.ipfs_files = IpfsFiles()
+        self.files_service = FilesService()
         self.vault_manager = VaultManager()
         self.mcli = MongodbClient()
 
@@ -395,11 +395,11 @@ class Scripting:
         data = None
         logging.info(f'handle transaction by id: is_download={is_download}, file_name={trans["document"]["file_name"]}')
         if is_download:
-            data = self.ipfs_files.download_file_with_path(target_did, target_app_did, trans['document']['file_name'])
+            data = self.files_service.v1_download_file(target_did, target_app_did, trans['document']['file_name'])
         else:
             # Place here because not want to change the logic for v1.
             self.vault_manager.get_vault(target_did).check_storage_full()
-            self.ipfs_files.upload_file_with_path(target_did, target_app_did, trans['document']['file_name'])
+            self.files_service.v1_upload_file(target_did, target_app_did, trans['document']['file_name'])
 
         # transaction can be used only once.
         col.delete_one(col_filter)

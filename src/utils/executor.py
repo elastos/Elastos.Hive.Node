@@ -153,7 +153,7 @@ def count_vault_storage_task():
     count_vault_storage_really()
 
 
-@hive_job('count_vault_storage_executor', tag='executor')
+@hive_job('rename_pricing_name_executor', tag='executor')
 def rename_pricing_name():
     """ Rename pricing name: Free, Rookie, Advanced -> Basic, Standard, Premium
 
@@ -177,8 +177,6 @@ def rename_pricing_name():
     update_pricing_plan_name(COL_IPFS_BACKUP_SERVER, VAULT_BACKUP_SERVICE_USING)
     update_pricing_plan_name(COL_ORDERS, COL_ORDERS_PRICING_NAME)
     update_pricing_plan_name(COL_RECEIPTS, COL_ORDERS_PRICING_NAME)
-
-    logging.info('rename_pricing_name() done !!!')
 
 
 def init_executor(app, mode):

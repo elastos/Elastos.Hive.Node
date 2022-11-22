@@ -79,6 +79,9 @@ class Condition:
                 # Just 'queryHasResults'
                 validate_exists(data, ['collection'], parent_name='body')
 
+                if MongodbClient().is_internal_user_collection(data['collection']):
+                    raise InvalidParameterException(f'No permission to the collection "{data["collection"]}"')
+
         validate(json_data, 1)
 
     def is_satisfied(self, condition_data, context) -> bool:
@@ -132,7 +135,7 @@ class Context:
 
     def get_script_data(self, script_name):
         """ get the script data by target_did and target_app_did """
-        col = self.mcli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        col = self.mcli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
         return col.find_one({'name': script_name})
 
 
@@ -321,14 +324,14 @@ class Scripting:
             "allowAnonymousUser": True,
             "allowAnonymousApp": True
         }}
-        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION)
         return col.update_one(filter_, update, contains_extra=True, upsert=True)
 
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
         fix_dollar_keys_recursively(json_data)
         json_data['name'] = script_name
 
-        col = self.mcli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        col = self.mcli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION)
         return col.replace_one({"name": script_name}, json_data)
 
     def unregister_script(self, script_name):
@@ -337,7 +340,7 @@ class Scripting:
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
-        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION, create_on_absence=True)
+        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION)
         result = col.delete_one({'name': script_name})
 
         if result['deleted_count'] <= 0:
@@ -372,7 +375,7 @@ class Scripting:
         row_id, target_did, target_app_did = Scripting.parse_transaction_id(transaction_id)
 
         col_filter = {"_id": ObjectId(row_id)}
-        col = self.mcli.get_user_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, create_on_absence=True)
+        col = self.mcli.get_user_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
         trans = col.find_one({"_id": ObjectId(row_id)})
         if not trans:
             raise InvalidParameterException('Invalid transaction id: can not found transaction')

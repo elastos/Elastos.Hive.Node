@@ -3,9 +3,10 @@ import logging
 from src.utils.consts import USR_DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, \
     COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, COL_IPFS_FILES_ENCRYPT_METHOD
 from src.utils.http_exception import FileNotFoundException
+from src.utils.customize_dict import Dotdict
 from src.modules.auth.user import UserManager
 from src.modules.files.ipfs_cid_ref import IpfsCidRef
-from src.modules.database.mongodb_client import MongodbClient, Dotdict
+from src.modules.database.mongodb_client import MongodbClient
 
 
 class FileMetadata(Dotdict):

@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from src.modules.database.mongodb_client import MongodbClient, Dotdict
+from src.utils.customize_dict import Dotdict
+from src.modules.database.mongodb_client import MongodbClient
 from src.utils.consts import COL_IPFS_BACKUP_SERVER, USR_DID, VAULT_BACKUP_SERVICE_USING, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, VAULT_BACKUP_SERVICE_USE_STORAGE
 from src.utils.http_exception import BackupNotFoundException

@@ -10,7 +10,7 @@ from flask import request, g
 from bson import ObjectId
 
 from src import hive_setting
-from src.utils.consts import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_ANONYMOUS_FILES
+from src.utils.consts import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_ANONYMOUS_FILES, SCRIPT_ANONYMOUS_FILE
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.files.files_service import IpfsFiles
@@ -272,8 +272,6 @@ class Script:
 
 
 class Scripting:
-    ANONYMOUS_FILE_SCRIPT = '__anonymous_files__'
-
     def __init__(self):
         self.files = None
         self.ipfs_files = IpfsFiles()
@@ -282,7 +280,7 @@ class Scripting:
 
     @staticmethod
     def check_internal_script(script_name):
-        if script_name == Scripting.ANONYMOUS_FILE_SCRIPT:
+        if script_name == SCRIPT_ANONYMOUS_FILE:
             raise InvalidParameterException(f'No permission to operate script {script_name}')
 
     def register_script(self, script_name):
@@ -301,7 +299,7 @@ class Scripting:
 
         Note: database size changing has been checked by uploading file.
         """
-        script_name = Scripting.ANONYMOUS_FILE_SCRIPT
+        script_name = SCRIPT_ANONYMOUS_FILE
         filter_ = {'name': script_name}
         update = {'$setOnInsert': {
             "condition": {

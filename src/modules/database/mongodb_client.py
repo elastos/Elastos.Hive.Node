@@ -7,38 +7,12 @@ from bson import ObjectId
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
-from src import hive_setting
-from src.utils.consts import DID_INFO_DB_NAME
+from src.utils.consts import DID_INFO_DB_NAME, COL_IPFS_FILES, SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_COLLECTION_METADATA, \
+    COL_ANONYMOUS_FILES
 from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException, BadRequestException
+from src import hive_setting
 
 _T = typing.TypeVar('_T', dict, list, tuple)
-
-
-class Dotdict(dict):
-    """ Base class for all mongodb document.
-
-    if you define a document like this (all keys must be underscore):
-
-        {
-            "did": "xxx",
-            "max_storage": 2097152000,
-            "pricing_using": "Rockie"
-        }
-
-    Then you can define class like this. So please just use in the class.
-
-        class Vault(Dotdict):
-            def get_user_did():
-                return self.did
-
-    Usage like this:
-
-        vault = Vault(**doc)
-
-    """
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
 
 
 class MongodbCollection:
@@ -219,7 +193,11 @@ class MongodbClient:
     """ Used to connect mongodb and is a helper class for all mongo database operation. """
 
     # The collections used by node to manage cannot be operated by user.
-    MANAGED_USER_COLLECTIONS = ['database_metadata', 'ipfs_files', 'anonymous_files', 'scripts', 'scripts_temptx']
+    INTERNAL_USER_COLLECTIONS = [COL_IPFS_FILES,
+                                 SCRIPTING_SCRIPT_COLLECTION,
+                                 SCRIPTING_SCRIPT_TEMP_TX_COLLECTION,
+                                 COL_COLLECTION_METADATA,
+                                 COL_ANONYMOUS_FILES]
 
     def __init__(self):
         self.mongodb_uri = hive_setting.MONGODB_URL
@@ -239,15 +217,21 @@ class MongodbClient:
         """
         return self.__get_connection()[name]
 
-    def exists_database(self, name):
+    def __exists_database(self, name):
         return name in self.__get_connection().list_database_names()
 
     def exists_user_database(self, user_did, app_did):
-        return self.exists_database(MongodbClient.get_user_database_name(user_did, app_did))
+        """ Check if user application database exists. """
+        return self.__exists_database(MongodbClient.get_user_database_name(user_did, app_did))
 
-    def exists_user_collection(self, user_did, app_did, col_name):
+    def exists_user_collection(self, user_did, app_did, col_name, contain_internal=False):
+        """ Check if the collection of the user application exists. """
+
+        if not contain_internal and col_name in MongodbClient.INTERNAL_USER_COLLECTIONS:
+            return False
+
         database_name = MongodbClient.get_user_database_name(user_did, app_did)
-        if not self.exists_database(database_name):
+        if not self.__exists_database(database_name):
             return False
 
         return col_name not in self.__get_database(database_name).list_collection_names()
@@ -264,13 +248,12 @@ class MongodbClient:
         return prefix + str(md5.hexdigest())
 
     def get_management_collection(self, col_name) -> MongodbCollection:
-        """ Get internal usage collection.
+        """ Get the collection used for node management.
+        It will be created if not exists.
 
-        All manager collection must exist before call this method.
         """
-        database = self.__get_database(DID_INFO_DB_NAME)
 
-        # Directly create manager collection if not exists.
+        database = self.__get_database(DID_INFO_DB_NAME)
         if col_name not in database.list_collection_names():
             database.create_collection(col_name)
         return MongodbCollection(database[col_name])
@@ -291,10 +274,10 @@ class MongodbClient:
     def get_user_collection_names(self, user_did: str, app_did: str):
         database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
         names = database.list_collection_names()
-        return filter(lambda n: n not in self.MANAGED_USER_COLLECTIONS, names)
+        return filter(lambda n: n not in self.INTERNAL_USER_COLLECTIONS, names)
 
     def is_internal_collection(self, user_did: str, app_did: str, col_name: str):
-        return col_name in self.MANAGED_USER_COLLECTIONS
+        return col_name in self.INTERNAL_USER_COLLECTIONS
 
     def create_user_collection(self, user_did, app_did, col_name) -> MongodbCollection:
         database_name = MongodbClient.get_user_database_name(user_did, app_did)
@@ -315,13 +298,13 @@ class MongodbClient:
 
     def drop_user_database(self, user_did, app_did):
         name = MongodbClient.get_user_database_name(user_did, app_did)
-        if self.exists_database(name):
+        if self.__exists_database(name):
             self.__get_connection().drop_database(name)
 
     def get_user_database_size(self, user_did, app_did) -> int:
         """ Get the size of the user database, if not exist, return 0 """
         name = self.get_user_database_name(user_did, app_did)
-        if not self.exists_database(name):
+        if not self.__exists_database(name):
             return 0
 
         database = self.__get_database(name)

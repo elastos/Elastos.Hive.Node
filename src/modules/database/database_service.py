@@ -12,14 +12,16 @@ from src.utils.http_exception import InvalidParameterException, CollectionNotFou
 from src.utils.http_request import RequestData
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.subscription.vault import VaultManager
-from src.modules.database.database_metadata import DatabaseMetadataManager
+from src.modules.database.collection_metadata import CollectionMetadata
 
 
 class DatabaseService:
+    """ Database service is for data saving and retrieving which is based on mongodb. """
+
     def __init__(self):
         self.mcli = MongodbClient()
         self.vault_manager = VaultManager()
-        self.dmm = DatabaseMetadataManager()
+        self.collection_metadata = CollectionMetadata()
 
     def create_collection(self, collection_name, is_encrypt, encrypt_method):
         """ Create collection by name
@@ -36,7 +38,7 @@ class DatabaseService:
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         self.mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
-        self.dmm.add(g.usr_did, g.app_did, collection_name, is_encrypt, encrypt_method)
+        self.collection_metadata.add(g.usr_did, g.app_did, collection_name, is_encrypt, encrypt_method)
         return {'name': collection_name}
 
     def delete_collection(self, collection_name):
@@ -49,7 +51,7 @@ class DatabaseService:
             raise InvalidParameterException(f'No permission to delete the collection {collection_name}')
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
-        self.dmm.delete(g.usr_did, g.app_did, collection_name)
+        self.collection_metadata.delete(g.usr_did, g.app_did, collection_name)
         self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
 
     def get_collections(self):
@@ -60,8 +62,8 @@ class DatabaseService:
 
         self.vault_manager.get_vault(g.usr_did)
 
-        self.dmm.sync_all(g.usr_did, g.app_did)
-        docs = self.dmm.get_all(g.usr_did, g.app_did)
+        self.collection_metadata.sync_all(g.usr_did, g.app_did)
+        docs = self.collection_metadata.get_all(g.usr_did, g.app_did)
         if not docs:
             raise CollectionNotFoundException()
 
@@ -180,7 +182,7 @@ class DatabaseService:
     def __do_internal_find(self, collection_name, filter_, options):
         col = self.__get_collection(collection_name)
         docs = col.find_many(filter_, **options)
-        metadata = self.dmm.get(g.usr_did, g.app_did, collection_name)
+        metadata = self.collection_metadata.get(g.usr_did, g.app_did, collection_name)
         return {
             'items': [c for c in json.loads(json_util.dumps(docs))],
             'is_encrypt': metadata['is_encrypt'] if metadata else False,

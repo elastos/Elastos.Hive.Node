@@ -79,8 +79,9 @@ class Condition:
                 # Just 'queryHasResults'
                 validate_exists(data, ['collection'], parent_name='body')
 
-                if MongodbClient().is_internal_user_collection(data['collection']):
-                    raise InvalidParameterException(f'No permission to the collection "{data["collection"]}"')
+                col_name = data['body']['collection']
+                if MongodbClient().is_internal_user_collection(col_name):
+                    raise InvalidParameterException(f'No permission to the collection "{col_name}"')
 
         validate(json_data, 1)
 

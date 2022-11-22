@@ -73,6 +73,8 @@ SCRIPTING_EXECUTABLE_PARAMS = "$params"
 SCRIPTING_EXECUTABLE_DOWNLOADABLE = "_downloadable"
 # scripting end
 
+SCRIPT_ANONYMOUS_FILE = '__anonymous_files__'
+
 # @deprecated compatible with v1
 # HIVE_MODE_DEV = "dev"
 HIVE_MODE_PROD = "prod"  # for normal run
@@ -162,17 +164,17 @@ COL_IPFS_FILES_ENCRYPT_METHOD = 'encrypt_method'
 COL_IPFS_CID_REF = 'ipfs_cid_ref'
 # end of ipfs_cid_ref
 
-# database_metadata
-COL_DATABASE_METADATA = 'database_metadata'
-COL_DATABASE_METADATA_USR_DID = USR_DID
-COL_DATABASE_METADATA_APP_DID = APP_DID
-COL_DATABASE_METADATA_NAME = 'name'
-COL_DATABASE_METADATA_IS_ENCRYPT = 'is_encrypt'
-COL_DATABASE_METADATA_ENCRYPT_METHOD = 'encrypt_method'
-# end of database_metadata
+# collection_metadata
+COL_COLLECTION_METADATA = '__collection_metadata__'
+COL_COLLECTION_METADATA_USR_DID = USR_DID
+COL_COLLECTION_METADATA_APP_DID = APP_DID
+COL_COLLECTION_METADATA_NAME = 'name'
+COL_COLLECTION_METADATA_IS_ENCRYPT = 'is_encrypt'
+COL_COLLECTION_METADATA_ENCRYPT_METHOD = 'encrypt_method'
+# end of collection_metadata
 
 # anonymous_files
-COL_ANONYMOUS_FILES = 'anonymous_files'
+COL_ANONYMOUS_FILES = '__anonymous_files__'
 COL_ANONYMOUS_FILES_USR_DID = USR_DID
 COL_ANONYMOUS_FILES_APP_DID = APP_DID
 COL_ANONYMOUS_FILES_NAME = 'name'

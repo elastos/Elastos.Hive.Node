@@ -28,8 +28,8 @@ class CollectionMetadata:
             COL_COLLECTION_METADATA_IS_ENCRYPT: is_encrypt,
             COL_COLLECTION_METADATA_ENCRYPT_METHOD: encrypt_method}}
 
-        self.mcli.get_user_collection(user_did, app_did, COL_COLLECTION_METADATA,
-                                      create_on_absence=True).update_one(filter_, update, contains_extra=True, upsert=True)
+        self.mcli.get_user_collection(user_did, app_did, COL_COLLECTION_METADATA)\
+            .update_one(filter_, update, contains_extra=True, upsert=True)
 
     def delete(self, user_did, app_did, collection_name):
         filter_ = {
@@ -37,7 +37,7 @@ class CollectionMetadata:
             COL_COLLECTION_METADATA_APP_DID: app_did,
             COL_COLLECTION_METADATA_NAME: collection_name,
         }
-        self.mcli.get_user_collection(user_did, app_did, COL_COLLECTION_METADATA, create_on_absence=True).delete_one(filter_)
+        self.mcli.get_user_collection(user_did, app_did, COL_COLLECTION_METADATA).delete_one(filter_)
 
     def get(self, user_did, app_did, collection_name):
         filter_ = {
@@ -45,7 +45,7 @@ class CollectionMetadata:
             COL_COLLECTION_METADATA_APP_DID: app_did,
             COL_COLLECTION_METADATA_NAME: collection_name,
         }
-        return self.mcli.get_user_collection(user_did, app_did, COL_COLLECTION_METADATA, create_on_absence=True).find_one(filter_)
+        return self.mcli.get_user_collection(user_did, app_did, COL_COLLECTION_METADATA).find_one(filter_)
 
     def get_all(self, user_did, app_did):
-        return self.mcli.get_user_collection(user_did, app_did, COL_COLLECTION_METADATA, create_on_absence=True).find_many({})
+        return self.mcli.get_user_collection(user_did, app_did, COL_COLLECTION_METADATA).find_many({})

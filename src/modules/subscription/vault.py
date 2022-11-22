@@ -292,13 +292,10 @@ class VaultManager:
         if not self.mcli.exists_user_database(user_did, app_did):
             return 0
 
-        try:
-            col = self.mcli.get_user_collection(user_did, app_did, COL_IPFS_FILES)
-            files = col.find_many({"user_did": user_did, "app_did": app_did})
-            # get total size of all user's application files
-            return int(sum(map(lambda o: o["size"], files)))
-        except CollectionNotFoundException as e:
-            return 0
+        col = self.mcli.get_user_collection(user_did, app_did, COL_IPFS_FILES)
+        files = col.find_many({"user_did": user_did, "app_did": app_did})
+        # get total size of all user's application files
+        return int(sum(map(lambda o: o["size"], files)))
 
     def get_access_statistics(self, user_did):
         access_count, access_amount, access_last_time = 0, 0, -1

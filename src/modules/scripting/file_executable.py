@@ -27,7 +27,7 @@ class FileExecutable(Executable):
 
         # The created transaction record can only be use once. So do not consider run script twice.
         # If the user not call this transaction later, the transaction record will keep forever.
-        col = self.mcli.get_user_collection(self.get_target_did(), self.get_target_app_did(), SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, create_on_absence=True)
+        col = self.mcli.get_user_collection(self.get_target_did(), self.get_target_app_did(), SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
         result = col.insert_one({
             "document": {
                 "file_name": self.get_populated_path(),

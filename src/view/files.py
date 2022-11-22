@@ -5,7 +5,7 @@ The view of ipfs module for files and scripting.
 """
 from flask_restful import Resource
 
-from src.modules.files.files_service import IpfsFiles
+from src.modules.files.files_service import FilesService
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import RV
 from src.utils.http_response import response_stream
@@ -13,7 +13,7 @@ from src.utils.http_response import response_stream
 
 class ReadingOperation(Resource):
     def __init__(self):
-        self.ipfs_files = IpfsFiles()
+        self.files_service = FilesService()
 
     @response_stream
     def get(self, path):
@@ -180,20 +180,20 @@ class ReadingOperation(Resource):
             raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
         if not component:
-            return self.ipfs_files.download_file(path)
+            return self.files_service.download_file(path)
         elif component == 'children':
-            return self.ipfs_files.list_folder(path)
+            return self.files_service.list_folder(path)
         elif component == 'metadata':
-            return self.ipfs_files.get_properties(path)
+            return self.files_service.get_properties(path)
         elif component == 'hash':
-            return self.ipfs_files.get_hash(path)
+            return self.files_service.get_hash(path)
         else:
             raise InvalidParameterException(f'Unsupported parameter "comp" value {component}')
 
 
 class WritingOperation(Resource):
     def __init__(self):
-        self.ipfs_files = IpfsFiles()
+        self.files_service = FilesService()
 
     def put(self, path):
         """ Copy or upload file by path.
@@ -309,17 +309,17 @@ class WritingOperation(Resource):
             if is_encrypt and not encrypt_method:
                 raise InvalidParameterException("MUST provide 'encrypt_method' when 'is_encrypt' is true.")
 
-            return self.ipfs_files.upload_file(path, is_public, is_encrypt, encrypt_method)
+            return self.files_service.upload_file(path, is_public, is_encrypt, encrypt_method)
 
         if path == dst_path:
             raise InvalidParameterException(f'The source file {path} can be copied to a target file with the same name')
 
-        return self.ipfs_files.copy_file(path, dst_path)
+        return self.files_service.copy_file(path, dst_path)
 
 
 class MoveFile(Resource):
     def __init__(self):
-        self.ipfs_files = IpfsFiles()
+        self.files_service = FilesService()
 
     def patch(self, path):
         """ Move the file by path to the file provided by the URL parameter 'to=<path/to/destination>'
@@ -375,12 +375,12 @@ class MoveFile(Resource):
         if path == dst_path:
             raise InvalidParameterException(f'The source file {path} can be moved to a target file with the same name')
 
-        return self.ipfs_files.move_file(path, dst_path)
+        return self.files_service.move_file(path, dst_path)
 
 
 class DeleteFile(Resource):
     def __init__(self):
-        self.ipfs_files = IpfsFiles()
+        self.files_service = FilesService()
 
     def delete(self, path):
         """ Delete the file by path.
@@ -422,4 +422,4 @@ class DeleteFile(Resource):
         if not path:
             raise InvalidParameterException('Resource path is mandatory, but its missing.')
 
-        return self.ipfs_files.delete_file(path)
+        return self.files_service.delete_file(path)

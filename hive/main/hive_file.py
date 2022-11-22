@@ -6,7 +6,7 @@ from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL
 from hive.util.payment.vault_service_manage import can_access_vault
-from src.modules.files.files_service import IpfsFiles
+from src.modules.files.files_service import FilesService
 from src.utils.consts import COL_IPFS_FILES_IS_FILE, COL_IPFS_FILES_PATH, SIZE, COL_IPFS_FILES_SHA256
 from hive.util.v2_adapter import v2_wrapper
 
@@ -15,7 +15,7 @@ class HiveFile:
     def __init__(self, app=None):
         self.app = app
         self.response = ServerResponse("HiveFile")
-        self.ipfs_files = IpfsFiles()
+        self.files_service = FilesService()
 
     def init_app(self, app):
         self.app = app
@@ -29,7 +29,7 @@ class HiveFile:
         if response is not None:
             return response
 
-        _, resp_err = v2_wrapper(self.ipfs_files.move_copy_file)(
+        _, resp_err = v2_wrapper(self.files_service.v1_move_copy_file)(
             did, app_id, content.get('src_path'), content.get('dst_path'), is_copy=is_copy
         )
         if resp_err:
@@ -42,7 +42,7 @@ class HiveFile:
         if response is not None:
             return response
 
-        _, resp_err = v2_wrapper(self.ipfs_files.upload_file_with_path)(did, app_id, file_name)
+        _, resp_err = v2_wrapper(self.files_service.v1_upload_file)(did, app_id, file_name)
         if resp_err:
             return resp_err
 
@@ -59,7 +59,7 @@ class HiveFile:
             resp.status_code = r
             return resp
 
-        data, resp_err = v2_wrapper(self.ipfs_files.download_file_with_path)(did, app_id, request.args.get('path'))
+        data, resp_err = v2_wrapper(self.files_service.v1_download_file)(did, app_id, request.args.get('path'))
         if resp_err:
             return resp_err
 
@@ -70,7 +70,7 @@ class HiveFile:
         if response is not None:
             return response
 
-        metadata, resp_err = v2_wrapper(self.ipfs_files.get_file_metadata)(did, app_id, content['path'])
+        metadata, resp_err = v2_wrapper(self.files_service.v1_get_file_metadata)(did, app_id, content['path'])
         if resp_err:
             return resp_err
         data = HiveFile.get_info_by_metadata(metadata)
@@ -95,7 +95,7 @@ class HiveFile:
         if r != SUCCESS:
             return self.response.response_err(r, msg)
 
-        docs, resp_err = v2_wrapper(self.ipfs_files.list_folder_with_path)(did, app_id, request.args.get('path'))
+        docs, resp_err = v2_wrapper(self.files_service.v1_list_folder)(did, app_id, request.args.get('path'))
         if resp_err:
             return resp_err
         file_info_list = list(map(lambda d: HiveFile.get_info_by_metadata(d), docs))
@@ -107,7 +107,7 @@ class HiveFile:
         if response is not None:
             return response
 
-        metadata, resp_err = v2_wrapper(self.ipfs_files.get_file_metadata)(did, app_id, content['path'])
+        metadata, resp_err = v2_wrapper(self.files_service.v1_get_file_metadata)(did, app_id, content['path'])
         if resp_err:
             return resp_err
         data = {"SHA256": metadata[COL_IPFS_FILES_SHA256]}
@@ -119,7 +119,7 @@ class HiveFile:
         if response is not None:
             return response
 
-        _, resp_err = v2_wrapper(self.ipfs_files.delete_file_with_path)(did, app_id, content.get('path'))
+        _, resp_err = v2_wrapper(self.files_service.v1_delete_file)(did, app_id, content.get('path'))
         if resp_err:
             return resp_err
 

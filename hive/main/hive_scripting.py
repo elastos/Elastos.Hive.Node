@@ -24,7 +24,7 @@ from hive.util.did_scripting import check_json_param, run_executable_find, run_c
 from hive.util.error_code import INTERNAL_SERVER_ERROR, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SUCCESS
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
 from hive.util.server_response import ServerResponse
-from src.modules.files.files_service import IpfsFiles
+from src.modules.files.files_service import FilesService
 from hive.util.v2_adapter import v2_wrapper
 
 
@@ -32,7 +32,7 @@ class HiveScripting:
     def __init__(self, app=None):
         self.app = app
         self.response = ServerResponse("HiveScripting")
-        self.ipfs_files = IpfsFiles()
+        self.files_service = FilesService()
 
     def init_app(self, app):
         self.app = app
@@ -398,7 +398,7 @@ class HiveScripting:
             logging.debug(err[1])
             return self.response.response_err(err[0], err[1])
 
-        _, resp_err = v2_wrapper(self.ipfs_files.upload_file_with_path)(target_did, target_app_did, file_name)
+        _, resp_err = v2_wrapper(self.files_service.v1_upload_file)(target_did, target_app_did, file_name)
         if resp_err:
             return resp_err
 
@@ -415,7 +415,7 @@ class HiveScripting:
             logging.debug(err[1])
             return self.response.response_err(err[0], err[1])
 
-        data, resp_err = v2_wrapper(self.ipfs_files.download_file_with_path)(
+        data, resp_err = v2_wrapper(self.files_service.v1_download_file)(
             target_did, target_app_did, file_name
         )
         if resp_err:

@@ -16,7 +16,7 @@ _server_response = ServerResponse("CallV2")
 
 def v2_wrapper(func):
     """ Wrapper for v1 modules to call v2 module functions.
-    1. Use the class IpfsFiles in v2.
+    1. Use the class FilesService in v2.
 
     For calling files.upload(name), please call like this:
         result, resp_err = v2_wrapper(files.upload)(name)

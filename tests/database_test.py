@@ -8,6 +8,7 @@ import unittest
 
 import pymongo
 
+from src.utils.consts import COL_COLLECTION_METADATA
 from tests.utils.http_client import HttpClient
 from tests import init_test, VaultFreezer
 from tests.utils.resp_asserter import RA, DictAsserter
@@ -39,7 +40,7 @@ class DatabaseTestCase(unittest.TestCase):
             RA(response).body().assert_equal('name', self.collection_name)
 
     def test01_create_internal_collection(self):
-        response = self.cli.put(f'/db/collections/database_metadata')
+        response = self.cli.put(f'/db/collections/{COL_COLLECTION_METADATA}')
         RA(response).assert_status(400)
 
     def test01_create_encrypt_collection(self):

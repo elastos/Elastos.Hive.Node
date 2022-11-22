@@ -6,7 +6,7 @@ from src.utils.consts import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXE
     SCRIPTING_EXECUTABLE_CALLER_APP_DID, SCRIPTING_EXECUTABLE_PARAMS, SCRIPTING_EXECUTABLE_TYPE_COUNT
 from src.utils.http_exception import NotImplementedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.files.files_service import IpfsFiles
+from src.modules.files.files_service import FilesService
 from src.modules.subscription.vault import VaultManager
 
 
@@ -96,7 +96,7 @@ class Executable:
         # If execute this executable with output or not.
         self.output = executable_data.get('output', True)
 
-        self.ipfs_files = IpfsFiles()
+        self.files_service = FilesService()
         self.vault_manager = VaultManager()
         self.mcli = MongodbClient()
 

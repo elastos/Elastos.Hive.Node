@@ -4,14 +4,14 @@
 The view of database module.
 """
 from flask_restful import Resource
-from src.modules.database.database import Database
+from src.modules.database.database_service import DatabaseService
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import RV
 
 
 class GetCollections(Resource):
     def __init__(self):
-        self.database = Database()
+        self.database_service = DatabaseService()
 
     def get(self):
         """ Get all collections created by user.
@@ -60,12 +60,12 @@ class GetCollections(Resource):
 
         """
 
-        return self.database.get_collections()
+        return self.database_service.get_collections()
 
 
 class CreateCollection(Resource):
     def __init__(self):
-        self.database = Database()
+        self.database_service = DatabaseService()
 
     def put(self, collection_name):
         """ Create the collection by collection name.
@@ -74,9 +74,12 @@ class CreateCollection(Resource):
 
         **Request**:
 
+        **URL Parameters**:
+
         .. sourcecode:: http
 
-            None
+            is_encrypt=<true|false>     # [optional] Whether the documents of the collection has been encrypted by hive sdk. Default is 'false'.
+            encrypt_method=<string>     # [optional] The way to encrypt. Default is empty string.
 
         **Response OK**:
 
@@ -121,12 +124,12 @@ class CreateCollection(Resource):
         if is_encrypt and not encrypt_method:
             raise InvalidParameterException('Invalid encrypt_method when is_encrypt is True')
 
-        return self.database.create_collection(collection_name, is_encrypt, encrypt_method)
+        return self.database_service.create_collection(collection_name, is_encrypt, encrypt_method)
 
 
 class DeleteCollection(Resource):
     def __init__(self):
-        self.database = Database()
+        self.database_service = DatabaseService()
 
     def delete(self, collection_name):
         """ Delete the collection by collection name.
@@ -167,12 +170,12 @@ class DeleteCollection(Resource):
 
         collection_name = RV.get_value('collection_name', collection_name, str)
 
-        return self.database.delete_collection(collection_name)
+        return self.database_service.delete_collection(collection_name)
 
 
 class InsertOrCount(Resource):
     def __init__(self):
-        self.database = Database()
+        self.database_service = DatabaseService()
 
     def post(self, collection_name):
         """ Insert or count the documents.
@@ -296,12 +299,12 @@ class InsertOrCount(Resource):
                 if not isinstance(doc, dict):
                     raise InvalidParameterException('The element of "document" MUST "dict"')
 
-            return self.database.insert_document(collection_name, documents, options)
+            return self.database_service.insert_documents(collection_name, documents, options)
 
         elif op == 'count':
             filter_ = RV.get_body().get('filter')
 
-            return self.database.count_document(collection_name, filter_, options)
+            return self.database_service.count_document(collection_name, filter_, options)
 
         else:
             raise InvalidParameterException('Invalid parameter "op"')
@@ -309,7 +312,7 @@ class InsertOrCount(Resource):
 
 class Update(Resource):
     def __init__(self):
-        self.database = Database()
+        self.database_service = DatabaseService()
 
     def patch(self, collection_name):
         """ Update the documents by collection name.
@@ -390,12 +393,12 @@ class Update(Resource):
         RV.get_body().get('update').validate_opt('$set')
         options = RV.get_body().get_opt('options', dict, {})
 
-        return self.database.update_document(collection_name, filter_, update, options, is_update_one)
+        return self.database_service.update_documents(collection_name, filter_, update, options, is_update_one)
 
 
 class Delete(Resource):
     def __init__(self):
-        self.database = Database()
+        self.database_service = DatabaseService()
 
     def delete(self, collection_name):
         """ Delete the documents by collection name.
@@ -447,12 +450,12 @@ class Delete(Resource):
         is_delete_one = RV.get_args().get_opt('deleteone', bool, False)
         filter_ = RV.get_body().get('filter')
 
-        return self.database.delete_document(collection_name, filter_, is_delete_one)
+        return self.database_service.delete_document(collection_name, filter_, is_delete_one)
 
 
 class Find(Resource):
     def __init__(self):
-        self.database = Database()
+        self.database_service = DatabaseService()
 
     def get(self, collection_name):
         """ Find the documents by collection name. The parameters are URL ones.
@@ -514,12 +517,12 @@ class Find(Resource):
         skip = RV.get_args().get_opt('skip', int, None)
         limit = RV.get_args().get_opt('limit', int, None)
 
-        return self.database.find_document(collection_name, filter_, skip, limit)
+        return self.database_service.find_document(collection_name, filter_, skip, limit)
 
 
 class Query(Resource):
     def __init__(self):
-        self.database = Database()
+        self.database_service = DatabaseService()
 
     def post(self):
         """ Query the documents with more options
@@ -600,4 +603,4 @@ class Query(Resource):
         filter_ = RV.get_body().get('filter')
         options = RV.get_body().get_opt('options', dict, {})
 
-        return self.database.query_document(collection_name, filter_, options)
+        return self.database_service.query_document(collection_name, filter_, options)

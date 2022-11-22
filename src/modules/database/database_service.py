@@ -15,7 +15,7 @@ from src.modules.subscription.vault import VaultManager
 from src.modules.database.database_metadata import DatabaseMetadataManager
 
 
-class Database:
+class DatabaseService:
     def __init__(self):
         self.mcli = MongodbClient()
         self.vault_manager = VaultManager()
@@ -24,8 +24,12 @@ class Database:
     def create_collection(self, collection_name, is_encrypt, encrypt_method):
         """ Create collection by name
 
-        :v2 API:
+        :param collection_name: The collection name.
+        :param is_encrypt: If the document of the collection has been encrypted.
+        :param encrypt_method: The encrypt method when is_encrypt is True.
+        :return: The collection name.
         """
+
         if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
             raise InvalidParameterException(f'No permission to create the collection {collection_name}')
 
@@ -38,7 +42,8 @@ class Database:
     def delete_collection(self, collection_name):
         """ Delete collection by name
 
-        :v2 API:
+        :param collection_name: The collection name.
+        :return: None
         """
         if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
             raise InvalidParameterException(f'No permission to delete the collection {collection_name}')
@@ -48,7 +53,11 @@ class Database:
         self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
 
     def get_collections(self):
-        """ v2 API """
+        """ Get all collection belonged to the user.
+
+        :return: The list which contains every collection details.
+        """
+
         self.vault_manager.get_vault(g.usr_did)
 
         self.dmm.sync_all(g.usr_did, g.app_did)
@@ -64,47 +73,74 @@ class Database:
             }, docs))
         }
 
-    def __get_collection(self, collection_name):
-        if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
-            raise InvalidParameterException(f'No permission to operate the collection {collection_name}')
+    def insert_documents(self, collection_name, documents, options):
+        """ Insert documents from the collection
 
-        return self.mcli.get_user_collection(g.usr_did, g.app_did, collection_name)
+        :param collection_name: The collection name.
+        :param documents: The documents to be inserted.
+        :param options: The options used to insert.
+        :return: The insert result.
+        """
 
-    @staticmethod
-    def __is_timestamp(options):
-        RequestData(options, optional=True).validate_opt('timestamp', bool)
-        return options.pop('timestamp', True)
-
-    def insert_document(self, collection_name, documents, options):
-        """ :v2 API: """
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         col = self.__get_collection(collection_name)
         return col.insert_many(documents, contains_extra=self.__is_timestamp(options), **options)
 
-    def update_document(self, collection_name, filter_, update, options, is_update_one):
-        """ :v2 API: """
+    def update_documents(self, collection_name, filter_, update, options, only_one):
+        """ Update the documents of the collection
+
+        :param collection_name: The collection name.
+        :param filter_: The filter to get matched documents.
+        :param update: The content for updating the matching documents.
+        :param options: The options to update.
+        :param only_one: Whether update only one matched document or all matched ones.
+        :return: The update result.
+        """
+
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         col = self.__get_collection(collection_name)
-        return col.update_many(filter_, update, contains_extra=self.__is_timestamp(options), only_one=is_update_one, **options)
+        return col.update_many(filter_, update, contains_extra=self.__is_timestamp(options), only_one=only_one, **options)
 
-    def delete_document(self, collection_name, col_filter, is_delete_one):
-        """ :v2 API: """
+    def delete_document(self, collection_name, filter_, only_one):
+        """ Delete the documents of the collection
+
+        :param collection_name: The collection name.
+        :param filter_: The filter to get matched documents.
+        :param only_one: Whether delete only one matched document or all matched ones.
+        :return: None
+        """
+
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
         col = self.__get_collection(collection_name)
-        col.delete_many(col_filter, only_one=is_delete_one)
+        col.delete_many(filter_, only_one=only_one)
 
     def count_document(self, collection_name, filter_, options):
-        """ :v2 API: """
+        """ Count the documents of the collection
+
+        :param collection_name: The collection name.
+        :param filter_: The filter to get matched documents.
+        :param options: The options to count.
+        :return: The amount of matched documents.
+        """
+
         self.vault_manager.get_vault(g.usr_did)
 
         col = self.__get_collection(collection_name)
         return {"count": col.count(filter_, **options)}
 
     def find_document(self, collection_name, filter_, skip, limit):
-        """ :v2 API: """
+        """ Find the documents of the collection
+
+        :param collection_name: The collection name.
+        :param filter_: The filter to get matched documents.
+        :param skip: Skip first n matched documents.
+        :param limit: Limit the result size.
+        :return: The matched documents list.
+        """
+
         self.vault_manager.get_vault(g.usr_did)
 
         # options is optional
@@ -117,10 +153,29 @@ class Database:
         return self.__do_internal_find(collection_name, filter_, options)
 
     def query_document(self, collection_name, filter_, options):
-        """ :v2 API: """
+        """ Query the documents of the collection.
+        Query API provides more options than Find.
+
+        :param collection_name: The collection name.
+        :param filter_: The filter to get matched documents.
+        :param options: The options to query.
+        :return: The matched documents list.
+        """
+
         self.vault_manager.get_vault(g.usr_did)
 
         return self.__do_internal_find(collection_name, filter_, options)
+
+    @staticmethod
+    def __is_timestamp(options):
+        RequestData(options, optional=True).validate_opt('timestamp', bool)
+        return options.pop('timestamp', True)
+
+    def __get_collection(self, collection_name):
+        if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
+            raise InvalidParameterException(f'No permission to operate the collection {collection_name}')
+
+        return self.mcli.get_user_collection(g.usr_did, g.app_did, collection_name)
 
     def __do_internal_find(self, collection_name, filter_, options):
         col = self.__get_collection(collection_name)

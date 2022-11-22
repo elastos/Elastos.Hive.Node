@@ -20,7 +20,7 @@ class FileMetadataManager:
         self.user_manager = UserManager()
 
     def __get_col(self, user_did, app_did):
-        return self.mcli.get_user_collection(user_did, app_did, COL_IPFS_FILES, create_on_absence=True)
+        return self.mcli.get_user_collection(user_did, app_did, COL_IPFS_FILES)
 
     def get_all_metadatas(self, user_did, app_did, folder_dir: str = None):
         """ Get files metadata under folder 'path'. Get all application files if folder_dir not specified.

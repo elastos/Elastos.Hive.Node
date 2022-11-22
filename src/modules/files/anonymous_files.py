@@ -16,7 +16,7 @@ class AnonymousFiles:
             COL_ANONYMOUS_FILES_NAME: name}
         update = {'$setOnInsert': {
             COL_ANONYMOUS_FILES_CID: cid}}
-        self.mcli.get_user_collection(user_did, app_did, COL_ANONYMOUS_FILES, create_on_absence=True)\
+        self.mcli.get_user_collection(user_did, app_did, COL_ANONYMOUS_FILES)\
             .update_one(filter_, update, contains_extra=True, upsert=True)
 
     def delete(self, user_did, app_did, name):
@@ -24,4 +24,4 @@ class AnonymousFiles:
             COL_ANONYMOUS_FILES_USR_DID: user_did,
             COL_ANONYMOUS_FILES_APP_DID: app_did,
             COL_ANONYMOUS_FILES_NAME: name}
-        self.mcli.get_user_collection(user_did, app_did, COL_ANONYMOUS_FILES, create_on_absence=True).delete_one(filter_)
+        self.mcli.get_user_collection(user_did, app_did, COL_ANONYMOUS_FILES).delete_one(filter_)

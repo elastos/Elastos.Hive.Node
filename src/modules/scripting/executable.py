@@ -35,8 +35,8 @@ def validate_exists(json_data, properties, parent_name=None):
 
     # directly check
     for prop in properties:
-        if prop not in data:
-            raise InvalidParameterException(f'Invalid parameter: "{str(json_data)}" ("{prop}" not exist)')
+        if prop not in data or not data[prop]:
+            raise InvalidParameterException(f'Invalid parameter: "{str(json_data)}"')
 
 
 def get_populated_value_with_params(data, user_did, app_did, params):
@@ -165,7 +165,7 @@ class Executable:
                                  SCRIPTING_EXECUTABLE_TYPE_DELETE]:
             validate_exists(json_data['body'], ['collection'])
 
-            if MongodbClient().is_internal_collection(g.usr_did, g.app_did, json_data['body']['collection']):
+            if MongodbClient().is_internal_user_collection(json_data['body']['collection']):
                 raise InvalidParameterException(f"No permission to set the operation on the collection {json_data['body']['collection']}")
 
             if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_INSERT:

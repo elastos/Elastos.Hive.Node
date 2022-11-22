@@ -32,7 +32,7 @@ class DatabaseService:
         :return: The collection name.
         """
 
-        if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
+        if self.mcli.is_internal_user_collection(collection_name):
             raise InvalidParameterException(f'No permission to create the collection {collection_name}')
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
@@ -47,7 +47,7 @@ class DatabaseService:
         :param collection_name: The collection name.
         :return: None
         """
-        if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
+        if self.mcli.is_internal_user_collection(collection_name):
             raise InvalidParameterException(f'No permission to delete the collection {collection_name}')
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
@@ -174,7 +174,7 @@ class DatabaseService:
         return options.pop('timestamp', True)
 
     def __get_collection(self, collection_name):
-        if self.mcli.is_internal_collection(g.usr_did, g.app_did, collection_name):
+        if self.mcli.is_internal_user_collection(collection_name):
             raise InvalidParameterException(f'No permission to operate the collection {collection_name}')
 
         return self.mcli.get_user_collection(g.usr_did, g.app_did, collection_name)

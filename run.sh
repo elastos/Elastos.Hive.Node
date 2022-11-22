@@ -61,7 +61,7 @@ function setup_venv () {
         pip install -r requirements.txt
         ;;
     Darwin )
-        #virtualenv -p `which python3.7` .venv
+        # If got an error, please use `pip install` to retry failed dependency and retry.
         python3 -m venv .venv
         source .venv/bin/activate
         pip install --upgrade pip
@@ -228,7 +228,10 @@ case "$1" in
     stop)
         stop
         ;;
+    reset_env)
+        cp -f config/.env.local .env
+        ;;
     *)
-    echo "Usage: run.sh {setup|direct|docker|test|test_v1|HIVE_PORT=5000 ./run.sh test_v2|stop}"
+    echo "Usage: run.sh {setup|direct|docker|test|test_v1|HIVE_PORT=5000 ./run.sh test_v2|stop|reset_env}"
     exit 1
 esac

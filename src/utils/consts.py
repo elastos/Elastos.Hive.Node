@@ -181,6 +181,15 @@ COL_ANONYMOUS_FILES_NAME = 'name'
 COL_ANONYMOUS_FILES_CID = 'cid'
 # end of anonymous_files
 
+# pubsub
+COL_PUBSUB = '__pubsub__'
+COL_PUBSUB_USR_DID = USR_DID
+COL_PUBSUB_APP_DID = APP_DID
+COL_PUBSUB_NAME = 'name'
+COL_PUBSUB_CONTENT = 'content'
+COL_PUBSUB_SCRIPT_NAME = 'script_name'
+# end of anonymous_files
+
 COL_IPFS_BACKUP_CLIENT = 'ipfs_backup_client'
 COL_IPFS_BACKUP_SERVER = 'ipfs_backup_server'
 

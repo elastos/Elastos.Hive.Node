@@ -159,6 +159,7 @@ class NotFoundException(HiveException):
     ORDER_NOT_FOUND = 7
     RECEIPT_NOT_FOUND = 8
     APPLICATION_NOT_FOUND = 9
+    PUBSUB_MESSAGE_NOT_FOUND = 10
 
     code = 404
     internal_code = HiveException.NO_INTERNAL_CODE
@@ -227,6 +228,13 @@ class ReceiptNotFoundException(NotFoundException):
     internal_code = NotFoundException.RECEIPT_NOT_FOUND
 
     def __init__(self, msg='The payment receipt can not be found.'):
+        super().__init__(msg)
+
+
+class PubSubMessageNotFoundException(NotFoundException):
+    internal_code = NotFoundException.PUBSUB_MESSAGE_NOT_FOUND
+
+    def __init__(self, msg='The pub/sub message can not be found.'):
         super().__init__(msg)
 
 

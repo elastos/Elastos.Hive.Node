@@ -230,9 +230,13 @@ class RequestData(dict):
         if type(self[key]) != type_:
             raise InvalidParameterException(f'Invalid parameter: The value of the key "{key}" MUST be the type "{type_}"')
 
+        return self
+
     def validate_opt(self, key, type_=dict):
         if key in self and type(self[key]) != type_:
             raise InvalidParameterException(f'Invalid parameter: The value of the key "{key}" MUST be the type "{type_}"')
+
+        return self
 
 
 class RequestArgs(dict):

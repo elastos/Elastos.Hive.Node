@@ -136,6 +136,12 @@ class Context:
         if not self.target_did or not self.target_app_did:
             raise BadRequestException(f"target_did and target_app_did MUST be provided when do anonymous access.")
 
+    def get_target_did(self):
+        return self.target_did
+
+    def get_target_app_did(self):
+        return self.target_app_did
+
     def get_script_data(self, script_name):
         """ get the script data by target_did and target_app_did """
         col = self.mcli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
@@ -317,6 +323,11 @@ class Scripting:
         Script.validate_script_data(json_data)
 
         return self.__upsert_script_to_database(script_name, json_data, g.usr_did, g.app_did)
+
+    def register_script_internal(self, script_name, json_data, user_did, app_did):
+        """ Directly register the script to the database. """
+
+        return self.__upsert_script_to_database(script_name, json_data, user_did, app_did)
 
     def set_anonymous_file_script(self):
         """ Set global script for uploading public file on files service

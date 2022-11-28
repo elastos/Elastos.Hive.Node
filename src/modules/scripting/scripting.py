@@ -53,6 +53,8 @@ class Condition:
     @staticmethod
     def validate_data(json_data):
         """ Validate the condition data, can not nest than 5 layers.
+        The 'queryHasResults' body is dict, and the 'or', 'and' body is list.
+
         :param json_data: condition content.
         """
         if not json_data:
@@ -144,6 +146,25 @@ class Script:
     """ Represents a script registered by owner and ran by caller.
     Their user DIDs can be same or not, or even the caller is anonymous.
 
+    A script format is like this:
+
+    {
+        "condition": {...},
+        "executable": {...},
+        "allowAnonymousUser": <true|false>,
+        "allowAnonymousApp": <true|false>,
+    }
+
+    To run script, the following format is required:
+
+    {
+        "context": {
+            "target_did": <target user did>
+            "target_app_did": <target application did>
+        },
+        "params": {...}
+    }
+
     .. allowAnonymousUser, allowAnonymousApp
 
     These two options is for first checking when caller calls the script.
@@ -163,7 +184,6 @@ class Script:
         target_app_did
 
     If not specified, relating did of caller will be used.
-
 
     .. Parameter Replacement ( $params )
 

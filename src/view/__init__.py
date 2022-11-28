@@ -55,6 +55,7 @@ def init_app(api: Api):
     # pub/sub service
     api.add_resource(pubsub.RegisterMessage, '/vault/pubsub/<message_name>', endpoint='pubsub.register_message')
     api.add_resource(pubsub.UnregisterMessage, '/vault/pubsub/<message_name>', endpoint='pubsub.unregister_message')
+    api.add_resource(pubsub.GetMessages, '/vault/pubsub/messages', endpoint='pubsub.get_messages')
 
     # backup service
     api.add_resource(backup.State, '/vault/content', endpoint='backup.state')

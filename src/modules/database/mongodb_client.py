@@ -8,7 +8,7 @@ from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from src.utils.consts import DID_INFO_DB_NAME, COL_IPFS_FILES, SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_COLLECTION_METADATA, \
-    COL_ANONYMOUS_FILES
+    COL_ANONYMOUS_FILES, COL_PUBSUB
 from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException, BadRequestException
 from src import hive_setting
 
@@ -197,7 +197,8 @@ class MongodbClient:
                                  SCRIPTING_SCRIPT_COLLECTION,
                                  SCRIPTING_SCRIPT_TEMP_TX_COLLECTION,
                                  COL_COLLECTION_METADATA,
-                                 COL_ANONYMOUS_FILES]
+                                 COL_ANONYMOUS_FILES,
+                                 COL_PUBSUB]
 
     def __init__(self):
         self.mongodb_uri = hive_setting.MONGODB_URL

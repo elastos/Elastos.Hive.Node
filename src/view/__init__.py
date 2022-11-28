@@ -5,7 +5,7 @@ from flask_restful import Api
 
 from src import hive_setting
 from src.utils.consts import URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, URL_SERVER_INTERNAL_STATE
-from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider
+from src.view import about, auth, subscription, database, files, scripting, payment, backup, provider, pubsub
 
 
 def init_app(api: Api):
@@ -51,6 +51,10 @@ def init_app(api: Api):
     api.add_resource(scripting.UploadFile, '/vault/scripting/stream/<transaction_id>', endpoint='scripting.upload_file')
     api.add_resource(scripting.DownloadFile, '/vault/scripting/stream/<transaction_id>', endpoint='scripting.download_file')
     api.add_resource(scripting.UnregisterScript, '/vault/scripting/<script_name>', endpoint='scripting.unregister_script')
+
+    # pub/sub service
+    api.add_resource(pubsub.RegisterMessage, '/vault/pubsub/<message_name>', endpoint='pubsub.register_message')
+    api.add_resource(pubsub.UnregisterMessage, '/vault/pubsub/<message_name>', endpoint='pubsub.unregister_message')
 
     # backup service
     api.add_resource(backup.State, '/vault/content', endpoint='backup.state')

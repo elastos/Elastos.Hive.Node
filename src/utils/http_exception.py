@@ -28,6 +28,9 @@ class HiveException(Exception):
     def get_error_response(self):
         return jsonify(self.get_error_dict()), self.code
 
+    def get_error_str(self):
+        return jsonify(self.get_error_dict())
+
     def get_error_dict(self):
         return HiveException.__get_error_dict(self.internal_code, self.msg)
 

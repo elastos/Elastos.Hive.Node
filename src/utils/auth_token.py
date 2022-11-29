@@ -12,7 +12,7 @@ from src.modules.auth.auth import Auth
 from src.utils.did.eladid_wrapper import JWT
 
 
-def __get_token_details(token, is_internal):
+def __get_token_details(token, is_internal=False):
     """ check the token is valid JWT string and get the details inside
 
     :param is_internal: True means request is from other hive node, else is from user
@@ -178,3 +178,22 @@ class TokenParser:
         # Only normal token contains application DID.
         g.usr_did, g.app_ins_did, g.app_did = info[USER_DID], info[APP_INSTANCE_DID], info.get(APP_ID)
         self.record_user_did_and_app_did(g.usr_did, g.app_did)
+
+
+# for websocket
+
+
+class LoginUser:
+    def __init__(self, user_did, app_did):
+        self.user_did = user_did
+        self.app_did = app_did
+
+
+def parse_websocket_token(token):
+    from flask_login import login_user
+
+    info, err_msg = __get_token_details(token)
+    if err_msg:
+        raise UnauthorizedException(f'Invalid token: {err_msg}')
+
+    login_user(LoginUser(info[USER_DID], info.get(APP_ID)))

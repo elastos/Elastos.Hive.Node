@@ -20,7 +20,9 @@ from src.utils.auth_token import TokenParser
 from src.utils.did.did_init import init_did_backend
 from src.utils.consts import HIVE_MODE_PROD, HIVE_MODE_TEST
 from src.utils.payment_config import PaymentConfig
+from src.utils.websocket import init_websocket
 from src import view
+from src.modules.pubsub.pubsub_message_handler import PubSubMessageHandler
 
 import hive.settings
 import hive.main
@@ -126,6 +128,9 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
     if mode != HIVE_MODE_TEST:
         # init v2 APIs
         view.init_app(api)
+        init_websocket(app, {
+            'pubsub_message': PubSubMessageHandler
+        })
 
         logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
         logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')

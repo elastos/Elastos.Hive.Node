@@ -32,6 +32,10 @@ class PubSubMessage:
 
     def add(self, name, json_body):
         context = Context(json_body.get('context', {}))
+        json_body['context'] = {
+            'target_did': context.get_target_did(),
+            'target_app_did': context.get_target_app_did()
+        }
 
         # add aggregated script
         executables = []
@@ -78,11 +82,19 @@ class PubSubMessage:
         self.scripting.unregister_script(msg[COL_PUBSUB_SCRIPT_NAME])
         col.delete_one(filter_)
 
-    def get_all(self, name):
+    def get_all(self, name=None):
+        return self.get_all_by_user(g.usr_did, g.app_did, name)
+
+    def get_all_by_user(self, user_did, app_did, name=None):
         filter_ = {}
         if name:
             filter_['name'] = name
-        return self.mcli.get_user_collection(g.usr_did, g.app_did, COL_PUBSUB).find_many(filter_)
+        return self.mcli.get_user_collection(user_did, app_did, COL_PUBSUB).find_many(filter_)
+
+    def get_result(self, msg):
+        context = msg[COL_PUBSUB_SCRIPT_NAME]['context']
+        result = self.scripting.run_script_url(msg[COL_PUBSUB_SCRIPT_NAME], context['target_did'], context['target_app_did'], {})
+        return [{k: v['count']} for k, v in result.items()]
 
 
 class PubSubService:

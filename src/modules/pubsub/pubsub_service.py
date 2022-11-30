@@ -5,7 +5,7 @@ from flask import request, g
 from src.utils.consts import COL_PUBSUB_USR_DID, COL_PUBSUB_APP_DID, COL_PUBSUB_NAME, COL_PUBSUB_CONTENT, COL_PUBSUB_SCRIPT_NAME, COL_PUBSUB
 from src.utils.customize_dict import Dotdict
 from src.utils.http_exception import InvalidParameterException, PubSubMessageNotFoundException
-from src.utils.http_request import RV
+from src.utils.http_request import RV, RequestData
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.scripting.scripting import Scripting, Context
 from src.modules.subscription.vault import VaultManager
@@ -62,9 +62,11 @@ class PubSubMessage:
             raise InvalidParameterException('Invalid type')
 
         cols = RV.get_body().get('body').validate('interval', int).get('collections', list)
-        # TODO:
-        # for col in cols:
-        #     RequestData(**get_dict(col)).validate('name', str).validate_opt('filter', dict)
+        for col in cols:
+            if not isinstance(col, dict):
+                raise InvalidParameterException('Invalid collections')
+
+            RequestData(**col).validate('name', str).validate('field', str).validate('inside', int)
 
     def add(self, name, json_body):
         context = Context(json_body.get('context', {}))
@@ -113,7 +115,7 @@ class PubSubMessage:
         if not msg:
             raise PubSubMessageNotFoundException()
 
-        self.scripting.unregister_script(msg[COL_PUBSUB_SCRIPT_NAME])
+        self.scripting.unregister_script(msg[COL_PUBSUB_SCRIPT_NAME], is_internal=True)
         col.delete_one(filter_)
 
     def get_all(self, name=None):
@@ -128,7 +130,7 @@ class PubSubMessage:
             return []
         elif raw:
             return items
-        return map(lambda d: Message(d), items)
+        return list(map(lambda d: Message(d), items))
 
     def get_result(self, msg: Message, cur_t):
         """ get result items for pushing message. """

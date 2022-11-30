@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime
 
 from flask import g
@@ -36,5 +37,7 @@ class PubSubMessageHandler:
                     if items:
                         self.ws.send(json.dumps({'collections': items}))
                     msg.update_next(cur_t)
+
+                time.sleep(1)
 
         return False

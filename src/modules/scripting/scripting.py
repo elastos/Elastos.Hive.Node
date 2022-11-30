@@ -284,7 +284,7 @@ class Script:
 
         # The feature support that the script can be run without access token when two anonymous options are all True
         anonymous_access = self.anonymous_app and self.anonymous_user
-        if anonymous_access and g.token_error is not None:
+        if not anonymous_access and getattr(g, 'token_error', None) is not None:
             raise UnauthorizedException(f'Parse access token for running script error: {g.token_error}')
 
         # Reverse the script content to let the key contains '$'
@@ -367,9 +367,10 @@ class Scripting:
         col = self.mcli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION)
         return col.replace_one({"name": script_name}, json_data)
 
-    def unregister_script(self, script_name):
+    def unregister_script(self, script_name, is_internal=False):
         """ :v2 API: """
-        Scripting.check_internal_script(script_name)
+        if not is_internal:
+            Scripting.check_internal_script(script_name)
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
@@ -415,7 +416,7 @@ class Scripting:
 
         # Do anonymous checking, it's same as 'Script.execute'
         anonymous_access = trans.get('anonymous', False)
-        if not anonymous_access and g.token_error is not None:
+        if not anonymous_access and getattr(g, 'token_error', None) is not None:
             raise UnauthorizedException(f'Parse access token for running script error: {g.token_error}')
 
         # check vault

@@ -4,6 +4,7 @@
 Testing file for the pubsub module.
 """
 import json
+import time
 import unittest
 import websocket
 
@@ -55,7 +56,7 @@ class PubSubTestCase(unittest.TestCase):
 
         # prepare data
         response = self.cli.delete(f'/vault/db/{self.collection_name}')
-        RA(response).assert_status(204)
+        RA(response).assert_status(204, 404)
         response = self.cli.put(f'/vault/db/collections/{self.collection_name}')
         RA(response).assert_status(200, 455)
 
@@ -71,6 +72,17 @@ class PubSubTestCase(unittest.TestCase):
             "token": self.cli.get_token()
         }
         ws.send(json.dumps(data))
+        data_str = ws.recv()
+        data = json.loads(data_str)
+        self.assertEqual(data['collections'][0][self.collection_name], 1)
+
+        # try again
+        time.sleep(2)
+        response = self.cli.post(f'/vault/db/collection/{self.collection_name}', body={
+            'document': [{'name': 'zhangsan'}]
+        })
+        time.sleep(2)
+        RA(response).assert_status(201)
         data_str = ws.recv()
         data = json.loads(data_str)
         self.assertEqual(data['collections'][0][self.collection_name], 1)

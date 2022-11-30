@@ -190,10 +190,8 @@ class LoginUser:
 
 
 def parse_websocket_token(token):
-    from flask_login import login_user
-
     info, err_msg = __get_token_details(token)
     if err_msg:
         raise UnauthorizedException(f'Invalid token: {err_msg}')
 
-    login_user(LoginUser(info[USER_DID], info.get(APP_ID)))
+    g.usr_did, g.app_ins_did, g.app_did = info[USER_DID], info[APP_INSTANCE_DID], info.get(APP_ID)

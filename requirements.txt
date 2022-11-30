@@ -10,6 +10,8 @@ Flask-Testing===0.8.1
 flask-cors==3.0.10
 flask-unittest==0.1.2
 Flask-Executor==0.10.0
+Flask-SocketIo==5.3.2
+websocket-client===1.4.2
 google-api-python-client
 google-auth
 google-auth-oauthlib

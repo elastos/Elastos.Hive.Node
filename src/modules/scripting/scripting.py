@@ -284,7 +284,7 @@ class Script:
 
         # The feature support that the script can be run without access token when two anonymous options are all True
         anonymous_access = self.anonymous_app and self.anonymous_user
-        if not anonymous_access and g.token_error is not None:
+        if anonymous_access and g.token_error is not None:
             raise UnauthorizedException(f'Parse access token for running script error: {g.token_error}')
 
         # Reverse the script content to let the key contains '$'
@@ -309,8 +309,9 @@ class Scripting:
         self.mcli = MongodbClient()
 
     @staticmethod
-    def check_internal_script(script_name):
-        if script_name == SCRIPT_ANONYMOUS_FILE:
+    def check_internal_script(script_name: str):
+        if script_name == SCRIPT_ANONYMOUS_FILE\
+                or script_name.startswith('__pubsub'):
             raise InvalidParameterException(f'No permission to operate script {script_name}')
 
     def register_script(self, script_name):

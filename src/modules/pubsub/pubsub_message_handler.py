@@ -1,16 +1,17 @@
 import json
+from datetime import datetime
 
-from flask_login import current_user
-from flask_socketio import send
+from flask import g
 
-from src.utils.websocket import WebSocketHandler
 from src.modules.pubsub.pubsub_service import PubSubMessage
 
 
-class PubSubMessageHandler(WebSocketHandler):
-    def __init__(self, content):
-        super().__init__(content)
+class PubSubMessageHandler:
+    def __init__(self, ws, content):
+        self.ws = ws
+        self.content = content
         self.message = PubSubMessage()
+        self.quit = False
 
     def handle(self):
         """ Every notification message format:
@@ -21,13 +22,19 @@ class PubSubMessageHandler(WebSocketHandler):
         }
         """
 
-        user_did, app_did = current_user().user_did, current_user().app_did
+        user_did, app_did = g.usr_did, g.app_did
 
-        messages = self.message.get_all_by_user(user_did, app_did)
+        messages = self.message.get_all_by_user(user_did, app_did, raw=False)
         if not messages:
             return True
 
-        for msg in messages:
-            send(json.dumps(self.message.get_result(msg)))
+        while not self.quit:
+            for msg in messages:
+                cur_t = int(datetime.now().timestamp())
+                if msg.get_next() == -1 or msg.get_next() < cur_t:
+                    items = self.message.get_result(msg, cur_t)
+                    if items:
+                        self.ws.send(json.dumps({'collections': items}))
+                    msg.update_next(cur_t)
 
         return False

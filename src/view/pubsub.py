@@ -31,9 +31,10 @@ class RegisterMessage(Resource):
                 "type": "countDocs",
                 "body": {
                     "collections": [{name: ‘channel’, # count the newest inserted documents.
-                        "filter": {...} # optional, filter to count the documents.
+                        "field": "created" # the field needs to check. Here is new created on 1 hour.
+                        "inside": 3600, # seconds
                     }],
-                    "interval": 300, # trigger interval.
+                    "interval": 300, # trigger interval to check.
                 }
             }
 
@@ -78,7 +79,7 @@ class UnregisterMessage(Resource):
     def __init__(self):
         self.pubsub_service = PubSubService()
 
-    def delete(self, script_name):
+    def delete(self, message_name):
         """ Unregister the message.
 
         .. :quickref: 10 Pub/Sub; Unregister
@@ -114,7 +115,7 @@ class UnregisterMessage(Resource):
             HTTP/1.1 404 Not Found
 
         """
-        self.pubsub_service.unregister_message(script_name)
+        self.pubsub_service.unregister_message(message_name)
 
 
 class GetMessages(Resource):

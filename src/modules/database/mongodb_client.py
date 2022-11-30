@@ -96,9 +96,12 @@ class MongodbCollection:
             "upserted_id": str(result.upserted_id) if result.upserted_id else None
         }
 
-    def replace_one(self, filter_, document, upsert=True):
+    def replace_one(self, filter_, doc, upsert=True, contains_extra=True):
+        if contains_extra:
+            doc['created'] = doc['modified'] = int(datetime.now().timestamp())
+
         # default 'bypass_document_validation': False
-        result = self.col.replace_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(document), upsert=upsert)
+        result = self.col.replace_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(doc), upsert=upsert)
         return {
             "acknowledged": result.acknowledged,
             "matched_count": result.matched_count,

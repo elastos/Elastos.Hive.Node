@@ -259,12 +259,15 @@ class HttpClient:
         if is_json:
             headers['Content-type'] = 'application/json'
         if need_token:
-            headers['Authorization'] = 'token ' + self.remote_resolver.get_token()
+            headers['Authorization'] = 'token ' + self.get_token()
         test_log(f'HEADER: {headers}')
         return headers
 
     def get_current_did(self) -> str:
         return self.remote_resolver.get_current_user_did_str()
+
+    def get_token(self):
+        return self.remote_resolver.get_token()
 
     @staticmethod
     def get_backup_node_did():

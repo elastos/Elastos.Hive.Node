@@ -278,7 +278,7 @@ class Script:
 
         # The feature support that the script can be run without access token when two anonymous options are all True
         anonymous_access = self.anonymous_app and self.anonymous_user
-        if not anonymous_access and g.token_error is not None:
+        if not anonymous_access and getattr(g, 'token_error', None) is not None:
             raise UnauthorizedException(f'Parse access token for running script error: {g.token_error}')
 
         # Reverse the script content to let the key contains '$'
@@ -403,7 +403,7 @@ class Scripting:
 
         # Do anonymous checking, it's same as 'Script.execute'
         anonymous_access = trans.get('anonymous', False)
-        if not anonymous_access and g.token_error is not None:
+        if not anonymous_access and getattr(g, 'token_error', None) is not None:
             raise UnauthorizedException(f'Parse access token for running script error: {g.token_error}')
 
         # check vault

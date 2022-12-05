@@ -263,6 +263,38 @@ class IpfsScriptingTestCase(unittest.TestCase):
         execute_once('message6', 60000)
         execute_once('message8', 80000)
 
+    def test02_get_scripts(self):
+        script_name, executable_name = 'ipfs_database_count', 'database_count'
+        script_body = {'condition': {
+            'name': 'verify_user_permission',
+            'type': 'queryHasResults',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.condition_author'}
+            }
+        }, 'executable': {
+            'name': executable_name,
+            'type': 'count',
+            'body': {
+                'collection': self.collection_name,
+                'filter': {'author': '$params.author'}
+            }
+        }}
+        self.__register_script(script_name, script_body)
+
+        # the check for 'get scripts'.
+        response = self.cli.get(f'/scripting/scripts')
+        RA(response).assert_status(200)
+        scripts = RA(response).body().get('scripts', list)
+        self.assertEqual(len(scripts), 1)
+        script = DictAsserter(**scripts[0])
+        script.get('executable', dict).assert_equal('name', executable_name)
+        script.get('executable', dict).assert_equal('type', 'count')
+        script.get('executable', dict).get('body').assert_equal('collection', self.collection_name)
+        script.get('executable', dict).get('body', dict).get('filter', dict).assert_equal('author', '$params.author')
+
+        self.delete_script(script_name)
+
     def test02_count(self):
         script_name, executable_name = 'ipfs_database_count', 'database_count'
         script_body = {'executable': {

@@ -9,6 +9,7 @@ from flask_restful import Resource
 
 from src.modules.scripting.scripting import Scripting
 from src.utils.http_exception import InvalidParameterException
+from src.utils.http_request import RV
 from src.utils.http_response import response_stream
 
 
@@ -177,6 +178,68 @@ class RegisterScript(Resource):
 
         """
         return self.scripting.register_script(script_name)
+
+
+class GetScripts(Resource):
+    def __init__(self):
+        self.scripting = Scripting()
+
+    def get(self):
+        """ Get the scripts which user already registered.
+
+        .. :quickref: 05 Scripting; Get Scripts
+
+        **Request**:
+
+        **URL Parameters**:
+
+        .. sourcecode:: http
+
+            <skip>  # optional, default is 0
+            <limit> # optional, default is 0 ()
+            <name>  # the script name.
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+
+        .. code-block:: json
+
+            {
+                "scripts": [{ # the content of every script.
+                    "context": {...},
+                    "executable": {...},
+                    "allowAnonymousUser": false,
+                    "allowAnonymousApp": false
+                }]
+            }
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 400 Bad Request
+
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
+        .. sourcecode:: http
+
+            HTTP/1.1 404 Not Found
+
+        """
+        skip = RV.get_args().get_opt('skip', int, None)
+        limit = RV.get_args().get_opt('limit', int, None)
+        name = RV.get_args().get_opt('name', str, None)
+
+        return self.scripting.get_scripts(skip, limit, name)
 
 
 class UnregisterScript(Resource):

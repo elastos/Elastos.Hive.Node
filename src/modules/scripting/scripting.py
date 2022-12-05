@@ -446,3 +446,30 @@ class Scripting:
             raise InvalidParameterException(f"Invalid transaction id '{transaction_id}': {[row_id, target_did, target_app_did]}.")
 
         return row_id, target_did, target_app_did
+
+    def get_scripts(self, skip, limit, name):
+        """ :v2 API: """
+        self.vault_manager.get_vault(g.usr_did).check_write_permission()
+
+        if name:
+            self.check_internal_script(name)
+            filter_ = {'name': name}
+        else:
+            filter_ = {'name': {'$ne': SCRIPT_ANONYMOUS_FILE}}
+
+        options = {}
+        if skip:
+            options['skip'] = skip
+        if limit:
+            options['limit'] = limit
+
+        docs = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION).find_many(filter_, **options)
+        if not docs:
+            raise ScriptNotFoundException()
+
+        for d in docs:
+            del d['_id']
+            fix_dollar_keys_recursively(d, is_save=False)
+        return {
+            "scripts": docs
+        }

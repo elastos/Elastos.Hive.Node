@@ -20,7 +20,7 @@ Summary
     database.get_collections, database.create_collection, database.delete_collection, database.insert_or_count,
     database.update, database.delete, database.find, database.query,
     files.reading_operation, files.writing_operation, files.move_file, files.delete_file,
-    scripting.register_script, scripting.call_script, scripting.call_script_url,
+    scripting.register_script, scripting.get_scripts, scripting.call_script, scripting.call_script_url,
     scripting.unregister_script, scripting.upload_file, scripting.download_file,
     backup.state, backup.backup_restore, backup.server_promotion,
     payment.version, payment.place_order, payment.settle_order, payment.orders, payment.receipts,
@@ -228,6 +228,13 @@ register script
 .. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: scripting.register_script
+
+get scripts
+-----------
+
+.. autoflask:: src:get_docs_app()
+  :undoc-static:
+  :endpoints: scripting.get_scripts
 
 call script
 -----------

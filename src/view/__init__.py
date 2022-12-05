@@ -45,6 +45,7 @@ def init_app(api: Api):
     api.add_resource(files.DeleteFile, '/vault/files/<path:path>', endpoint='files.delete_file')
 
     # scripting service
+    api.add_resource(scripting.GetScripts, '/vault/scripting/scripts', endpoint='scripting.get_scripts')
     api.add_resource(scripting.RegisterScript, '/vault/scripting/<script_name>', endpoint='scripting.register_script')
     api.add_resource(scripting.CallScript, '/vault/scripting/<script_name>', endpoint='scripting.call_script')
     api.add_resource(scripting.CallScriptUrl, '/vault/scripting/<script_name>/<context_str>/<params>', endpoint='scripting.call_script_url')

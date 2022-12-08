@@ -35,7 +35,7 @@ class UserDID(Entity):
 
 class AppDID(Entity):
     access_token = "123"
-    app_did = "did:elastos:ienWaA6sfWETz6gVzX78SNytx8VUwDzxai"
+    app_did = "did:elastos:ic8pRXyAT3JqEXo4PzHQHv5rsoYyEyDwpB"  # can resolve, and from ionic sample of hive js.
 
     def __init__(self, name, mnemonic=None, passphrase=None):
         Entity.__init__(self, name, mnemonic=mnemonic, passphrase=passphrase, need_resolve=False)

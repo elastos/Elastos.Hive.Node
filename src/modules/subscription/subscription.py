@@ -16,7 +16,7 @@ from src.modules.payment.order import OrderManager
 from src.modules.subscription.vault import VaultManager
 from src.utils.consts import VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_PRICING_USING, COL_APPLICATION_APP_DID, \
     COL_APPLICATION_ACCESS_COUNT, COL_APPLICATION_ACCESS_AMOUNT, COL_APPLICATION_ACCESS_LAST_TIME
-from src.utils.did.eladid_wrapper import DID, DIDDocument
+from src.utils.did.eladid_wrapper import DID, DIDDocument, DIDURL
 from src.utils.payment_config import PaymentConfig
 from src.utils.http_exception import BadRequestException, ApplicationNotFoundException
 from src.utils.singleton import Singleton
@@ -132,7 +132,7 @@ class VaultSubscription(metaclass=Singleton):
         if not did_str:
             raise BadRequestException('get_appdid_info: did must provide.')
 
-        did: DID = DID.from_string(did_str)
+        did: DID = DID.create_from_str(did_str)
         doc: DIDDocument = did.resolve()
 
         def get_appinfo_props(vc_json: dict) -> dict:
@@ -150,12 +150,19 @@ class VaultSubscription(metaclass=Singleton):
 
         def get_info_from_credential(fragment: str, props_callback: t.Callable[[dict], dict]) -> dict:
             """ Get the information from the credential. """
-            vc = doc.get_credential(did, fragment)
+            vc = doc.get_credential(DIDURL.create_from_did(did, fragment))
             if not vc.is_valid():
                 logging.error('The credential is not valid.')
                 return {}
             return props_callback(json.loads(vc.to_json()))
 
-        info = get_info_from_credential('appinfo', get_appinfo_props)
-        info.update(get_info_from_credential('developer', get_developer_props))
+        info = {}
+        try:
+            info.update(get_info_from_credential('appinfo', get_appinfo_props))
+        except Exception as e:
+            logging.error(f'Failed to get "appinfo" of the app did: {e}')
+        try:
+            info.update(get_info_from_credential('developer', get_developer_props))
+        except Exception as e:
+            logging.error(f'Failed to get "developer" of the app did: {e}')
         return info

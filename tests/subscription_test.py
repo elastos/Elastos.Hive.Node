@@ -6,7 +6,7 @@ Testing file for the scripting module.
 
 import unittest
 
-from tests.utils.http_client import HttpClient
+from tests.utils.http_client import HttpClient, AppDID
 from tests import init_test, test_log, RA, HttpCode
 
 
@@ -36,7 +36,11 @@ class SubscriptionTestCase(unittest.TestCase):
 
     def test04_vault_get_app_stats(self):
         response = self.cli.get('/subscription/vault/app_stats')
-        self.assertTrue(response.status_code in [200, 404])
+        RA(response).assert_status(200)
+        apps = RA(response).body().get('apps', list)
+        apps = list(filter(lambda a: a['app_did'] == AppDID.app_did, apps))
+        self.assertEqual(len(apps), 1)
+        self.assertTrue(apps[0]['name'])  # resolve app did successfully.
 
     def test05_vault_deactivate(self):
         response = self.cli.post('/subscription/vault?op=deactivation')

@@ -157,7 +157,7 @@ class VaultManager:
         col = self.mcli.get_management_collection(VAULT_SERVICE_COL)
 
         doc = col.find_one({VAULT_SERVICE_DID: user_did})
-        if not doc or doc[VAULT_SERVICE_STATE] == VAULT_SERVICE_STATE_REMOVED:
+        if not doc or doc.get(VAULT_SERVICE_STATE, None) == VAULT_SERVICE_STATE_REMOVED:
             raise VaultNotFoundException()
         return Vault(**doc)
 

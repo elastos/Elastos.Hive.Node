@@ -29,7 +29,7 @@ VAULT_SERVICE_MODIFY_TIME = "modify_time"
 VAULT_SERVICE_START_TIME = "start_time"
 VAULT_SERVICE_END_TIME = "end_time"
 VAULT_SERVICE_PRICING_USING = "pricing_using"
-VAULT_SERVICE_STATE = "state"
+VAULT_SERVICE_STATE = "state"  # maybe not exists
 
 VAULT_SERVICE_STATE_RUNNING = "running"  # read and write
 VAULT_SERVICE_STATE_FREEZE = "freeze"  # read, but not write

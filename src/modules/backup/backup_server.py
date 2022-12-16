@@ -71,7 +71,7 @@ class BackupServer:
             raise BadRequestException('Failed because backup is in processing.')
 
         # pin the request metadata to local ipfs node.
-        self.ipfs_client.cid_pin(cid)
+        self.ipfs_client.cid_pin(cid, size, sha256)
 
         # recode the request and run the executor.
         update = {

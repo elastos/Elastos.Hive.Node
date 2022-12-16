@@ -17,7 +17,8 @@ class HttpClient:
         self.timeout = 30
 
     def __check_status_code(self, r, expect_code):
-        if r.status_code != expect_code:
+        ecs = expect_code if isinstance(expect_code, list) else [expect_code]
+        if r.status_code not in ecs:
             msg = r.text
             try:
                 body = r.json()
@@ -30,11 +31,11 @@ class HttpClient:
     def __raise_http_exception(self, url, method, e):
         raise BadRequestException(f'[HttpClient] Failed to {method}, ({url}) with exception: {str(e)}')
 
-    def get(self, url, access_token, is_body=True, **kwargs):
+    def get(self, url, access_token, is_body=True, success_code=200, **kwargs):
         try:
-            headers = {"Content-Type": "application/json", "Authorization": "token " + access_token}
-            r = requests.get(url, headers=headers, timeout=self.timeout, **kwargs)
-            self.__check_status_code(r, 200)
+            headers = {"Content-Type": "application/json", "Authorization": f"token {access_token}"}
+            r = requests.get(url, headers=headers if access_token else {}, timeout=self.timeout, **kwargs)
+            self.__check_status_code(r, success_code)
             return r.json() if is_body else r
         except HiveException as e:
             raise e

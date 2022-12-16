@@ -16,7 +16,11 @@ def try_three_times(f: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
             try:
                 return f(*args, **kwargs)
             except Exception as e:
-                i += 1
+                if i == count:
+                    raise e
+                else:
+                    logging.error(f'get an error: {e}')
+                    i += 1
     return wrapper
 
 
@@ -41,7 +45,10 @@ class IpfsClient:
     @try_three_times
     def download_file(self, cid, file_path: Path, is_proxy=False, sha256=None, size=None):
         url = self.ipfs_gateway_url if is_proxy else self.ipfs_url
-        response = self.http.post(f'{url}/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
+        if is_proxy:
+            response = self.http.get(f'{url}/ipfs/{cid}', None, is_body=False, success_code=[200, 301], allow_redirects=False)
+        else:
+            response = self.http.post(f'{url}/api/v0/cat?arg={cid}', None, None, is_body=False, success_code=200)
         LocalFile.write_file_by_response(response, file_path)
 
         if size is not None:
@@ -65,7 +72,7 @@ class IpfsClient:
         temp_file.unlink()
         return metadata
 
-    def cid_pin(self, cid):
+    def cid_pin(self, cid, size=None, sha256=None):
         """ Pin file from ipfs proxy to the local node. """
 
         # INFO: IPFS does not support that one node directly pin file from other node.
@@ -73,9 +80,9 @@ class IpfsClient:
 
         # download the file to local
         temp_file = LocalFile.generate_tmp_file_path()
-        self.download_file(cid, temp_file, is_proxy=True)
+        self.download_file(cid, temp_file, is_proxy=True, size=size, sha256=sha256)
 
-        logging.info(f'[IpfsClient.cid_pin] Download file OK.')
+        logging.info(f'[IpfsClient.cid_pin] Download file OK, cid, {cid}, size, {size}, path, {temp_file.as_posix()}.')
 
         # then upload the file to local IPFS node.
         self.upload_file(temp_file)

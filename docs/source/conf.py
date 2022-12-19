@@ -22,7 +22,7 @@ copyright = 'Elastos'
 author = 'Fred Chen'
 
 # The full version, including alpha/beta/rc tags
-release = '2.7.2'
+release = '2.9.2'
 
 
 # -- General configuration ---------------------------------------------------

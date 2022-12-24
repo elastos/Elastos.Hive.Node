@@ -16,7 +16,7 @@ from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, B
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
     URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, \
-    COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2
+    COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2, COL_APPLICATION_DATABASE_NAME, COL_APPLICATION_APP_DID
 from src.utils.http_exception import BadRequestException, InsufficientStorageException
 from src.modules.files.local_file import LocalFile
 from src.utils.http_client import HttpClient
@@ -159,15 +159,17 @@ class BackupClient:
         - dump the specific database to a snapshot file;
         - upload this snapshot file into IPFS node
         """
-        names = self.user_manager.get_database_names(user_did)
-        metadata_list, length = list(), len(names)
+        app_docs = self.user_manager.get_app_docs(user_did)
+        metadata_list, length = list(), len(app_docs)
         for i in range(length):
             if process_callback:
                 process_callback(i + 1, length)
 
+            db_name, app_did = app_docs[i][COL_APPLICATION_DATABASE_NAME], app_docs[i][COL_APPLICATION_APP_DID]
             d = {
                 'path': LocalFile.generate_tmp_file_path(),
-                'name': names[i]
+                'name': db_name,
+                'app_did': app_did
             }
             # dump the database data to snapshot file.
             LocalFile.dump_mongodb_to_full_path(d['name'], d['path'])
@@ -176,7 +178,7 @@ class BackupClient:
             try:
                 encrypt_path = encryption.encrypt_file(d['path'])
             except Exception as e:
-                raise BadRequestException(f'Can not encrypt the dump file for the database {names[i]}: {e}')
+                raise BadRequestException(f'Can not encrypt the dump file for the database {db_name}: {e}')
             d['path'].unlink()
 
             # upload this snapshot file onto IPFS node.
@@ -249,6 +251,8 @@ class BackupClient:
 
             LocalFile.restore_mongodb_from_full_path(plain_path)
             plain_path.unlink()
+
+            self.user_manager.add_app_if_not_exists(request_metadata['user_did'], d['app_did'])
             logging.info(f'[BackupClient] Success to restore the dump file for database {d["name"]}.')
 
     def retry_backup_request(self):

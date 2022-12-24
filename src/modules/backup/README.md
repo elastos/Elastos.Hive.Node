@@ -10,7 +10,8 @@ Backup Protocol between Vault and Backup Node
         "name": "<database name>",
         "sha256": "<sha256 of dump file>",
         "cid": "<cid in the vault node>",
-        "size": "<size of the dump file>"
+        "size": "<size of the dump file>",
+        "app_did": "<app did str>"
     }],
     "files": [{
         "sha256": "<sha256 of the file content>",

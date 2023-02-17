@@ -41,6 +41,17 @@ class UserManager:
 
         return self.mcli.get_management_collection(COL_APPLICATION).find_many(filter_)
 
+    def get_app_doc(self, user_did: str, app_did: str):
+        if not user_did or not app_did:
+            return None
+
+        filter_ = {
+            COL_APPLICATION_USR_DID: user_did,
+            COL_APPLICATION_APP_DID: app_did,
+        }
+
+        return self.mcli.get_management_collection(COL_APPLICATION).find_one(filter_)
+
     def get_apps(self, user_did) -> list:
         """ get all application DIDs of the user did """
         return list(map(lambda d: d[COL_APPLICATION_APP_DID], self.get_app_docs(user_did)))
@@ -105,3 +116,14 @@ class UserManager:
         }
 
         self.mcli.get_management_collection(COL_APPLICATION).delete_many(filter_)
+
+    def remove_user_app(self, user_did, app_did):
+        if not user_did or not app_did:
+            return
+
+        filter_ = {
+            COL_APPLICATION_USR_DID: user_did,
+            COL_APPLICATION_APP_DID: app_did,
+        }
+
+        self.mcli.get_management_collection(COL_APPLICATION).delete_one(filter_)

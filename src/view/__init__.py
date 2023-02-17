@@ -19,6 +19,7 @@ def init_app(api: Api):
     # subscription service
     api.add_resource(subscription.VaultInfo, '/subscription/vault', endpoint='subscription.vault_info')
     api.add_resource(subscription.VaultAppStates, '/subscription/vault/app_stats', endpoint='subscription.vault_app_states')
+    api.add_resource(subscription.VaultAppDelete, '/subscription/vault/app', endpoint='subscription.vault_app_delete')
     api.add_resource(subscription.VaultPricePlan, '/subscription/pricing_plan', endpoint='subscription.vault_price_plan')
     api.add_resource(subscription.VaultActivateDeactivate, '/subscription/vault', endpoint='subscription.vault_activate_deactivate')
     api.add_resource(subscription.VaultSubscribe, '/subscription/vault', endpoint='subscription.vault_subscribe')

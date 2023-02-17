@@ -20,7 +20,9 @@ class IpfsCidRef:
         col.update_one(filter_, update, upsert=True)
 
     def decrease(self, count=1):
-        """ decrease count if not to zero, else to remove cid info """
+        """ decrease count if not to zero, else to remove cid info
+        :return: whether the cid removed.
+        """
 
         filter_ = {CID: self.cid}
 
@@ -28,11 +30,13 @@ class IpfsCidRef:
         col = self.mcli.get_management_collection(COL_IPFS_CID_REF)
         doc = col.find_one(filter_)
         if not doc:
-            return
+            return True
 
         # delete or decrease
         if doc[COUNT] <= count:
             col.delete_one(filter_)
+            return True
         else:
             update = {'$inc': {COUNT: -count}}
             col.update_one(filter_, update)
+            return False

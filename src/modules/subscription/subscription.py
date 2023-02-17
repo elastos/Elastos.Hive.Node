@@ -125,6 +125,9 @@ class VaultSubscription(metaclass=Singleton):
 
         return {"apps": results}
 
+    def delete_app(self):
+        self.vault_manager.remove_vault_app(g.usr_did, g.app_did)
+
     @staticmethod
     def __get_appdid_info_by_did(did_str: str):
         """ Get the information from the service did. """

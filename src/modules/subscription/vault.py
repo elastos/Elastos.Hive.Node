@@ -1,13 +1,17 @@
 import shutil
 from datetime import datetime
 
+from src.modules.files.file_cache_service import FileCacheService
+from src.modules.files.file_metadata import FileMetadataManager
+from src.modules.files.ipfs_cid_ref import IpfsCidRef
+from src.modules.files.ipfs_client import IpfsClient
 from src.utils.customize_dict import Dotdict
 from src.utils.payment_config import PaymentConfig
-from src.utils.http_exception import VaultNotFoundException, CollectionNotFoundException, VaultFrozenException
+from src.utils.http_exception import VaultNotFoundException, VaultFrozenException, FileNotFoundException
 from src.utils.consts import COL_IPFS_FILES, IS_UPGRADED, VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_LATEST_ACCESS_TIME, \
-    VAULT_SERVICE_STATE_REMOVED
+    VAULT_SERVICE_STATE_REMOVED, COL_IPFS_FILES_IPFS_CID
 from src import hive_setting
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
@@ -209,6 +213,29 @@ class VaultManager:
                     VAULT_SERVICE_STATE: VAULT_SERVICE_STATE_REMOVED
                 }
             })
+
+    def remove_vault_app(self, user_did, app_did):
+        app_doc = self.user_manager.get_app_doc(user_did, app_did)
+        if not app_doc:
+            return
+
+        try:
+            metadatas = FileMetadataManager().get_all_metadatas(user_did, app_did)
+            # 1. Clean cache files.
+            FileCacheService.delete_cache_files(user_did, metadatas)
+            # 2. Unpin cids.
+            ipfs_client = IpfsClient()
+            for m in metadatas:
+                if IpfsCidRef(m[COL_IPFS_FILES_IPFS_CID]).decrease():
+                    ipfs_client.cid_unpin(m[COL_IPFS_FILES_IPFS_CID])
+            # 3. Delete app database
+            self.mcli.drop_user_database(user_did, app_did)
+        except FileNotFoundException:
+            # No files on the app.
+            pass
+
+        # Remove app information
+        self.user_manager.remove_user_app(user_did, app_did)
 
     def recalculate_user_databases_size(self, user_did: str):
         """ Update all databases used size in vault """

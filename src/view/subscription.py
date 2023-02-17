@@ -220,6 +220,50 @@ class VaultAppStates(Resource):
         return self.vault_subscription.get_app_stats()
 
 
+class VaultAppDelete(Resource):
+    def __init__(self):
+        self.vault_subscription = VaultSubscription()
+
+    def delete(self):
+        """ Delete current application.
+
+        .. :quickref: 02 Subscription; Delete Application
+
+        **Request**:
+
+        .. sourcecode:: http
+
+            None
+
+        **Response OK**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 204 No Content
+
+        **Response Error**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 400 Bad Request
+
+        .. sourcecode:: http
+
+            HTTP/1.1 401 Unauthorized
+
+        .. sourcecode:: http
+
+            HTTP/1.1 403 Forbidden
+
+        .. sourcecode:: http
+
+            HTTP/1.1 404 Not Found
+
+        """
+
+        return self.vault_subscription.delete_app()
+
+
 class VaultSubscribe(Resource):
     def __init__(self):
         self.vault_subscription = VaultSubscription()

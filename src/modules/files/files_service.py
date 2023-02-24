@@ -9,6 +9,7 @@ from pathlib import Path
 
 from flask import g
 
+from src.modules.files.file_cache import FileCache
 from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, \
     COL_IPFS_FILES_ENCRYPT_METHOD
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
@@ -200,7 +201,7 @@ class FilesService:
         """
 
         metadata = self.v1_get_file_metadata(user_did, app_did, path)
-        cached_file = LocalFile.get_cid_cache_dir(user_did) / metadata[COL_IPFS_FILES_IPFS_CID]
+        cached_file = FileCache.get_path(user_did, metadata)
         if not cached_file.exists():
             self.ipfs_client.download_file(metadata[COL_IPFS_FILES_IPFS_CID], cached_file)
         return LocalFile.get_download_response(cached_file)
@@ -263,9 +264,9 @@ class FilesService:
 
         # do copy or move
         if is_copy:
-            self.file_manager.add_metadata(user_did, app_did, dst_path,
-                                           src_metadata[COL_IPFS_FILES_SHA256], src_metadata[SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID],
-                                           src_metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False), src_metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''))
+            self.file_manager.upsert_metadata(user_did, app_did, dst_path,
+                                              src_metadata[COL_IPFS_FILES_SHA256], src_metadata[SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID],
+                                              src_metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False), src_metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''))
             IpfsCidRef(src_metadata[COL_IPFS_FILES_IPFS_CID]).increase()
             self.vault_manager.update_user_files_size(user_did, src_metadata[SIZE])
         else:
@@ -322,20 +323,22 @@ class FilesService:
 
         # add new or update exist one
         sha256, size = LocalFile.get_sha256(local_path.as_posix()), local_path.stat().st_size
-        new_metadata = self.file_manager.add_metadata(user_did, app_did, file_path, sha256, size, new_cid, is_encrypt, encrypt_method)
+        new_metadata = self.file_manager.upsert_metadata(user_did, app_did, file_path, sha256, size, new_cid, is_encrypt, encrypt_method)
         if not old_metadata:
             IpfsCidRef(new_cid).increase()
             increased_size = size
         elif old_metadata[COL_IPFS_FILES_IPFS_CID] != new_cid:
             IpfsCidRef(new_cid).increase()
-            IpfsCidRef(old_metadata[COL_IPFS_FILES_IPFS_CID]).decrease()
+            already_removed = IpfsCidRef(old_metadata[COL_IPFS_FILES_IPFS_CID]).decrease()
+            if already_removed:
+                FileCache.remove_file(user_did, old_metadata[COL_IPFS_FILES_IPFS_CID])
             increased_size = new_metadata[SIZE] - old_metadata[SIZE]
 
         if increased_size and not only_import:
             self.vault_manager.update_user_files_size(user_did, increased_size)
 
         # cache the uploaded file.
-        cache_file = LocalFile.get_cid_cache_dir(user_did, need_create=True) / new_cid
+        cache_file = FileCache.get_path_by_cid(user_did, new_cid)
         if not cache_file.exists():
             if only_import:
                 shutil.copy(local_path.as_posix(), cache_file.as_posix())

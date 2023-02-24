@@ -15,7 +15,7 @@ Summary
   :undoc-static:
   :endpoints: v2_auth.sign_in, v2_auth.auth,
     subscription.vault_subscribe, subscription.vault_unsubscribe, subscription.vault_info, subscription.vault_app_states,
-    subscription.vault_activate_deactivate,
+    subscription.vault_app_delete, subscription.vault_activate_deactivate,
     subscription.backup_subscribe, subscription.backup_unsubscribe, subscription.backup_info, subscription.vault_price_plan,
     database.get_collections, database.create_collection, database.delete_collection, database.insert_or_count,
     database.update, database.delete, database.find, database.query,
@@ -87,6 +87,13 @@ get app stats
 .. autoflask:: src:get_docs_app()
   :undoc-static:
   :endpoints: subscription.vault_app_states
+
+delete application
+------------------
+
+.. autoflask:: src:get_docs_app()
+  :undoc-static:
+  :endpoints: subscription.vault_app_delete
 
 activate & deactivate
 ---------------------

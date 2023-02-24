@@ -1,5 +1,6 @@
 import logging
 
+from src.modules.files.file_cache import FileCache
 from src.utils.consts import USR_DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, \
     COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, COL_IPFS_FILES_ENCRYPT_METHOD
 from src.utils.http_exception import FileNotFoundException
@@ -51,7 +52,7 @@ class FileMetadataManager:
 
         return FileMetadata(**doc)
 
-    def add_metadata(self, user_did, app_did, rel_path: str, sha256: str, size: int, cid: str, is_encrypt: bool, encrypt_method: str):
+    def upsert_metadata(self, user_did, app_did, rel_path: str, sha256: str, size: int, cid: str, is_encrypt: bool, encrypt_method: str):
         """ add or update the file metadata """
         filter_ = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: rel_path}
         update = {'$set': {
@@ -75,7 +76,9 @@ class FileMetadataManager:
         filter_ = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: rel_path}
         result = self.__get_col(user_did, app_did).delete_one(filter_)
         if result['deleted_count'] > 0 and cid:
-            IpfsCidRef(cid).decrease()
+            removed = IpfsCidRef(cid).decrease()
+            if removed:
+                FileCache.remove_file(user_did, cid)
 
     def get_backup_file_metadatas(self, user_did):
         """ get all cid infos from user's vault for backup

@@ -1,7 +1,7 @@
 import shutil
 from datetime import datetime
 
-from src.modules.files.file_cache_service import FileCacheService
+from src.modules.files.file_cache import FileCache
 from src.modules.files.file_metadata import FileMetadataManager
 from src.modules.files.ipfs_cid_ref import IpfsCidRef
 from src.modules.files.ipfs_client import IpfsClient
@@ -222,7 +222,7 @@ class VaultManager:
         try:
             metadatas = FileMetadataManager().get_all_metadatas(user_did, app_did)
             # 1. Clean cache files.
-            FileCacheService.delete_cache_files(user_did, metadatas)
+            FileCache.delete_files(user_did, metadatas)
             # 2. Unpin cids.
             ipfs_client = IpfsClient()
             for m in metadatas:

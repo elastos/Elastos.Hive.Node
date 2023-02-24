@@ -42,10 +42,6 @@ class HttpClient:
         except Exception as e:
             self.__raise_http_exception(url, 'GET', e)
 
-    def get_to_file(self, url, access_token, file_path: Path):
-        r = self.get(url, access_token, is_body=False, stream=True)
-        LocalFile.write_file_by_response(r, file_path, use_temp=True)
-
     def post(self, url, access_token, body, is_json=True, is_body=True, success_code=201, timeout=None, **kwargs):
         try:
             headers = dict()

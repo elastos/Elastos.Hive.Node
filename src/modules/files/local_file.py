@@ -71,7 +71,7 @@ class LocalFile:
 
     @staticmethod
     def write_file_by_request_stream(file_path: Path, use_temp=False):
-        """ used when download file """
+        """ used when upload file """
 
         def receiving_data(path: Path):
             with open(path.as_posix(), "bw") as f:
@@ -84,7 +84,7 @@ class LocalFile:
         LocalFile.__write_to_file(file_path, receiving_data, use_temp=use_temp)
 
     @staticmethod
-    def write_file_by_response(response, file_path: Path, use_temp=False):
+    def write_file_by_response(response, file_path: Path):
         """ used when download file by url """
 
         def receiving_data(path: Path):
@@ -94,7 +94,7 @@ class LocalFile:
                     if chunk:
                         f.write(chunk)
 
-        LocalFile.__write_to_file(file_path, receiving_data, use_temp=use_temp)
+        LocalFile.__write_to_file(file_path, receiving_data)
 
     @staticmethod
     def __write_to_file(file_path: Path, on_receiving_data: typing.Callable[[Path], None], use_temp=False):

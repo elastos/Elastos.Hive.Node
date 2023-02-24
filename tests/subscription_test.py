@@ -42,15 +42,19 @@ class SubscriptionTestCase(unittest.TestCase):
         self.assertEqual(len(apps), 1)
         self.assertTrue(apps[0]['name'])  # resolve app did successfully.
 
-    def test05_vault_deactivate(self):
+    def test05_vault_remove_app(self):
+        response = self.cli.delete('/subscription/vault/app')
+        RA(response).assert_status(204)
+
+    def test06_vault_deactivate(self):
         response = self.cli.post('/subscription/vault?op=deactivation')
         self.assertEqual(response.status_code, 201)
 
-    def test06_vault_unsubscribe(self):
+    def test07_vault_unsubscribe(self):
         response = self.cli.delete('/subscription/vault?force=true')
         self.assertIn(response.status_code, [204, 404])
 
-    def test07_vault_unsubscribe_without_force(self):
+    def test08_vault_unsubscribe_without_force(self):
         """ if unsubscribe without force, the data will keep until next subscribing """
 
         # subscribe

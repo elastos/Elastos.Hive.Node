@@ -9,6 +9,7 @@ import typing as t
 
 from flask import g
 
+from src.modules.backup.backup_notifier import BackupNotifier
 from src.modules.backup.encryption import Encryption
 from src.modules.files.ipfs_client import IpfsClient
 from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, BACKUP_REQUEST_ACTION, \
@@ -25,10 +26,10 @@ from src.modules.auth.user import UserManager
 from src.modules.subscription.vault import VaultManager
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.backup.backup_server_client import BackupServerClient
-from src.modules.backup.backup_executor import BackupClientExecutor, RestoreExecutor
+from src.modules.backup.backup_executor import BackupExecutor, RestoreExecutor
 
 
-class BackupClient:
+class __BackupClient:
     """ Represents the backup client on the vault node side. """
 
     def __init__(self):
@@ -38,6 +39,7 @@ class BackupClient:
         self.user_manager = UserManager()
         self.vault_manager = VaultManager()
         self.ipfs_client = IpfsClient()
+        self.notifier = None
 
     def get_state(self):
         """ :v2 API: """
@@ -76,7 +78,7 @@ class BackupClient:
         credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
         client = self.__validate_remote_state(credential_info['targetHost'], credential, is_force, is_restore=False)
         req = self.__save_request_doc(g.usr_did, credential_info, client.get_token(), is_restore=False)
-        BackupClientExecutor(g.usr_did, self, req, is_force=is_force).start()
+        BackupExecutor(g.usr_did, self, req, is_force=is_force).start()
 
     def restore(self, credential, is_force):
         """
@@ -271,8 +273,18 @@ class BackupClient:
             logging.info(f"[BackupClient] Found unfinished request({user_did}), retry.")
 
             if req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_BACKUP:
-                BackupClientExecutor(user_did, self, req, start_delay=30).start()
+                BackupExecutor(user_did, self, req, start_delay=30).start()
             elif req.get(BACKUP_REQUEST_ACTION) == BACKUP_REQUEST_ACTION_RESTORE:
                 RestoreExecutor(user_did, self, start_delay=30).start()
             else:
                 logging.error(f'[BackupClient] Unknown action({req.get(BACKUP_REQUEST_ACTION)}), skip.')
+
+    def set_notifier(self, notifier: BackupNotifier):
+        self.notifier = notifier
+
+    def notify_process(self, action, process):
+        if self.notifier:
+            self.notifier.on_process(action, process)
+
+
+bc = __BackupClient()

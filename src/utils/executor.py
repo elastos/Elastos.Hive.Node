@@ -6,7 +6,7 @@ from flask import g
 
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.backup.backup_client import BackupClient
+from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_server import BackupServer
 from src.modules.scripting.scripting import Scripting
 from src.modules.subscription.vault import VaultManager
@@ -119,7 +119,7 @@ def retry_backup_when_reboot_task():
     1. handle all backup request in the vault node.
     2. handle all backup request in the backup node.
     """
-    client, server = BackupClient(), BackupServer()
+    client, server = bc, BackupServer()
     client.retry_backup_request()
     server.retry_backup_request()
 

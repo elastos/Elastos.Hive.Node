@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from flask_socketio import SocketIO
 
 import yaml
 import traceback
@@ -24,6 +25,7 @@ from src import view
 
 import hive.settings
 import hive.main
+from src.ws import ws_backup
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CONFIG_FILE = os.path.join(BASE_DIR, 'config', 'logging.conf')
@@ -33,6 +35,7 @@ app = Flask('Hive Node V2')
 app.url_map.converters['folder_path'] = FileFolderPath
 app.url_map.converters['regex'] = RegexConverter
 api = HiveApi(app, prefix='/api/v2')
+socketio = SocketIO(app, cors_allowed_origins='*')
 
 
 @app.before_request
@@ -122,6 +125,7 @@ def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
 
     # init v1 APIs
     hive.main.init_app(app, mode)
+    ws_backup.init(socketio)
 
     if mode != HIVE_MODE_TEST:
         # init v2 APIs
@@ -153,3 +157,8 @@ def get_docs_app(first=False):
         init_did_backend()
         view.init_app(api)
     return app
+
+
+@socketio.on('ws')
+def handle_message(data):
+    logging.getLogger('ws').debug(f'received message: {data}')

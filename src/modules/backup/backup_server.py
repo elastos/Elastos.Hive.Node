@@ -18,7 +18,7 @@ from src.modules.auth.auth import Auth
 from src.modules.auth.user import UserManager
 from src.modules.backup.backup import BackupManager
 from src.modules.database.mongodb_client import MongodbClient
-from src.modules.backup.backup_client import BackupClient
+from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.subscription.subscription import VaultSubscription
@@ -28,7 +28,7 @@ from src.modules.subscription.vault import VaultManager
 class BackupServer:
     def __init__(self):
         self.vault = VaultSubscription()
-        self.client = BackupClient()
+        self.client = bc
         self.auth = Auth()
         self.mcli = MongodbClient()
         self.user_manager = UserManager()

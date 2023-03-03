@@ -5,7 +5,7 @@ The view of ipfs-backup module for file saving and viewing.
 """
 from flask_restful import Resource
 
-from src.modules.backup.backup_client import BackupClient
+from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_server import BackupServer
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import params, rqargs
@@ -13,7 +13,7 @@ from src.utils.http_request import params, rqargs
 
 class State(Resource):
     def __init__(self):
-        self.backup_client = BackupClient()
+        self.backup_client = bc
 
     def get(self):
         """ Get the status of the backup processing.
@@ -52,7 +52,7 @@ class State(Resource):
 
 class BackupRestore(Resource):
     def __init__(self):
-        self.backup_client = BackupClient()
+        self.backup_client = bc
 
     def post(self):
         """ Backup or restore the data of the vault service.
@@ -147,7 +147,7 @@ class BackupRestore(Resource):
 
 class ServerPromotion(Resource):
     def __init__(self):
-        self.backup_server = BackupServer()
+        self.backup_server = bc
 
     def post(self):
         """ Promote a backup service to the vault service on backup node.

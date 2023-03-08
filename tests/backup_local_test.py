@@ -4,8 +4,10 @@
 Testing file for the ipfs-backup module.
 INFO: To run this on travis which needs support mongodb dump first.
 """
+import json
 import time
 import unittest
+from socketio import Client
 
 from tests import init_test, test_log, HttpCode, RA
 from tests.utils.http_client import HttpClient
@@ -28,6 +30,13 @@ class IpfsBackupTestCase(unittest.TestCase):
         # for uploading, and copying back
         self.src_file_name = 'ipfs_src_file.node.txt'
         self.src_file_content = 'File Content: 12345678' + ('9' * 200)
+
+        self.sio = Client()
+        self.sio.connect('http://127.0.0.1:5005')
+
+        @self.sio.on('backup_state')
+        def on_state(data):
+            test_log('sio::backup_state::', json.dumps(data))
 
     def vault_subscribe(self):
         response = self.cli.put('/subscription/vault')

@@ -163,7 +163,8 @@ class ExecutorBase(threading.Thread):
             logging.info('[ExecutorBase] Success to pin all files CIDs.')
 
     def update_process(self, process, is_notify=True):
-        self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, process)
+        if process != '100':
+            self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, process)
         if is_notify:
             self.owner.notify_process(self.action, process)
 
@@ -208,6 +209,7 @@ class BackupExecutor(ExecutorBase):
                 if remote_state == BACKUP_REQUEST_STATE_PROCESS:
                     self.update_process(remote_msg)
                 elif remote_state == BACKUP_REQUEST_STATE_SUCCESS:
+                    self.update_process('100')
                     break
                 else:
                     raise BadRequestException(f'server error: {remote_msg}')

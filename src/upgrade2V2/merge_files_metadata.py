@@ -9,10 +9,11 @@ import logging
 import sys
 from pathlib import Path
 
-from src.modules.files.file_metadata import FileMetadataManager
+from src.modules.database.mongodb_client import mcli
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.files_service import FilesService
 from src.upgrade2V2.gen_files_metadata import get_vaults_root, get_files_metadata_file, generate_app_files_root
-from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, SIZE, COL_IPFS_FILES_IPFS_CID, COL_COMMON_CREATED, COL_COMMON_MODIFIED
+from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_SIZE, COL_IPFS_FILES_IPFS_CID, COL_COMMON_CREATED, COL_COMMON_MODIFIED
 
 
 def init_app_files_metadata(vaults_root, user_did, app_did, files: list):
@@ -62,14 +63,14 @@ def calculate_changed_files(cur_files, dst_files):
 def update_app_files_metadata(vaults_root, user_did, app_did, files: list):
     logging.info(f'enter update file metadata for {user_did}, {app_did}.')
 
-    cur_files = FileMetadataManager().get_all_metadatas(user_did, app_did)
+    cur_files = mcli.get_collection(user_did, app_did, CollectionFileMetadata).get_all_file_metadatas()
     if not cur_files:
         return
 
     cur_files = list(map(lambda doc: {
                 "path": doc[COL_IPFS_FILES_PATH],
                 "sha256": doc[COL_IPFS_FILES_SHA256],
-                "size": doc[SIZE],
+                "size": doc[COL_IPFS_FILES_SIZE],
                 "cid": doc[COL_IPFS_FILES_IPFS_CID],
                 "created": doc[COL_COMMON_CREATED],
                 "modified": doc[COL_COMMON_MODIFIED]

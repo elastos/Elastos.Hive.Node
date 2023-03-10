@@ -10,7 +10,7 @@ from datetime import datetime
 from src.modules.backup.backup_server_client import BackupServerClient
 from src.modules.backup.encryption import Encryption
 from src.modules.database.mongodb_client import mcli
-from src.modules.files.file_metadata import FileMetadataManager
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.files.local_file import LocalFile
@@ -174,7 +174,6 @@ class BackupExecutor(ExecutorBase):
     def __init__(self, user_did, client, req, **kwargs):
         super().__init__(user_did, client, BACKUP_REQUEST_ACTION_BACKUP, **kwargs)
         self.req = req
-        self.file_manager = FileMetadataManager()
 
     def execute(self):
         def callback_dump_databases(index, total):
@@ -189,7 +188,7 @@ class BackupExecutor(ExecutorBase):
         self.update_process('15')
         logging.info('[BackupExecutor] Dumped the database data to IPFS node and returned with array of CIDs')
 
-        filedata_size, file_cids = self.file_manager.get_backup_file_metadatas(self.user_did)
+        filedata_size, file_cids = CollectionFileMetadata.get_backup_file_metadatas(self.user_did)
         self.update_process('25')
         logging.info('[BackupExecutor] Got an array of CIDs to file data')
 

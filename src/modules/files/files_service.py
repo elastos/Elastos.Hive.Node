@@ -11,11 +11,11 @@ from flask import g
 
 from src.modules.database.mongodb_client import mcli
 from src.modules.files.file_cache import FileCache
-from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, \
-    COL_IPFS_FILES_ENCRYPT_METHOD, COL_COMMON_CREATED, COL_COMMON_MODIFIED
+from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, COL_IPFS_FILES_SIZE, COL_IPFS_FILES_IPFS_CID, \
+    COL_IPFS_FILES_IS_ENCRYPT, COL_IPFS_FILES_ENCRYPT_METHOD, COL_COMMON_CREATED, COL_COMMON_MODIFIED
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
 from src.modules.subscription.vault import VaultManager
-from src.modules.files.file_metadata import FileMetadataManager
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.files.local_file import LocalFile
 from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
@@ -33,7 +33,6 @@ class FilesService:
 
         """
         self.vault_manager = VaultManager()
-        self.file_manager = FileMetadataManager()
         self.ipfs_client = IpfsClient()
 
     def upload_file(self, path, is_public: bool, is_encrypt: bool, encrypt_method: str):
@@ -122,7 +121,7 @@ class FilesService:
             return {
                 'name': metadata[COL_IPFS_FILES_PATH],
                 'is_file': metadata[COL_IPFS_FILES_IS_FILE],
-                'size': metadata[SIZE],
+                'size': metadata[COL_IPFS_FILES_SIZE],
                 'is_encrypt': metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False),
                 'encrypt_method': metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''),
             }
@@ -145,7 +144,7 @@ class FilesService:
         return {
             'name': metadata[COL_IPFS_FILES_PATH],
             'is_file': metadata[COL_IPFS_FILES_IS_FILE],
-            'size': int(metadata[SIZE]),
+            'size': int(metadata[COL_IPFS_FILES_SIZE]),
             'is_encrypt': metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False),
             'encrypt_method': metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''),
             'created': int(metadata[COL_COMMON_CREATED]),
@@ -216,8 +215,9 @@ class FilesService:
         :return: None
         """
 
+        col = mcli.get_collection(user_did, app_did, CollectionFileMetadata)
         try:
-            metadata = self.file_manager.get_metadata(user_did, app_did, path)
+            metadata = col.get_file_metadata(path)
         except FileNotFoundException as e:
             if check_exists:
                 raise e
@@ -226,8 +226,8 @@ class FilesService:
 
         # do real remove
         LocalFile.remove_ipfs_cache_file(user_did, metadata[COL_IPFS_FILES_IPFS_CID])
-        self.file_manager.delete_metadata(user_did, app_did, path, metadata[COL_IPFS_FILES_IPFS_CID])
-        self.vault_manager.update_user_files_size(user_did, 0 - metadata[SIZE])
+        col.delete_file_metadata(path, metadata[COL_IPFS_FILES_IPFS_CID])
+        self.vault_manager.update_user_files_size(user_did, 0 - metadata[COL_IPFS_FILES_SIZE])
 
     def v1_list_folder(self, user_did, app_did, folder_path):
         """ List files by the folder path, empty string means root path.
@@ -238,7 +238,7 @@ class FilesService:
         :return: The files list.
         """
 
-        return self.file_manager.get_all_metadatas(user_did, app_did, folder_path)
+        return mcli.get_collection(user_did, app_did, CollectionFileMetadata).get_all_file_metadatas(folder_path)
 
     def v1_move_copy_file(self, user_did, app_did, src_path: str, dst_path: str, is_copy=False):
         """ Move/Copy file with the following steps:
@@ -253,24 +253,25 @@ class FilesService:
         :param is_copy: True means copy file, else move.
         :return: The destination path.
         """
+        col = mcli.get_collection(user_did, app_did, CollectionFileMetadata)
 
         # check two file paths
-        src_metadata = self.file_manager.get_metadata(user_did, app_did, src_path)
+        src_metadata = col.get_file_metadata(user_did, app_did, src_path)
         try:
-            dst_metadata = self.file_manager.get_metadata(user_did, app_did, dst_path)
+            dst_metadata = col.get_file_metadata(user_did, app_did, dst_path)
             raise AlreadyExistsException(f'The destination file {dst_path} already exists, impossible to {"copy" if is_copy else "move"}.')
         except FileNotFoundException:
             pass
 
         # do copy or move
         if is_copy:
-            self.file_manager.upsert_metadata(user_did, app_did, dst_path,
-                                              src_metadata[COL_IPFS_FILES_SHA256], src_metadata[SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID],
-                                              src_metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False), src_metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''))
+            col.upsert_file_metadata(user_did, app_did, dst_path,
+                                     src_metadata[COL_IPFS_FILES_SHA256], src_metadata[COL_IPFS_FILES_SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID],
+                                     src_metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False), src_metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''))
             mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(src_metadata[COL_IPFS_FILES_IPFS_CID])
-            self.vault_manager.update_user_files_size(user_did, src_metadata[SIZE])
+            self.vault_manager.update_user_files_size(user_did, src_metadata[COL_IPFS_FILES_SIZE])
         else:
-            self.file_manager.move_metadata(user_did, app_did, src_path, dst_path)
+            col.move_file_metadata(user_did, app_did, src_path, dst_path)
 
         return {
             'name': dst_path
@@ -287,7 +288,7 @@ class FilesService:
         """
 
         try:
-            return self.file_manager.get_metadata(user_did, app_did, path)
+            return mcli.get_collection(user_did, app_did, CollectionFileMetadata).get_file_metadata(path)
         except FileNotFoundException as e:
             if check_exists:
                 raise e
@@ -323,7 +324,7 @@ class FilesService:
 
         # add new or update exist one
         sha256, size = LocalFile.get_sha256(local_path.as_posix()), local_path.stat().st_size
-        new_metadata = self.file_manager.upsert_metadata(user_did, app_did, file_path, sha256, size, new_cid, is_encrypt, encrypt_method)
+        new_metadata = mcli.get_collection(user_did, app_did, CollectionFileMetadata).upsert_file_metadata(file_path, sha256, size, new_cid, is_encrypt, encrypt_method)
         if not old_metadata:
             mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(new_cid)
             increased_size = size
@@ -332,7 +333,7 @@ class FilesService:
             already_removed = mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(old_metadata[COL_IPFS_FILES_IPFS_CID])
             if already_removed:
                 FileCache.remove_file(user_did, old_metadata[COL_IPFS_FILES_IPFS_CID])
-            increased_size = new_metadata[SIZE] - old_metadata[SIZE]
+            increased_size = new_metadata[COL_IPFS_FILES_SIZE] - old_metadata[COL_IPFS_FILES_SIZE]
 
         if increased_size and not only_import:
             self.vault_manager.update_user_files_size(user_did, increased_size)
@@ -357,5 +358,5 @@ class FilesService:
         :return: None
         """
 
-        self.file_manager.delete_metadata(user_did, app_did, path, cid)
+        mcli.get_collection(user_did, app_did, CollectionFileMetadata).delete_file_metadata(path, cid)
         logging.info(f'[ipfs-files] Remove an existing file {path}')

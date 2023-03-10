@@ -32,7 +32,6 @@ DID = 'did'
 OWNER_ID = 'owner_id'
 CREATE_TIME = 'create_time'
 MODIFY_TIME = 'modify_time'
-SIZE = 'size'
 STATE = 'state'
 STATE_RUNNING = 'running'
 STATE_FINISH = 'finish'
@@ -69,9 +68,10 @@ URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
 
 # TODO: make these internal
 USR_DID = 'user_did'
-APP_DID = 'app_did'
+_APP_DID = 'app_did'
 CID = 'cid'
 COUNT = 'count'
+SIZE = 'size'
 
 COL_COMMON_CREATED = 'created'
 COL_COMMON_MODIFIED = 'modified'
@@ -85,7 +85,7 @@ DID_INFO_DB_NAME = "hive_manage_info"  # management database
 # for user did and app did relations
 COL_APPLICATION = 'application'  # management table
 COL_APPLICATION_USR_DID = USR_DID
-COL_APPLICATION_APP_DID = APP_DID
+COL_APPLICATION_APP_DID = _APP_DID
 COL_APPLICATION_DATABASE_NAME = 'database_name'
 COL_APPLICATION_ACCESS_COUNT = 'access_count'
 COL_APPLICATION_ACCESS_AMOUNT = 'access_amount'  # data in and out from app data API
@@ -187,7 +187,7 @@ VAULT_SERVICE_LATEST_ACCESS_TIME = "latest_access_time"  # for access checking o
 # collection_metadata
 COL_COLLECTION_METADATA = '__collection_metadata__'
 COL_COLLECTION_METADATA_USR_DID = USR_DID
-COL_COLLECTION_METADATA_APP_DID = APP_DID
+COL_COLLECTION_METADATA_APP_DID = _APP_DID
 COL_COLLECTION_METADATA_NAME = 'name'
 COL_COLLECTION_METADATA_IS_ENCRYPT = 'is_encrypt'
 COL_COLLECTION_METADATA_ENCRYPT_METHOD = 'encrypt_method'
@@ -195,8 +195,11 @@ COL_COLLECTION_METADATA_ENCRYPT_METHOD = 'encrypt_method'
 
 # ipfs_files
 COL_IPFS_FILES = 'ipfs_files'
+COL_IPFS_FILES_USR_DID = USR_DID
+COL_IPFS_FILES_APP_DID = _APP_DID
 COL_IPFS_FILES_PATH = 'path'
 COL_IPFS_FILES_SHA256 = 'sha256'
+COL_IPFS_FILES_SIZE = SIZE
 COL_IPFS_FILES_IS_FILE = 'is_file'
 COL_IPFS_FILES_IPFS_CID = 'ipfs_cid'
 COL_IPFS_FILES_IS_ENCRYPT = 'is_encrypt'
@@ -212,7 +215,7 @@ COL_IPFS_CID_REF_COUNT = COUNT
 # anonymous_files
 COL_ANONYMOUS_FILES = '__anonymous_files__'  # user table, internal
 COL_ANONYMOUS_FILES_USR_DID = USR_DID
-COL_ANONYMOUS_FILES_APP_DID = APP_DID
+COL_ANONYMOUS_FILES_APP_DID = _APP_DID
 COL_ANONYMOUS_FILES_NAME = 'name'
 COL_ANONYMOUS_FILES_CID = 'cid'
 # end of anonymous_files

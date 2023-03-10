@@ -2,7 +2,7 @@ import shutil
 from datetime import datetime
 
 from src.modules.files.file_cache import FileCache
-from src.modules.files.file_metadata import FileMetadataManager
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.files.ipfs_client import IpfsClient
 from src.utils.customize_dict import Dotdict
@@ -220,7 +220,7 @@ class VaultManager:
             return
 
         try:
-            metadatas = FileMetadataManager().get_all_metadatas(user_did, app_did)
+            metadatas = mcli.get_col(user_did, app_did, CollectionFileMetadata).get_all_file_metadatas()
             # 1. Clean cache files.
             FileCache.delete_files(user_did, metadatas)
             # 2. Unpin cids.

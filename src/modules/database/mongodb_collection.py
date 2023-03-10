@@ -34,15 +34,9 @@ class MongodbCollection:
 
     """
 
-    def __init__(self, col, is_management=True):
-        """
-        :param is_management: the collection is global one (not under user app database)
-        """
+    def __init__(self, col):
         # Collection from pymongo
         self.col = col
-
-        # management means internal collection which do not support extra features
-        self.is_management = is_management
 
     def insert_one(self, doc, contains_extra=True, **kwargs):
         if contains_extra:
@@ -185,7 +179,7 @@ class MongodbCollection:
             { "group_id": ObjectId("5f497bb83bd36ab235d82e6a") }
         """
         # The management collection do not do $oid checking.
-        if self.is_management:
+        if self.is_management():
             return value
 
         if type(value) in (list, tuple):

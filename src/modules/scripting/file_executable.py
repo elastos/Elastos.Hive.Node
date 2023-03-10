@@ -1,7 +1,7 @@
 import jwt
 
 from src import hive_setting
-from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
+from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_COMMON_MODIFIED
 from src.modules.scripting.executable import Executable
 from src.modules.scripting.scripting import Script
 
@@ -75,7 +75,7 @@ class FilePropertiesExecutable(FileExecutable):
             "type": "file" if doc[COL_IPFS_FILES_IS_FILE] else "folder",
             "name": path,
             "size": doc[SIZE],
-            "last_modify": int(doc['modified'])
+            "last_modify": int(doc[COL_COMMON_MODIFIED])
         })
 
 

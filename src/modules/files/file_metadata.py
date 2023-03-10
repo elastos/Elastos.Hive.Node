@@ -6,8 +6,8 @@ from src.utils.consts import USR_DID, APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FIL
 from src.utils.http_exception import FileNotFoundException
 from src.utils.customize_dict import Dotdict
 from src.modules.auth.user import UserManager
-from src.modules.files.ipfs_cid_ref import IpfsCidRef
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
+from src.modules.database.mongodb_client import MongodbClient, mcli
 
 
 class FileMetadata(Dotdict):
@@ -76,7 +76,7 @@ class FileMetadataManager:
         filter_ = {USR_DID: user_did, APP_DID: app_did, COL_IPFS_FILES_PATH: rel_path}
         result = self.__get_col(user_did, app_did).delete_one(filter_)
         if result['deleted_count'] > 0 and cid:
-            removed = IpfsCidRef(cid).decrease()
+            removed = mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(cid)
             if removed:
                 FileCache.remove_file(user_did, cid)
 

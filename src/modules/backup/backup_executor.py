@@ -9,8 +9,9 @@ from datetime import datetime
 
 from src.modules.backup.backup_server_client import BackupServerClient
 from src.modules.backup.encryption import Encryption
+from src.modules.database.mongodb_client import mcli
 from src.modules.files.file_metadata import FileMetadataManager
-from src.modules.files.ipfs_cid_ref import IpfsCidRef
+from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.files.local_file import LocalFile
 from src.modules.subscription.vault import VaultManager
@@ -154,11 +155,11 @@ class ExecutorBase(threading.Thread):
                 if not only_files_ref:
                     execute_pin_unpin(f['cid'])
 
-                cid_ref = IpfsCidRef(f['cid'])
+                cid_ref = mcli.get_col(CollectionIpfsCidRef)
                 if not is_unpin:
-                    cid_ref.decrease(f['count'])
+                    cid_ref.decrease_cid_ref(f['cid'], f['count'])
                 else:
-                    cid_ref.increase(f['count'])
+                    cid_ref.increase_cid_ref(f['cid'], f['count'])
 
             logging.info('[ExecutorBase] Success to pin all files CIDs.')
 

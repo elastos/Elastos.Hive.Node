@@ -18,7 +18,7 @@ from src.modules.subscription.vault import VaultManager
 from src.modules.files.file_metadata import FileMetadataManager
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.files.local_file import LocalFile
-from src.modules.files.ipfs_cid_ref import IpfsCidRef
+from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.files.collection_anonymous_files import CollectionAnonymousFiles
 
 
@@ -267,7 +267,7 @@ class FilesService:
             self.file_manager.upsert_metadata(user_did, app_did, dst_path,
                                               src_metadata[COL_IPFS_FILES_SHA256], src_metadata[SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID],
                                               src_metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False), src_metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''))
-            IpfsCidRef(src_metadata[COL_IPFS_FILES_IPFS_CID]).increase()
+            mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(src_metadata[COL_IPFS_FILES_IPFS_CID])
             self.vault_manager.update_user_files_size(user_did, src_metadata[SIZE])
         else:
             self.file_manager.move_metadata(user_did, app_did, src_path, dst_path)
@@ -325,11 +325,11 @@ class FilesService:
         sha256, size = LocalFile.get_sha256(local_path.as_posix()), local_path.stat().st_size
         new_metadata = self.file_manager.upsert_metadata(user_did, app_did, file_path, sha256, size, new_cid, is_encrypt, encrypt_method)
         if not old_metadata:
-            IpfsCidRef(new_cid).increase()
+            mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(new_cid)
             increased_size = size
         elif old_metadata[COL_IPFS_FILES_IPFS_CID] != new_cid:
-            IpfsCidRef(new_cid).increase()
-            already_removed = IpfsCidRef(old_metadata[COL_IPFS_FILES_IPFS_CID]).decrease()
+            mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(new_cid)
+            already_removed = mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(old_metadata[COL_IPFS_FILES_IPFS_CID])
             if already_removed:
                 FileCache.remove_file(user_did, old_metadata[COL_IPFS_FILES_IPFS_CID])
             increased_size = new_metadata[SIZE] - old_metadata[SIZE]

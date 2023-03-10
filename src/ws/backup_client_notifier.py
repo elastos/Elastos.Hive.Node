@@ -8,5 +8,5 @@ class BackupClientNotifier(BackupNotifier):
         BackupNotifier.__init__(self)
         self.socketio = socketio
 
-    def on_process(self, action: str, process: str):
-        self.socketio.emit('backup_state', {'action': action, 'process': process})
+    def on_progress(self, action: str, progress: str):
+        self.socketio.emit('backup_state', {'action': action, 'process': progress})

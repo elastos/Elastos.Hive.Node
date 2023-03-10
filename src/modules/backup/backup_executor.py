@@ -21,6 +21,8 @@ from src.utils.http_exception import HiveException, BadRequestException
 
 
 class ExecutorBase(threading.Thread):
+    PROGRESS_DONE = '100'
+
     def __init__(self, user_did, owner, action, start_delay=0, is_force=False):
         super().__init__()
         self.user_did = user_did
@@ -36,7 +38,7 @@ class ExecutorBase(threading.Thread):
                 time.sleep(self.start_delay)
             logging.info(f'[ExecutorBase] Enter execute the executor for {self.action}.')
             self.execute()
-            self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_SUCCESS, '')
+            self.update_progress(ExecutorBase.PROGRESS_DONE)
             logging.info(f'[ExecutorBase] Leave execute the executor for {self.action} without error.')
         except HiveException as e:
             msg = f'[ExecutorBase] Failed to {self.action}: {e.msg}'
@@ -163,11 +165,14 @@ class ExecutorBase(threading.Thread):
 
             logging.info('[ExecutorBase] Success to pin all files CIDs.')
 
-    def update_process(self, process, is_notify=True):
-        if process != '100':
-            self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, process)
+    def update_progress(self, progress, is_notify=True):
+        if progress != ExecutorBase.PROGRESS_DONE:
+            self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, progress)
+        else:
+            self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_SUCCESS, '')
+
         if is_notify:
-            self.owner.notify_process(self.action, process)
+            self.owner.notify_progress(self.action, progress)
 
 
 class BackupExecutor(ExecutorBase):
@@ -178,26 +183,26 @@ class BackupExecutor(ExecutorBase):
     def execute(self):
         def callback_dump_databases(index, total):
             percent = str(int(15 * (index - 1) / total))
-            self.update_process(percent)
+            self.update_progress(percent)
 
         encryption = Encryption()
 
-        self.update_process('0')
+        self.update_progress('0')
 
         database_cids = self.owner.dump_database_data_to_backup_cids(self.user_did, encryption, callback_dump_databases)
-        self.update_process('15')
+        self.update_progress('15')
         logging.info('[BackupExecutor] Dumped the database data to IPFS node and returned with array of CIDs')
 
         filedata_size, file_cids = CollectionFileMetadata.get_backup_file_metadatas(self.user_did)
-        self.update_process('25')
+        self.update_progress('25')
         logging.info('[BackupExecutor] Got an array of CIDs to file data')
 
         cid, sha256, size, request_metadata = self.generate_root_backup_cid(database_cids, file_cids, filedata_size, encryption)
-        self.update_process('35')
+        self.update_progress('35')
         logging.info(f'[BackupExecutor] Generated the root backup CID to vault data, request_metadata, {request_metadata}, cid, {cid}')
 
         self.owner.send_root_backup_cid_to_backup_node(self.user_did, cid, sha256, size, self.is_force)
-        self.update_process('50')
+        self.update_progress('50')
         logging.info('[BackupExecutor] Send the root backup CID to the backup node.')
 
         # wait until the server ends
@@ -207,9 +212,8 @@ class BackupExecutor(ExecutorBase):
                 remote_action, remote_state, remote_msg, _ = client.get_state()
 
                 if remote_state == BACKUP_REQUEST_STATE_PROCESS:
-                    self.update_process(remote_msg)
+                    self.update_progress(remote_msg)
                 elif remote_state == BACKUP_REQUEST_STATE_SUCCESS:
-                    self.update_process('100')
                     break
                 else:
                     raise BadRequestException(f'server error: {remote_msg}')
@@ -228,20 +232,20 @@ class RestoreExecutor(ExecutorBase):
         super().__init__(user_did, client, BACKUP_REQUEST_ACTION_RESTORE, **kwargs)
 
     def execute(self):
-        self.update_process('0')
+        self.update_progress('0')
 
         # only get the content
         request_metadata = self.owner.get_request_metadata_from_backup_node(self.user_did)
-        self.update_process('40')
+        self.update_progress('40')
         logging.info('[RestoreExecutor] Success to get request metadata from the backup node.')
 
         # direct download database packages and restore to mongodb
         self.owner.restore_database_by_dump_files(request_metadata)
-        self.update_process('60')
+        self.update_progress('60')
         logging.info("[RestoreExecutor] Success to restore the dump files of the user's database.")
 
         self.__class__.handle_cids_in_local_ipfs(request_metadata, contain_databases=False)
-        self.update_process('80')
+        self.update_progress('80')
         logging.info('[RestoreExecutor] Success to pin files CIDs.')
 
         self.__class__.update_vault_usage_by_metadata(self.user_did, request_metadata)
@@ -254,17 +258,17 @@ class BackupServerExecutor(ExecutorBase):
         self.req = req
 
     def execute(self):
-        self.update_process('50', is_notify=False)
+        self.update_progress('50', is_notify=False)
 
         # request_metadata already pinned to ipfs node
 
         request_metadata = self.owner.get_server_request_metadata(self.user_did, self.req)
         logging.info(f'[BackupServerExecutor] request_metadata: {request_metadata}')
-        self.update_process('60', is_notify=False)
+        self.update_progress('60', is_notify=False)
         logging.info('[BackupServerExecutor] Success to get request metadata.')
 
         self.__class__.handle_cids_in_local_ipfs(request_metadata)
-        self.update_process('80', is_notify=False)
+        self.update_progress('80', is_notify=False)
         logging.info('[BackupServerExecutor] Success to get pin all CIDs.')
 
         self.owner.update_storage_usage(self.user_did, request_metadata['backup_size'])

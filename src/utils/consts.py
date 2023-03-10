@@ -28,8 +28,7 @@ URL_SERVER_INTERNAL_STATE = '/vault-backup-service/state'
 BACKUP_FILE_SUFFIX = '.backup'
 
 DID = 'did'
-USR_DID = 'user_did'
-APP_DID = 'app_did'
+
 OWNER_ID = 'owner_id'
 CREATE_TIME = 'create_time'
 MODIFY_TIME = 'modify_time'
@@ -65,6 +64,16 @@ URL_RESTORE_FINISH = '/api/v2/internal_restore/finished_confirmation'
 URL_IPFS_BACKUP_PIN_CIDS = '/api/v2/ipfs-backup-internal/pin_cids'
 URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'
 URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
+
+###############################################################################
+# common field for collections
+###############################################################################
+
+USR_DID = 'user_did'  # TODO: make this internal
+APP_DID = 'app_did'  # TODO: make this internal
+
+COL_COMMON_CREATED = 'created'
+COL_COMMON_MODIFIED = 'modified'
 
 ###############################################################################
 # management tables definition
@@ -129,10 +138,6 @@ BACKUP_REQUEST_TARGET_DID = 'target_did'
 BACKUP_REQUEST_TARGET_TOKEN = 'target_token'
 # end of backup service
 
-# ipfs_cid_ref
-COL_IPFS_CID_REF = 'ipfs_cid_ref'
-# end of ipfs_cid_ref
-
 # for order
 COL_ORDERS = 'vault_order'  # management table
 COL_ORDERS_SUBSCRIPTION = 'subscription'
@@ -196,6 +201,10 @@ COL_IPFS_FILES_IPFS_CID = 'ipfs_cid'
 COL_IPFS_FILES_IS_ENCRYPT = 'is_encrypt'
 COL_IPFS_FILES_ENCRYPT_METHOD = 'encrypt_method'
 # end of ipfs_files
+
+# ipfs_cid_ref
+COL_IPFS_CID_REF = 'ipfs_cid_ref'
+# end of ipfs_cid_ref
 
 # anonymous_files
 COL_ANONYMOUS_FILES = '__anonymous_files__'  # user table, internal

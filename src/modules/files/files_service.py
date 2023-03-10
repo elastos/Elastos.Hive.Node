@@ -12,7 +12,7 @@ from flask import g
 from src.modules.database.mongodb_client import mcli
 from src.modules.files.file_cache import FileCache
 from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, \
-    COL_IPFS_FILES_ENCRYPT_METHOD
+    COL_IPFS_FILES_ENCRYPT_METHOD, COL_COMMON_CREATED, COL_COMMON_MODIFIED
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
 from src.modules.subscription.vault import VaultManager
 from src.modules.files.file_metadata import FileMetadataManager
@@ -51,7 +51,7 @@ class FilesService:
         cid = self.v1_upload_file(g.usr_did, g.app_did, path, is_encrypt, encrypt_method)
 
         if is_public:
-            mcli.get_col(CollectionAnonymousFiles).add_anonymous_file(path, cid)
+            mcli.get_col(CollectionAnonymousFiles).save_anonymous_file(path, cid)
         else:
             mcli.get_col(CollectionAnonymousFiles).delete_anonymous_file(path)
 
@@ -148,8 +148,8 @@ class FilesService:
             'size': int(metadata[SIZE]),
             'is_encrypt': metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False),
             'encrypt_method': metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''),
-            'created': int(metadata['created']),
-            'updated': int(metadata['modified']),
+            'created': int(metadata[COL_COMMON_CREATED]),
+            'updated': int(metadata[COL_COMMON_MODIFIED]),
         }
 
     def get_hash(self, path):

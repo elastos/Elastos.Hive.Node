@@ -12,7 +12,7 @@ from pathlib import Path
 from src.modules.files.file_metadata import FileMetadataManager
 from src.modules.files.files_service import FilesService
 from src.upgrade2V2.gen_files_metadata import get_vaults_root, get_files_metadata_file, generate_app_files_root
-from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, SIZE, COL_IPFS_FILES_IPFS_CID
+from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, SIZE, COL_IPFS_FILES_IPFS_CID, COL_COMMON_CREATED, COL_COMMON_MODIFIED
 
 
 def init_app_files_metadata(vaults_root, user_did, app_did, files: list):
@@ -24,7 +24,9 @@ def init_app_files_metadata(vaults_root, user_did, app_did, files: list):
     files_service = FilesService()
     for file in files:
         files_service.tov2_upload_file_from_local(user_did, app_did, file['path'], files_root / file['path'],
-                                                  only_import=True, created=file['created'], modified=file['modified'])
+                                                  only_import=True,
+                                                  created=file[COL_COMMON_CREATED],
+                                                  modified=file[COL_COMMON_MODIFIED])
     logging.info(f'leave init file metadata for {user_did}, {app_did}.')
 
 
@@ -36,7 +38,7 @@ def get_file_by_path(files: list, path):
 def is_need_insert_or_update(cur_file, dst_file):
     if not cur_file:
         return True
-    if dst_file['modified'] < cur_file['modified']:
+    if dst_file[COL_COMMON_MODIFIED] < cur_file[COL_COMMON_MODIFIED]:
         return False
     if cur_file['sha256'] == dst_file['sha256'] and cur_file['size'] == dst_file['size']:
         return False
@@ -69,15 +71,17 @@ def update_app_files_metadata(vaults_root, user_did, app_did, files: list):
                 "sha256": doc[COL_IPFS_FILES_SHA256],
                 "size": doc[SIZE],
                 "cid": doc[COL_IPFS_FILES_IPFS_CID],
-                "created": doc['created'],
-                "modified": doc['modified']
+                "created": doc[COL_COMMON_CREATED],
+                "modified": doc[COL_COMMON_MODIFIED]
             }, cur_files))
 
     files_service, files_root = FilesService(), generate_app_files_root(vaults_root, user_did, app_did)
     update_files, delete_files = calculate_changed_files(cur_files, files)
     for file in update_files:
         files_service.tov2_upload_file_from_local(user_did, app_did, file['path'], files_root / file['path'],
-                                                  only_import=True, created=file['created'], modified=file['modified'])
+                                                  only_import=True,
+                                                  created=file[COL_COMMON_CREATED],
+                                                  modified=file[COL_COMMON_MODIFIED])
     for file in delete_files:
         files_service.tov2_delete_file_metadata(user_did, app_did, file['path'], file['cid'])
 

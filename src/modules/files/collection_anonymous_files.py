@@ -9,21 +9,21 @@ class CollectionAnonymousFiles(MongodbCollection):
     def __init__(self, col):
         MongodbCollection.__init__(self, col)
 
-    def add_anonymous_file(self, name, cid):
+    def save_anonymous_file(self, path, cid):
         from src.modules.scripting.scripting import Scripting
         Scripting().set_anonymous_file_script()
 
         filter_ = {
             COL_ANONYMOUS_FILES_USR_DID: self.user_did,
             COL_ANONYMOUS_FILES_APP_DID: self.app_did,
-            COL_ANONYMOUS_FILES_NAME: name}
+            COL_ANONYMOUS_FILES_NAME: path}
         update = {'$setOnInsert': {
             COL_ANONYMOUS_FILES_CID: cid}}
         self.update_one(filter_, update, contains_extra=True, upsert=True)
 
-    def delete_anonymous_file(self, name):
+    def delete_anonymous_file(self, path):
         filter_ = {
             COL_ANONYMOUS_FILES_USR_DID: self.user_did,
             COL_ANONYMOUS_FILES_APP_DID: self.app_did,
-            COL_ANONYMOUS_FILES_NAME: name}
+            COL_ANONYMOUS_FILES_NAME: path}
         self.delete_one(filter_)

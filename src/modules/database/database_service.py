@@ -10,7 +10,7 @@ from flask import g
 
 from src.utils.http_exception import InvalidParameterException, CollectionNotFoundException
 from src.utils.http_request import RequestData
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.database.mongodb_client import mcli
 from src.modules.subscription.vault import VaultManager
 from src.modules.database.collection_metadata import CollectionMetadata
 
@@ -19,9 +19,7 @@ class DatabaseService:
     """ Database service is for data saving and retrieving which is based on mongodb. """
 
     def __init__(self):
-        self.mcli = MongodbClient()
         self.vault_manager = VaultManager()
-        self.collection_metadata = CollectionMetadata()
 
     def create_collection(self, collection_name, is_encrypt, encrypt_method):
         """ Create collection by name
@@ -32,13 +30,13 @@ class DatabaseService:
         :return: The collection name.
         """
 
-        if self.mcli.is_internal_user_collection(collection_name):
+        if mcli.is_internal_user_collection(collection_name):
             raise InvalidParameterException(f'No permission to create the collection {collection_name}')
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission().check_storage_full()
 
-        self.mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
-        self.collection_metadata.add(g.usr_did, g.app_did, collection_name, is_encrypt, encrypt_method)
+        mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
+        mcli.get_col(CollectionMetadata).add_col(collection_name, is_encrypt, encrypt_method)
         return {'name': collection_name}
 
     def delete_collection(self, collection_name):
@@ -47,12 +45,12 @@ class DatabaseService:
         :param collection_name: The collection name.
         :return: None
         """
-        if self.mcli.is_internal_user_collection(collection_name):
+        if mcli.is_internal_user_collection(collection_name):
             raise InvalidParameterException(f'No permission to delete the collection {collection_name}')
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
-        self.collection_metadata.delete(g.usr_did, g.app_did, collection_name)
-        self.mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
+        mcli.get_col(CollectionMetadata).delete_col(collection_name)
+        mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
 
     def get_collections(self):
         """ Get all collection belonged to the user.
@@ -62,8 +60,8 @@ class DatabaseService:
 
         self.vault_manager.get_vault(g.usr_did)
 
-        self.collection_metadata.sync_all(g.usr_did, g.app_did)
-        docs = self.collection_metadata.get_all(g.usr_did, g.app_did)
+        mcli.get_col(CollectionMetadata).sync_all_cols()
+        docs = mcli.get_col(CollectionMetadata).get_all_cols()
         if not docs:
             raise CollectionNotFoundException()
 
@@ -174,15 +172,15 @@ class DatabaseService:
         return options.pop('timestamp', True)
 
     def __get_collection(self, collection_name):
-        if self.mcli.is_internal_user_collection(collection_name):
+        if mcli.is_internal_user_collection(collection_name):
             raise InvalidParameterException(f'No permission to operate the collection {collection_name}')
 
-        return self.mcli.get_user_collection(g.usr_did, g.app_did, collection_name)
+        return mcli.get_user_collection(g.usr_did, g.app_did, collection_name)
 
     def __do_internal_find(self, collection_name, filter_, options):
         col = self.__get_collection(collection_name)
         docs = col.find_many(filter_, **options)
-        metadata = self.collection_metadata.get(g.usr_did, g.app_did, collection_name)
+        metadata = mcli.get_col(CollectionMetadata).get_col(collection_name)
         return {
             'items': [c for c in json.loads(json_util.dumps(docs))],
             'is_encrypt': metadata['is_encrypt'] if metadata else False,

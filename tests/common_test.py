@@ -2,7 +2,7 @@ import unittest
 
 from bson import ObjectId
 
-from src.modules.database.mongodb_client import MongodbCollection
+from src.modules.database.mongodb_collection import MongodbCollection
 from src.utils.http_exception import InvalidParameterException
 from src.utils.http_request import RequestData
 

@@ -6,9 +6,9 @@ class BackupNotifier:
     def __init__(self):
         pass
 
-    def on_process(self, action: str, process: str):
+    def on_progress(self, action: str, progress: str):
         """ notify when backup and restore.
         :param action: backup or restore.
-        :param process: str, number by percentage point; 100-based.
+        :param progress: str, number by percentage point; 100-based.
         """
-        logging.getLogger('BackupNotifier').debug(f'on_process with {action}, {process}')
+        logging.getLogger('BackupNotifier').debug(f'on_progress with {action}, {progress}')

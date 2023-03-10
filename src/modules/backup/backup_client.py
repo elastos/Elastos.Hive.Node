@@ -282,9 +282,9 @@ class __BackupClient:
     def set_notifier(self, notifier: BackupNotifier):
         self.notifier = notifier
 
-    def notify_process(self, action, process):
+    def notify_progress(self, action, progress):
         if self.notifier:
-            self.notifier.on_process(action, process)
+            self.notifier.on_progress(action, progress)
 
 
 bc = __BackupClient()

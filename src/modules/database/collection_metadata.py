@@ -11,7 +11,7 @@ class CollectionMetadata(MongodbCollection):
 
     """
     def __init__(self, col):
-        MongodbCollection.__init__(self, col, is_management=False)
+        MongodbCollection.__init__(self, col)
 
     def sync_all_cols(self):
         names = mcli.get_user_collection_names(self.user_did, self.app_did)

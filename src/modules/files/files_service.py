@@ -9,6 +9,7 @@ from pathlib import Path
 
 from flask import g
 
+from src.modules.database.mongodb_client import mcli
 from src.modules.files.file_cache import FileCache
 from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, \
     COL_IPFS_FILES_ENCRYPT_METHOD
@@ -18,7 +19,7 @@ from src.modules.files.file_metadata import FileMetadataManager
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.files.local_file import LocalFile
 from src.modules.files.ipfs_cid_ref import IpfsCidRef
-from src.modules.files.anonymous_files import AnonymousFiles
+from src.modules.files.collection_anonymous_files import CollectionAnonymousFiles
 
 
 class FilesService:
@@ -34,7 +35,6 @@ class FilesService:
         self.vault_manager = VaultManager()
         self.file_manager = FileMetadataManager()
         self.ipfs_client = IpfsClient()
-        self.anonymous_files = AnonymousFiles()
 
     def upload_file(self, path, is_public: bool, is_encrypt: bool, encrypt_method: str):
         """ Upload file to the backend IPFS node and keeps metadata on the node.
@@ -51,9 +51,9 @@ class FilesService:
         cid = self.v1_upload_file(g.usr_did, g.app_did, path, is_encrypt, encrypt_method)
 
         if is_public:
-            self.anonymous_files.add(g.usr_did, g.app_did, path, cid)
+            mcli.get_col(CollectionAnonymousFiles).add_anonymous_file(path, cid)
         else:
-            self.anonymous_files.delete(g.usr_did, g.app_did, path)
+            mcli.get_col(CollectionAnonymousFiles).delete_anonymous_file(path)
 
         return {
             'name': path,
@@ -82,7 +82,7 @@ class FilesService:
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
-        self.anonymous_files.delete(g.usr_did, g.app_did, path)
+        mcli.get_col(CollectionAnonymousFiles).delete_anonymous_file(path)
         self.v1_delete_file(g.usr_did, g.app_did, path, check_exists=True)
 
     def move_file(self, src_path, dst_path):
@@ -95,7 +95,7 @@ class FilesService:
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
-        self.anonymous_files.delete(g.usr_did, g.app_did, src_path)
+        mcli.get_col(CollectionAnonymousFiles).delete_anonymous_file(src_path)
         return self.v1_move_copy_file(g.usr_did, g.app_did, src_path, dst_path)
 
     def copy_file(self, src_path, dst_path):

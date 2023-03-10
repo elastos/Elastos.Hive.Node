@@ -256,22 +256,22 @@ class FilesService:
         col = mcli.get_collection(user_did, app_did, CollectionFileMetadata)
 
         # check two file paths
-        src_metadata = col.get_file_metadata(user_did, app_did, src_path)
+        src_metadata = col.get_file_metadata(src_path)
         try:
-            dst_metadata = col.get_file_metadata(user_did, app_did, dst_path)
+            dst_metadata = col.get_file_metadata(dst_path)
             raise AlreadyExistsException(f'The destination file {dst_path} already exists, impossible to {"copy" if is_copy else "move"}.')
         except FileNotFoundException:
             pass
 
         # do copy or move
         if is_copy:
-            col.upsert_file_metadata(user_did, app_did, dst_path,
+            col.upsert_file_metadata(dst_path,
                                      src_metadata[COL_IPFS_FILES_SHA256], src_metadata[COL_IPFS_FILES_SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID],
                                      src_metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False), src_metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''))
             mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(src_metadata[COL_IPFS_FILES_IPFS_CID])
             self.vault_manager.update_user_files_size(user_did, src_metadata[COL_IPFS_FILES_SIZE])
         else:
-            col.move_file_metadata(user_did, app_did, src_path, dst_path)
+            col.move_file_metadata(src_path, dst_path)
 
         return {
             'name': dst_path

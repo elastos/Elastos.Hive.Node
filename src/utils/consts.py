@@ -39,8 +39,6 @@ STATE_FINISH = 'finish'
 STATE_FAILED = 'failed'
 ORIGINAL_SIZE = 'original_size'
 IS_UPGRADED = 'is_upgraded'
-CID = 'cid'
-COUNT = 'count'
 VERSION = 'version'
 
 # For backup subscription.
@@ -69,8 +67,11 @@ URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
 # common field for collections
 ###############################################################################
 
-USR_DID = 'user_did'  # TODO: make this internal
-APP_DID = 'app_did'  # TODO: make this internal
+# TODO: make these internal
+USR_DID = 'user_did'
+APP_DID = 'app_did'
+CID = 'cid'
+COUNT = 'count'
 
 COL_COMMON_CREATED = 'created'
 COL_COMMON_MODIFIED = 'modified'
@@ -204,6 +205,8 @@ COL_IPFS_FILES_ENCRYPT_METHOD = 'encrypt_method'
 
 # ipfs_cid_ref
 COL_IPFS_CID_REF = 'ipfs_cid_ref'
+COL_IPFS_CID_REF_CID = CID
+COL_IPFS_CID_REF_COUNT = COUNT
 # end of ipfs_cid_ref
 
 # anonymous_files

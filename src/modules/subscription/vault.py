@@ -3,7 +3,7 @@ from datetime import datetime
 
 from src.modules.files.file_cache import FileCache
 from src.modules.files.file_metadata import FileMetadataManager
-from src.modules.files.ipfs_cid_ref import IpfsCidRef
+from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.files.ipfs_client import IpfsClient
 from src.utils.customize_dict import Dotdict
 from src.utils.payment_config import PaymentConfig
@@ -14,7 +14,7 @@ from src.utils.consts import COL_IPFS_FILES, IS_UPGRADED, VAULT_SERVICE_MAX_STOR
     VAULT_SERVICE_STATE_REMOVED, COL_IPFS_FILES_IPFS_CID
 from src import hive_setting
 from src.modules.auth.user import UserManager
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.database.mongodb_client import MongodbClient, mcli
 
 
 class Vault(Dotdict):
@@ -226,7 +226,7 @@ class VaultManager:
             # 2. Unpin cids.
             ipfs_client = IpfsClient()
             for m in metadatas:
-                if IpfsCidRef(m[COL_IPFS_FILES_IPFS_CID]).decrease():
+                if mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(m[COL_IPFS_FILES_IPFS_CID]):
                     ipfs_client.cid_unpin(m[COL_IPFS_FILES_IPFS_CID])
             # 3. Delete app database
             self.mcli.drop_user_database(user_did, app_did)

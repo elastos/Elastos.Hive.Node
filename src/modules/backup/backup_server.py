@@ -246,3 +246,7 @@ class BackupServer:
             user_did = req[USR_DID]
             logging.info(f"[IpfsBackupServer] Found uncompleted request({user_did}), retry.")
             BackupServerExecutor(user_did, self, req, start_delay=30).start()
+
+    def notify_progress(self, action, progress):
+        """ Keep same method with client. """
+        pass

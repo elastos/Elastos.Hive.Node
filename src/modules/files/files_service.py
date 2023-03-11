@@ -215,7 +215,7 @@ class FilesService:
         :return: None
         """
 
-        col = mcli.get_collection(user_did, app_did, CollectionFileMetadata)
+        col = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did)
         try:
             metadata = col.get_file_metadata(path)
         except FileNotFoundException as e:
@@ -238,7 +238,7 @@ class FilesService:
         :return: The files list.
         """
 
-        return mcli.get_collection(user_did, app_did, CollectionFileMetadata).get_all_file_metadatas(folder_path)
+        return mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_all_file_metadatas(folder_path)
 
     def v1_move_copy_file(self, user_did, app_did, src_path: str, dst_path: str, is_copy=False):
         """ Move/Copy file with the following steps:
@@ -253,7 +253,7 @@ class FilesService:
         :param is_copy: True means copy file, else move.
         :return: The destination path.
         """
-        col = mcli.get_collection(user_did, app_did, CollectionFileMetadata)
+        col = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did)
 
         # check two file paths
         src_metadata = col.get_file_metadata(src_path)
@@ -288,7 +288,7 @@ class FilesService:
         """
 
         try:
-            return mcli.get_collection(user_did, app_did, CollectionFileMetadata).get_file_metadata(path)
+            return mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_file_metadata(path)
         except FileNotFoundException as e:
             if check_exists:
                 raise e
@@ -324,7 +324,7 @@ class FilesService:
 
         # add new or update exist one
         sha256, size = LocalFile.get_sha256(local_path.as_posix()), local_path.stat().st_size
-        new_metadata = mcli.get_collection(user_did, app_did, CollectionFileMetadata).upsert_file_metadata(file_path, sha256, size, new_cid, is_encrypt, encrypt_method)
+        new_metadata = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).upsert_file_metadata(file_path, sha256, size, new_cid, is_encrypt, encrypt_method)
         if not old_metadata:
             mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(new_cid)
             increased_size = size
@@ -358,5 +358,5 @@ class FilesService:
         :return: None
         """
 
-        mcli.get_collection(user_did, app_did, CollectionFileMetadata).delete_file_metadata(path, cid)
+        mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).delete_file_metadata(path, cid)
         logging.info(f'[ipfs-files] Remove an existing file {path}')

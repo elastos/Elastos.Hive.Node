@@ -60,8 +60,9 @@ class DatabaseService:
 
         self.vault_manager.get_vault(g.usr_did)
 
-        mcli.get_col(CollectionMetadata).sync_all_cols()
-        docs = mcli.get_col(CollectionMetadata).get_all_cols()
+        col = mcli.get_col(CollectionMetadata)
+        col.sync_all_cols()
+        docs = col.get_all_cols()
         if not docs:
             raise CollectionNotFoundException()
 

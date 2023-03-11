@@ -107,10 +107,13 @@ class MongodbClient:
 
         return MongodbCollection(database[col_name], is_management=False)
 
-    def get_collection(self, user_did: str, app_did: str, col_class: type(_T) = MongodbCollection) -> _T:
+    def get_col(self, col_class: type(_T) = MongodbCollection, user_did: str = None, app_did: str = None, use_g=True) -> _T:
         """ Use for get collection with the specific class. """
         col_name, is_management = col_class.get_name(), col_class.is_management()
         assert col_name
+
+        if use_g:
+            user_did, app_did = user_did if user_did else g.usr_did, app_did if app_did else g.app_did
 
         if is_management:
             database = self.__get_database(DID_INFO_DB_NAME)
@@ -125,12 +128,8 @@ class MongodbClient:
                     raise CollectionNotFoundException(f'Can not find collection {col_name}')
 
         col = col_class(database[col_name])
-        col.user_did = user_did
-        col.app_did = app_did
+        col.user_did, col.app_did = user_did, app_did
         return col
-
-    def get_col(self, col_class: type(_T) = MongodbCollection) -> _T:
-        return self.get_collection(g.usr_did, g.app_did, col_class)
 
     def get_user_collection_names(self, user_did: str, app_did: str):
         """ Get collection names belongs to the user's application """

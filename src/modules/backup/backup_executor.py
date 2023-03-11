@@ -157,7 +157,7 @@ class ExecutorBase(threading.Thread):
                 if not only_files_ref:
                     execute_pin_unpin(f['cid'])
 
-                cid_ref = mcli.get_col(CollectionIpfsCidRef)
+                cid_ref = mcli.get_col(CollectionIpfsCidRef, use_g=False)
                 if not is_unpin:
                     cid_ref.decrease_cid_ref(f['cid'], f['count'])
                 else:
@@ -165,14 +165,13 @@ class ExecutorBase(threading.Thread):
 
             logging.info('[ExecutorBase] Success to pin all files CIDs.')
 
-    def update_progress(self, progress, is_notify=True):
+    def update_progress(self, progress):
         if progress != ExecutorBase.PROGRESS_DONE:
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_PROCESS, progress)
         else:
             self.owner.update_request_state(self.user_did, BACKUP_REQUEST_STATE_SUCCESS, '')
 
-        if is_notify:
-            self.owner.notify_progress(self.action, progress)
+        self.owner.notify_progress(self.action, progress)
 
 
 class BackupExecutor(ExecutorBase):
@@ -258,17 +257,17 @@ class BackupServerExecutor(ExecutorBase):
         self.req = req
 
     def execute(self):
-        self.update_progress('50', is_notify=False)
+        self.update_progress('50')
 
         # request_metadata already pinned to ipfs node
 
         request_metadata = self.owner.get_server_request_metadata(self.user_did, self.req)
         logging.info(f'[BackupServerExecutor] request_metadata: {request_metadata}')
-        self.update_progress('60', is_notify=False)
+        self.update_progress('60')
         logging.info('[BackupServerExecutor] Success to get request metadata.')
 
         self.__class__.handle_cids_in_local_ipfs(request_metadata)
-        self.update_progress('80', is_notify=False)
+        self.update_progress('80')
         logging.info('[BackupServerExecutor] Success to get pin all CIDs.')
 
         self.owner.update_storage_usage(self.user_did, request_metadata['backup_size'])

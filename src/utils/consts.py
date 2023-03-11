@@ -180,6 +180,12 @@ VAULT_SERVICE_STATE_REMOVED = "removed"  # soft unsubscribe
 VAULT_SERVICE_LATEST_ACCESS_TIME = "latest_access_time"  # for access checking on database, files, scripting.
 # constants of db end
 
+# ipfs_cid_ref
+COL_IPFS_CID_REF = 'ipfs_cid_ref'
+COL_IPFS_CID_REF_CID = CID
+COL_IPFS_CID_REF_COUNT = COUNT
+# end of ipfs_cid_ref
+
 ###############################################################################
 # user tables definition
 ###############################################################################
@@ -205,12 +211,6 @@ COL_IPFS_FILES_IPFS_CID = 'ipfs_cid'
 COL_IPFS_FILES_IS_ENCRYPT = 'is_encrypt'
 COL_IPFS_FILES_ENCRYPT_METHOD = 'encrypt_method'
 # end of ipfs_files
-
-# ipfs_cid_ref
-COL_IPFS_CID_REF = 'ipfs_cid_ref'
-COL_IPFS_CID_REF_CID = CID
-COL_IPFS_CID_REF_COUNT = COUNT
-# end of ipfs_cid_ref
 
 # anonymous_files
 COL_ANONYMOUS_FILES = '__anonymous_files__'  # user table, internal

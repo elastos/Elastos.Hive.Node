@@ -70,7 +70,7 @@ class CollectionFileMetadata(MongodbCollection):
         filter_ = {COL_IPFS_FILES_USR_DID: self.user_did, COL_IPFS_FILES_APP_DID: self.app_did, COL_IPFS_FILES_PATH: rel_path}
         result = self.delete_one(filter_)
         if result['deleted_count'] > 0 and cid:
-            removed = mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(cid)
+            removed = mcli.get_col(CollectionIpfsCidRef, use_g=False).decrease_cid_ref(cid)
             if removed:
                 FileCache.remove_file(self.user_did, cid)
 
@@ -95,7 +95,7 @@ class CollectionFileMetadata(MongodbCollection):
             return None
 
         for app_did in app_dids:
-            metadatas = mcli.get_collection(user_did, app_did).get_all_file_metadatas()
+            metadatas = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_all_file_metadatas()
             for doc in metadatas:
                 mt = get_cid_metadata_from_list(cids, doc)
                 if mt:

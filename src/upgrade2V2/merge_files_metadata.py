@@ -63,7 +63,7 @@ def calculate_changed_files(cur_files, dst_files):
 def update_app_files_metadata(vaults_root, user_did, app_did, files: list):
     logging.info(f'enter update file metadata for {user_did}, {app_did}.')
 
-    cur_files = mcli.get_collection(user_did, app_did, CollectionFileMetadata).get_all_file_metadatas()
+    cur_files = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_all_file_metadatas()
     if not cur_files:
         return
 

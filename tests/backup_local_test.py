@@ -14,6 +14,9 @@ from tests.utils.http_client import HttpClient
 
 
 class IpfsBackupTestCase(unittest.TestCase):
+    # websocket to receive backup & restore state.
+    sio = None
+
     def __init__(self, method_name='runTest'):
         """
         TODO: only run on local because travis does not support mongo dump command.
@@ -31,12 +34,19 @@ class IpfsBackupTestCase(unittest.TestCase):
         self.src_file_name = 'ipfs_src_file.node.txt'
         self.src_file_content = 'File Content: 12345678' + ('9' * 200)
 
-        self.sio = Client()
-        self.sio.connect('http://127.0.0.1:5005')
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sio = Client()
+        cls.sio.connect('http://127.0.0.1:5005')
 
-        @self.sio.on('backup_state')
+        @cls.sio.on('backup_state')
         def on_state(data):
             test_log('sio::backup_state::', json.dumps(data))
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.sio:
+            cls.sio.disconnect()
 
     def vault_subscribe(self):
         response = self.cli.put('/subscription/vault')

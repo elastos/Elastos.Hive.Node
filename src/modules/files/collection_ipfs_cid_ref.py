@@ -2,11 +2,11 @@ from src.modules.database.mongodb_collection import mongodb_collection, MongodbC
 from src.utils.consts import COL_IPFS_CID_REF, COL_IPFS_CID_REF_CID, COL_IPFS_CID_REF_COUNT
 
 
-@mongodb_collection(COL_IPFS_CID_REF, is_management=False, is_internal=True)
+@mongodb_collection(COL_IPFS_CID_REF, is_management=True, is_internal=True)
 class CollectionIpfsCidRef(MongodbCollection):
     def __init__(self, col):
         """ This class represents the references of the cid in the files service. """
-        MongodbCollection.__init__(self, col, is_management=False)
+        MongodbCollection.__init__(self, col, is_management=True)
 
     def increase_cid_ref(self, cid: str, count=1):
         """ directly increase count if exists, else set count """

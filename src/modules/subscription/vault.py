@@ -220,13 +220,13 @@ class VaultManager:
             return
 
         try:
-            metadatas = mcli.get_col(user_did, app_did, CollectionFileMetadata).get_all_file_metadatas()
+            metadatas = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_all_file_metadatas()
             # 1. Clean cache files.
             FileCache.delete_files(user_did, metadatas)
             # 2. Unpin cids.
             ipfs_client = IpfsClient()
             for m in metadatas:
-                if mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(m[COL_IPFS_FILES_IPFS_CID]):
+                if mcli.get_col(CollectionIpfsCidRef, use_g=False).decrease_cid_ref(m[COL_IPFS_FILES_IPFS_CID]):
                     ipfs_client.cid_unpin(m[COL_IPFS_FILES_IPFS_CID])
             # 3. Delete app database
             self.mcli.drop_user_database(user_did, app_did)

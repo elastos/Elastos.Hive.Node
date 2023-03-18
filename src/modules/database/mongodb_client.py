@@ -6,9 +6,8 @@ from flask import g
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
-from src.modules.database.mongodb_collection import MongodbCollection
-from src.utils.consts import DID_INFO_DB_NAME, COL_IPFS_FILES, SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_COLLECTION_METADATA, \
-    COL_ANONYMOUS_FILES
+from src.modules.database.mongodb_collection import MongodbCollection, CollectionName
+from src.utils.consts import DID_INFO_DB_NAME
 from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException
 from src import hive_setting
 
@@ -18,13 +17,6 @@ _T = TypeVar('_T', bound=MongodbCollection)
 
 class MongodbClient:
     """ Used to connect mongodb and is a helper class for all mongo database operation. """
-
-    # The collections used by node to manage cannot be operated by user.
-    INTERNAL_USER_COLLECTIONS = [COL_IPFS_FILES,
-                                 SCRIPTING_SCRIPT_COLLECTION,
-                                 SCRIPTING_SCRIPT_TEMP_TX_COLLECTION,
-                                 COL_COLLECTION_METADATA,
-                                 COL_ANONYMOUS_FILES]
 
     def __init__(self):
         self.mongodb_uri = hive_setting.MONGODB_URL
@@ -56,7 +48,7 @@ class MongodbClient:
     def exists_user_collection(self, user_did, app_did, col_name, contain_internal=False):
         """ Check if the collection of the user application exists. """
 
-        if not contain_internal and col_name in MongodbClient.INTERNAL_USER_COLLECTIONS:
+        if not contain_internal and CollectionName.is_user_internal_collection(col_name):
             return False
 
         database_name = MongodbClient.get_user_database_name(user_did, app_did)
@@ -96,7 +88,7 @@ class MongodbClient:
 
         TODO: replace this with get_collection
         """
-        is_internal = col_name in MongodbClient.INTERNAL_USER_COLLECTIONS
+        is_internal = CollectionName.is_user_internal_collection(col_name)
 
         database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
         if col_name not in database.list_collection_names():
@@ -136,10 +128,10 @@ class MongodbClient:
 
         database = self.__get_database(MongodbClient.get_user_database_name(user_did, app_did))
         names = database.list_collection_names()
-        return filter(lambda n: n not in self.INTERNAL_USER_COLLECTIONS, names)
+        return filter(lambda n: not CollectionName.is_user_internal_collection(n), names)
 
     def is_internal_user_collection(self, col_name: str):
-        return col_name in self.INTERNAL_USER_COLLECTIONS
+        return CollectionName.is_user_internal_collection(col_name)
 
     def create_user_collection(self, user_did, app_did, col_name) -> MongodbCollection:
         """ Create the collection belongs to the user's application.

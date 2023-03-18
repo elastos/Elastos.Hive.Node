@@ -5,14 +5,13 @@ The main handling file of scripting module.
 """
 import logging
 
-import jwt
 from flask import request, g
-from bson import ObjectId
 
-from src import hive_setting
-from src.utils.consts import SCRIPTING_SCRIPT_COLLECTION, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_ANONYMOUS_FILES, SCRIPT_ANONYMOUS_FILE
+from src.modules.files.collection_anonymous_files import CollectionAnonymousFiles
+from src.modules.scripting.collection_scripts import CollectionScripts
+from src.modules.scripting.collection_scripts_transaction import CollectionScriptsTransaction
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.files.files_service import FilesService
 from src.modules.subscription.vault import VaultManager
 from src.modules.scripting.executable import Executable, get_populated_value_with_params, validate_exists
@@ -138,8 +137,7 @@ class Context:
 
     def get_script_data(self, script_name):
         """ get the script data by target_did and target_app_did """
-        col = self.mcli.get_user_collection(self.target_did, self.target_app_did, SCRIPTING_SCRIPT_COLLECTION)
-        return col.find_one({'name': script_name})
+        return mcli.get_col(CollectionScripts, user_did=self.target_did, app_did=self.target_app_did).find_script(script_name)
 
 
 class Script:
@@ -304,7 +302,7 @@ class Scripting:
 
     @staticmethod
     def check_internal_script(script_name):
-        if script_name == SCRIPT_ANONYMOUS_FILE:
+        if script_name == CollectionAnonymousFiles.SCRIPT_NAME:
             raise InvalidParameterException(f'No permission to operate script {script_name}')
 
     def register_script(self, script_name):
@@ -323,14 +321,13 @@ class Scripting:
 
         Note: database size changing has been checked by uploading file.
         """
-        script_name = SCRIPT_ANONYMOUS_FILE
-        filter_ = {'name': script_name}
-        update = {'$setOnInsert': {
+        script_name = CollectionAnonymousFiles.SCRIPT_NAME
+        return mcli.get_col(CollectionScripts).upsert_script(script_name, {
             "condition": {
                 'name': 'verify_user_permission',
                 'type': 'queryHasResults',
                 'body': {
-                    'collection': COL_ANONYMOUS_FILES,
+                    'collection': CollectionAnonymousFiles.get_name(),
                     'filter': {'name': '$params.path'}
                 }
             },
@@ -344,16 +341,13 @@ class Scripting:
             },
             "allowAnonymousUser": True,
             "allowAnonymousApp": True
-        }}
-        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION)
-        return col.update_one(filter_, update, contains_extra=True, upsert=True)
+        })
 
     def __upsert_script_to_database(self, script_name, json_data, user_did, app_did):
         fix_dollar_keys_recursively(json_data)
         json_data['name'] = script_name
 
-        col = self.mcli.get_user_collection(user_did, app_did, SCRIPTING_SCRIPT_COLLECTION)
-        return col.replace_one({"name": script_name}, json_data)
+        return mcli.get_col(CollectionScripts, user_did=user_did, app_did=app_did).replace_script(script_name, json_data)
 
     def unregister_script(self, script_name):
         """ :v2 API: """
@@ -361,9 +355,7 @@ class Scripting:
 
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
-        col = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION)
-        result = col.delete_one({'name': script_name})
-
+        result = mcli.get_col(CollectionScripts).delete_script(script_name)
         if result['deleted_count'] <= 0:
             raise ScriptNotFoundException(f'The script {script_name} does not exist.')
 
@@ -393,13 +385,7 @@ class Scripting:
     def __handle_transaction(self, transaction_id, is_download=False):
         """ Do real uploading or downloading for caller """
         # check by transaction id from request body
-        row_id, target_did, target_app_did = Scripting.parse_transaction_id(transaction_id)
-
-        col_filter = {"_id": ObjectId(row_id)}
-        col = self.mcli.get_user_collection(target_did, target_app_did, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
-        trans = col.find_one({"_id": ObjectId(row_id)})
-        if not trans:
-            raise InvalidParameterException('Invalid transaction id: can not found transaction')
+        row_id, target_did, target_app_did, trans = CollectionScriptsTransaction.parse_script_transaction_id(transaction_id)
 
         # Do anonymous checking, it's same as 'Script.execute'
         anonymous_access = trans.get('anonymous', False)
@@ -422,7 +408,7 @@ class Scripting:
             self.files_service.v1_upload_file(target_did, target_app_did, trans['document']['file_name'])
 
         # transaction can be used only once.
-        col.delete_one(col_filter)
+        mcli.get_col(CollectionScriptsTransaction, user_did=target_did, app_did=target_app_did).delete_script_transaction(row_id)
 
         # return the content of the file if download else nothing.
         return data
@@ -431,39 +417,14 @@ class Scripting:
         """ :v2 API: """
         return self.__handle_transaction(transaction_id, is_download=True)
 
-    @staticmethod
-    def parse_transaction_id(transaction_id):
-        try:
-            trans = jwt.decode(transaction_id, hive_setting.PASSWORD, algorithms=['HS256'])
-        except Exception as e:
-            raise InvalidParameterException(f"Invalid transaction id '{transaction_id}'")
-
-        if not trans or not isinstance(trans, dict):
-            raise InvalidParameterException(f"Invalid transaction id '{transaction_id}', {trans}.")
-
-        row_id, target_did, target_app_did = trans.get('row_id', None), trans.get('target_did', None), trans.get('target_app_did', None)
-        if not row_id or not target_did or not target_app_did:
-            raise InvalidParameterException(f"Invalid transaction id '{transaction_id}': {[row_id, target_did, target_app_did]}.")
-
-        return row_id, target_did, target_app_did
-
     def get_scripts(self, skip, limit, name):
         """ :v2 API: """
         self.vault_manager.get_vault(g.usr_did).check_write_permission()
 
         if name:
             self.check_internal_script(name)
-            filter_ = {'name': name}
-        else:
-            filter_ = {'name': {'$ne': SCRIPT_ANONYMOUS_FILE}}
 
-        options = {}
-        if skip:
-            options['skip'] = skip
-        if limit:
-            options['limit'] = limit
-
-        docs = self.mcli.get_user_collection(g.usr_did, g.app_did, SCRIPTING_SCRIPT_COLLECTION).find_many(filter_, **options)
+        docs = mcli.get_col(CollectionScripts).find_scripts(script_name=name, skip=skip, limit=limit)
         if not docs:
             raise ScriptNotFoundException()
 

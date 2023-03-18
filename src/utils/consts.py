@@ -190,15 +190,6 @@ COL_IPFS_CID_REF_COUNT = COUNT
 # user tables definition
 ###############################################################################
 
-# collection_metadata
-COL_COLLECTION_METADATA = '__collection_metadata__'
-COL_COLLECTION_METADATA_USR_DID = USR_DID
-COL_COLLECTION_METADATA_APP_DID = _APP_DID
-COL_COLLECTION_METADATA_NAME = 'name'
-COL_COLLECTION_METADATA_IS_ENCRYPT = 'is_encrypt'
-COL_COLLECTION_METADATA_ENCRYPT_METHOD = 'encrypt_method'
-# end of collection_metadata
-
 # ipfs_files
 COL_IPFS_FILES = 'ipfs_files'
 COL_IPFS_FILES_USR_DID = USR_DID
@@ -211,14 +202,6 @@ COL_IPFS_FILES_IPFS_CID = 'ipfs_cid'
 COL_IPFS_FILES_IS_ENCRYPT = 'is_encrypt'
 COL_IPFS_FILES_ENCRYPT_METHOD = 'encrypt_method'
 # end of ipfs_files
-
-# anonymous_files
-COL_ANONYMOUS_FILES = '__anonymous_files__'  # user table, internal
-COL_ANONYMOUS_FILES_USR_DID = USR_DID
-COL_ANONYMOUS_FILES_APP_DID = _APP_DID
-COL_ANONYMOUS_FILES_NAME = 'name'
-COL_ANONYMOUS_FILES_CID = 'cid'
-# end of anonymous_files
 
 # scripting begin, compatible with v1
 SCRIPTING_SCRIPT_COLLECTION = "scripts"  # user table, internal
@@ -245,7 +228,6 @@ SCRIPTING_EXECUTABLE_CALLER_APP_DID = "$caller_app_did"
 SCRIPTING_EXECUTABLE_PARAMS = "$params"
 SCRIPTING_EXECUTABLE_DOWNLOADABLE = "_downloadable"
 
-SCRIPT_ANONYMOUS_FILE = '__anonymous_files__'  # script name
 # scripting end
 
 

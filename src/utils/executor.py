@@ -8,7 +8,7 @@ from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_server import BackupServer
-from src.modules.scripting.scripting import Scripting
+from src.modules.scripting.collection_scripts_transaction import CollectionScriptsTransaction
 from src.modules.subscription.vault import VaultManager
 from src.utils import hive_job
 from src.utils.scheduler import count_vault_storage_really
@@ -52,7 +52,7 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
             return
 
         try:
-            row_id, target_did, target_app_did = Scripting.parse_transaction_id(transaction_id)
+            row_id, target_did, target_app_did, _ = CollectionScriptsTransaction.parse_transaction_id(transaction_id)
             user_manager.update_access(target_did, target_app_did, 1, total_len)
         except:
             return

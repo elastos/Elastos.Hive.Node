@@ -4,8 +4,9 @@ from src.utils.consts import COL_IPFS_CID_REF, COL_IPFS_CID_REF_CID, COL_IPFS_CI
 
 @mongodb_collection(COL_IPFS_CID_REF, is_management=True, is_internal=True)
 class CollectionIpfsCidRef(MongodbCollection):
+    """ This class represents the references of the cid in the files service. """
+
     def __init__(self, col):
-        """ This class represents the references of the cid in the files service. """
         MongodbCollection.__init__(self, col, is_management=True)
 
     def increase_cid_ref(self, cid: str, count=1):

@@ -1,7 +1,6 @@
-import jwt
-
-from src import hive_setting
-from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256, SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, COL_COMMON_MODIFIED
+from src.modules.database.mongodb_client import mcli
+from src.modules.scripting.collection_scripts_transaction import ActionType, CollectionScriptsTransaction
+from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256, COL_COMMON_MODIFIED
 from src.modules.scripting.executable import Executable
 from src.modules.scripting.scripting import Script
 
@@ -22,26 +21,15 @@ class FileExecutable(Executable):
     def _create_transaction(self, action_type):
         """ Here just create a transaction for later uploading and downloading. """
         vault = self.vault_manager.get_vault(self.get_target_did())
-        if action_type == 'upload':
+        if action_type == ActionType.UPLOAD:
             vault.check_write_permission().check_storage_full()
 
         # The created transaction record can only be use once. So do not consider run script twice.
         # If the user not call this transaction later, the transaction record will keep forever.
-        col = self.mcli.get_user_collection(self.get_target_did(), self.get_target_app_did(), SCRIPTING_SCRIPT_TEMP_TX_COLLECTION)
-        result = col.insert_one({
-            "document": {
-                "file_name": self.get_populated_path(),
-                "fileapi_type": action_type
-            },
-            'anonymous': self.script.anonymous_app and self.script.anonymous_user
-        })
-
         return {
-            "transaction_id": jwt.encode({
-                    "row_id": result['inserted_id'],
-                    "target_did": self.get_target_did(),
-                    "target_app_did": self.get_target_app_did()
-                }, hive_setting.PASSWORD, algorithm='HS256')
+            "transaction_id":
+                mcli.get_col(CollectionScriptsTransaction, user_did=self.get_target_did(), app_did=self.get_target_app_did()).
+                create_script_transaction_id(self.get_populated_path(), action_type, self.script.anonymous_app and self.script.anonymous_user)
         }
 
 
@@ -50,7 +38,7 @@ class FileUploadExecutable(FileExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        return self.get_result_data(self._create_transaction('upload'))
+        return self.get_result_data(self._create_transaction(ActionType.UPLOAD))
 
 
 class FileDownloadExecutable(FileExecutable):
@@ -58,7 +46,7 @@ class FileDownloadExecutable(FileExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        return self.get_result_data(self._create_transaction('download'))
+        return self.get_result_data(self._create_transaction(ActionType.DOWNLOAD))
 
 
 class FilePropertiesExecutable(FileExecutable):

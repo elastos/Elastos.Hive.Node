@@ -10,9 +10,45 @@ from src.utils.http_exception import BadRequestException
 _T = typing.TypeVar('_T', dict, list, tuple)
 
 
+class CollectionName:
+    # management collections
+    IPFS_CID_REF = 'ipfs_cid_ref'
+
+    # user collections
+    COLLECTION_METADATA = '__collection_metadata__'
+    ANONYMOUS_FILE = '__anonymous_files__'
+    FILE_METADATA = 'ipfs_files'
+    SCRIPTS = 'scripts'
+    SCRIPTS_TRANSACTION = 'scripts_temptx'
+
+    @classmethod
+    def is_user_internal_collection(cls, name):
+        """ The collections used by node to manage cannot be operated by user. """
+        return name in [
+            cls.COLLECTION_METADATA,
+            cls.ANONYMOUS_FILE,
+            cls.FILE_METADATA,
+            cls.SCRIPTS,
+            cls.SCRIPTS_TRANSACTION,
+        ]
+
+
+class CollectionGenericField:
+    CREATED = 'created'
+    MODIFIED = 'modified'
+
+    USR_DID = 'user_did'
+    APP_DID = 'app_did'
+    NAME = 'name'
+    CID = 'cid'
+    COUNT = 'count'
+    SIZE = 'size'
+
+
 def mongodb_collection(col_name, is_management=False, is_internal=True):
     """ decorator for any collection class.
     class instance user_did and app_did will be setup by mcli.get_col()
+    , specific collection can choose use them.
 
     :param col_name: collection name.
     :param is_management: if the collection is global collection.
@@ -114,6 +150,7 @@ class MongodbCollection:
         }
 
     def replace_one(self, filter_, document, upsert=True):
+        """ if upsert is True and old one not exists, create a new one. """
         # default 'bypass_document_validation': False
         result = self.col.replace_one(self.convert_oid(filter_) if filter_ else None, self.convert_oid(document), upsert=upsert)
         return {

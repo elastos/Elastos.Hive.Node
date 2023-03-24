@@ -1,6 +1,7 @@
 from src.modules.database.mongodb_client import mcli
+from src.modules.database.mongodb_collection import CollectionGenericField
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.scripting.collection_scripts_transaction import ActionType, CollectionScriptsTransaction
-from src.utils.consts import COL_IPFS_FILES_IS_FILE, SIZE, COL_IPFS_FILES_SHA256, COL_COMMON_MODIFIED
 from src.modules.scripting.executable import Executable
 from src.modules.scripting.scripting import Script
 
@@ -60,10 +61,10 @@ class FilePropertiesExecutable(FileExecutable):
 
         doc = self.files_service.v1_get_file_metadata(self.get_target_did(), self.get_target_app_did(), path)
         return self.get_result_data({
-            "type": "file" if doc[COL_IPFS_FILES_IS_FILE] else "folder",
+            "type": "file" if doc[CollectionFileMetadata.IS_FILE] else "folder",
             "name": path,
-            "size": doc[SIZE],
-            "last_modify": int(doc[COL_COMMON_MODIFIED])
+            "size": doc[CollectionFileMetadata.SIZE],
+            "last_modify": int(doc[CollectionGenericField.MODIFIED])
         })
 
 
@@ -75,4 +76,4 @@ class FileHashExecutable(FileExecutable):
         self.vault_manager.get_vault(self.get_target_did())
 
         doc = self.files_service.v1_get_file_metadata(self.get_target_did(), self.get_target_app_did(), self.get_populated_path())
-        return self.get_result_data({"SHA256": doc[COL_IPFS_FILES_SHA256]})
+        return self.get_result_data({"SHA256": doc[CollectionFileMetadata.SHA256]})

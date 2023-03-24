@@ -10,9 +10,8 @@ from pathlib import Path
 from flask import g
 
 from src.modules.database.mongodb_client import mcli
+from src.modules.database.mongodb_collection import CollectionGenericField
 from src.modules.files.file_cache import FileCache
-from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, COL_IPFS_FILES_SIZE, COL_IPFS_FILES_IPFS_CID, \
-    COL_IPFS_FILES_IS_ENCRYPT, COL_IPFS_FILES_ENCRYPT_METHOD, COL_COMMON_CREATED, COL_COMMON_MODIFIED
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
 from src.modules.subscription.vault import VaultManager
 from src.modules.files.collection_file_metadata import CollectionFileMetadata
@@ -119,11 +118,11 @@ class FilesService:
 
         def get_out_file_info(metadata):
             return {
-                'name': metadata[COL_IPFS_FILES_PATH],
-                'is_file': metadata[COL_IPFS_FILES_IS_FILE],
-                'size': metadata[COL_IPFS_FILES_SIZE],
-                'is_encrypt': metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False),
-                'encrypt_method': metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''),
+                'name': metadata[CollectionFileMetadata.PATH],
+                'is_file': metadata[CollectionFileMetadata.IS_FILE],
+                'size': metadata[CollectionFileMetadata.SIZE],
+                'is_encrypt': metadata.get(CollectionFileMetadata.IS_ENCRYPT, False),
+                'encrypt_method': metadata.get(CollectionFileMetadata.ENCRYPT_METHOD, ''),
             }
 
         docs = self.v1_list_folder(g.usr_did, g.app_did, path)
@@ -142,13 +141,13 @@ class FilesService:
 
         metadata = self.v1_get_file_metadata(g.usr_did, g.app_did, path)
         return {
-            'name': metadata[COL_IPFS_FILES_PATH],
-            'is_file': metadata[COL_IPFS_FILES_IS_FILE],
-            'size': int(metadata[COL_IPFS_FILES_SIZE]),
-            'is_encrypt': metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False),
-            'encrypt_method': metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''),
-            'created': int(metadata[COL_COMMON_CREATED]),
-            'updated': int(metadata[COL_COMMON_MODIFIED]),
+            'name': metadata[CollectionFileMetadata.PATH],
+            'is_file': metadata[CollectionFileMetadata.IS_FILE],
+            'size': int(metadata[CollectionFileMetadata.SIZE]),
+            'is_encrypt': metadata.get(CollectionFileMetadata.IS_ENCRYPT, False),
+            'encrypt_method': metadata.get(CollectionFileMetadata.ENCRYPT_METHOD, ''),
+            'created': int(metadata[CollectionGenericField.CREATED]),
+            'updated': int(metadata[CollectionGenericField.MODIFIED]),
         }
 
     def get_hash(self, path):
@@ -162,9 +161,9 @@ class FilesService:
 
         metadata = self.v1_get_file_metadata(g.usr_did, g.app_did, path)
         return {
-            'name': metadata[COL_IPFS_FILES_PATH],
+            'name': metadata[CollectionFileMetadata.PATH],
             'algorithm': 'SHA256',
-            'hash': metadata[COL_IPFS_FILES_SHA256]
+            'hash': metadata[CollectionFileMetadata.SHA256]
         }
 
     def v1_upload_file(self, user_did, app_did, file_path: str, is_encrypt=False, encrypt_method=''):
@@ -200,9 +199,9 @@ class FilesService:
         """
 
         metadata = self.v1_get_file_metadata(user_did, app_did, path)
-        cached_file = FileCache.get_path(user_did, metadata)
+        cached_file = FileCache.get_path(user_did, metadata[CollectionFileMetadata.IPFS_CID])
         if not cached_file.exists():
-            self.ipfs_client.download_file(metadata[COL_IPFS_FILES_IPFS_CID], cached_file)
+            self.ipfs_client.download_file(metadata[CollectionFileMetadata.IPFS_CID], cached_file)
         return LocalFile.get_download_response(cached_file)
 
     def v1_delete_file(self, user_did, app_did, path, check_exists=False):
@@ -225,9 +224,9 @@ class FilesService:
                 return
 
         # do real remove
-        LocalFile.remove_ipfs_cache_file(user_did, metadata[COL_IPFS_FILES_IPFS_CID])
-        col.delete_file_metadata(path, metadata[COL_IPFS_FILES_IPFS_CID])
-        self.vault_manager.update_user_files_size(user_did, 0 - metadata[COL_IPFS_FILES_SIZE])
+        LocalFile.remove_ipfs_cache_file(user_did, metadata[CollectionFileMetadata.IPFS_CID])
+        col.delete_file_metadata(path, metadata[CollectionFileMetadata.IPFS_CID])
+        self.vault_manager.update_user_files_size(user_did, 0 - metadata[CollectionFileMetadata.SIZE])
 
     def v1_list_folder(self, user_did, app_did, folder_path):
         """ List files by the folder path, empty string means root path.
@@ -266,10 +265,13 @@ class FilesService:
         # do copy or move
         if is_copy:
             col.upsert_file_metadata(dst_path,
-                                     src_metadata[COL_IPFS_FILES_SHA256], src_metadata[COL_IPFS_FILES_SIZE], src_metadata[COL_IPFS_FILES_IPFS_CID],
-                                     src_metadata.get(COL_IPFS_FILES_IS_ENCRYPT, False), src_metadata.get(COL_IPFS_FILES_ENCRYPT_METHOD, ''))
-            mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(src_metadata[COL_IPFS_FILES_IPFS_CID])
-            self.vault_manager.update_user_files_size(user_did, src_metadata[COL_IPFS_FILES_SIZE])
+                                     src_metadata[CollectionFileMetadata.SHA256],
+                                     src_metadata[CollectionFileMetadata.SIZE],
+                                     src_metadata[CollectionFileMetadata.IPFS_CID],
+                                     src_metadata.get(CollectionFileMetadata.IS_ENCRYPT, False),
+                                     src_metadata.get(CollectionFileMetadata.ENCRYPT_METHOD, ''))
+            mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(src_metadata[CollectionFileMetadata.IPFS_CID])
+            self.vault_manager.update_user_files_size(user_did, src_metadata[CollectionFileMetadata.SIZE])
         else:
             col.move_file_metadata(src_path, dst_path)
 
@@ -328,12 +330,12 @@ class FilesService:
         if not old_metadata:
             mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(new_cid)
             increased_size = size
-        elif old_metadata[COL_IPFS_FILES_IPFS_CID] != new_cid:
+        elif old_metadata[CollectionFileMetadata.IPFS_CID] != new_cid:
             mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(new_cid)
-            already_removed = mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(old_metadata[COL_IPFS_FILES_IPFS_CID])
+            already_removed = mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(old_metadata[CollectionFileMetadata.IPFS_CID])
             if already_removed:
-                FileCache.remove_file(user_did, old_metadata[COL_IPFS_FILES_IPFS_CID])
-            increased_size = new_metadata[COL_IPFS_FILES_SIZE] - old_metadata[COL_IPFS_FILES_SIZE]
+                FileCache.remove_file(user_did, old_metadata[CollectionFileMetadata.IPFS_CID])
+            increased_size = new_metadata[CollectionFileMetadata.SIZE] - old_metadata[CollectionFileMetadata.SIZE]
 
         if increased_size and not only_import:
             self.vault_manager.update_user_files_size(user_did, increased_size)

@@ -1,5 +1,4 @@
 from src.modules.files.local_file import LocalFile
-from src.utils.consts import COL_IPFS_FILES_IPFS_CID
 
 
 class FileCache:
@@ -7,15 +6,15 @@ class FileCache:
         pass
 
     @staticmethod
-    def delete_files(user_did, metadatas: list):
-        for m in metadatas:
-            file_path = LocalFile.get_cid_cache_dir(user_did) / m[COL_IPFS_FILES_IPFS_CID]
+    def delete_files(user_did, cids: list):
+        for cid in cids:
+            file_path = LocalFile.get_cid_cache_dir(user_did) / cid
             if file_path.exists():
                 file_path.unlink()
 
     @staticmethod
-    def get_path(user_did, metadata: dict):
-        return FileCache.get_path_by_cid(user_did, metadata[COL_IPFS_FILES_IPFS_CID])
+    def get_path(user_did, cid: str):
+        return FileCache.get_path_by_cid(user_did, cid)
 
     @staticmethod
     def get_path_by_cid(user_did, cid: str):

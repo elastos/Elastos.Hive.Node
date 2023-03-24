@@ -10,10 +10,10 @@ import sys
 from pathlib import Path
 
 from src.modules.database.mongodb_client import mcli
+from src.modules.database.mongodb_collection import CollectionGenericField
 from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.files_service import FilesService
 from src.upgrade2V2.gen_files_metadata import get_vaults_root, get_files_metadata_file, generate_app_files_root
-from src.utils.consts import COL_IPFS_FILES_PATH, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_SIZE, COL_IPFS_FILES_IPFS_CID, COL_COMMON_CREATED, COL_COMMON_MODIFIED
 
 
 def init_app_files_metadata(vaults_root, user_did, app_did, files: list):
@@ -26,8 +26,8 @@ def init_app_files_metadata(vaults_root, user_did, app_did, files: list):
     for file in files:
         files_service.tov2_upload_file_from_local(user_did, app_did, file['path'], files_root / file['path'],
                                                   only_import=True,
-                                                  created=file[COL_COMMON_CREATED],
-                                                  modified=file[COL_COMMON_MODIFIED])
+                                                  created=file[CollectionGenericField.CREATED],
+                                                  modified=file[CollectionGenericField.MODIFIED])
     logging.info(f'leave init file metadata for {user_did}, {app_did}.')
 
 
@@ -39,7 +39,7 @@ def get_file_by_path(files: list, path):
 def is_need_insert_or_update(cur_file, dst_file):
     if not cur_file:
         return True
-    if dst_file[COL_COMMON_MODIFIED] < cur_file[COL_COMMON_MODIFIED]:
+    if dst_file[CollectionGenericField.MODIFIED] < cur_file[CollectionGenericField.MODIFIED]:
         return False
     if cur_file['sha256'] == dst_file['sha256'] and cur_file['size'] == dst_file['size']:
         return False
@@ -68,12 +68,12 @@ def update_app_files_metadata(vaults_root, user_did, app_did, files: list):
         return
 
     cur_files = list(map(lambda doc: {
-                "path": doc[COL_IPFS_FILES_PATH],
-                "sha256": doc[COL_IPFS_FILES_SHA256],
-                "size": doc[COL_IPFS_FILES_SIZE],
-                "cid": doc[COL_IPFS_FILES_IPFS_CID],
-                "created": doc[COL_COMMON_CREATED],
-                "modified": doc[COL_COMMON_MODIFIED]
+                "path": doc[CollectionFileMetadata.PATH],
+                "sha256": doc[CollectionFileMetadata.SHA256],
+                "size": doc[CollectionFileMetadata.SIZE],
+                "cid": doc[CollectionFileMetadata.IPFS_CID],
+                "created": doc[CollectionGenericField.CREATED],
+                "modified": doc[CollectionGenericField.MODIFIED]
             }, cur_files))
 
     files_service, files_root = FilesService(), generate_app_files_root(vaults_root, user_did, app_did)
@@ -81,8 +81,8 @@ def update_app_files_metadata(vaults_root, user_did, app_did, files: list):
     for file in update_files:
         files_service.tov2_upload_file_from_local(user_did, app_did, file['path'], files_root / file['path'],
                                                   only_import=True,
-                                                  created=file[COL_COMMON_CREATED],
-                                                  modified=file[COL_COMMON_MODIFIED])
+                                                  created=file[CollectionGenericField.CREATED],
+                                                  modified=file[CollectionGenericField.MODIFIED])
     for file in delete_files:
         files_service.tov2_delete_file_metadata(user_did, app_did, file['path'], file['cid'])
 

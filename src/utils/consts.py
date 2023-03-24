@@ -180,56 +180,6 @@ VAULT_SERVICE_STATE_REMOVED = "removed"  # soft unsubscribe
 VAULT_SERVICE_LATEST_ACCESS_TIME = "latest_access_time"  # for access checking on database, files, scripting.
 # constants of db end
 
-# ipfs_cid_ref
-COL_IPFS_CID_REF = 'ipfs_cid_ref'
-COL_IPFS_CID_REF_CID = CID
-COL_IPFS_CID_REF_COUNT = COUNT
-# end of ipfs_cid_ref
-
-###############################################################################
-# user tables definition
-###############################################################################
-
-# ipfs_files
-COL_IPFS_FILES = 'ipfs_files'
-COL_IPFS_FILES_USR_DID = USR_DID
-COL_IPFS_FILES_APP_DID = _APP_DID
-COL_IPFS_FILES_PATH = 'path'
-COL_IPFS_FILES_SHA256 = 'sha256'
-COL_IPFS_FILES_SIZE = SIZE
-COL_IPFS_FILES_IS_FILE = 'is_file'
-COL_IPFS_FILES_IPFS_CID = 'ipfs_cid'
-COL_IPFS_FILES_IS_ENCRYPT = 'is_encrypt'
-COL_IPFS_FILES_ENCRYPT_METHOD = 'encrypt_method'
-# end of ipfs_files
-
-# scripting begin, compatible with v1
-SCRIPTING_SCRIPT_COLLECTION = "scripts"  # user table, internal
-SCRIPTING_SCRIPT_TEMP_TX_COLLECTION = "scripts_temptx"  # user table, internal
-
-SCRIPTING_CONDITION_TYPE_QUERY_HAS_RESULTS = "queryHasResults"
-SCRIPTING_CONDITION_TYPE_AND = "and"
-SCRIPTING_CONDITION_TYPE_OR = "or"
-
-SCRIPTING_EXECUTABLE_TYPE_AGGREGATED = "aggregated"
-SCRIPTING_EXECUTABLE_TYPE_FIND = "find"
-SCRIPTING_EXECUTABLE_TYPE_COUNT = "count"
-SCRIPTING_EXECUTABLE_TYPE_INSERT = "insert"
-SCRIPTING_EXECUTABLE_TYPE_UPDATE = "update"
-SCRIPTING_EXECUTABLE_TYPE_DELETE = "delete"
-
-SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD = "fileUpload"
-SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD = "fileDownload"
-SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES = "fileProperties"
-SCRIPTING_EXECUTABLE_TYPE_FILE_HASH = "fileHash"
-
-SCRIPTING_EXECUTABLE_CALLER_DID = "$caller_did"
-SCRIPTING_EXECUTABLE_CALLER_APP_DID = "$caller_app_did"
-SCRIPTING_EXECUTABLE_PARAMS = "$params"
-SCRIPTING_EXECUTABLE_DOWNLOADABLE = "_downloadable"
-
-# scripting end
-
 
 def get_unique_dict_item_from_list(dict_list: list) -> list:
     if not dict_list:

@@ -1,17 +1,25 @@
 import logging
 
-from src.modules.database.mongodb_collection import MongodbCollection, mongodb_collection
-from src.modules.files.file_cache import FileCache
-from src.utils.consts import COL_IPFS_FILES_APP_DID, COL_IPFS_FILES_PATH, COL_IPFS_FILES, COL_IPFS_FILES_SHA256, COL_IPFS_FILES_IS_FILE, SIZE, \
-    COL_IPFS_FILES_IPFS_CID, COL_IPFS_FILES_IS_ENCRYPT, COL_IPFS_FILES_ENCRYPT_METHOD, COL_IPFS_FILES_USR_DID
 from src.utils.http_exception import FileNotFoundException
+from src.modules.database.mongodb_collection import MongodbCollection, mongodb_collection, CollectionName, CollectionGenericField
+from src.modules.files.file_cache import FileCache
 from src.modules.auth.user import UserManager
 from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.database.mongodb_client import mcli
 
 
-@mongodb_collection(COL_IPFS_FILES, is_management=False, is_internal=True)
+@mongodb_collection(CollectionName.FILE_METADATA, is_management=False, is_internal=True)
 class CollectionFileMetadata(MongodbCollection):
+    USR_DID = CollectionGenericField.USR_DID
+    APP_DID = CollectionGenericField.APP_DID
+    PATH = 'path'
+    SHA256 = 'sha256'
+    SIZE = CollectionGenericField.SIZE
+    IS_FILE = 'is_file'
+    IPFS_CID = 'ipfs_cid'
+    IS_ENCRYPT = 'is_encrypt'
+    ENCRYPT_METHOD = 'encrypt_method'
+
     def __init__(self, col):
         MongodbCollection.__init__(self, col, is_management=False)
         self.user_manager = UserManager()
@@ -22,11 +30,11 @@ class CollectionFileMetadata(MongodbCollection):
         raise FileNotFoundException if no files under sub-folder which means sub-folder does not exist.
         """
 
-        filter_ = {COL_IPFS_FILES_USR_DID: self.user_did, COL_IPFS_FILES_APP_DID: self.app_did}
+        filter_ = self._get_internal_filter()
         if folder_dir:
             # if specify the path, it will find the files start with folder name
             folder_path = folder_dir if folder_dir[len(folder_dir) - 1] == '/' else f'{folder_dir}/'
-            filter_[COL_IPFS_FILES_PATH] = {
+            filter_[self.PATH] = {
                 '$regex': f'^{folder_path}'
             }
 
@@ -38,44 +46,45 @@ class CollectionFileMetadata(MongodbCollection):
         return docs
 
     def get_file_metadata(self, rel_path):
-        filter_ = {COL_IPFS_FILES_USR_DID: self.user_did, COL_IPFS_FILES_APP_DID: self.app_did, COL_IPFS_FILES_PATH: rel_path}
-        doc = self.find_one(filter_)
+        doc = self.find_one(self._get_internal_filter(rel_path))
         if not doc:
             raise FileNotFoundException(f'The file {rel_path} does not exist.')
 
-        # return FileMetadata(**doc)
         return doc
 
     def upsert_file_metadata(self, rel_path: str, sha256: str, size: int, cid: str, is_encrypt: bool, encrypt_method: str):
         """ add or update the file metadata """
-        filter_ = {COL_IPFS_FILES_USR_DID: self.user_did, COL_IPFS_FILES_APP_DID: self.app_did, COL_IPFS_FILES_PATH: rel_path}
         update = {'$set': {
-            COL_IPFS_FILES_SHA256: sha256,
-            COL_IPFS_FILES_IS_FILE: True,
-            SIZE: size,
-            COL_IPFS_FILES_IPFS_CID: cid,
-            COL_IPFS_FILES_IS_ENCRYPT: is_encrypt,  # added from v2.9
-            COL_IPFS_FILES_ENCRYPT_METHOD: encrypt_method,  # added from v2.9
+            self.SHA256: sha256,
+            self.IS_FILE: True,
+            self.SIZE: size,
+            self.IPFS_CID: cid,
+            self.IS_ENCRYPT: is_encrypt,  # added from v2.9
+            self.ENCRYPT_METHOD: encrypt_method,  # added from v2.9
         }}
-        self.update_one(filter_, update, upsert=True)
+        self.update_one(self._get_internal_filter(rel_path), update, upsert=True)
 
         return self.get_file_metadata(rel_path)
 
     def move_file_metadata(self, src_path: str, dst_path: str):
-        filter_ = {COL_IPFS_FILES_USR_DID: self.user_did, COL_IPFS_FILES_APP_DID: self.app_did, COL_IPFS_FILES_PATH: src_path}
-        update = {'$set': {COL_IPFS_FILES_PATH: dst_path}}
-        self.update_one(filter_, update)
+        update = {'$set': {self.PATH: dst_path}}
+        self.update_one(self._get_internal_filter(src_path), update)
 
     def delete_file_metadata(self, rel_path, cid):
-        filter_ = {COL_IPFS_FILES_USR_DID: self.user_did, COL_IPFS_FILES_APP_DID: self.app_did, COL_IPFS_FILES_PATH: rel_path}
-        result = self.delete_one(filter_)
+        result = self.delete_one(self._get_internal_filter(rel_path))
         if result['deleted_count'] > 0 and cid:
             removed = mcli.get_col(CollectionIpfsCidRef, use_g=False).decrease_cid_ref(cid)
             if removed:
                 FileCache.remove_file(self.user_did, cid)
 
-    @staticmethod
-    def get_backup_file_metadatas(user_did):
+    def _get_internal_filter(self, path=None):
+        filter_ = {self.USR_DID: self.user_did, self.APP_DID: self.app_did}
+        if path is not None:
+            filter_[self.PATH] = path
+        return filter_
+
+    @classmethod
+    def get_backup_file_metadatas(cls, user_did):
         """ get all cid infos from user's vault for backup
 
         The result shows the files content (cid) information.
@@ -87,9 +96,9 @@ class CollectionFileMetadata(MongodbCollection):
             if not cid_mts:
                 return None
             for mt in cid_mts:
-                if mt['cid'] == file_mt[COL_IPFS_FILES_IPFS_CID]:
-                    if mt['sha256'] != file_mt[COL_IPFS_FILES_SHA256] or mt['size'] != int(file_mt[SIZE]):
-                        logging.error(f'Found an unexpected file {file_mt[COL_IPFS_FILES_PATH]} with same CID, '
+                if mt['cid'] == file_mt[cls.IPFS_CID]:
+                    if mt['sha256'] != file_mt[cls.SHA256] or mt['size'] != int(file_mt[cls.SIZE]):
+                        logging.error(f'Found an unexpected file {file_mt[cls.PATH]} with same CID, '
                                       f'but different sha256 or size.')
                     return mt
             return None
@@ -101,10 +110,10 @@ class CollectionFileMetadata(MongodbCollection):
                 if mt:
                     mt['count'] += 1
                 else:
-                    cids.append({'cid': doc[COL_IPFS_FILES_IPFS_CID],
-                                 'sha256': doc[COL_IPFS_FILES_SHA256],
-                                 'size': int(doc[SIZE]),
+                    cids.append({'cid': doc[cls.IPFS_CID],
+                                 'sha256': doc[cls.SHA256],
+                                 'size': int(doc[cls.SIZE]),
                                  'count': 1})
-            total_size += sum([doc[SIZE] for doc in metadatas])
+            total_size += sum([doc[cls.SIZE] for doc in metadatas])
 
         return total_size, cids

@@ -1,10 +1,12 @@
-from src.modules.database.mongodb_collection import mongodb_collection, MongodbCollection
-from src.utils.consts import COL_IPFS_CID_REF, COL_IPFS_CID_REF_CID, COL_IPFS_CID_REF_COUNT
+from src.modules.database.mongodb_collection import mongodb_collection, MongodbCollection, CollectionName, CollectionGenericField
 
 
-@mongodb_collection(COL_IPFS_CID_REF, is_management=True, is_internal=True)
+@mongodb_collection(CollectionName.IPFS_CID_REF, is_management=True, is_internal=True)
 class CollectionIpfsCidRef(MongodbCollection):
     """ This class represents the references of the cid in the files service. """
+
+    CID = CollectionGenericField.CID
+    COUNT = CollectionGenericField.COUNT
 
     def __init__(self, col):
         MongodbCollection.__init__(self, col, is_management=True)
@@ -12,9 +14,9 @@ class CollectionIpfsCidRef(MongodbCollection):
     def increase_cid_ref(self, cid: str, count=1):
         """ directly increase count if exists, else set count """
 
-        filter_ = {COL_IPFS_CID_REF_CID: cid}
+        filter_ = {self.CID: cid}
         update = {
-            '$inc': {COL_IPFS_CID_REF_COUNT: count},  # increase count when exists, else set to count
+            '$inc': {self.COUNT: count},  # increase count when exists, else set to count
         }
 
         self.update_one(filter_, update, upsert=True)
@@ -24,7 +26,7 @@ class CollectionIpfsCidRef(MongodbCollection):
         :return: whether the cid removed.
         """
 
-        filter_ = {COL_IPFS_CID_REF_CID: cid}
+        filter_ = {self.CID: cid}
 
         # check if exists
         doc = self.find_one(filter_)
@@ -32,10 +34,10 @@ class CollectionIpfsCidRef(MongodbCollection):
             return True
 
         # delete or decrease
-        if doc[COL_IPFS_CID_REF_COUNT] <= count:
+        if doc[self.COUNT] <= count:
             self.delete_one(filter_)
             return True
         else:
-            update = {'$inc': {COL_IPFS_CID_REF_COUNT: -count}}
+            update = {'$inc': {self.COUNT: -count}}
             self.update_one(filter_, update)
             return False

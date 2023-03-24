@@ -4,8 +4,7 @@ from bson import ObjectId
 
 from src import hive_setting
 from src.modules.database.mongodb_client import mcli
-from src.modules.database.mongodb_collection import mongodb_collection, MongodbCollection
-from src.utils.consts import SCRIPTING_SCRIPT_TEMP_TX_COLLECTION
+from src.modules.database.mongodb_collection import mongodb_collection, MongodbCollection, CollectionName
 from src.utils.http_exception import InvalidParameterException
 
 
@@ -14,7 +13,7 @@ class ActionType(Enum):
     DOWNLOAD = 'download'
 
 
-@mongodb_collection(SCRIPTING_SCRIPT_TEMP_TX_COLLECTION, is_management=False, is_internal=True)
+@mongodb_collection(CollectionName.SCRIPTS_TRANSACTION, is_management=False, is_internal=True)
 class CollectionScriptsTransaction(MongodbCollection):
     """ This class keeps script transaction info. when doing upload and download by scripts. """
 

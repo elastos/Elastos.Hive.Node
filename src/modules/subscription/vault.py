@@ -8,10 +8,10 @@ from src.modules.files.ipfs_client import IpfsClient
 from src.utils.customize_dict import Dotdict
 from src.utils.payment_config import PaymentConfig
 from src.utils.http_exception import VaultNotFoundException, VaultFrozenException, FileNotFoundException
-from src.utils.consts import COL_IPFS_FILES, IS_UPGRADED, VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
+from src.utils.consts import IS_UPGRADED, VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_LATEST_ACCESS_TIME, \
-    VAULT_SERVICE_STATE_REMOVED, COL_IPFS_FILES_IPFS_CID
+    VAULT_SERVICE_STATE_REMOVED
 from src import hive_setting
 from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient, mcli
@@ -222,12 +222,12 @@ class VaultManager:
         try:
             metadatas = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_all_file_metadatas()
             # 1. Clean cache files.
-            FileCache.delete_files(user_did, metadatas)
+            FileCache.delete_files(user_did, list(map(lambda md: md[CollectionFileMetadata.IPFS_CID], metadatas)))
             # 2. Unpin cids.
             ipfs_client = IpfsClient()
             for m in metadatas:
-                if mcli.get_col(CollectionIpfsCidRef, use_g=False).decrease_cid_ref(m[COL_IPFS_FILES_IPFS_CID]):
-                    ipfs_client.cid_unpin(m[COL_IPFS_FILES_IPFS_CID])
+                if mcli.get_col(CollectionIpfsCidRef, use_g=False).decrease_cid_ref(m[CollectionFileMetadata.IPFS_CID]):
+                    ipfs_client.cid_unpin(m[CollectionFileMetadata.IPFS_CID])
             # 3. Delete app database
             self.mcli.drop_user_database(user_did, app_did)
         except FileNotFoundException:
@@ -319,8 +319,7 @@ class VaultManager:
         if not self.mcli.exists_user_database(user_did, app_did):
             return 0
 
-        col = self.mcli.get_user_collection(user_did, app_did, COL_IPFS_FILES)
-        files = col.find_many({"user_did": user_did, "app_did": app_did})
+        files = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_all_file_metadatas()
         # get total size of all user's application files
         return int(sum(map(lambda o: o["size"], files)))
 

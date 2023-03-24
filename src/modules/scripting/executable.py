@@ -1,9 +1,3 @@
-from flask import g
-
-from src.utils.consts import SCRIPTING_EXECUTABLE_TYPE_AGGREGATED, SCRIPTING_EXECUTABLE_TYPE_FIND, SCRIPTING_EXECUTABLE_TYPE_INSERT, \
-    SCRIPTING_EXECUTABLE_TYPE_UPDATE, SCRIPTING_EXECUTABLE_TYPE_DELETE, SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD, SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD, \
-    SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES, SCRIPTING_EXECUTABLE_TYPE_FILE_HASH, SCRIPTING_EXECUTABLE_CALLER_DID, \
-    SCRIPTING_EXECUTABLE_CALLER_APP_DID, SCRIPTING_EXECUTABLE_PARAMS, SCRIPTING_EXECUTABLE_TYPE_COUNT
 from src.utils.http_exception import NotImplementedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.files.files_service import FilesService
@@ -59,16 +53,16 @@ def get_populated_value_with_params(data, user_did, app_did, params):
         elif isinstance(value, list):  # tuple can not change the element, so skip
             return get_populated_value_with_params(value, user_did, app_did, params)
         elif isinstance(value, str):
-            if value == SCRIPTING_EXECUTABLE_CALLER_DID:
+            if value == Executable.PARAM_CALLER_DID:
                 if not user_did:
                     raise InvalidParameterException(f"Can not find caller's 'user_did' as '$caller_did' exists in script.")
                 return user_did
-            elif value == SCRIPTING_EXECUTABLE_CALLER_APP_DID:
+            elif value == Executable.PARAM_CALLER_APP_DID:
                 if not app_did:
                     raise InvalidParameterException(f"Can not find caller's 'app_did' as '$caller_app_did' exists in script.")
                 return app_did
-            elif value.startswith(f"{SCRIPTING_EXECUTABLE_PARAMS}."):
-                p = value.replace(f"{SCRIPTING_EXECUTABLE_PARAMS}.", "")
+            elif value.startswith(f"{Executable.PARAM_PARAMS}."):
+                p = value.replace(f"{Executable.PARAM_PARAMS}.", "")
                 if p not in params:
                     raise InvalidParameterException(f'Can not find "{p}" of "params" for the script.')
                 return params[p]
@@ -87,6 +81,22 @@ def get_populated_value_with_params(data, user_did, app_did, params):
 
 class Executable:
     """ Executable represents an action which contains operation for database and files. """
+
+    TYPE_AGGREGATED = "aggregated"
+    TYPE_FIND = "find"
+    TYPE_COUNT = "count"
+    TYPE_INSERT = "insert"
+    TYPE_UPDATE = "update"
+    TYPE_DELETE = "delete"
+
+    TYPE_FILE_UPLOAD = "fileUpload"
+    TYPE_FILE_DOWNLOAD = "fileDownload"
+    TYPE_FILE_PROPERTIES = "fileProperties"
+    TYPE_FILE_HASH = "fileHash"
+
+    PARAM_CALLER_DID = "$caller_did"
+    PARAM_CALLER_APP_DID = "$caller_app_did"
+    PARAM_PARAMS = "$params"
 
     def __init__(self, script, executable_data):
         self.script = script
@@ -123,8 +133,8 @@ class Executable:
         """ for response with the option 'is_output' of the executable """
         return data if self.output else None
 
-    @staticmethod
-    def validate_data(json_data, can_aggregated=True):
+    @classmethod
+    def validate_data(cls, json_data, can_aggregated=True):
         """ Note: type 'aggregated' can not contain same type.
 
         :param can_aggregated: recursive option.
@@ -134,43 +144,43 @@ class Executable:
         validate_exists(json_data, ['name', 'type', 'body'])
 
         # validate 'type'
-        types = [SCRIPTING_EXECUTABLE_TYPE_FIND,
-                 SCRIPTING_EXECUTABLE_TYPE_COUNT,
-                 SCRIPTING_EXECUTABLE_TYPE_INSERT,
-                 SCRIPTING_EXECUTABLE_TYPE_UPDATE,
-                 SCRIPTING_EXECUTABLE_TYPE_DELETE,
-                 SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD,
-                 SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD,
-                 SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES,
-                 SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]
+        types = [cls.TYPE_FIND,
+                 cls.TYPE_COUNT,
+                 cls.TYPE_INSERT,
+                 cls.TYPE_UPDATE,
+                 cls.TYPE_DELETE,
+                 cls.TYPE_FILE_UPLOAD,
+                 cls.TYPE_FILE_DOWNLOAD,
+                 cls.TYPE_FILE_PROPERTIES,
+                 cls.TYPE_FILE_HASH]
         if can_aggregated:
-            types.append(SCRIPTING_EXECUTABLE_TYPE_AGGREGATED)
+            types.append(cls.TYPE_AGGREGATED)
 
         if json_data['type'] not in types:
             raise InvalidParameterException(f"Invalid type {json_data['type']} of the executable.")
 
-        if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
+        if json_data['type'] == cls.TYPE_AGGREGATED:
             items = json_data['body']
             if not isinstance(items, list or len(items) < 1):
                 raise InvalidParameterException(f"Executable body MUST be list for type "
-                                                f"'{SCRIPTING_EXECUTABLE_TYPE_AGGREGATED}'.")
+                                                f"'{cls.TYPE_AGGREGATED}'.")
 
             for item in items:
                 Executable.validate_data(item, can_aggregated=False)
 
-        if json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FIND,
-                                 SCRIPTING_EXECUTABLE_TYPE_COUNT,
-                                 SCRIPTING_EXECUTABLE_TYPE_INSERT,
-                                 SCRIPTING_EXECUTABLE_TYPE_UPDATE,
-                                 SCRIPTING_EXECUTABLE_TYPE_DELETE]:
+        if json_data['type'] in [cls.TYPE_FIND,
+                                 cls.TYPE_COUNT,
+                                 cls.TYPE_INSERT,
+                                 cls.TYPE_UPDATE,
+                                 cls.TYPE_DELETE]:
             validate_exists(json_data['body'], ['collection'])
 
             if MongodbClient().is_internal_user_collection(json_data['body']['collection']):
                 raise InvalidParameterException(f"No permission to set the operation on the collection {json_data['body']['collection']}")
 
-            if json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_INSERT:
+            if json_data['type'] == cls.TYPE_INSERT:
                 validate_exists(json_data['body'], ['document'])
-            elif json_data['type'] == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
+            elif json_data['type'] == cls.TYPE_UPDATE:
                 validate_exists(json_data['body'], ['update'])
 
             if 'filter' in json_data['body'] and not isinstance(json_data['body']['filter'], dict):
@@ -179,10 +189,10 @@ class Executable:
             if 'options' in json_data['body'] and not isinstance(json_data['body']['options'], dict):
                 raise InvalidParameterException(f'The "options" MUST be dictionary.')
 
-        elif json_data['type'] in [SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD,
-                                   SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD,
-                                   SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES,
-                                   SCRIPTING_EXECUTABLE_TYPE_FILE_HASH]:
+        elif json_data['type'] in [cls.TYPE_FILE_UPLOAD,
+                                   cls.TYPE_FILE_DOWNLOAD,
+                                   cls.TYPE_FILE_PROPERTIES,
+                                   cls.TYPE_FILE_HASH]:
             validate_exists(json_data['body'], ['path'])
 
             path = json_data['body']['path']
@@ -195,31 +205,31 @@ class Executable:
         Executable.__create(result, script, executable_data)
         return result
 
-    @staticmethod
-    def __create(result, script, executable_data):
+    @classmethod
+    def __create(cls, result, script, executable_data):
         from src.modules.scripting.database_executable import FindExecutable, InsertExecutable, UpdateExecutable, DeleteExecutable, CountExecutable
         from src.modules.scripting.file_executable import FileUploadExecutable, FileDownloadExecutable, FilePropertiesExecutable, FileHashExecutable
 
         executable_type = executable_data['type']
         executable_body = executable_data['body']
-        if executable_type == SCRIPTING_EXECUTABLE_TYPE_AGGREGATED:
+        if executable_type == cls.TYPE_AGGREGATED:
             for data in executable_body:
                 Executable.__create(result, script, data)
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FIND:
+        elif executable_type == cls.TYPE_FIND:
             result.append(FindExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_COUNT:
+        elif executable_type == cls.TYPE_COUNT:
             result.append(CountExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_INSERT:
+        elif executable_type == cls.TYPE_INSERT:
             result.append(InsertExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_UPDATE:
+        elif executable_type == cls.TYPE_UPDATE:
             result.append(UpdateExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_DELETE:
+        elif executable_type == cls.TYPE_DELETE:
             result.append(DeleteExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_UPLOAD:
+        elif executable_type == cls.TYPE_FILE_UPLOAD:
             result.append(FileUploadExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_DOWNLOAD:
+        elif executable_type == cls.TYPE_FILE_DOWNLOAD:
             result.append(FileDownloadExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_PROPERTIES:
+        elif executable_type == cls.TYPE_FILE_PROPERTIES:
             result.append(FilePropertiesExecutable(script, executable_data))
-        elif executable_type == SCRIPTING_EXECUTABLE_TYPE_FILE_HASH:
+        elif executable_type == cls.TYPE_FILE_HASH:
             result.append(FileHashExecutable(script, executable_data))

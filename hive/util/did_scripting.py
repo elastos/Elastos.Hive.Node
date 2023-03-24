@@ -13,8 +13,8 @@ from hive.util.did_mongo_db_resource import populate_options_find_many, \
     get_mongo_database_size
 from hive.util.error_code import SUCCESS
 from hive.util.payment.vault_service_manage import can_access_vault, update_vault_db_use_storage_byte
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.files_service import FilesService
-from src.utils.consts import COL_IPFS_FILES_SHA256
 from hive.util.v2_adapter import v2_wrapper
 
 
@@ -352,6 +352,6 @@ def run_executable_file_hash(did, app_did, target_did, target_app_did, executabl
     metadata, resp_err = v2_wrapper(FilesService().v1_get_file_metadata)(target_did, target_app_did, name)
     if resp_err:
         return None, f'Exception: Could not get the hash of the file. Status={resp_err[1]} Error={resp_err[0]}'
-    data = {"SHA256": metadata[COL_IPFS_FILES_SHA256]}
+    data = {"SHA256": metadata[CollectionFileMetadata.SHA256]}
 
     return data, None

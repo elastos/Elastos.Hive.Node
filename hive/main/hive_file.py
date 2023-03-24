@@ -6,8 +6,8 @@ from hive.util.server_response import ServerResponse
 from hive.main.interceptor import post_json_param_pre_proc, pre_proc, get_pre_proc
 from hive.util.constants import VAULT_ACCESS_R, VAULT_ACCESS_WR, VAULT_ACCESS_DEL
 from hive.util.payment.vault_service_manage import can_access_vault
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.files_service import FilesService
-from src.utils.consts import COL_IPFS_FILES_IS_FILE, COL_IPFS_FILES_PATH, SIZE, COL_IPFS_FILES_SHA256
 from hive.util.v2_adapter import v2_wrapper
 
 
@@ -80,9 +80,9 @@ class HiveFile:
     @staticmethod
     def get_info_by_metadata(metadata):
         return {
-            "type": "file" if metadata[COL_IPFS_FILES_IS_FILE] else "folder",
-            "name": metadata[COL_IPFS_FILES_PATH],
-            "size": metadata[SIZE],
+            "type": "file" if metadata[CollectionFileMetadata.IS_FILE] else "folder",
+            "name": metadata[CollectionFileMetadata.PATH],
+            "size": metadata[CollectionFileMetadata.SIZE],
             "last_modify": metadata['modified'],
         }
 
@@ -110,7 +110,7 @@ class HiveFile:
         metadata, resp_err = v2_wrapper(self.files_service.v1_get_file_metadata)(did, app_id, content['path'])
         if resp_err:
             return resp_err
-        data = {"SHA256": metadata[COL_IPFS_FILES_SHA256]}
+        data = {"SHA256": metadata[CollectionFileMetadata.SHA256]}
 
         return self.response.response_ok(data)
 

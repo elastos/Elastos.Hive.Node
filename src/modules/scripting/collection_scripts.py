@@ -1,9 +1,8 @@
 from src.modules.files.collection_anonymous_files import CollectionAnonymousFiles
-from src.utils.consts import SCRIPTING_SCRIPT_COLLECTION
-from src.modules.database.mongodb_collection import mongodb_collection, MongodbCollection
+from src.modules.database.mongodb_collection import mongodb_collection, MongodbCollection, CollectionName
 
 
-@mongodb_collection(SCRIPTING_SCRIPT_COLLECTION, is_management=False, is_internal=True)
+@mongodb_collection(CollectionName.SCRIPTS, is_management=False, is_internal=True)
 class CollectionScripts(MongodbCollection):
     """ This class keeps scripts for data and file sharing. """
 

@@ -43,16 +43,20 @@ def fix_dollar_keys_recursively(data, is_save=True):
 
 
 class Condition:
+    TYPE_OR = 'or'
+    TYPE_AND = 'and'
+    TYPE_QUERY_HAS_RESULTS = 'queryHasResults'
+
     def __init__(self, params):
         self.user_did = g.usr_did
         self.app_did = g.app_did
         self.params = params
         self.mcli = MongodbClient()
 
-    @staticmethod
-    def validate_data(json_data):
+    @classmethod
+    def validate_data(cls, json_data):
         """ Validate the condition data, can not nest than 5 layers.
-        The 'queryHasResults' body is dict, and the 'or', 'and' body is list.
+        The TYPE_QUERY_HAS_RESULTS body is dict, and the TYPE_OR, TYPE_AND body is list.
 
         :param json_data: condition content.
         """
@@ -66,18 +70,17 @@ class Condition:
             validate_exists(data, ['name', 'type', 'body'])
 
             condition_type = data['type']
-            if condition_type not in ['or', 'and', 'queryHasResults']:
+            if condition_type not in [cls.TYPE_OR, cls.TYPE_AND, cls.TYPE_QUERY_HAS_RESULTS]:
                 raise InvalidParameterException(f"Unsupported condition type {condition_type}")
 
-            if condition_type in ['and', 'or']:
+            if condition_type in [cls.TYPE_AND, cls.TYPE_OR]:
                 if not isinstance(data['body'], list)\
                         or not data['body']:
                     raise InvalidParameterException(f"Condition body MUST be list "
                                                     f"and at least contain one element for the type '{condition_type}'")
                 for d in data['body']:
                     validate(d, layer + 1)
-            else:
-                # Just 'queryHasResults'
+            else:  # TYPE_QUERY_HAS_RESULTS
                 validate_exists(data, ['collection'], parent_name='body')
 
                 col_name = data['body']['collection']
@@ -92,12 +95,12 @@ class Condition:
             return True
 
         type_, body = condition_data['type'], condition_data['body']
-        if type_ == 'or':
+        if type_ == self.TYPE_OR:
             return any([self.is_satisfied(data, context) for data in body])
-        elif type_ == 'and':
+        elif type_ == self.TYPE_AND:
             return all([self.is_satisfied(data, context) for data in body])
 
-        # type: 'queryHasResults'
+        # handle self.TYPE_QUERY_HAS_RESULTS
 
         # 'options' is for internal
         col_name, options = body['collection'], body.get('options', {})
@@ -325,7 +328,7 @@ class Scripting:
         return mcli.get_col(CollectionScripts).upsert_script(script_name, {
             "condition": {
                 'name': 'verify_user_permission',
-                'type': 'queryHasResults',
+                'type': Condition.TYPE_QUERY_HAS_RESULTS,
                 'body': {
                     'collection': CollectionAnonymousFiles.get_name(),
                     'filter': {'name': '$params.path'}

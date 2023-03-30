@@ -105,6 +105,11 @@ class DID:
         return DID(_obj_call('DID_FromString', did_str.encode(), release_name='DID_Destroy'))
 
     @staticmethod
+    def create_from_cstr(did_str: str) -> 'DID':
+        """ TODO: combine with create_from_str() """
+        return DID(_obj_call('DID_FromString', did_str, release_name='DID_Destroy'))
+
+    @staticmethod
     def create_from_method(method: t.Optional[str], method_specific_str: str) -> 'DID':
         if method is not None:
             did = _obj_call('DID_NewWithMethod', method.encode(), method_specific_str.encode(), release_name='DID_Destroy')
@@ -145,7 +150,7 @@ class DID:
         return DIDMetadata(_obj_call('DID_GetMetadata', self.did))
 
     def __str__(self):
-        did_str = ffi.new(f'char[{lib.ELA_MAX_DID_LEN}]')
+        did_str = ffi.new(f'char[]', lib.ELA_MAX_DID_LEN)
         return _str_call('DID_ToString', self.did, did_str, lib.ELA_MAX_DID_LEN)
 
     def __eq__(self, other: 'DID'):
@@ -244,7 +249,7 @@ class DIDURL:
         return CredentialMetadata(_obj_call('DIDURL_GetMetadata', self.url))
 
     def __str__(self):
-        out_str = ffi.new('char[200]')
+        out_str = ffi.new('char[]', 200)
         return _str_call('DIDURL_ToString', self.url, out_str, 200)
 
     def __eq__(self, other: 'DIDURL'):
@@ -1157,10 +1162,12 @@ class DIDStore:
         def ListDIDsCallback(did, context):
             # INFO: contains a terminating signal by a did with None.
             if did:
-                did_str = ffi.new(f'char[{lib.ELA_MAX_DID_LEN}]')
-                did_str = lib.DID_ToString(did, did_str, lib.ELA_MAX_DID_LEN)
-                d = lib.DID_FromString(did_str)
-                dids.append(DID(_get_gc_obj(d, 'DID_Destroy')))
+                size = lib.ELA_MAX_DID_LEN
+                did_str = ffi.new(f'char[]', size)
+                # TODO: why return value is an empty string.
+                lib.DID_ToString(did, did_str, size)
+                dids.append(DID.create_from_cstr(did_str))
+
             # 0 means no error.
             return 0
 

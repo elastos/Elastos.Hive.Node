@@ -13,6 +13,13 @@ _T = typing.TypeVar('_T', dict, list, tuple)
 class CollectionName:
     # management collections
     IPFS_CID_REF = 'ipfs_cid_ref'
+    APPLICATION = 'application'
+    REGISTER = 'auth_register'
+    VAULT_SERVICE = 'vault_service'
+    BACKUP_CLIENT = 'ipfs_backup_client'
+    BACKUP_SERVER = 'ipfs_backup_server'
+    PAYMENT_ORDER = 'vault_order'
+    PAYMENT_RECEIPT = 'vault_receipt'
 
     # user collections
     COLLECTION_METADATA = '__collection_metadata__'
@@ -43,6 +50,7 @@ class CollectionGenericField:
     CID = 'cid'
     COUNT = 'count'
     SIZE = 'size'
+    STATE = 'state'
 
 
 def mongodb_collection(col_name, is_management=False, is_internal=True):

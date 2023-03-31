@@ -4,16 +4,17 @@ from concurrent.futures import ThreadPoolExecutor
 from flask_executor import Executor
 from flask import g
 
+from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST, VAULT_SERVICE_PRICING_USING, COL_IPFS_BACKUP_SERVER, \
+    VAULT_BACKUP_SERVICE_USING, COL_ORDERS, COL_ORDERS_PRICING_NAME, COL_RECEIPTS
+from src.utils import hive_job
+from src.utils.scheduler import count_vault_storage_really
+from src.modules.auth.collection_application import CollectionApplication
 from src.modules.auth.user import UserManager
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_server import BackupServer
 from src.modules.scripting.collection_scripts_transaction import CollectionScriptsTransaction
 from src.modules.subscription.vault import VaultManager
-from src.utils import hive_job
-from src.utils.scheduler import count_vault_storage_really
-from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST, VAULT_SERVICE_PRICING_USING, COL_IPFS_BACKUP_SERVER, \
-    VAULT_BACKUP_SERVICE_USING, COL_ORDERS, COL_ORDERS_PRICING_NAME, COL_RECEIPTS
 
 executor = Executor()
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
@@ -23,7 +24,7 @@ pool = ThreadPoolExecutor(1)
 @executor.job
 @hive_job('update_vault_databases_usage', 'executor')
 def update_application_access_task(user_did: str, app_did: str, request, response):
-    user_manager, full_url = UserManager(), request.full_path
+    full_url = request.full_path
     request_len = request.content_length if request.content_length else 0
     response_len = response.content_length if response.content_length else 0
     total_len = request_len + response_len
@@ -40,7 +41,7 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
 
     need_update = any([full_url.startswith(url) for url in access_start_urls])
     if need_update:
-        user_manager.update_access(user_did, app_did, 1, total_len)
+        mcli.get_col(CollectionApplication).update_app_access(user_did, app_did, 1, total_len)
         return
 
     # handle v2 scripting module.
@@ -53,7 +54,7 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
 
         try:
             row_id, target_did, target_app_did, _ = CollectionScriptsTransaction.parse_transaction_id(transaction_id)
-            user_manager.update_access(target_did, target_app_did, 1, total_len)
+            mcli.get_col(CollectionApplication).update_app_access(target_did, target_app_did, 1, total_len)
         except:
             return
 
@@ -63,14 +64,14 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
         is_register = request.method.upper() == 'GET' and '/' not in full_url[len(scripting_url):]
         is_unregister = request.method.upper() == 'DELETE'
         if is_register or is_unregister:
-            user_manager.update_access(user_did, app_did, 1, total_len)
+            mcli.get_col(CollectionApplication).update_app_access(user_did, app_did, 1, total_len)
             return
 
         # run script or run by url
         if not hasattr(g, 'script_context') or not g.script_context:
             return
 
-        user_manager.update_access(g.script_context.target_did, g.script_context.target_app_did, 1, total_len)
+        mcli.get_col(CollectionApplication).update_app_access(g.script_context.target_did, g.script_context.target_app_did, 1, total_len)
 
 
 @executor.job
@@ -141,7 +142,7 @@ def sync_app_dids_task():
 
         src_app_dids = user_manager.get_temp_app_dids(user_did)
         for app_did in src_app_dids:
-            user_manager.add_app_if_not_exists(user_did, app_did)
+            mcli.get_col(CollectionApplication).save_app(user_did, app_did)
 
 
 @hive_job('count_vault_storage_executor', tag='executor')

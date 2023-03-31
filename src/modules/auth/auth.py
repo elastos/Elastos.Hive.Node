@@ -16,8 +16,8 @@ from src.utils.did.entity import Entity
 from src.utils.http_request import RequestData
 from src.utils.http_client import HttpClient
 from src.modules.auth.access_token import AccessToken
-from src.modules.auth.user import UserManager
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.auth.collection_application import CollectionApplication
+from src.modules.database.mongodb_client import MongodbClient, mcli
 
 from src.utils.consts import URL_SIGN_IN, URL_BACKUP_AUTH, URL_V2
 from src.utils.singleton import Singleton
@@ -30,7 +30,6 @@ class Auth(Entity, metaclass=Singleton):
         self.http = HttpClient()
         self.mcli = MongodbClient()
         self.access_token = AccessToken()
-        self.user_manager = UserManager()
         logging.info(f'Service DID V2: {self.get_did_string()}')
 
     def sign_in(self, doc: dict):
@@ -93,7 +92,7 @@ class Auth(Entity, metaclass=Singleton):
             logging.info(f'Update access token to auth collection failed: {e}')
 
         # @deprecated auth_register is just a temporary collection, need keep relation here
-        self.user_manager.add_app_if_not_exists(info["userDid"], info["appDid"])
+        mcli.get_col(CollectionApplication).save_app(info["userDid"], info["appDid"])
 
         return {
             "token": access_token,

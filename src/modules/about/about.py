@@ -4,6 +4,8 @@
 The entrance for backup module.
 """
 from src import hive_setting
+from src.modules.auth.collection_application import CollectionApplication
+from src.modules.database.mongodb_client import mcli
 from src.modules.auth.auth import Auth
 from src.modules.provider.provider import Provider
 
@@ -34,7 +36,6 @@ class About:
         import shutil
         import psutil
 
-        from src.modules.auth.user import UserManager
         from src.modules.subscription.vault import VaultManager
         from src.modules.backup.backup import BackupManager
 
@@ -55,7 +56,7 @@ class About:
             "description": hive_setting.NODE_DESCRIPTION,
             "version": hive_setting.VERSION,
             "last_commit_id": hive_setting.LAST_COMMIT,
-            "user_count": UserManager().get_user_count(),
+            "user_count": mcli.get_col(CollectionApplication).get_user_count(),
             "vault_count": VaultManager().get_vault_count(),
             "backup_count": BackupManager().get_backup_count(),
             "latest_access_time": get_last_access_time(),

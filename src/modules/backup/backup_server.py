@@ -15,7 +15,6 @@ from src.utils.http_exception import BackupNotFoundException, AlreadyExistsExcep
     InsufficientStorageException, NotImplementedException, VaultNotFoundException
 from src.utils.payment_config import PaymentConfig
 from src.modules.auth.auth import Auth
-from src.modules.auth.user import UserManager
 from src.modules.backup.backup import BackupManager
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.backup.backup_client import bc
@@ -31,7 +30,6 @@ class BackupServer:
         self.client = bc
         self.auth = Auth()
         self.mcli = MongodbClient()
-        self.user_manager = UserManager()
         self.vault_manager = VaultManager()
         self.backup_manager = BackupManager()
         self.ipfs_client = IpfsClient()
@@ -197,7 +195,7 @@ class BackupServer:
             raise BadRequestException(f"The '{backup.get(BKSERVER_REQ_ACTION)}' is in process.")
 
         # INFO: maybe use has a vault.
-        # self.user_manager.remove_user(g.usr_did)
+        # mcli.get_col(CollectionApplication).remove_user(g.usr_did)
         self.remove_backup_by_did(g.usr_did, backup)
 
     def remove_backup_by_did(self, user_did, doc):

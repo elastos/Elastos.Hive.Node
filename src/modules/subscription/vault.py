@@ -1,19 +1,19 @@
 import shutil
 from datetime import datetime
 
-from src.modules.files.file_cache import FileCache
-from src.modules.files.collection_file_metadata import CollectionFileMetadata
-from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
-from src.modules.files.ipfs_client import IpfsClient
-from src.utils.customize_dict import Dotdict
-from src.utils.payment_config import PaymentConfig
-from src.utils.http_exception import VaultNotFoundException, VaultFrozenException, FileNotFoundException
 from src.utils.consts import IS_UPGRADED, VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_COL, \
     VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, \
     VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_STATE_FREEZE, VAULT_SERVICE_STATE, VAULT_SERVICE_STATE_RUNNING, VAULT_SERVICE_LATEST_ACCESS_TIME, \
     VAULT_SERVICE_STATE_REMOVED
 from src import hive_setting
-from src.modules.auth.user import UserManager
+from src.utils.customize_dict import Dotdict
+from src.utils.payment_config import PaymentConfig
+from src.utils.http_exception import VaultNotFoundException, VaultFrozenException, FileNotFoundException
+from src.modules.files.ipfs_client import IpfsClient
+from src.modules.files.file_cache import FileCache
+from src.modules.auth.collection_application import CollectionApplication
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
+from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.database.mongodb_client import MongodbClient, mcli
 
 
@@ -98,7 +98,6 @@ class VaultManager:
 
     def __init__(self):
         self.mcli = MongodbClient()
-        self.user_manager = UserManager()
 
     def create_vault(self, user_did, price_plan: dict, is_upgraded=False) -> Vault:
         now = datetime.now().timestamp()  # seconds in UTC
@@ -203,7 +202,7 @@ class VaultManager:
         filter_ = {VAULT_SERVICE_DID: user_did}
         if force:
             # remove applications.
-            self.user_manager.remove_user(user_did)
+            mcli.get_col(CollectionApplication).remove_user(user_did)
 
             # remove the vault.
             self.mcli.get_management_collection(VAULT_SERVICE_COL).delete_one(filter_)
@@ -215,8 +214,8 @@ class VaultManager:
             })
 
     def remove_vault_app(self, user_did, app_did):
-        app_doc = self.user_manager.get_app_doc(user_did, app_did)
-        if not app_doc:
+        app = mcli.get_col(CollectionApplication).get_app(user_did, app_did)
+        if not app:
             return
 
         try:
@@ -235,12 +234,12 @@ class VaultManager:
             pass
 
         # Remove app information
-        self.user_manager.remove_user_app(user_did, app_did)
+        mcli.get_col(CollectionApplication).remove_user_app(user_did, app_did)
 
     def recalculate_user_databases_size(self, user_did: str):
         """ Update all databases used size in vault """
         # Get all application DIDs of user DID, then get their sizes.
-        app_dids = self.user_manager.get_apps(user_did)
+        app_dids = mcli.get_col(CollectionApplication).get_app_dids(user_did)
         size = sum(list(map(lambda d: self.mcli.get_user_database_size(user_did, d), app_dids)))
 
         self.update_user_databases_size(user_did, size, is_reset=True)
@@ -310,7 +309,7 @@ class VaultManager:
 
         if force:
             # remove all databases belong to user's vault
-            app_dids = self.user_manager.get_apps(user_did)
+            app_dids = mcli.get_col(CollectionApplication).get_app_dids(user_did)
             for app_did in app_dids:
                 self.mcli.drop_user_database(user_did, app_did)
 
@@ -331,7 +330,7 @@ class VaultManager:
         except VaultNotFoundException as e:
             pass
 
-        apps = self.user_manager.get_app_docs(user_did)
+        apps = mcli.get_col(CollectionApplication).get_apps(user_did)
         if apps:
             access_count = sum(list(map(lambda app: app.get('access_count', 0), apps)))
             access_amount = sum(list(map(lambda app: app.get('access_amount', 0), apps)))

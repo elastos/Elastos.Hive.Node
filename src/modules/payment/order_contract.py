@@ -14,7 +14,7 @@ BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 class OrderContract:
     def __init__(self):
         self.url = hive_setting.ESC_RESOLVER_URL
-        self.address = Web3.toChecksumAddress(hive_setting.PAYMENT_CONTRACT_ADDRESS)
+        self.address = Web3.to_checksum_address(hive_setting.PAYMENT_CONTRACT_ADDRESS)
         assert self.url and self.address and 'Please set payment url and address on the .env file.'
         logging.info(f'Payment contract config: contract resolver url, {self.url}, contract address, {self.address}')
         with open(os.path.join(BASE_DIR, 'order_abi.json')) as f:
@@ -28,7 +28,7 @@ class OrderContract:
         order = self.__get_contract().functions.getOrder(order_id).call()
         if not order or len(order) < 4:
             raise BadRequestException(f'Invalid contract order info: {order}')
-        oid, amount, to, memo = order[0], Web3(Web3.HTTPProvider(self.url)).fromWei(order[1], "ether"), order[2], order[3]
+        oid, amount, to, memo = order[0], Web3(Web3.HTTPProvider(self.url)).from_wei(order[1], "ether"), order[2], order[3]
         return {
             'orderId': oid,
             'to': to,

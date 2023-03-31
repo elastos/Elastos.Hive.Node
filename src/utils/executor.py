@@ -4,12 +4,12 @@ from concurrent.futures import ThreadPoolExecutor
 from flask_executor import Executor
 from flask import g
 
+from src.modules.auth.collection_register import CollectionRegister
 from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST, VAULT_SERVICE_PRICING_USING, COL_IPFS_BACKUP_SERVER, \
     VAULT_BACKUP_SERVICE_USING, COL_ORDERS, COL_ORDERS_PRICING_NAME, COL_RECEIPTS
 from src.utils import hive_job
 from src.utils.scheduler import count_vault_storage_really
 from src.modules.auth.collection_application import CollectionApplication
-from src.modules.auth.user import UserManager
 from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_server import BackupServer
@@ -132,7 +132,7 @@ def sync_app_dids_task():
     @deprecated Only used when hive node starting, it will be removed later.
     """
 
-    mcli, user_manager, vault_manager = MongodbClient(), UserManager(), VaultManager()
+    mcli, vault_manager = MongodbClient(), VaultManager()
 
     col = mcli.get_management_collection(VAULT_SERVICE_COL)
     vault_services = col.find_many({VAULT_SERVICE_DID: {'$exists': True}})  # cursor
@@ -140,7 +140,7 @@ def sync_app_dids_task():
     for service in vault_services:
         user_did = service[VAULT_SERVICE_DID]
 
-        src_app_dids = user_manager.get_temp_app_dids(user_did)
+        src_app_dids = mcli.get_col(CollectionRegister).get_register_app_dids(user_did)
         for app_did in src_app_dids:
             mcli.get_col(CollectionApplication).save_app(user_did, app_did)
 

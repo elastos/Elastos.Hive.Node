@@ -3,7 +3,6 @@ from datetime import datetime
 
 from bson import ObjectId
 
-from src.utils.consts import COL_COMMON_CREATED, COL_COMMON_MODIFIED
 from src.utils.http_exception import BadRequestException
 
 
@@ -92,7 +91,7 @@ class MongodbCollection:
 
     def insert_one(self, doc, contains_extra=True, **kwargs):
         if contains_extra:
-            doc[COL_COMMON_CREATED] = doc[COL_COMMON_MODIFIED] = int(datetime.now().timestamp())
+            doc[CollectionGenericField.CREATED] = doc[CollectionGenericField.MODIFIED] = int(datetime.now().timestamp())
 
         # kwargs are the options
         options = {k: v for k, v in kwargs.items() if k in ["bypass_document_validation"]}
@@ -109,7 +108,7 @@ class MongodbCollection:
     def insert_many(self, docs, contains_extra=True, **kwargs):
         if contains_extra:
             for doc in docs:
-                doc[COL_COMMON_CREATED] = doc[COL_COMMON_MODIFIED] = int(datetime.now().timestamp())
+                doc[CollectionGenericField.CREATED] = doc[CollectionGenericField.MODIFIED] = int(datetime.now().timestamp())
 
         # kwargs are the options
         options = {k: v for k, v in kwargs.items() if k in ["ordered", "bypass_document_validation"]}
@@ -132,16 +131,16 @@ class MongodbCollection:
 
             # for normal update
             if "$set" in update:
-                update["$set"][COL_COMMON_MODIFIED] = now_timestamp
+                update["$set"][CollectionGenericField.MODIFIED] = now_timestamp
             else:
-                update["$set"] = {COL_COMMON_MODIFIED: now_timestamp}
+                update["$set"] = {CollectionGenericField.MODIFIED: now_timestamp}
 
             # for insert if not exists
             if kwargs.get('upsert', False):
                 if "$setOnInsert" in update:
-                    update["$setOnInsert"][COL_COMMON_CREATED] = now_timestamp
+                    update["$setOnInsert"][CollectionGenericField.CREATED] = now_timestamp
                 else:
-                    update["$setOnInsert"] = {COL_COMMON_CREATED: now_timestamp}
+                    update["$setOnInsert"] = {CollectionGenericField.CREATED: now_timestamp}
 
         # kwargs are the options, and filter them
         options = {k: v for k, v in kwargs.items() if k in ("upsert", "bypass_document_validation")}

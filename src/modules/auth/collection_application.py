@@ -17,7 +17,7 @@ class AppState(Enum):
 class CollectionApplication(MongodbCollection):
     """ represents the application on the vault. """
 
-    # contain extra two fields: created, modified.
+    # Contain extra two fields: created, modified.
     USR_DID = CollectionGenericField.USR_DID
     APP_DID = CollectionGenericField.APP_DID
     DATABASE_NAME = 'database_name'

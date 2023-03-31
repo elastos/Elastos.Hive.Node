@@ -5,12 +5,13 @@ import logging
 from flask import g
 
 from src.modules.backup.encryption import Encryption
+from src.modules.database.mongodb_collection import CollectionGenericField
 from src.modules.files.local_file import LocalFile
 from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
     BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER, USR_DID, BACKUP_REQUEST_STATE_SUCCESS, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
-    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE, BKSERVER_REQ_PUBLIC_KEY, COL_COMMON_CREATED, COL_COMMON_MODIFIED
+    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE, BKSERVER_REQ_PUBLIC_KEY
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
     InsufficientStorageException, NotImplementedException, VaultNotFoundException
 from src.utils.payment_config import PaymentConfig
@@ -224,8 +225,8 @@ class BackupServer:
             'storage_used': int(doc.get(VAULT_BACKUP_SERVICE_USE_STORAGE, 0)),
             'start_time': int(doc[VAULT_BACKUP_SERVICE_START_TIME]),
             'end_time': int(doc[VAULT_BACKUP_SERVICE_END_TIME]),
-            'created': int(doc.get(COL_COMMON_CREATED)),
-            'updated': int(doc.get(COL_COMMON_MODIFIED)),
+            'created': int(doc.get(CollectionGenericField.CREATED)),
+            'updated': int(doc.get(CollectionGenericField.MODIFIED)),
         }
 
     def update_storage_usage(self, user_did, size):

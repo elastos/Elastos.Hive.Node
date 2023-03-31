@@ -5,11 +5,12 @@ from datetime import datetime
 from flask import request, g
 
 from src import UnauthorizedException
-from src.modules.auth.user import UserManager
-from src.utils.consts import URL_V2, URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_STATE, \
-    URL_SERVER_INTERNAL_RESTORE, URL_V1, USER_DID, APP_ID, APP_INSTANCE_DID
+from src.modules.auth.collection_application import CollectionApplication
+from src.modules.database.mongodb_client import mcli
 from src.modules.auth.auth import Auth
 from src.utils.did.eladid_wrapper import JWT
+from src.utils.consts import URL_V2, URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_STATE, \
+    URL_SERVER_INTERNAL_RESTORE, URL_V1, USER_DID, APP_ID, APP_INSTANCE_DID
 
 
 def __get_token_details(token, is_internal):
@@ -113,7 +114,6 @@ class TokenParser:
         the implementation of all APIs can directly use this two global variables.
         """
         g.usr_did, g.app_did, g.app_ins_did = None, None, None
-        self.user_manager = UserManager()
 
     def __no_need_auth(self):
         return any(map(lambda url: request.full_path.startswith(url), self.EXCEPT_URLS))
@@ -140,7 +140,7 @@ class TokenParser:
 
         @deprecated this will be commented many days later
         """
-        self.user_manager.add_app_if_not_exists(user_did, app_did)
+        mcli.get_col(CollectionApplication).save_app(user_did, app_did)
 
     def parse(self):
         """ Only handle the access token of v2 APIs.

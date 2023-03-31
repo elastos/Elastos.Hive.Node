@@ -11,10 +11,10 @@ from pathlib import Path
 from flask_apscheduler import APScheduler
 
 from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_MODIFY_TIME
-from src.utils import hive_job
-from src.modules.auth.user import UserManager
-from src.modules.database.mongodb_client import MongodbClient
 from src.modules.files.local_file import LocalFile
+from src.utils import hive_job
+from src.modules.auth.collection_application import CollectionApplication
+from src.modules.database.mongodb_client import MongodbClient
 from src.modules.subscription.vault import VaultManager
 
 scheduler = APScheduler()
@@ -27,7 +27,7 @@ def scheduler_init(app):
 
 
 def count_vault_storage_really():
-    mcli, user_manager, vault_manager = MongodbClient(), UserManager(), VaultManager()
+    mcli, vault_manager = MongodbClient(), VaultManager()
     now = int(datetime.now().timestamp())
 
     col = mcli.get_management_collection(VAULT_SERVICE_COL)
@@ -37,7 +37,7 @@ def count_vault_storage_really():
         user_did = service[VAULT_SERVICE_DID]
 
         # get files and databases total size
-        app_dids = user_manager.get_apps(user_did)
+        app_dids = mcli.get_col(CollectionApplication).get_app_dids(user_did)
         files_size = sum(map(lambda app_did: vault_manager.count_app_files_total_size(user_did, app_did), app_dids))
         dbs_size = sum(map(lambda app_did: mcli.get_user_database_size(user_did, app_did), app_dids))
 

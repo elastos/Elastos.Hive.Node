@@ -80,21 +80,6 @@ COL_COMMON_MODIFIED = 'modified'
 # management tables definition
 ###############################################################################
 
-DID_INFO_DB_NAME = "hive_manage_info"  # management database
-
-# for user did and app did relations
-COL_APPLICATION = 'application'  # management table
-COL_APPLICATION_USR_DID = USR_DID
-COL_APPLICATION_APP_DID = _APP_DID
-COL_APPLICATION_DATABASE_NAME = 'database_name'
-COL_APPLICATION_ACCESS_COUNT = 'access_count'
-COL_APPLICATION_ACCESS_AMOUNT = 'access_amount'  # data in and out from app data API
-COL_APPLICATION_ACCESS_LAST_TIME = 'access_last_time'
-COL_APPLICATION_STATE = STATE
-# extra: 'created' and 'modified'
-COL_APPLICATION_STATE_NORMAL = 'normal'
-# COL_APPLICATION_STATE_REMOVED = 'removed'
-
 # for auth collection, must compatible with v1
 # this collection is treated as the temporary one for signin/auth, do not dependent on it for long usage.
 DID_INFO_REGISTER_COL = "auth_register"  # management table
@@ -109,7 +94,7 @@ DID_INFO_TOKEN_EXPIRED = "token_expired"
 
 # for backup service
 
-VAULT_BACKUP_SERVICE_COL = "vault_backup_service"  # management table, only for v1
+# VAULT_BACKUP_SERVICE_COL = "vault_backup_service"  # management table, only for v1
 VAULT_BACKUP_SERVICE_USING = "backup_using"  # pricing name
 VAULT_BACKUP_SERVICE_MAX_STORAGE = "max_storage"
 VAULT_BACKUP_SERVICE_USE_STORAGE = "use_storage"

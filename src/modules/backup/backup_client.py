@@ -17,14 +17,14 @@ from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, B
     BACKUP_REQUEST_STATE_MSG, BACKUP_REQUEST_TARGET_HOST, BACKUP_REQUEST_TARGET_DID, BACKUP_REQUEST_TARGET_TOKEN, \
     BACKUP_REQUEST_STATE_STOP, BACKUP_REQUEST_STATE_SUCCESS, \
     URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_RESTORE, \
-    COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2, COL_APPLICATION_DATABASE_NAME, COL_APPLICATION_APP_DID
+    COL_IPFS_BACKUP_CLIENT, USR_DID, URL_V2
 from src.utils.http_exception import BadRequestException, InsufficientStorageException
 from src.modules.files.local_file import LocalFile
 from src.utils.http_client import HttpClient
+from src.modules.auth.collection_application import CollectionApplication
+from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.auth.auth import Auth
-from src.modules.auth.user import UserManager
 from src.modules.subscription.vault import VaultManager
-from src.modules.database.mongodb_client import MongodbClient
 from src.modules.backup.backup_server_client import BackupServerClient
 from src.modules.backup.backup_executor import BackupExecutor, RestoreExecutor
 
@@ -36,7 +36,6 @@ class __BackupClient:
         self.auth = Auth()
         self.http = HttpClient()
         self.mcli = MongodbClient()
-        self.user_manager = UserManager()
         self.vault_manager = VaultManager()
         self.ipfs_client = IpfsClient()
         self.notifier = None
@@ -161,13 +160,13 @@ class __BackupClient:
         - dump the specific database to a snapshot file;
         - upload this snapshot file into IPFS node
         """
-        app_docs = self.user_manager.get_app_docs(user_did)
+        app_docs = mcli.get_col(CollectionApplication).get_apps(user_did)
         metadata_list, length = list(), len(app_docs)
         for i in range(length):
             if process_callback:
                 process_callback(i + 1, length)
 
-            db_name, app_did = app_docs[i][COL_APPLICATION_DATABASE_NAME], app_docs[i][COL_APPLICATION_APP_DID]
+            db_name, app_did = app_docs[i][CollectionApplication.DATABASE_NAME], app_docs[i][CollectionApplication.APP_DID]
             d = {
                 'path': LocalFile.generate_tmp_file_path(),
                 'name': db_name,
@@ -254,7 +253,7 @@ class __BackupClient:
             LocalFile.restore_mongodb_from_full_path(plain_path)
             plain_path.unlink()
 
-            self.user_manager.add_app_if_not_exists(request_metadata['user_did'], d['app_did'])
+            mcli.get_col(CollectionApplication).save_app(request_metadata['user_did'], d['app_did'])
             logging.info(f'[BackupClient] Success to restore the dump file for database {d["name"]}.')
 
     def retry_backup_request(self):

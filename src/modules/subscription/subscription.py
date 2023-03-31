@@ -9,13 +9,12 @@ import typing as t
 
 from flask import g
 
+from src.utils.consts import VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_PRICING_USING
 from src.modules.auth.auth import Auth
-from src.modules.auth.user import UserManager
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.auth.collection_application import CollectionApplication
+from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.payment.order import OrderManager
 from src.modules.subscription.vault import VaultManager
-from src.utils.consts import VAULT_SERVICE_START_TIME, VAULT_SERVICE_END_TIME, VAULT_SERVICE_MODIFY_TIME, VAULT_SERVICE_PRICING_USING, COL_APPLICATION_APP_DID, \
-    COL_APPLICATION_ACCESS_COUNT, COL_APPLICATION_ACCESS_AMOUNT, COL_APPLICATION_ACCESS_LAST_TIME
 from src.utils.did.eladid_wrapper import DID, DIDDocument, DIDURL
 from src.utils.payment_config import PaymentConfig
 from src.utils.http_exception import BadRequestException, ApplicationNotFoundException
@@ -31,7 +30,6 @@ class VaultSubscription(metaclass=Singleton):
     def __init__(self):
         self.auth = Auth()
         self.mcli = MongodbClient()
-        self.user_manager = UserManager()
         self.order_manager = OrderManager()
         self.vault_manager = VaultManager()
 
@@ -51,7 +49,7 @@ class VaultSubscription(metaclass=Singleton):
             'end_time': int(vault[VAULT_SERVICE_END_TIME]),
             'created': int(vault[VAULT_SERVICE_START_TIME]),
             'updated': int(vault[VAULT_SERVICE_MODIFY_TIME]),
-            'app_count': len(self.user_manager.get_apps(g.usr_did))
+            'app_count': len(mcli.get_col(CollectionApplication).get_apps(g.usr_did))
         }
 
         if files_used:
@@ -96,10 +94,10 @@ class VaultSubscription(metaclass=Singleton):
 
         :v2 API: """
 
-        apps = self.user_manager.get_app_docs(g.usr_did)
+        apps = mcli.get_col(CollectionApplication).get_apps(g.usr_did)
 
         def get_app_detail(user_did, app):
-            app_did, info = app[COL_APPLICATION_APP_DID], {}
+            app_did, info = app[CollectionApplication.APP_DID], {}
             try:
                 info = VaultSubscription.__get_appdid_info_by_did(app_did)
             except Exception as e:
@@ -114,9 +112,9 @@ class VaultSubscription(metaclass=Singleton):
                 "app_did": app_did,
                 "used_storage_size": int(self.vault_manager.count_app_files_total_size(user_did, app_did)
                                          + self.vault_manager.get_user_database_size(user_did, app_did)),
-                "access_count": app.get(COL_APPLICATION_ACCESS_COUNT, 0),
-                "access_amount": app.get(COL_APPLICATION_ACCESS_AMOUNT, 0),
-                "access_last_time": app.get(COL_APPLICATION_ACCESS_LAST_TIME, -1),
+                "access_count": app.get(CollectionApplication.ACCESS_COUNT, 0),
+                "access_amount": app.get(CollectionApplication.ACCESS_AMOUNT, 0),
+                "access_last_time": app.get(CollectionApplication.ACCESS_LAST_TIME, -1),
             }
 
         results = list(filter(lambda b: b is not None, map(lambda app: get_app_detail(g.usr_did, app), apps)))

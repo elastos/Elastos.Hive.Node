@@ -6,10 +6,9 @@ from flask import g
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
-from src.modules.database.mongodb_collection import MongodbCollection, CollectionName
-from src.utils.consts import DID_INFO_DB_NAME
 from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException
 from src import hive_setting
+from src.modules.database.mongodb_collection import MongodbCollection, CollectionName
 
 
 _T = TypeVar('_T', bound=MongodbCollection)
@@ -17,6 +16,9 @@ _T = TypeVar('_T', bound=MongodbCollection)
 
 class MongodbClient:
     """ Used to connect mongodb and is a helper class for all mongo database operation. """
+
+    # the database for global data of all users.
+    MANAGEMENT_DBNAME = "hive_manage_info"
 
     def __init__(self):
         self.mongodb_uri = hive_setting.MONGODB_URL
@@ -75,7 +77,7 @@ class MongodbClient:
         TODO: replace this with get_collection
         """
 
-        database = self.__get_database(DID_INFO_DB_NAME)
+        database = self.__get_database(self.MANAGEMENT_DBNAME)
         if col_name not in database.list_collection_names():
             database.create_collection(col_name)
         return MongodbCollection(database[col_name])
@@ -108,7 +110,7 @@ class MongodbClient:
             user_did, app_did = user_did if user_did else g.usr_did, app_did if app_did else g.app_did
 
         if is_management:
-            database = self.__get_database(DID_INFO_DB_NAME)
+            database = self.__get_database(self.MANAGEMENT_DBNAME)
             if col_name not in database.list_collection_names():
                 database.create_collection(col_name)
         else:

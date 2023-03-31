@@ -1,9 +1,9 @@
 import logging
 
 from src.utils.http_exception import FileNotFoundException
-from src.modules.database.mongodb_collection import MongodbCollection, mongodb_collection, CollectionName, CollectionGenericField
 from src.modules.files.file_cache import FileCache
-from src.modules.auth.user import UserManager
+from src.modules.database.mongodb_collection import MongodbCollection, mongodb_collection, CollectionName, CollectionGenericField
+from src.modules.auth.collection_application import CollectionApplication
 from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.database.mongodb_client import mcli
 
@@ -22,7 +22,6 @@ class CollectionFileMetadata(MongodbCollection):
 
     def __init__(self, col):
         MongodbCollection.__init__(self, col, is_management=False)
-        self.user_manager = UserManager()
 
     def get_all_file_metadatas(self, folder_dir: str = None):
         """ Get files metadata under folder 'path'. Get all application files if folder_dir not specified.
@@ -90,7 +89,7 @@ class CollectionFileMetadata(MongodbCollection):
         The result shows the files content (cid) information.
         """
 
-        app_dids, total_size, cids = UserManager().get_apps(user_did), 0, list()
+        app_dids, total_size, cids = mcli.get_col(CollectionApplication).get_app_dids(user_did), 0, list()
 
         def get_cid_metadata_from_list(cid_mts, file_mt):
             if not cid_mts:

@@ -8,15 +8,15 @@ import logging
 import os
 from datetime import datetime
 
-from src.utils.consts import APP_INSTANCE_DID, DID_INFO_NONCE_EXPIRED, DID_INFO_REGISTER_COL, DID_INFO_NONCE
+from src.utils.consts import APP_INSTANCE_DID
 from src.utils.http_exception import InvalidParameterException, BadRequestException
 from src import hive_setting
 from src.utils.did.eladid_wrapper import Credential, DIDDocument, DID, JWT, Presentation
 from src.utils.did.entity import Entity
 from src.utils.http_request import RequestData
 from src.utils.http_client import HttpClient
-from src.modules.auth.access_token import AccessToken
 from src.modules.auth.collection_application import CollectionApplication
+from src.modules.auth.collection_register import CollectionRegister
 from src.modules.database.mongodb_client import MongodbClient, mcli
 
 from src.utils.consts import URL_SIGN_IN, URL_BACKUP_AUTH, URL_V2
@@ -29,7 +29,6 @@ class Auth(Entity, metaclass=Singleton):
                         from_file=True, file_content=hive_setting.SERVICE_DID_PRIVATE_KEY)
         self.http = HttpClient()
         self.mcli = MongodbClient()
-        self.access_token = AccessToken()
         logging.info(f'Service DID V2: {self.get_did_string()}')
 
     def sign_in(self, doc: dict):
@@ -59,17 +58,9 @@ class Auth(Entity, metaclass=Singleton):
 
     def __save_nonce_to_db(self, app_instance_did: str):
         """ return nonce and 3 minutes expire time """
-        nonce, expire_time = AccessToken.create_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
+        nonce, expire_time = CollectionRegister.generate_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
         try:
-            filter_ = {APP_INSTANCE_DID: app_instance_did}
-            update = {
-                '$set': {  # for update and insert
-                    DID_INFO_NONCE: nonce,
-                    DID_INFO_NONCE_EXPIRED: expire_time
-                }
-            }
-            col = self.mcli.get_management_collection(DID_INFO_REGISTER_COL)
-            col.update_one(filter_, update, contains_extra=False, upsert=True)
+            mcli.get_col(CollectionRegister).update_register_nonce(app_instance_did, nonce, expire_time)
         except Exception as e:
             logging.getLogger("HiveAuth").error(f"Exception in __save_nonce_to_db: {e}")
             raise BadRequestException(f'Failed to generate nonce: {e}')
@@ -86,7 +77,7 @@ class Auth(Entity, metaclass=Singleton):
         access_token = super().create_jwt_token('AccessToken', info["id"], info["expTime"], 'props', json.dumps(props), claim_json=False)
 
         try:
-            self.access_token.update_auth_info(info["userDid"], info["appDid"], info["id"], info["nonce"], access_token, info["expTime"])
+            mcli.get_col(CollectionRegister).update_register_token(info["userDid"], info["appDid"], info["id"], info["nonce"], access_token, info["expTime"])
         except Exception as e:
             # update to temporary auth collection, so failed can skip
             logging.info(f'Update access token to auth collection failed: {e}')
@@ -119,11 +110,11 @@ class Auth(Entity, metaclass=Singleton):
 
         # presentation check nonce
 
-        auth_info = self.access_token.get_auth_info_by_nonce(presentation.get_nonce())
+        auth_info = mcli.get_col(CollectionRegister).get_register(presentation.get_nonce())
         if not auth_info:
             raise InvalidParameterException('Can not get presentation nonce information from database.')
 
-        if auth_info[DID_INFO_NONCE_EXPIRED] < int(datetime.now().timestamp()):
+        if auth_info['nonce_expired'] < int(datetime.now().timestamp()):
             raise InvalidParameterException('The nonce expired.')
 
         # credential check
@@ -153,7 +144,7 @@ class Auth(Entity, metaclass=Singleton):
         info["userDid"] = str(issuer)
         # min(7 days, credential expire time)
         info["expTime"] = min(int(datetime.now().timestamp()) + hive_setting.ACCESS_TOKEN_EXPIRED, exp_time)
-        info["nonce"] = auth_info[DID_INFO_NONCE]
+        info["nonce"] = auth_info['nonce']
 
         return info
 
@@ -243,7 +234,7 @@ class Auth(Entity, metaclass=Singleton):
 
     def get_ownership_presentation(self, credential: str):
         vc = Credential.from_json(credential)
-        vp_json = self.create_presentation_str(vc, AccessToken.create_nonce(), super().get_did_string())
+        vp_json = self.create_presentation_str(vc, CollectionRegister.generate_nonce(), super().get_did_string())
         return json.loads(vp_json)
 
     @staticmethod

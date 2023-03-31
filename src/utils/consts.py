@@ -11,6 +11,9 @@ HIVE_MODE_TEST = "test"  # run on v1 test cases
 
 # for files service
 CHUNK_SIZE = 4096
+USER_DID = "userDid"
+APP_ID = "appDid"
+APP_INSTANCE_DID = "appInstanceDid"
 
 ###############################################################################
 # constant variables added by v2
@@ -68,29 +71,10 @@ URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
 
 # TODO: make these internal
 USR_DID = 'user_did'
-_APP_DID = 'app_did'
-CID = 'cid'
-COUNT = 'count'
-SIZE = 'size'
-
-COL_COMMON_CREATED = 'created'
-COL_COMMON_MODIFIED = 'modified'
 
 ###############################################################################
 # management tables definition
 ###############################################################################
-
-# for auth collection, must compatible with v1
-# this collection is treated as the temporary one for signin/auth, do not dependent on it for long usage.
-DID_INFO_REGISTER_COL = "auth_register"  # management table
-USER_DID = "userDid"  # added when /auth
-APP_ID = "appDid"  # added when /auth
-APP_INSTANCE_DID = "appInstanceDid"  # added when /signin
-DID_INFO_NONCE = "nonce"
-DID_INFO_TOKEN = "token"
-DID_INFO_NONCE_EXPIRED = "nonce_expired"
-DID_INFO_TOKEN_EXPIRED = "token_expired"
-# auth_register end
 
 # for backup service
 

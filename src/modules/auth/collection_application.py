@@ -1,14 +1,13 @@
 import logging
 from datetime import datetime
-from enum import Enum
-
 import bson
 
 from src.modules.database.mongodb_collection import CollectionName, mongodb_collection, MongodbCollection, \
     CollectionGenericField
+from src.modules.database.mongodb_client import mcli
 
 
-class AppState(Enum):
+class AppState:
     NORMAL = 'normal'
     # REMOVED = 'removed'
 
@@ -66,7 +65,7 @@ class CollectionApplication(MongodbCollection):
             return
 
         update = {'$setOnInsert': {
-            self.DATABASE_NAME: self.mcli.get_user_database_name(user_did, app_did),
+            self.DATABASE_NAME: mcli.get_user_database_name(user_did, app_did),
             self.STATE: AppState.NORMAL}}
 
         self.update_one(self._get_filter(user_did, app_did), update, contains_extra=True, upsert=True)

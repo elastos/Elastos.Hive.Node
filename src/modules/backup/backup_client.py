@@ -160,7 +160,7 @@ class __BackupClient:
         - dump the specific database to a snapshot file;
         - upload this snapshot file into IPFS node
         """
-        app_docs = mcli.get_col(CollectionApplication).get_apps(user_did)
+        app_docs = mcli.get_col(CollectionApplication, use_g=False).get_apps(user_did)
         metadata_list, length = list(), len(app_docs)
         for i in range(length):
             if process_callback:
@@ -253,7 +253,7 @@ class __BackupClient:
             LocalFile.restore_mongodb_from_full_path(plain_path)
             plain_path.unlink()
 
-            mcli.get_col(CollectionApplication).save_app(request_metadata['user_did'], d['app_did'])
+            mcli.get_col(CollectionApplication, use_g=False).save_app(request_metadata['user_did'], d['app_did'])
             logging.info(f'[BackupClient] Success to restore the dump file for database {d["name"]}.')
 
     def retry_backup_request(self):

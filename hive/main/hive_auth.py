@@ -7,8 +7,10 @@ from datetime import datetime
 import os
 
 from src.utils.did.eladid import ffi, lib
+
 from src.utils.did.eladid_wrapper import Credential
-from src.modules.auth.user import UserManager
+from src.modules.auth.collection_application import CollectionApplication
+from src.modules.database.mongodb_client import mcli
 
 from hive.util.did.v1_entity import V1Entity
 from hive.util.did_info import add_did_nonce_to_db, create_nonce, get_did_info_by_nonce, \
@@ -29,7 +31,6 @@ class HiveAuth(V1Entity):
     def __init__(self):
         self.app = None
         self.response = ServerResponse("HiveSync")
-        self.user_manager = UserManager()
 
     def init_app(self, app):
         self.app = app
@@ -111,7 +112,7 @@ class HiveAuth(V1Entity):
             return self.response.response_err(UNAUTHORIZED, "save to db fail!")
 
         # auth_register is just a temporary collection, need keep relation here
-        self.user_manager.add_app_if_not_exists(auth_info["userDid"], auth_info["appDid"])
+        mcli.get_col(CollectionApplication).save_app(auth_info["userDid"], auth_info["appDid"])
 
         # response token
         data = {
@@ -298,7 +299,7 @@ class HiveAuth(V1Entity):
         # @deprecated save the relationship between user did and app did
         # backup module not used in v1, so here is from user
         if info.get(DID, None) and info.get(APP_ID, None):
-            UserManager().add_app_if_not_exists(info[DID], info[APP_ID])
+            mcli.get_col(CollectionApplication).save_app(info[DID], info[APP_ID])
 
         return info, None
 

@@ -41,7 +41,7 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
 
     need_update = any([full_url.startswith(url) for url in access_start_urls])
     if need_update:
-        mcli.get_col(CollectionApplication).update_app_access(user_did, app_did, 1, total_len)
+        mcli.get_col(CollectionApplication, use_g=False).update_app_access(user_did, app_did, 1, total_len)
         return
 
     # handle v2 scripting module.
@@ -54,7 +54,7 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
 
         try:
             row_id, target_did, target_app_did, _ = CollectionScriptsTransaction.parse_transaction_id(transaction_id)
-            mcli.get_col(CollectionApplication).update_app_access(target_did, target_app_did, 1, total_len)
+            mcli.get_col(CollectionApplication, use_g=False).update_app_access(target_did, target_app_did, 1, total_len)
         except:
             return
 
@@ -64,14 +64,14 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
         is_register = request.method.upper() == 'GET' and '/' not in full_url[len(scripting_url):]
         is_unregister = request.method.upper() == 'DELETE'
         if is_register or is_unregister:
-            mcli.get_col(CollectionApplication).update_app_access(user_did, app_did, 1, total_len)
+            mcli.get_col(CollectionApplication, use_g=False).update_app_access(user_did, app_did, 1, total_len)
             return
 
         # run script or run by url
         if not hasattr(g, 'script_context') or not g.script_context:
             return
 
-        mcli.get_col(CollectionApplication).update_app_access(g.script_context.target_did, g.script_context.target_app_did, 1, total_len)
+        mcli.get_col(CollectionApplication, use_g=False).update_app_access(g.script_context.target_did, g.script_context.target_app_did, 1, total_len)
 
 
 @executor.job
@@ -140,9 +140,9 @@ def sync_app_dids_task():
     for service in vault_services:
         user_did = service[VAULT_SERVICE_DID]
 
-        src_app_dids = mcli.get_col(CollectionRegister).get_register_app_dids(user_did)
+        src_app_dids = mcli.get_col(CollectionRegister, use_g=False).get_register_app_dids(user_did)
         for app_did in src_app_dids:
-            mcli.get_col(CollectionApplication).save_app(user_did, app_did)
+            mcli.get_col(CollectionApplication, use_g=False).save_app(user_did, app_did)
 
 
 @hive_job('count_vault_storage_executor', tag='executor')

@@ -30,7 +30,8 @@ function start_ipfs() {
         --network hive-service                                \
         -v ${PWD}/.ipfs-data/ipfs-docker-staging:/export      \
         -v ${PWD}/.ipfs-data/ipfs-docker-data:/data/ipfs      \
-        -p 127.0.0.1:5002:5001                                \
+        -p 127.0.0.1:5020:5001                                \
+        -p 127.0.0.1:8080:8080                                \
         lscr.io/linuxserver/ipfs | cut -c -9
 }
 
@@ -207,6 +208,11 @@ case "$1" in
     setup)
         setup_venv
         ;;
+    prepare)
+        echo "Prepare ipfs and mongo only..."
+        prepare_before_running
+        echo "done !!!"
+        ;;
     direct)
         start_direct
         ;;
@@ -232,6 +238,6 @@ case "$1" in
         cp -f config/.env.local .env
         ;;
     *)
-    echo "Usage: run.sh {setup|direct|docker|test|test_v1|HIVE_PORT=5000 ./run.sh test_v2|stop|reset_env}"
+    echo "Usage: ./run.sh {setup|prepare|direct|docker|test|test_v1|HIVE_PORT=5000 ./run.sh test_v2|stop|reset_env}"
     exit 1
 esac

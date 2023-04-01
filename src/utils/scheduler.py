@@ -37,7 +37,7 @@ def count_vault_storage_really():
         user_did = service[VAULT_SERVICE_DID]
 
         # get files and databases total size
-        app_dids = mcli.get_col(CollectionApplication).get_app_dids(user_did)
+        app_dids = mcli.get_col(CollectionApplication, use_g=False).get_app_dids(user_did)
         files_size = sum(map(lambda app_did: vault_manager.count_app_files_total_size(user_did, app_did), app_dids))
         dbs_size = sum(map(lambda app_did: mcli.get_user_database_size(user_did, app_did), app_dids))
 

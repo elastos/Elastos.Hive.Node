@@ -89,7 +89,7 @@ class CollectionFileMetadata(MongodbCollection):
         The result shows the files content (cid) information.
         """
 
-        app_dids, total_size, cids = mcli.get_col(CollectionApplication).get_app_dids(user_did), 0, list()
+        app_dids, total_size, cids = mcli.get_col(CollectionApplication, use_g=False).get_app_dids(user_did), 0, list()
 
         def get_cid_metadata_from_list(cid_mts, file_mt):
             if not cid_mts:

@@ -4,6 +4,7 @@ from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.scripting.collection_scripts_transaction import ActionType, CollectionScriptsTransaction
 from src.modules.scripting.executable import Executable
 from src.modules.scripting.scripting import Script
+from src.modules.subscription.collection_vault import CollectionVault
 
 
 class FileExecutable(Executable):
@@ -21,7 +22,7 @@ class FileExecutable(Executable):
 
     def _create_transaction(self, action_type):
         """ Here just create a transaction for later uploading and downloading. """
-        vault = self.vault_manager.get_vault(self.get_target_did())
+        vault = mcli.get_col(CollectionVault).get_vault(self.get_target_did())
         if action_type == ActionType.UPLOAD:
             vault.check_write_permission().check_storage_full()
 
@@ -55,7 +56,7 @@ class FilePropertiesExecutable(FileExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        self.vault_manager.get_vault(self.get_target_did())
+        mcli.get_col(CollectionVault).get_vault(self.get_target_did())
 
         path = self.get_populated_path()
 
@@ -73,7 +74,7 @@ class FileHashExecutable(FileExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        self.vault_manager.get_vault(self.get_target_did())
+        mcli.get_col(CollectionVault).get_vault(self.get_target_did())
 
         doc = self.files_service.v1_get_file_metadata(self.get_target_did(), self.get_target_app_did(), self.get_populated_path())
         return self.get_result_data({"SHA256": doc[CollectionFileMetadata.SHA256]})

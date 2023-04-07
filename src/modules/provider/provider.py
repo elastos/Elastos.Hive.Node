@@ -12,13 +12,14 @@ import base58
 from flask import g
 
 from src import hive_setting
-from src.modules.backup.backup import BackupManager
-from src.modules.subscription.vault import VaultManager
-from src.utils.did.eladid_wrapper import Credential
-from src.utils.consts import USR_DID, VAULT_SERVICE_DID, VAULT_SERVICE_PRICING_USING, \
-    VAULT_SERVICE_MAX_STORAGE, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_BACKUP_SERVICE_USING, \
+from src.utils.consts import USR_DID, VAULT_BACKUP_SERVICE_USING, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_USE_STORAGE
 from src.utils.http_exception import ForbiddenException, ReceiptNotFoundException
+from src.modules.backup.backup import BackupManager
+from src.modules.subscription.vault import Vault
+from src.modules.subscription.collection_vault import CollectionVault
+from src.modules.database.mongodb_client import mcli
+from src.utils.did.eladid_wrapper import Credential
 from src.modules.payment.order import OrderManager
 
 
@@ -27,7 +28,6 @@ class Provider:
         self.owner_did, self.credential = Provider.get_verified_owner_did()
         logging.info(f'Owner DID: {self.owner_did}')
         self.order_manager = OrderManager()
-        self.vault_manager = VaultManager()
         self.backup_manager = BackupManager()
 
     @staticmethod
@@ -49,18 +49,18 @@ class Provider:
 
         self.__check_auth_owner_id()
 
-        def vault_mapper(v):
+        def vault_mapper(v: Vault):
             result = {
-                "pricing_using": v[VAULT_SERVICE_PRICING_USING],
+                "pricing_using": v.get_plan_name(),
                 "max_storage": v.get_storage_quota(),
-                "file_use_storage": v[VAULT_SERVICE_FILE_USE_STORAGE],
-                "db_use_storage": v[VAULT_SERVICE_DB_USE_STORAGE],
-                "user_did": v[VAULT_SERVICE_DID],
+                "file_use_storage": v.get_files_usage(),
+                "db_use_storage": v.get_database_usage(),
+                "user_did": v.get_user_did(),
             }
-            result.update(self.vault_manager.get_access_statistics(g.usr_did))
+            result.update(mcli.get_col(CollectionVault).get_vault_access_statistics(g.usr_did))
             return result
 
-        vaults = self.vault_manager.get_all_vaults()
+        vaults = mcli.get_col(CollectionVault).get_all_vaults(raise_not_found=True)
         return {
             "vaults": list(map(lambda v: vault_mapper(v), vaults))
         }

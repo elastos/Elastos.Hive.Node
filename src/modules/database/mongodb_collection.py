@@ -156,6 +156,11 @@ class MongodbCollection:
             "upserted_id": str(result.upserted_id) if result.upserted_id else None
         }
 
+    def update_many_field_value(self, field_name, src_value, dst_value, contains_extra=True):
+        """ Update many docs with specific field name field_name and src_value to dst_value. """
+        filter_, update_ = {field_name: src_value}, {"$set": {field_name: dst_value}}
+        return self.update_many(filter_, update_, contains_extra=contains_extra)
+
     def replace_one(self, filter_, document, upsert=True):
         """ if upsert is True and old one not exists, create a new one. """
         # default 'bypass_document_validation': False

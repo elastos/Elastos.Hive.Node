@@ -4,17 +4,17 @@ from concurrent.futures import ThreadPoolExecutor
 from flask_executor import Executor
 from flask import g
 
-from src.modules.auth.collection_register import CollectionRegister
-from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, HIVE_MODE_TEST, VAULT_SERVICE_PRICING_USING, COL_IPFS_BACKUP_SERVER, \
+from src.utils.consts import HIVE_MODE_TEST, COL_IPFS_BACKUP_SERVER, \
     VAULT_BACKUP_SERVICE_USING, COL_ORDERS, COL_ORDERS_PRICING_NAME, COL_RECEIPTS
 from src.utils import hive_job
 from src.utils.scheduler import count_vault_storage_really
 from src.modules.auth.collection_application import CollectionApplication
+from src.modules.auth.collection_register import CollectionRegister
+from src.modules.scripting.collection_scripts_transaction import CollectionScriptsTransaction
+from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_server import BackupServer
-from src.modules.scripting.collection_scripts_transaction import CollectionScriptsTransaction
-from src.modules.subscription.vault import VaultManager
 
 executor = Executor()
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
@@ -41,7 +41,7 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
 
     need_update = any([full_url.startswith(url) for url in access_start_urls])
     if need_update:
-        mcli.get_col(CollectionApplication, use_g=False).update_app_access(user_did, app_did, 1, total_len)
+        mcli.get_col(CollectionApplication).update_app_access(user_did, app_did, 1, total_len)
         return
 
     # handle v2 scripting module.
@@ -54,7 +54,7 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
 
         try:
             row_id, target_did, target_app_did, _ = CollectionScriptsTransaction.parse_transaction_id(transaction_id)
-            mcli.get_col(CollectionApplication, use_g=False).update_app_access(target_did, target_app_did, 1, total_len)
+            mcli.get_col(CollectionApplication).update_app_access(target_did, target_app_did, 1, total_len)
         except:
             return
 
@@ -64,22 +64,19 @@ def update_application_access_task(user_did: str, app_did: str, request, respons
         is_register = request.method.upper() == 'GET' and '/' not in full_url[len(scripting_url):]
         is_unregister = request.method.upper() == 'DELETE'
         if is_register or is_unregister:
-            mcli.get_col(CollectionApplication, use_g=False).update_app_access(user_did, app_did, 1, total_len)
+            mcli.get_col(CollectionApplication).update_app_access(user_did, app_did, 1, total_len)
             return
 
         # run script or run by url
         if not hasattr(g, 'script_context') or not g.script_context:
             return
 
-        mcli.get_col(CollectionApplication, use_g=False).update_app_access(g.script_context.target_did, g.script_context.target_app_did, 1, total_len)
+        mcli.get_col(CollectionApplication).update_app_access(g.script_context.target_did, g.script_context.target_app_did, 1, total_len)
 
 
 @executor.job
 @hive_job('update_vault_databases_usage', 'executor')
 def update_vault_databases_usage_task(user_did: str, full_url: str):
-    from src.modules.subscription.vault import VaultManager
-    vault_manager = VaultManager()
-
     # record latest vault access time, include v1, v2 and database, files, scripting (caller)
     access_start_urls = [
         '/api/v1/db',
@@ -92,7 +89,7 @@ def update_vault_databases_usage_task(user_did: str, full_url: str):
 
     need_update = any([full_url.startswith(url) for url in access_start_urls])
     if need_update:
-        vault_manager.update_vault_latest_access_time(user_did)
+        mcli.get_col(CollectionVault).update_vault_latest_access(user_did)
 
     # v1, just consider auth, subscription, database, files, subscripting
     exclude_start_urls = [
@@ -109,7 +106,7 @@ def update_vault_databases_usage_task(user_did: str, full_url: str):
     ]
     need_update = all([not full_url.startswith(url) for url in exclude_start_urls])
     if need_update:
-        vault_manager.recalculate_user_databases_size(user_did)
+        mcli.get_col(CollectionVault).recalculate_vault_database_used_size(user_did)
         logging.getLogger('AFTER REQUEST').info(f'Succeeded to update_vault_databases_usage({user_did}), {full_url}')
 
 
@@ -132,17 +129,14 @@ def sync_app_dids_task():
     @deprecated Only used when hive node starting, it will be removed later.
     """
 
-    mcli, vault_manager = MongodbClient(), VaultManager()
-
-    col = mcli.get_management_collection(VAULT_SERVICE_COL)
-    vault_services = col.find_many({VAULT_SERVICE_DID: {'$exists': True}})  # cursor
+    vault_services = mcli.get_col(CollectionVault).get_all_vaults()
 
     for service in vault_services:
-        user_did = service[VAULT_SERVICE_DID]
+        user_did = service[CollectionVault.USER_DID]
 
-        src_app_dids = mcli.get_col(CollectionRegister, use_g=False).get_register_app_dids(user_did)
+        src_app_dids = mcli.get_col(CollectionRegister).get_register_app_dids(user_did)
         for app_did in src_app_dids:
-            mcli.get_col(CollectionApplication, use_g=False).save_app(user_did, app_did)
+            mcli.get_col(CollectionApplication).save_app(user_did, app_did)
 
 
 @hive_job('count_vault_storage_executor', tag='executor')
@@ -174,7 +168,12 @@ def rename_pricing_name():
         filter_, update_ = {field: "Advanced"}, {"$set": {field: "Premium"}}
         mcli.get_management_collection(collection_name).update_many(filter_, update_, contains_extra=False)
 
-    update_pricing_plan_name(VAULT_SERVICE_COL, VAULT_SERVICE_PRICING_USING)
+    def update_pricing_plan_name_ex(collection_cls, field_name):
+        mcli.get_col(collection_cls).update_many_field_value(field_name, 'Free', 'Basic')
+        mcli.get_col(collection_cls).update_many_field_value(field_name, 'Rookie', 'Standard')
+        mcli.get_col(collection_cls).update_many_field_value(field_name, 'Advanced', 'Premium')
+
+    update_pricing_plan_name_ex(CollectionVault, CollectionVault.PRICING_USING)
     update_pricing_plan_name(COL_IPFS_BACKUP_SERVER, VAULT_BACKUP_SERVICE_USING)
     update_pricing_plan_name(COL_ORDERS, COL_ORDERS_PRICING_NAME)
     update_pricing_plan_name(COL_RECEIPTS, COL_ORDERS_PRICING_NAME)

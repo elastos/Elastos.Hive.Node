@@ -12,9 +12,9 @@ from src.modules.backup.encryption import Encryption
 from src.modules.database.mongodb_client import mcli
 from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
+from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.files.local_file import LocalFile
-from src.modules.subscription.vault import VaultManager
 from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID, BACKUP_REQUEST_STATE_PROCESS, BACKUP_REQUEST_TARGET_HOST, \
     BACKUP_REQUEST_TARGET_TOKEN, BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE
 from src.utils.http_exception import HiveException, BadRequestException
@@ -30,7 +30,6 @@ class ExecutorBase(threading.Thread):
         self.action = action
         self.start_delay = start_delay
         self.is_force = is_force
-        self.vault_manager = VaultManager()
 
     def run(self):
         try:
@@ -76,7 +75,7 @@ class ExecutorBase(threading.Thread):
                        'size': d['size'],
                        'count': d['count']} for d in files_cids],
             USR_DID: self.user_did,
-            "vault_size": self.vault_manager.get_vault(self.user_did).get_storage_usage(),
+            "vault_size": mcli.get_col(CollectionVault).get_vault(self.user_did).get_storage_usage(),
             "backup_size": sum([d['size'] for d in database_cids]) + total_file_size,
             "create_time": datetime.now().timestamp(),
             "encryption": {
@@ -107,9 +106,8 @@ class ExecutorBase(threading.Thread):
     @staticmethod
     def update_vault_usage_by_metadata(user_did, request_metadata):
         files_size, dbs_size = ExecutorBase.get_vault_usage_by_metadata(request_metadata)
-        vault_manager = VaultManager()
-        vault_manager.update_user_files_size(user_did, files_size, is_reset=True)
-        vault_manager.update_user_databases_size(user_did, files_size, is_reset=True)
+        mcli.get_col(CollectionVault).update_vault_file_used_size(user_did, files_size, is_reset=True)
+        mcli.get_col(CollectionVault).update_vault_database_used_size(user_did, files_size, is_reset=True)
 
     @staticmethod
     def handle_cids_in_local_ipfs(request_metadata,
@@ -157,7 +155,7 @@ class ExecutorBase(threading.Thread):
                 if not only_files_ref:
                     execute_pin_unpin(f['cid'])
 
-                cid_ref = mcli.get_col(CollectionIpfsCidRef, use_g=False)
+                cid_ref = mcli.get_col(CollectionIpfsCidRef)
                 if not is_unpin:
                     cid_ref.decrease_cid_ref(f['cid'], f['count'])
                 else:

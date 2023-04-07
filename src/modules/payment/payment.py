@@ -13,8 +13,9 @@ from src import hive_setting
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, ReceiptNotFoundException
 from src.utils.singleton import Singleton
 from src.utils.payment_config import PaymentConfig
+from src.modules.subscription.collection_vault import CollectionVault
+from src.modules.database.mongodb_client import mcli
 from src.modules.auth.auth import Auth
-from src.modules.subscription.vault import VaultManager
 from src.modules.backup.backup import BackupManager
 from src.modules.payment.order import OrderManager, Order
 from src.modules.payment.order_contract import OrderContract
@@ -25,7 +26,6 @@ class Payment(metaclass=Singleton):
         self.ela_address = hive_setting.PAYMENT_RECEIVING_ADDRESS
         self.auth = Auth()
         self.vault_subscription = None
-        self.vault_manager = VaultManager()
         self.backup_manager = BackupManager()
         self.order_contract = OrderContract()
         self.order_manager = OrderManager()
@@ -49,7 +49,7 @@ class Payment(metaclass=Singleton):
         :v2 API:
         """
         if subscription == Order.SUBSCRIPTION_VAULT:
-            self.vault_manager.get_vault(g.usr_did)
+            mcli.get_col(CollectionVault).get_vault(g.usr_did)
             plan = PaymentConfig.get_vault_plan(pricing_name)
         else:
             self.backup_manager.get_backup(g.usr_did)
@@ -79,7 +79,7 @@ class Payment(metaclass=Singleton):
 
         # check the existence of the vault or backup, maybe removed by user :-(
         if order.get_subscription() == Order.SUBSCRIPTION_VAULT:
-            self.vault_manager.get_vault(g.usr_did)
+            mcli.get_col(CollectionVault).get_vault(g.usr_did)
         else:
             self.backup_manager.get_backup(g.usr_did)
 

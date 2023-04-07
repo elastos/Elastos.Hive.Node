@@ -1,7 +1,6 @@
 from src.utils.http_exception import NotImplementedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient
 from src.modules.files.files_service import FilesService
-from src.modules.subscription.vault import VaultManager
 
 
 def validate_exists(json_data, properties, parent_name=None):
@@ -107,7 +106,6 @@ class Executable:
         self.output = executable_data.get('output', True)
 
         self.files_service = FilesService()
-        self.vault_manager = VaultManager()
         self.mcli = MongodbClient()
 
     def execute(self):

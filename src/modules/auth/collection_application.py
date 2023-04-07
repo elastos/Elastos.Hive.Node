@@ -4,6 +4,7 @@ import bson
 
 from src.modules.database.mongodb_collection import CollectionName, mongodb_collection, MongodbCollection, \
     CollectionGenericField
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.database.mongodb_client import mcli
 
 
@@ -52,6 +53,24 @@ class CollectionApplication(MongodbCollection):
     def get_app_database_names(self, user_did) -> list:
         """ get all database names of the user did """
         return list(map(lambda d: d[self.DATABASE_NAME], self.get_apps(user_did)))
+
+    @staticmethod
+    def get_app_total_files_size(user_did, app_did) -> int:
+        """ for batch 'count_vault_storage_job' and count files occupation """
+        if not mcli.exists_user_database(user_did, app_did):
+            return 0
+
+        files = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_all_file_metadatas()
+        # get total size of all user's application files
+        return int(sum(map(lambda o: o[CollectionFileMetadata.SIZE], files)))
+
+    @staticmethod
+    def get_app_total_database_size(user_did, app_did) -> int:
+        return mcli.get_user_database_size(user_did, app_did)
+
+    @classmethod
+    def get_app_storage_used_size(cls, user_did, app_did) -> int:
+        return cls.get_app_total_files_size(user_did, app_did) + cls.get_app_total_database_size(user_did, app_did)
 
     def save_app(self, user_did, app_did):
         """ add the relation of user did and app did to collection if not exists.

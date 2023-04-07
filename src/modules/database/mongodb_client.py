@@ -102,11 +102,17 @@ class MongodbClient:
         return MongodbCollection(database[col_name], is_management=False)
 
     def get_col(self, col_class: type(_T) = MongodbCollection, user_did: str = None, app_did: str = None, use_g=True) -> _T:
-        """ Use for get collection with the specific class. """
+        """ Use for get collection with the specific class.
+        :param col_class: collection class which derives from class MongodbCollection.
+        :param user_did: user did
+        :param app_did: application did
+        :param use_g: use g values for user collections if user_did or app_did not provided.
+        """
+
         col_name, is_management = col_class.get_name(), col_class.is_management()
         assert col_name
 
-        if use_g:
+        if use_g and not is_management:  # management collection do not require global values.
             user_did, app_did = user_did if user_did else g.usr_did, app_did if app_did else g.app_did
 
         if is_management:

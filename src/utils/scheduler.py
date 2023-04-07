@@ -5,17 +5,15 @@ Scheduler tasks for the hive node.
 """
 import logging
 import time
-from datetime import datetime
 from pathlib import Path
 
 from flask_apscheduler import APScheduler
 
-from src.utils.consts import VAULT_SERVICE_COL, VAULT_SERVICE_DID, VAULT_SERVICE_FILE_USE_STORAGE, VAULT_SERVICE_DB_USE_STORAGE, VAULT_SERVICE_MODIFY_TIME
-from src.modules.files.local_file import LocalFile
 from src.utils import hive_job
+from src.modules.files.local_file import LocalFile
 from src.modules.auth.collection_application import CollectionApplication
-from src.modules.database.mongodb_client import MongodbClient
-from src.modules.subscription.vault import VaultManager
+from src.modules.subscription.collection_vault import CollectionVault
+from src.modules.database.mongodb_client import mcli
 
 scheduler = APScheduler()
 
@@ -27,27 +25,18 @@ def scheduler_init(app):
 
 
 def count_vault_storage_really():
-    mcli, vault_manager = MongodbClient(), VaultManager()
-    now = int(datetime.now().timestamp())
-
-    col = mcli.get_management_collection(VAULT_SERVICE_COL)
-    vault_services = col.find_many({VAULT_SERVICE_DID: {'$exists': True}})  # cursor
+    vault_services = mcli.get_col(CollectionVault).get_all_vaults()
 
     for service in vault_services:
-        user_did = service[VAULT_SERVICE_DID]
+        user_did = service[CollectionVault.USER_DID]
 
         # get files and databases total size
-        app_dids = mcli.get_col(CollectionApplication, use_g=False).get_app_dids(user_did)
-        files_size = sum(map(lambda app_did: vault_manager.count_app_files_total_size(user_did, app_did), app_dids))
-        dbs_size = sum(map(lambda app_did: mcli.get_user_database_size(user_did, app_did), app_dids))
+        app_dids = mcli.get_col(CollectionApplication).get_app_dids(user_did)
+        files_used_size = sum(map(lambda app_did: CollectionApplication.get_app_total_files_size(user_did, app_did), app_dids))
+        database_used_size = sum(map(lambda app_did: CollectionApplication.get_app_total_database_size(user_did, app_did), app_dids))
 
-        # update sizes into the vault information
-        filter_ = {"_id": service["_id"]}
-        update = {"$set": {
-            VAULT_SERVICE_FILE_USE_STORAGE: files_size,
-            VAULT_SERVICE_DB_USE_STORAGE: dbs_size,
-            VAULT_SERVICE_MODIFY_TIME: now}}
-        col.update_one(filter_, update, contains_extra=False)
+        mcli.get_col(CollectionVault).update_vault_file_used_size(user_did, files_used_size)
+        mcli.get_col(CollectionVault).update_vault_database_used_size(user_did, database_used_size)
 
 
 @scheduler.task(trigger='interval', id='daily_routine_job', days=1)

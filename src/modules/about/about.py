@@ -5,6 +5,7 @@ The entrance for backup module.
 """
 from src import hive_setting
 from src.modules.auth.collection_application import CollectionApplication
+from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.database.mongodb_client import mcli
 from src.modules.auth.auth import Auth
 from src.modules.provider.provider import Provider
@@ -36,11 +37,12 @@ class About:
         import shutil
         import psutil
 
-        from src.modules.subscription.vault import VaultManager
         from src.modules.backup.backup import BackupManager
 
         def get_last_access_time():
-            vaults = VaultManager().get_all_vaults()
+            vaults = mcli.get_col(CollectionVault).get_all_vaults()
+            if not vaults:
+                return -1
             return max(list(map(lambda v: v.get_latest_access_time(), vaults)))
 
         owner_did, credential = Provider.get_verified_owner_did()
@@ -57,7 +59,7 @@ class About:
             "version": hive_setting.VERSION,
             "last_commit_id": hive_setting.LAST_COMMIT,
             "user_count": mcli.get_col(CollectionApplication).get_user_count(),
-            "vault_count": VaultManager().get_vault_count(),
+            "vault_count": mcli.get_col(CollectionVault).get_vault_count(),
             "backup_count": BackupManager().get_backup_count(),
             "latest_access_time": get_last_access_time(),
             "memory_used": memory.available,

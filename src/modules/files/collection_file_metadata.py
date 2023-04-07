@@ -2,8 +2,8 @@ import logging
 
 from src.utils.http_exception import FileNotFoundException
 from src.modules.files.file_cache import FileCache
-from src.modules.database.mongodb_collection import MongodbCollection, mongodb_collection, CollectionName, CollectionGenericField
-from src.modules.auth.collection_application import CollectionApplication
+from src.modules.database.mongodb_collection import MongodbCollection, mongodb_collection, CollectionName, \
+    CollectionGenericField
 from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.database.mongodb_client import mcli
 
@@ -72,7 +72,7 @@ class CollectionFileMetadata(MongodbCollection):
     def delete_file_metadata(self, rel_path, cid):
         result = self.delete_one(self._get_internal_filter(rel_path))
         if result['deleted_count'] > 0 and cid:
-            removed = mcli.get_col(CollectionIpfsCidRef, use_g=False).decrease_cid_ref(cid)
+            removed = mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(cid)
             if removed:
                 FileCache.remove_file(self.user_did, cid)
 
@@ -85,11 +85,11 @@ class CollectionFileMetadata(MongodbCollection):
     @classmethod
     def get_backup_file_metadatas(cls, user_did):
         """ get all cid infos from user's vault for backup
-
+        # TODO: move this to CollectionVault and split it into CollectionApplication.
         The result shows the files content (cid) information.
         """
-
-        app_dids, total_size, cids = mcli.get_col(CollectionApplication, use_g=False).get_app_dids(user_did), 0, list()
+        from src.modules.auth.collection_application import CollectionApplication
+        app_dids, total_size, cids = mcli.get_col(CollectionApplication).get_app_dids(user_did), 0, list()
 
         def get_cid_metadata_from_list(cid_mts, file_mt):
             if not cid_mts:

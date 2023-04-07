@@ -4,14 +4,14 @@ from datetime import datetime
 from bson import ObjectId
 
 from src import hive_setting
-from src.modules.database.mongodb_collection import CollectionGenericField
 from src.utils.consts import COL_ORDERS, COL_ORDERS_ELA_AMOUNT, COL_ORDERS_PROOF, USR_DID, COL_ORDERS_CONTRACT_ORDER_ID, COL_ORDERS_SUBSCRIPTION, VERSION, \
     COL_ORDERS_PRICING_NAME, COL_ORDERS_ELA_ADDRESS, COL_ORDERS_STATUS, COL_ORDERS_STATUS_NORMAL, COL_RECEIPTS_ORDER_ID, \
     COL_RECEIPTS_PAID_DID, COL_RECEIPTS, COL_ORDERS_EXPIRE_TIME, COL_ORDERS_STATUS_PAID, COL_ORDERS_STATUS_ARCHIVE, COL_ORDERS_STATUS_EXPIRED
 from src.utils.http_exception import OrderNotFoundException
 from src.utils.payment_config import PaymentConfig
-from src.modules.database.mongodb_client import MongodbClient
-from src.modules.subscription.vault import VaultManager
+from src.modules.database.mongodb_collection import CollectionGenericField
+from src.modules.subscription.collection_vault import CollectionVault
+from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.backup.backup import BackupManager
 
 
@@ -143,7 +143,6 @@ class OrderManager:
     def __init__(self):
         self.ela_address = hive_setting.PAYMENT_RECEIVING_ADDRESS
         self.mcli = MongodbClient()
-        self.vault_manager = VaultManager()
         self.backup_manager = BackupManager()
 
     def get_orders(self, user_did, subscription: t.Optional[str], contract_order_id: t.Optional[int]):
@@ -247,7 +246,7 @@ class OrderManager:
     def upgrade_vault_or_backup(self, user_did, order: Order):
         plan = order.get_plan()
         if order.is_for_vault():
-            self.vault_manager.upgrade(user_did, plan)
+            mcli.get_col(CollectionVault).upgrade_vault(user_did, plan)
         else:
             self.backup_manager.upgrade(user_did, plan)
 

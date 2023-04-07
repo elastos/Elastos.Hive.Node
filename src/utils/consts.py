@@ -130,25 +130,6 @@ COL_RECEIPTS_ORDER_ID = 'order_id'
 COL_RECEIPTS_PAID_DID = 'paid_did'
 # end of order
 
-# for vault collection, must compatible with v1
-VAULT_SERVICE_COL = "vault_service"  # management table
-VAULT_SERVICE_DID = "did"  # user_did
-VAULT_SERVICE_MAX_STORAGE = "max_storage"
-VAULT_SERVICE_FILE_USE_STORAGE = "file_use_storage"
-VAULT_SERVICE_DB_USE_STORAGE = "db_use_storage"
-VAULT_SERVICE_MODIFY_TIME = "modify_time"
-VAULT_SERVICE_START_TIME = "start_time"
-VAULT_SERVICE_END_TIME = "end_time"
-VAULT_SERVICE_PRICING_USING = "pricing_using"
-VAULT_SERVICE_STATE = "state"  # maybe not exists
-
-VAULT_SERVICE_STATE_RUNNING = "running"  # read and write
-VAULT_SERVICE_STATE_FREEZE = "freeze"  # read, but not write
-VAULT_SERVICE_STATE_REMOVED = "removed"  # soft unsubscribe
-
-VAULT_SERVICE_LATEST_ACCESS_TIME = "latest_access_time"  # for access checking on database, files, scripting.
-# constants of db end
-
 
 def get_unique_dict_item_from_list(dict_list: list) -> list:
     if not dict_list:

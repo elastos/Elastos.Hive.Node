@@ -5,24 +5,24 @@ import logging
 from flask import g
 
 from src.modules.backup.encryption import Encryption
-from src.modules.database.mongodb_collection import CollectionGenericField
 from src.modules.files.local_file import LocalFile
 from src.utils.consts import BKSERVER_REQ_STATE, BACKUP_REQUEST_STATE_PROCESS, BKSERVER_REQ_ACTION, \
     BACKUP_REQUEST_ACTION_BACKUP, BKSERVER_REQ_CID, BKSERVER_REQ_SHA256, BKSERVER_REQ_SIZE, \
     BKSERVER_REQ_STATE_MSG, BACKUP_REQUEST_STATE_FAILED, COL_IPFS_BACKUP_SERVER, USR_DID, BACKUP_REQUEST_STATE_SUCCESS, \
     VAULT_BACKUP_SERVICE_MAX_STORAGE, VAULT_BACKUP_SERVICE_START_TIME, VAULT_BACKUP_SERVICE_END_TIME, \
-    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, VAULT_SERVICE_MAX_STORAGE, BKSERVER_REQ_PUBLIC_KEY
+    VAULT_BACKUP_SERVICE_USING, VAULT_BACKUP_SERVICE_USE_STORAGE, BKSERVER_REQ_PUBLIC_KEY
 from src.utils.http_exception import BackupNotFoundException, AlreadyExistsException, BadRequestException, \
     InsufficientStorageException, NotImplementedException, VaultNotFoundException
 from src.utils.payment_config import PaymentConfig
 from src.modules.auth.auth import Auth
 from src.modules.backup.backup import BackupManager
-from src.modules.database.mongodb_client import MongodbClient
+from src.modules.database.mongodb_collection import CollectionGenericField
+from src.modules.subscription.collection_vault import CollectionVault
+from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_executor import ExecutorBase, BackupServerExecutor
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.subscription.subscription import VaultSubscription
-from src.modules.subscription.vault import VaultManager
 
 
 class BackupServer:
@@ -31,7 +31,6 @@ class BackupServer:
         self.client = bc
         self.auth = Auth()
         self.mcli = MongodbClient()
-        self.vault_manager = VaultManager()
         self.backup_manager = BackupManager()
         self.ipfs_client = IpfsClient()
 
@@ -47,14 +46,14 @@ class BackupServer:
         backup = self.backup_manager.get_backup(g.usr_did)
 
         try:
-            self.vault_manager.get_vault(g.usr_did)
+            mcli.get_col(CollectionVault).get_vault(g.usr_did)
             raise AlreadyExistsException('The vault already exists.')
         except VaultNotFoundException as e:
             pass
 
-        vault = self.vault_manager.create_vault(g.usr_did, PaymentConfig.get_free_vault_plan(), is_upgraded=True)
+        vault = mcli.get_col(CollectionVault).create_vault(g.usr_did, PaymentConfig.get_free_vault_plan(), is_upgraded=True)
         request_metadata = self.get_server_request_metadata(g.usr_did, backup, is_promotion=True,
-                                                            vault_max_size=vault[VAULT_SERVICE_MAX_STORAGE])
+                                                            vault_max_size=vault.get_storage_quota())
 
         # INFO: if free vault can not hold the backup data, then let it go
         #       or user can not promote again anymore.

@@ -14,8 +14,7 @@ from src.modules.backup.backup_server_client import BackupServerClient
 from src.modules.backup.encryption import Encryption
 from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
-from src.modules.subscription.collection_vault import CollectionVault
-from src.modules.database.mongodb_client import mcli, col_backup
+from src.modules.database.mongodb_client import mcli
 from src.modules.files.ipfs_client import IpfsClient
 from src.modules.files.local_file import LocalFile
 
@@ -75,7 +74,7 @@ class ExecutorBase(threading.Thread):
                        'size': d['size'],
                        'count': d['count']} for d in files_cids],
             USR_DID: self.user_did,
-            "vault_size": mcli.get_col(CollectionVault).get_vault(self.user_did).get_storage_usage(),
+            "vault_size": mcli.get_col_vault().get_vault(self.user_did).get_storage_usage(),
             "backup_size": sum([d['size'] for d in database_cids]) + total_file_size,
             "create_time": datetime.now().timestamp(),
             "encryption": {
@@ -106,8 +105,8 @@ class ExecutorBase(threading.Thread):
     @staticmethod
     def update_vault_usage_by_metadata(user_did, request_metadata):
         files_size, dbs_size = ExecutorBase.get_vault_usage_by_metadata(request_metadata)
-        mcli.get_col(CollectionVault).update_vault_file_used_size(user_did, files_size, is_reset=True)
-        mcli.get_col(CollectionVault).update_vault_database_used_size(user_did, files_size, is_reset=True)
+        mcli.get_col_vault().update_vault_file_used_size(user_did, files_size, is_reset=True)
+        mcli.get_col_vault().update_vault_database_used_size(user_did, files_size, is_reset=True)
 
     @staticmethod
     def handle_cids_in_local_ipfs(request_metadata,
@@ -268,5 +267,5 @@ class BackupServerExecutor(ExecutorBase):
         self.update_progress('80')
         logging.info('[BackupServerExecutor] Success to get pin all CIDs.')
 
-        col_backup.update_backup_storage_used_size(self.user_did, request_metadata['backup_size'])
+        mcli.get_col_backup().update_backup_storage_used_size(self.user_did, request_metadata['backup_size'])
         logging.info('[BackupServerExecutor] Success to update storage size.')

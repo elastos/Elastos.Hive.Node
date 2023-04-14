@@ -8,19 +8,15 @@ import logging
 import os
 from datetime import datetime
 
-from src.utils.consts import APP_INSTANCE_DID
+from src.utils.consts import APP_INSTANCE_DID, URL_SIGN_IN, URL_BACKUP_AUTH, URL_V2
 from src.utils.http_exception import InvalidParameterException, BadRequestException
 from src import hive_setting
+from src.utils.singleton import Singleton
 from src.utils.did.eladid_wrapper import Credential, DIDDocument, DID, JWT, Presentation
 from src.utils.did.entity import Entity
 from src.utils.http_request import RequestData
 from src.utils.http_client import HttpClient
-from src.modules.auth.collection_application import CollectionApplication
-from src.modules.auth.collection_register import CollectionRegister
 from src.modules.database.mongodb_client import MongodbClient, mcli
-
-from src.utils.consts import URL_SIGN_IN, URL_BACKUP_AUTH, URL_V2
-from src.utils.singleton import Singleton
 
 
 class Auth(Entity, metaclass=Singleton):
@@ -58,9 +54,10 @@ class Auth(Entity, metaclass=Singleton):
 
     def __save_nonce_to_db(self, app_instance_did: str):
         """ return nonce and 3 minutes expire time """
-        nonce, expire_time = CollectionRegister.generate_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
+        col_register = mcli.get_col_register()
+        nonce, expire_time = col_register.generate_nonce(), int(datetime.now().timestamp()) + hive_setting.AUTH_CHALLENGE_EXPIRED
         try:
-            mcli.get_col(CollectionRegister).update_register_nonce(app_instance_did, nonce, expire_time)
+            col_register.update_register_nonce(app_instance_did, nonce, expire_time)
         except Exception as e:
             logging.getLogger("HiveAuth").error(f"Exception in __save_nonce_to_db: {e}")
             raise BadRequestException(f'Failed to generate nonce: {e}')
@@ -77,13 +74,13 @@ class Auth(Entity, metaclass=Singleton):
         access_token = super().create_jwt_token('AccessToken', info["id"], info["expTime"], 'props', json.dumps(props), claim_json=False)
 
         try:
-            mcli.get_col(CollectionRegister).update_register_token(info["userDid"], info["appDid"], info["id"], info["nonce"], access_token, info["expTime"])
+            mcli.get_col_register().update_register_token(info["userDid"], info["appDid"], info["id"], info["nonce"], access_token, info["expTime"])
         except Exception as e:
             # update to temporary auth collection, so failed can skip
             logging.info(f'Update access token to auth collection failed: {e}')
 
         # @deprecated auth_register is just a temporary collection, need keep relation here
-        mcli.get_col(CollectionApplication).save_app(info["userDid"], info["appDid"])
+        mcli.get_col_application().save_app(info["userDid"], info["appDid"])
 
         return {
             "token": access_token,
@@ -110,7 +107,7 @@ class Auth(Entity, metaclass=Singleton):
 
         # presentation check nonce
 
-        auth_info = mcli.get_col(CollectionRegister).get_register(presentation.get_nonce())
+        auth_info = mcli.get_col_register().get_register(presentation.get_nonce())
         if not auth_info:
             raise InvalidParameterException('Can not get presentation nonce information from database.')
 
@@ -234,7 +231,7 @@ class Auth(Entity, metaclass=Singleton):
 
     def get_ownership_presentation(self, credential: str):
         vc = Credential.from_json(credential)
-        vp_json = self.create_presentation_str(vc, CollectionRegister.generate_nonce(), super().get_did_string())
+        vp_json = self.create_presentation_str(vc, mcli.get_col_register().generate_nonce(), super().get_did_string())
         return json.loads(vp_json)
 
     @staticmethod

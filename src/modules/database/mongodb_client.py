@@ -9,6 +9,15 @@ from pymongo.errors import CollectionInvalid
 from src import hive_setting
 from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException
 from src.modules.database.mongodb_collection import MongodbCollection, CollectionName
+from src.modules.auth.collection_application import CollectionApplication
+from src.modules.auth.collection_register import CollectionRegister
+from src.modules.database.collection_metadata import CollectionMetadata
+from src.modules.files.collection_anonymous_files import CollectionAnonymousFiles
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
+from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
+from src.modules.scripting.collection_scripts import CollectionScripts
+from src.modules.scripting.collection_scripts_transaction import CollectionScriptsTransaction
+from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.backup.collection_backup import CollectionBackup
 
 
@@ -132,6 +141,36 @@ class MongodbClient:
         col.user_did, col.app_did = user_did, app_did
         return col
 
+    def get_col_collection_metadata(self, user_did, app_did) -> CollectionMetadata:
+        return self.get_col(CollectionMetadata, user_did=user_did, app_did=app_did)
+
+    def get_col_anonymous_file(self, user_did, app_did) -> CollectionAnonymousFiles:
+        return self.get_col(CollectionAnonymousFiles, user_did=user_did, app_did=app_did)
+
+    def get_col_file_metadata(self, user_did, app_did) -> CollectionFileMetadata:
+        return self.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did)
+
+    def get_col_scripts(self, user_did, app_did) -> CollectionScripts:
+        return self.get_col(CollectionScripts, user_did=user_did, app_did=app_did)
+
+    def get_col_scripts_transaction(self, user_did, app_did) -> CollectionScriptsTransaction:
+        return self.get_col(CollectionScriptsTransaction, user_did=user_did, app_did=app_did)
+
+    def get_col_cid_ref(self) -> CollectionIpfsCidRef:
+        return self.get_col(CollectionIpfsCidRef)
+
+    def get_col_application(self) -> CollectionApplication:
+        return self.get_col(CollectionApplication)
+
+    def get_col_register(self) -> CollectionRegister:
+        return self.get_col(CollectionRegister)
+
+    def get_col_vault(self) -> CollectionVault:
+        return self.get_col(CollectionVault)
+
+    def get_col_backup(self) -> CollectionBackup:
+        return self.get_col(CollectionBackup)
+
     def get_user_collection_names(self, user_did: str, app_did: str):
         """ Get collection names belongs to the user's application """
 
@@ -185,4 +224,11 @@ class MongodbClient:
 
 
 mcli = MongodbClient()
-col_backup: CollectionBackup = mcli.get_col(CollectionBackup)
+
+# TODO: remove them
+col_collection_metadata: CollectionMetadata = mcli.get_col(CollectionMetadata)
+col_anonymous_file: CollectionAnonymousFiles = mcli.get_col(CollectionAnonymousFiles)
+col_file_metadata: CollectionFileMetadata = mcli.get_col(CollectionFileMetadata)
+col_scripts: CollectionScripts = mcli.get_col(CollectionScripts)
+col_scripts_transaction: CollectionScriptsTransaction = mcli.get_col(CollectionScriptsTransaction)
+col_cid_ref: CollectionIpfsCidRef = mcli.get_col(CollectionIpfsCidRef)

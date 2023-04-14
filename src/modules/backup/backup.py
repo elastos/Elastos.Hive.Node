@@ -5,7 +5,10 @@ from src.utils.payment_config import PaymentConfig
 
 
 class Backup(Dotdict):
-    """ Represent a backup service which can be used to save backup data on the backup node side. """
+    """ Represent a backup service which can be used to save backup data on the backup node side.
+
+    TODO：move to file collection_backup.py
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

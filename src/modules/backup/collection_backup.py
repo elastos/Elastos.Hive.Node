@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from flask import g
+
 from src import PaymentConfig
 from src.utils.http_exception import BackupNotFoundException
 from src.modules.database.mongodb_collection import mongodb_collection, CollectionName, MongodbCollection, \
@@ -77,17 +79,17 @@ class CollectionBackup(MongodbCollection):
     def update_backup_storage_used_size(self, user_did, size):
         self.update_backup(user_did, {self.STORAGE_USED_SIZE, size})
 
-    def update_backup_request(self, action, state, msg, cid, sha256, size, public_key):
+    def update_backup_request(self, action, state, state_msg, cid, sha256, size, public_key):
         update = {
-            BKSERVER_REQ_ACTION: BACKUP_REQUEST_ACTION_BACKUP,
-            BKSERVER_REQ_STATE: BACKUP_REQUEST_STATE_PROCESS,
-            BKSERVER_REQ_STATE_MSG: '50',  # start from 50%
-            BKSERVER_REQ_CID: cid,
-            BKSERVER_REQ_SHA256: sha256,
-            BKSERVER_REQ_SIZE: size,
-            BKSERVER_REQ_PUBLIC_KEY: public_key
+            self.REQUEST_ACTION: action,
+            self.REQUEST_STATE: state,
+            self.REQUEST_STATE_MSG: state_msg,  # start from 50%
+            self.REQUEST_CID: cid,
+            self.REQUEST_SHA256: sha256,
+            self.REQUEST_SIZE: size,
+            self.REQUEST_PUBLIC_KEY: public_key
         }
-        col_backup.update_backup(g.usr_did, update)
+        self.update_backup(g.usr_did, update)
 
     def upgrade_backup(self, user_did, plan: dict, backup=None):
         if not backup:

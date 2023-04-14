@@ -10,10 +10,9 @@ from src.utils.http_exception import BackupNotFoundException, AlreadyExistsExcep
     InsufficientStorageException, NotImplementedException, VaultNotFoundException
 from src.utils.payment_config import PaymentConfig
 from src.modules.database.mongodb_collection import CollectionGenericField
-from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.backup.backup import Backup
 from src.modules.backup.collection_backup import BackupRequestAction, BackupRequestState
-from src.modules.database.mongodb_client import mcli, col_backup
+from src.modules.database.mongodb_client import mcli
 from src.modules.auth.auth import Auth
 from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_executor import ExecutorBase, BackupServerExecutor
@@ -37,15 +36,15 @@ class BackupServer:
         4. increase the reference count of the file cid.
         5. restore all user databases.
         """
-        backup = col_backup.get_backup(g.usr_did)
+        backup = mcli.get_col_backup().get_backup(g.usr_did)
 
         try:
-            mcli.get_col(CollectionVault).get_vault(g.usr_did)
+            mcli.get_col_vault().get_vault(g.usr_did)
             raise AlreadyExistsException('The vault already exists.')
         except VaultNotFoundException as e:
             pass
 
-        vault = mcli.get_col(CollectionVault).create_vault(g.usr_did, PaymentConfig.get_free_vault_plan(), is_upgraded=True)
+        vault = mcli.get_col_vault().create_vault(g.usr_did, PaymentConfig.get_free_vault_plan(), is_upgraded=True)
         request_metadata = self.get_server_request_metadata(g.usr_did, backup, is_promotion=True,
                                                             vault_max_size=vault.get_storage_quota())
 
@@ -58,18 +57,18 @@ class BackupServer:
 
     def internal_backup(self, cid, sha256, size, is_force, public_key):
         # check currently whether it is in progress.
-        backup = col_backup.get_backup(g.usr_did)
+        backup = mcli.get_col_backup().get_backup(g.usr_did)
         if not is_force and backup.get_backup_request_state() == BackupRequestState.PROCESS:
             raise BadRequestException('Failed because backup is in processing.')
 
         # pin the request metadata to local ipfs node.
         self.ipfs_client.cid_pin(cid, size, sha256)
 
-        col_backup.update_backup_request(BackupRequestAction.BACKUP, BackupRequestState.PROCESS, '50', cid, sha256, size, public_key)
-        BackupServerExecutor(g.usr_did, self, col_backup.get_backup(g.usr_did)).start()
+        mcli.get_col_backup().update_backup_request(BackupRequestAction.BACKUP, BackupRequestState.PROCESS, '50', cid, sha256, size, public_key)
+        BackupServerExecutor(g.usr_did, self, mcli.get_col_backup().get_backup(g.usr_did)).start()
 
     def internal_backup_state(self):
-        backup = col_backup.get_backup(g.usr_did)
+        backup = mcli.get_col_backup().get_backup(g.usr_did)
         return {
             'state': backup.get_backup_request_action(),  # None or backup
             'result': backup.get_backup_request_state(),
@@ -78,7 +77,7 @@ class BackupServer:
         }
 
     def internal_restore(self, public_key):
-        backup = col_backup.get_backup(g.usr_did)
+        backup = mcli.get_col_backup().get_backup(g.usr_did)
 
         # Action: None, means not backup called; 'backup', backup called, and can be three states.
         if not backup.get_backup_request_action():
@@ -122,6 +121,7 @@ class BackupServer:
     # the flowing is for the executors.
 
     def update_request_state(self, user_did, state, msg=None):
+        col_backup = mcli.get_col_backup()
         col_backup.update_backup(user_did, {col_backup.REQUEST_STATE: state, col_backup.REQUEST_STATE_MSG: msg})
 
     def get_server_request_metadata(self, user_did, backup: Backup, is_promotion=False, vault_max_size=0):
@@ -164,22 +164,22 @@ class BackupServer:
 
     def subscribe(self):
         try:
-            backup = col_backup.get_backup(g.usr_did)
+            backup = mcli.get_col_backup().get_backup(g.usr_did)
             if backup:
                 raise AlreadyExistsException('The backup service is already subscribed.')
         except BackupNotFoundException as e:
             pass
 
-        new_backup = col_backup.create_backup(g.usr_did, PaymentConfig.get_free_backup_plan())
+        new_backup = mcli.get_col_backup().create_backup(g.usr_did, PaymentConfig.get_free_backup_plan())
         return self.__get_backup_info(new_backup)
 
     def unsubscribe(self):
-        backup = col_backup.get_backup(g.usr_did)
+        backup = mcli.get_col_backup().get_backup(g.usr_did)
         if backup.get_backup_request_state() == BackupRequestState.PROCESS:
             raise BadRequestException(f"The '{backup.get_backup_request_state()}' is in process.")
 
         # INFO: maybe use has a vault.
-        # mcli.get_col(CollectionApplication).remove_user(g.usr_did)
+        # mcli.get_col_application().remove_user(g.usr_did)
         self.remove_backup_by_did(g.usr_did, backup)
 
     def remove_backup_by_did(self, user_did, doc):
@@ -189,10 +189,10 @@ class BackupServer:
             request_metadata = self.__get_verified_request_metadata(user_did, doc)
             ExecutorBase.handle_cids_in_local_ipfs(request_metadata, root_cid=doc.get_backup_request_cid(), is_unpin=True)
 
-        col_backup.remove_backup(user_did)
+        mcli.get_col_backup().remove_backup(user_did)
 
     def get_info(self):
-        return self.__get_backup_info(col_backup.get_backup(g.usr_did))
+        return self.__get_backup_info(mcli.get_col_backup().get_backup(g.usr_did))
 
     def activate(self):
         raise NotImplementedException()
@@ -214,7 +214,7 @@ class BackupServer:
 
     def retry_backup_request(self):
         """ retry unfinished backup&restore action when node rebooted """
-        backups: [Backup] = col_backup.get_all_backups()
+        backups: [Backup] = mcli.get_col_backup().get_all_backups()
 
         for backup in backups:
             if backup.get_backup_request_state() != BackupRequestState.PROCESS:

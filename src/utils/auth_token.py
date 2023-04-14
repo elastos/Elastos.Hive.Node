@@ -5,7 +5,6 @@ from datetime import datetime
 from flask import request, g
 
 from src import UnauthorizedException
-from src.modules.auth.collection_application import CollectionApplication
 from src.modules.database.mongodb_client import mcli
 from src.modules.auth.auth import Auth
 from src.utils.did.eladid_wrapper import JWT
@@ -140,7 +139,7 @@ class TokenParser:
 
         @deprecated this will be commented many days later
         """
-        mcli.get_col(CollectionApplication).save_app(user_did, app_did)
+        mcli.get_col_application().save_app(user_did, app_did)
 
     def parse(self):
         """ Only handle the access token of v2 APIs.

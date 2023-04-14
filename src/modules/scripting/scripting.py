@@ -10,7 +10,6 @@ from flask import request, g
 from src.modules.files.collection_anonymous_files import CollectionAnonymousFiles
 from src.modules.scripting.collection_scripts import CollectionScripts
 from src.modules.scripting.collection_scripts_transaction import CollectionScriptsTransaction
-from src.modules.subscription.collection_vault import CollectionVault
 from src.utils.http_exception import BadRequestException, ScriptNotFoundException, UnauthorizedException, InvalidParameterException
 from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.files.files_service import FilesService
@@ -311,7 +310,7 @@ class Scripting:
         """ :v2 API: """
         Scripting.check_internal_script(script_name)
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission().check_storage_full()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         json_data = request.get_json(force=True, silent=True)
         Script.validate_script_data(json_data)
@@ -355,7 +354,7 @@ class Scripting:
         """ :v2 API: """
         Scripting.check_internal_script(script_name)
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission()
 
         result = mcli.get_col(CollectionScripts).delete_script(script_name)
         if result['deleted_count'] <= 0:
@@ -395,7 +394,7 @@ class Scripting:
             raise UnauthorizedException(f'Parse access token for running script error: {g.token_error}')
 
         # check vault
-        vault = mcli.get_col(CollectionVault).get_vault(target_did)
+        vault = mcli.get_col_vault().get_vault(target_did)
         if not is_download:
             vault.check_write_permission().check_storage_full()
 
@@ -406,7 +405,7 @@ class Scripting:
             data = self.files_service.v1_download_file(target_did, target_app_did, trans['document']['file_name'])
         else:
             # Place here because not want to change the logic for v1.
-            mcli.get_col(CollectionVault).get_vault(target_did).check_storage_full()
+            mcli.get_col_vault().get_vault(target_did).check_storage_full()
             self.files_service.v1_upload_file(target_did, target_app_did, trans['document']['file_name'])
 
         # transaction can be used only once.
@@ -421,7 +420,7 @@ class Scripting:
 
     def get_scripts(self, skip, limit, name):
         """ :v2 API: """
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission()
 
         if name:
             self.check_internal_script(name)

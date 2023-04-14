@@ -13,7 +13,6 @@ from src.modules.database.mongodb_client import mcli
 from src.modules.database.mongodb_collection import CollectionGenericField
 from src.modules.files.file_cache import FileCache
 from src.utils.http_exception import FileNotFoundException, AlreadyExistsException
-from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.files.collection_file_metadata import CollectionFileMetadata
 from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.files.collection_anonymous_files import CollectionAnonymousFiles
@@ -43,7 +42,7 @@ class FilesService:
         :return: File path and the cid of IPFS node.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission().check_storage_full()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         cid = self.v1_upload_file(g.usr_did, g.app_did, path, is_encrypt, encrypt_method)
 
@@ -64,7 +63,7 @@ class FilesService:
         :return: The content of the file.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         return self.v1_download_file(g.usr_did, g.app_did, path)
 
@@ -77,7 +76,7 @@ class FilesService:
         :return: None
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission()
 
         mcli.get_col(CollectionAnonymousFiles).delete_anonymous_file(path)
         self.v1_delete_file(g.usr_did, g.app_did, path, check_exists=True)
@@ -90,7 +89,7 @@ class FilesService:
         :return: The destination file path.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission()
 
         mcli.get_col(CollectionAnonymousFiles).delete_anonymous_file(src_path)
         return self.v1_move_copy_file(g.usr_did, g.app_did, src_path, dst_path)
@@ -103,7 +102,7 @@ class FilesService:
         :return: The destination file path.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission().check_storage_full()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         return self.v1_move_copy_file(g.usr_did, g.app_did, src_path, dst_path, is_copy=True)
 
@@ -113,7 +112,7 @@ class FilesService:
         :param path: The folder path. Empty means root folder.
         :return: Files list.
         """
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         def get_out_file_info(metadata):
             return {
@@ -136,7 +135,7 @@ class FilesService:
         :return: The properties of the file.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         metadata = self.v1_get_file_metadata(g.usr_did, g.app_did, path)
         return {
@@ -156,7 +155,7 @@ class FilesService:
         :return: The hash information of the file content.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         metadata = self.v1_get_file_metadata(g.usr_did, g.app_did, path)
         return {
@@ -225,7 +224,7 @@ class FilesService:
         # do real remove
         LocalFile.remove_ipfs_cache_file(user_did, metadata[CollectionFileMetadata.IPFS_CID])
         col.delete_file_metadata(path, metadata[CollectionFileMetadata.IPFS_CID])
-        mcli.get_col(CollectionVault).update_vault_file_used_size(user_did, 0 - metadata[CollectionFileMetadata.SIZE])
+        mcli.get_col_vault().update_vault_file_used_size(user_did, 0 - metadata[CollectionFileMetadata.SIZE])
 
     def v1_list_folder(self, user_did, app_did, folder_path):
         """ List files by the folder path, empty string means root path.
@@ -270,7 +269,7 @@ class FilesService:
                                      src_metadata.get(CollectionFileMetadata.IS_ENCRYPT, False),
                                      src_metadata.get(CollectionFileMetadata.ENCRYPT_METHOD, ''))
             mcli.get_col(CollectionIpfsCidRef).increase_cid_ref(src_metadata[CollectionFileMetadata.IPFS_CID])
-            mcli.get_col(CollectionVault).update_vault_file_used_size(user_did, src_metadata[CollectionFileMetadata.SIZE])
+            mcli.get_col_vault().update_vault_file_used_size(user_did, src_metadata[CollectionFileMetadata.SIZE])
         else:
             col.move_file_metadata(src_path, dst_path)
 
@@ -337,7 +336,7 @@ class FilesService:
             increased_size = new_metadata[CollectionFileMetadata.SIZE] - old_metadata[CollectionFileMetadata.SIZE]
 
         if increased_size and not only_import:
-            mcli.get_col(CollectionVault).update_vault_file_used_size(user_did, increased_size)
+            mcli.get_col_vault().update_vault_file_used_size(user_did, increased_size)
 
         # cache the uploaded file.
         cache_file = FileCache.get_path_by_cid(user_did, new_cid)

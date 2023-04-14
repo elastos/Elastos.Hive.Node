@@ -11,7 +11,6 @@ from flask import g
 from src.utils.http_exception import InvalidParameterException, CollectionNotFoundException
 from src.utils.http_request import RequestData
 from src.modules.database.collection_metadata import CollectionMetadata
-from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.database.mongodb_client import mcli
 
 
@@ -33,7 +32,7 @@ class DatabaseService:
         if mcli.is_internal_user_collection(collection_name):
             raise InvalidParameterException(f'No permission to create the collection {collection_name}')
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission().check_storage_full()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         mcli.create_user_collection(g.usr_did, g.app_did, collection_name)
         mcli.get_col(CollectionMetadata).add_col(collection_name, is_encrypt, encrypt_method)
@@ -48,7 +47,7 @@ class DatabaseService:
         if mcli.is_internal_user_collection(collection_name):
             raise InvalidParameterException(f'No permission to delete the collection {collection_name}')
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission()
         mcli.get_col(CollectionMetadata).delete_col(collection_name)
         mcli.delete_user_collection(g.usr_did, g.app_did, collection_name, check_exist=True)
 
@@ -58,7 +57,7 @@ class DatabaseService:
         :return: The list which contains every collection details.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         col = mcli.get_col(CollectionMetadata)
         col.sync_all_cols()
@@ -83,7 +82,7 @@ class DatabaseService:
         :return: The insert result.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission().check_storage_full()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         col = self.__get_collection(collection_name)
         return col.insert_many(documents, contains_extra=self.__is_timestamp(options), **options)
@@ -99,7 +98,7 @@ class DatabaseService:
         :return: The update result.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission().check_storage_full()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission().check_storage_full()
 
         col = self.__get_collection(collection_name)
         return col.update_many(filter_, update, contains_extra=self.__is_timestamp(options), only_one=only_one, **options)
@@ -113,7 +112,7 @@ class DatabaseService:
         :return: None
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did).check_write_permission()
+        mcli.get_col_vault().get_vault(g.usr_did).check_write_permission()
 
         col = self.__get_collection(collection_name)
         col.delete_many(filter_, only_one=only_one)
@@ -127,7 +126,7 @@ class DatabaseService:
         :return: The amount of matched documents.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         col = self.__get_collection(collection_name)
         return {"count": col.count(filter_, **options)}
@@ -142,7 +141,7 @@ class DatabaseService:
         :return: The matched documents list.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         # options is optional
         options = {}
@@ -163,7 +162,7 @@ class DatabaseService:
         :return: The matched documents list.
         """
 
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         return self.__do_internal_find(collection_name, filter_, options)
 

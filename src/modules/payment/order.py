@@ -10,8 +10,7 @@ from src.utils.consts import COL_ORDERS, COL_ORDERS_ELA_AMOUNT, COL_ORDERS_PROOF
 from src.utils.http_exception import OrderNotFoundException
 from src.utils.payment_config import PaymentConfig
 from src.modules.database.mongodb_collection import CollectionGenericField
-from src.modules.subscription.collection_vault import CollectionVault
-from src.modules.database.mongodb_client import MongodbClient, mcli, col_backup
+from src.modules.database.mongodb_client import MongodbClient, mcli
 
 
 class Receipt:
@@ -244,9 +243,9 @@ class OrderManager:
     def upgrade_vault_or_backup(self, user_did, order: Order):
         plan = order.get_plan()
         if order.is_for_vault():
-            mcli.get_col(CollectionVault).upgrade_vault(user_did, plan)
+            mcli.get_col_vault().upgrade_vault(user_did, plan)
         else:
-            col_backup.upgrade_backup(user_did, plan)
+            mcli.get_col_backup().upgrade_backup(user_did, plan)
 
     def archive_orders_receipts(self, user_did):
         """ for unsubscribe the vault

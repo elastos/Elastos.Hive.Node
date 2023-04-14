@@ -3,7 +3,10 @@ from src.modules.database.mongodb_collection import MongodbCollection, mongodb_c
 
 @mongodb_collection(CollectionName.ANONYMOUS_FILE, is_management=False, is_internal=True)
 class CollectionAnonymousFiles(MongodbCollection):
-    """ Anonymous file is a public file which can be access by scripting module anonymously. """
+    """ Anonymous file is a public file which can be access by scripting module anonymously.
+
+    TODO: rename to CollectionAnonymousFile
+    """
 
     # fields
     USR_DID = CollectionGenericField.USR_DID

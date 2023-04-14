@@ -4,7 +4,6 @@ from bson import json_util
 
 from src.modules.scripting.executable import Executable, get_populated_value_with_params
 from src.modules.scripting.scripting import Script
-from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.database.mongodb_client import mcli
 
 
@@ -39,7 +38,7 @@ class FindExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        mcli.get_col(CollectionVault).get_vault(self.get_target_did())
+        mcli.get_col_vault().get_vault(self.get_target_did())
 
         filter_, options = self.get_populated_filter(), self.get_populated_options()
         col = self.get_target_user_collection()
@@ -55,7 +54,7 @@ class CountExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        mcli.get_col(CollectionVault).get_vault(self.get_target_did())
+        mcli.get_col_vault().get_vault(self.get_target_did())
 
         filter_, options = self.get_populated_filter(), self.get_populated_options()
         col = self.get_target_user_collection()
@@ -68,7 +67,7 @@ class InsertExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        mcli.get_col(CollectionVault).get_vault(self.get_target_did()).check_write_permission().check_storage_full()
+        mcli.get_col_vault().get_vault(self.get_target_did()).check_write_permission().check_storage_full()
 
         options = self.get_options()
 
@@ -85,7 +84,7 @@ class UpdateExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        mcli.get_col(CollectionVault).get_vault(self.get_target_did()).check_write_permission().check_storage_full()
+        mcli.get_col_vault().get_vault(self.get_target_did()).check_write_permission().check_storage_full()
 
         options = self.get_options()
 
@@ -102,7 +101,7 @@ class DeleteExecutable(DatabaseExecutable):
         super().__init__(script, executable_data)
 
     def execute(self):
-        mcli.get_col(CollectionVault).get_vault(self.get_target_did()).check_write_permission()
+        mcli.get_col_vault().get_vault(self.get_target_did()).check_write_permission()
 
         col = self.get_target_user_collection()
         return self.get_result_data(col.delete_one(self.get_populated_filter()))

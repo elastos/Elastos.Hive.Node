@@ -225,10 +225,10 @@ class MongodbClient:
 
 mcli = MongodbClient()
 
-# TODO: remove them
-col_collection_metadata: CollectionMetadata = mcli.get_col(CollectionMetadata)
-col_anonymous_file: CollectionAnonymousFiles = mcli.get_col(CollectionAnonymousFiles)
-col_file_metadata: CollectionFileMetadata = mcli.get_col(CollectionFileMetadata)
-col_scripts: CollectionScripts = mcli.get_col(CollectionScripts)
-col_scripts_transaction: CollectionScriptsTransaction = mcli.get_col(CollectionScriptsTransaction)
-col_cid_ref: CollectionIpfsCidRef = mcli.get_col(CollectionIpfsCidRef)
+# # TODO: remove them
+# col_collection_metadata: CollectionMetadata = mcli.get_col(CollectionMetadata)
+# col_anonymous_file: CollectionAnonymousFiles = mcli.get_col(CollectionAnonymousFiles)
+# col_file_metadata: CollectionFileMetadata = mcli.get_col(CollectionFileMetadata)
+# col_scripts: CollectionScripts = mcli.get_col(CollectionScripts)
+# col_scripts_transaction: CollectionScriptsTransaction = mcli.get_col(CollectionScriptsTransaction)
+# col_cid_ref: CollectionIpfsCidRef = mcli.get_col(CollectionIpfsCidRef)

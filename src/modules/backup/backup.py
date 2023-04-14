@@ -45,28 +45,28 @@ class Backup(Dotdict):
 
     def get_backup_request_action(self):
         from src.modules.backup.collection_backup import CollectionBackup
-        return self[CollectionBackup.REQUEST_ACTION]
+        return self.get(CollectionBackup.REQUEST_ACTION, None)
 
     def get_backup_request_state(self):
         from src.modules.backup.collection_backup import CollectionBackup
-        return self[CollectionBackup.REQUEST_STATE]
+        return self.get(CollectionBackup.REQUEST_STATE, None)
 
     def get_backup_request_state_msg(self):
         from src.modules.backup.collection_backup import CollectionBackup
-        return self[CollectionBackup.REQUEST_STATE_MSG]
+        return self.get(CollectionBackup.REQUEST_STATE_MSG, None)
 
     def get_backup_request_cid(self):
         from src.modules.backup.collection_backup import CollectionBackup
-        return self[CollectionBackup.REQUEST_CID]
+        return self.get(CollectionBackup.REQUEST_CID, None)
 
     def get_backup_request_sha256(self):
         from src.modules.backup.collection_backup import CollectionBackup
-        return self[CollectionBackup.REQUEST_SHA256]
+        return self.get(CollectionBackup.REQUEST_SHA256, None)
 
     def get_backup_request_size(self):
         from src.modules.backup.collection_backup import CollectionBackup
-        return self[CollectionBackup.REQUEST_SIZE]
+        return self.get(CollectionBackup.REQUEST_SIZE, None)
 
     def get_backup_request_public_key(self):
         from src.modules.backup.collection_backup import CollectionBackup
-        return self[CollectionBackup.REQUEST_PUBLIC_KEY]
+        return self.get(CollectionBackup.REQUEST_PUBLIC_KEY, None)

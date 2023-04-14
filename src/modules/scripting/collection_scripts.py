@@ -1,5 +1,5 @@
-from src.modules.files.collection_anonymous_files import CollectionAnonymousFiles
 from src.modules.database.mongodb_collection import mongodb_collection, MongodbCollection, CollectionName
+from src.modules.files.collection_anonymous_files import CollectionAnonymousFiles
 
 
 @mongodb_collection(CollectionName.SCRIPTS, is_management=False, is_internal=True)

@@ -6,11 +6,7 @@ from src.utils.http_exception import VaultNotFoundException, FileNotFoundExcepti
 from src.modules.files.file_cache import FileCache
 from src.modules.database.mongodb_collection import mongodb_collection, CollectionName, MongodbCollection, \
     CollectionGenericField
-from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
 from src.modules.subscription.vault import Vault
-from src.modules.files.collection_file_metadata import CollectionFileMetadata
-from src.modules.auth.collection_application import CollectionApplication
-from src.modules.database.mongodb_client import mcli
 from src.modules.files.ipfs_client import IpfsClient
 
 
@@ -39,6 +35,9 @@ class CollectionVault(MongodbCollection):
 
     def __init__(self, col):
         MongodbCollection.__init__(self, col, is_management=True)
+
+        from src.modules.database.mongodb_client import mcli
+        self.mcli = mcli
 
     def get_all_vaults(self, raise_not_found=False):
         vaults = self.find_many({self.USER_DID: {'$exists': True}})
@@ -74,7 +73,7 @@ class CollectionVault(MongodbCollection):
         except VaultNotFoundException as e:
             pass
 
-        apps = mcli.get_col(CollectionApplication).get_apps(user_did)
+        apps = self.mcli.get_col_application().get_apps(user_did)
         if apps:
             access_count = sum(list(map(lambda app: app.get('access_count', 0), apps)))
             access_amount = sum(list(map(lambda app: app.get('access_amount', 0), apps)))
@@ -137,7 +136,7 @@ class CollectionVault(MongodbCollection):
         filter_ = {self.USER_DID: user_did}
         if force:
             # remove applications.
-            mcli.get_col(CollectionApplication).remove_user(user_did)
+            self.mcli.get_col_application().remove_user(user_did)
 
             # remove the vault.
             self.delete_one(filter_)
@@ -148,36 +147,36 @@ class CollectionVault(MongodbCollection):
                 }
             })
 
-    @staticmethod
-    def remove_vault_app(user_did, app_did):
+    def remove_vault_app(self, user_did, app_did):
         # TODO: move to CollectionApplication
-        app = mcli.get_col(CollectionApplication).get_app(user_did, app_did)
+        app = self.mcli.get_col_application().get_app(user_did, app_did)
         if not app:
             return
 
         try:
-            metadatas = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_all_file_metadatas()
+            col_file_metadata = self.mcli.get_col_file_metadata(user_did, app_did)
+            metadatas = col_file_metadata.get_all_file_metadatas()
             # 1. Clean cache files.
-            FileCache.delete_files(user_did, list(map(lambda md: md[CollectionFileMetadata.IPFS_CID], metadatas)))
+            FileCache.delete_files(user_did, list(map(lambda md: md[col_file_metadata.IPFS_CID], metadatas)))
             # 2. Unpin cids.
             ipfs_client = IpfsClient()
             for m in metadatas:
-                if mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(m[CollectionFileMetadata.IPFS_CID]):
-                    ipfs_client.cid_unpin(m[CollectionFileMetadata.IPFS_CID])
+                if self.mcli.get_col_cid_ref().decrease_cid_ref(m[col_file_metadata.IPFS_CID]):
+                    ipfs_client.cid_unpin(m[col_file_metadata.IPFS_CID])
             # 3. Delete app database
-            mcli.drop_user_database(user_did, app_did)
+            self.mcli.drop_user_database(user_did, app_did)
         except FileNotFoundException:
             # No files on the app.
             pass
 
         # Remove app information
-        mcli.get_col(CollectionApplication).remove_user_app(user_did, app_did)
+        self.mcli.get_col_application().remove_user_app(user_did, app_did)
 
     def recalculate_vault_database_used_size(self, user_did: str):
         """ Update all databases used size in vault """
         # Get all application DIDs of user DID, then get their sizes.
-        app_dids = mcli.get_col(CollectionApplication).get_app_dids(user_did)
-        size = sum(list(map(lambda d: mcli.get_user_database_size(user_did, d), app_dids)))
+        app_dids = self.mcli.get_col_application().get_app_dids(user_did)
+        size = sum(list(map(lambda d: self.mcli.get_user_database_size(user_did, d), app_dids)))
 
         self.update_vault_database_used_size(user_did, size, is_reset=True)
 
@@ -235,9 +234,9 @@ class CollectionVault(MongodbCollection):
 
         if force:
             # remove all databases belong to user's vault
-            app_dids = mcli.get_col(CollectionApplication).get_app_dids(user_did)
+            app_dids = self.mcli.get_col_application().get_app_dids(user_did)
             for app_did in app_dids:
-                mcli.drop_user_database(user_did, app_did)
+                self.mcli.drop_user_database(user_did, app_did)
 
     def _update_vault_storage_used_size(self, user_did, size, is_files: bool, is_reset=False):
         """ update files or databases usage of the vault

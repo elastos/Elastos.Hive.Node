@@ -21,8 +21,6 @@ from src.utils.consts import BACKUP_TARGET_TYPE, BACKUP_TARGET_TYPE_HIVE_NODE, B
 from src.utils.http_exception import BadRequestException, InsufficientStorageException
 from src.modules.files.local_file import LocalFile
 from src.utils.http_client import HttpClient
-from src.modules.auth.collection_application import CollectionApplication
-from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.auth.auth import Auth
 from src.modules.backup.backup_server_client import BackupServerClient
@@ -41,7 +39,7 @@ class __BackupClient:
 
     def get_state(self):
         """ :v2 API: """
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         doc = self.__get_request_doc(g.usr_did)
         if not doc:
@@ -71,7 +69,7 @@ class __BackupClient:
 
         :v2 API:
         """
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
         client = self.__validate_remote_state(credential_info['targetHost'], credential, is_force, is_restore=False)
@@ -90,7 +88,7 @@ class __BackupClient:
 
         :v2 API:
         """
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        mcli.get_col_vault().get_vault(g.usr_did)
 
         credential_info = self.auth.get_backup_credential_info(g.usr_did, credential)
         client = self.__validate_remote_state(credential_info['targetHost'], credential, is_force, is_restore=True)
@@ -159,13 +157,14 @@ class __BackupClient:
         - dump the specific database to a snapshot file;
         - upload this snapshot file into IPFS node
         """
-        app_docs = mcli.get_col(CollectionApplication).get_apps(user_did)
+        app_docs = mcli.get_col_application().get_apps(user_did)
         metadata_list, length = list(), len(app_docs)
         for i in range(length):
             if process_callback:
                 process_callback(i + 1, length)
 
-            db_name, app_did = app_docs[i][CollectionApplication.DATABASE_NAME], app_docs[i][CollectionApplication.APP_DID]
+            col_application = mcli.get_col_application()
+            db_name, app_did = app_docs[i][col_application.DATABASE_NAME], app_docs[i][col_application.APP_DID]
             d = {
                 'path': LocalFile.generate_tmp_file_path(),
                 'name': db_name,
@@ -228,7 +227,7 @@ class __BackupClient:
         except Exception as e:
             raise BadRequestException('Failed to decrypt the metadata for restoring on the vault node.')
 
-        if request_metadata['vault_size'] > mcli.get_col(CollectionVault).get_vault(user_did).get_storage_quota():
+        if request_metadata['vault_size'] > mcli.get_col_vault().get_vault(user_did).get_storage_quota():
             raise InsufficientStorageException('No enough space to restore, please upgrade the vault and try again.')
         return request_metadata
 
@@ -252,7 +251,7 @@ class __BackupClient:
             LocalFile.restore_mongodb_from_full_path(plain_path)
             plain_path.unlink()
 
-            mcli.get_col(CollectionApplication).save_app(request_metadata['user_did'], d['app_did'])
+            mcli.get_col_application().save_app(request_metadata['user_did'], d['app_did'])
             logging.info(f'[BackupClient] Success to restore the dump file for database {d["name"]}.')
 
     def retry_backup_request(self):

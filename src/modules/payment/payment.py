@@ -13,8 +13,7 @@ from src import hive_setting
 from src.utils.http_exception import InvalidParameterException, BadRequestException, OrderNotFoundException, ReceiptNotFoundException
 from src.utils.singleton import Singleton
 from src.utils.payment_config import PaymentConfig
-from src.modules.subscription.collection_vault import CollectionVault
-from src.modules.database.mongodb_client import mcli, col_backup
+from src.modules.database.mongodb_client import mcli
 from src.modules.auth.auth import Auth
 from src.modules.payment.order import OrderManager, Order
 from src.modules.payment.order_contract import OrderContract
@@ -47,10 +46,10 @@ class Payment(metaclass=Singleton):
         :v2 API:
         """
         if subscription == Order.SUBSCRIPTION_VAULT:
-            mcli.get_col(CollectionVault).get_vault(g.usr_did)
+            mcli.get_col_vault().get_vault(g.usr_did)
             plan = PaymentConfig.get_vault_plan(pricing_name)
         else:
-            col_backup.get_backup(g.usr_did)
+            mcli.get_col_backup().get_backup(g.usr_did)
             plan = PaymentConfig.get_backup_plan(pricing_name)
 
         # plan must exist and not free
@@ -77,9 +76,9 @@ class Payment(metaclass=Singleton):
 
         # check the existence of the vault or backup, maybe removed by user :-(
         if order.get_subscription() == Order.SUBSCRIPTION_VAULT:
-            mcli.get_col(CollectionVault).get_vault(g.usr_did)
+            mcli.get_col_vault().get_vault(g.usr_did)
         else:
-            col_backup.get_backup(g.usr_did)
+            mcli.get_col_backup().get_backup(g.usr_did)
 
         # Upgrade vault or backup.
         order.set_contract_order_id(contract_order_id)

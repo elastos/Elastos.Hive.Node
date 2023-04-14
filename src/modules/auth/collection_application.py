@@ -4,8 +4,6 @@ import bson
 
 from src.modules.database.mongodb_collection import CollectionName, mongodb_collection, MongodbCollection, \
     CollectionGenericField
-from src.modules.files.collection_file_metadata import CollectionFileMetadata
-from src.modules.database.mongodb_client import mcli
 
 
 class AppState:
@@ -28,6 +26,9 @@ class CollectionApplication(MongodbCollection):
 
     def __init__(self, col):
         MongodbCollection.__init__(self, col, is_management=True)
+
+        from src.modules.database.mongodb_client import mcli
+        self.mcli = mcli
 
     def get_user_count(self):
         return len(self.distinct(self.USR_DID))
@@ -54,23 +55,21 @@ class CollectionApplication(MongodbCollection):
         """ get all database names of the user did """
         return list(map(lambda d: d[self.DATABASE_NAME], self.get_apps(user_did)))
 
-    @staticmethod
-    def get_app_total_files_size(user_did, app_did) -> int:
+    def get_app_total_files_size(self, user_did, app_did) -> int:
         """ for batch 'count_vault_storage_job' and count files occupation """
-        if not mcli.exists_user_database(user_did, app_did):
+        if not self.mcli.exists_user_database(user_did, app_did):
             return 0
 
-        files = mcli.get_col(CollectionFileMetadata, user_did=user_did, app_did=app_did).get_all_file_metadatas()
+        col_file_metadata = self.mcli.get_col_file_metadata(user_did, app_did)
+        files = col_file_metadata.get_all_file_metadatas()
         # get total size of all user's application files
-        return int(sum(map(lambda o: o[CollectionFileMetadata.SIZE], files)))
+        return int(sum(map(lambda o: o[col_file_metadata.SIZE], files)))
 
-    @staticmethod
-    def get_app_total_database_size(user_did, app_did) -> int:
-        return mcli.get_user_database_size(user_did, app_did)
+    def get_app_total_database_size(self, user_did, app_did) -> int:
+        return self.mcli.get_user_database_size(user_did, app_did)
 
-    @classmethod
-    def get_app_storage_used_size(cls, user_did, app_did) -> int:
-        return cls.get_app_total_files_size(user_did, app_did) + cls.get_app_total_database_size(user_did, app_did)
+    def get_app_storage_used_size(self, user_did, app_did) -> int:
+        return self.get_app_total_files_size(user_did, app_did) + self.get_app_total_database_size(user_did, app_did)
 
     def save_app(self, user_did, app_did):
         """ add the relation of user did and app did to collection if not exists.
@@ -84,7 +83,7 @@ class CollectionApplication(MongodbCollection):
             return
 
         update = {'$setOnInsert': {
-            self.DATABASE_NAME: mcli.get_user_database_name(user_did, app_did),
+            self.DATABASE_NAME: self.mcli.get_user_database_name(user_did, app_did),
             self.STATE: AppState.NORMAL}}
 
         self.update_one(self._get_filter(user_did, app_did), update, contains_extra=True, upsert=True)

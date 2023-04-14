@@ -15,8 +15,7 @@ from src import hive_setting
 from src.modules.backup.backup import Backup
 from src.utils.http_exception import ForbiddenException, ReceiptNotFoundException
 from src.modules.subscription.vault import Vault
-from src.modules.subscription.collection_vault import CollectionVault
-from src.modules.database.mongodb_client import mcli, col_backup
+from src.modules.database.mongodb_client import mcli
 from src.utils.did.eladid_wrapper import Credential
 from src.modules.payment.order import OrderManager
 
@@ -54,10 +53,10 @@ class Provider:
                 "db_use_storage": v.get_database_usage(),
                 "user_did": v.get_user_did(),
             }
-            result.update(mcli.get_col(CollectionVault).get_vault_access_statistics(g.usr_did))
+            result.update(mcli.get_col_vault().get_vault_access_statistics(g.usr_did))
             return result
 
-        vaults = mcli.get_col(CollectionVault).get_all_vaults(raise_not_found=True)
+        vaults = mcli.get_col_vault().get_all_vaults(raise_not_found=True)
         return {
             "vaults": list(map(lambda v: vault_mapper(v), vaults))
         }
@@ -70,7 +69,7 @@ class Provider:
 
         self.__check_auth_owner_id()
 
-        backups: [Backup] = col_backup.get_all_backups()
+        backups: [Backup] = mcli.get_col_backup().get_all_backups()
         return {
             "backups": list(map(lambda b: {
                 "pricing_using": b.get_plan_name(),

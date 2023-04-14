@@ -4,8 +4,6 @@ from src.utils.http_exception import FileNotFoundException
 from src.modules.files.file_cache import FileCache
 from src.modules.database.mongodb_collection import MongodbCollection, mongodb_collection, CollectionName, \
     CollectionGenericField
-from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
-from src.modules.database.mongodb_client import mcli
 
 
 @mongodb_collection(CollectionName.FILE_METADATA, is_management=False, is_internal=True)
@@ -22,6 +20,9 @@ class CollectionFileMetadata(MongodbCollection):
 
     def __init__(self, col):
         MongodbCollection.__init__(self, col, is_management=False)
+
+        from src.modules.database.mongodb_client import mcli
+        self.mcli = mcli
 
     def get_all_file_metadatas(self, folder_dir: str = None):
         """ Get files metadata under folder 'path'. Get all application files if folder_dir not specified.
@@ -72,7 +73,7 @@ class CollectionFileMetadata(MongodbCollection):
     def delete_file_metadata(self, rel_path, cid):
         result = self.delete_one(self._get_internal_filter(rel_path))
         if result['deleted_count'] > 0 and cid:
-            removed = mcli.get_col(CollectionIpfsCidRef).decrease_cid_ref(cid)
+            removed = self.mcli.get_col_cid_ref().decrease_cid_ref(cid)
             if removed:
                 FileCache.remove_file(self.user_did, cid)
 
@@ -88,8 +89,9 @@ class CollectionFileMetadata(MongodbCollection):
         # TODO: move this to CollectionVault and split it into CollectionApplication.
         The result shows the files content (cid) information.
         """
-        from src.modules.auth.collection_application import CollectionApplication
-        app_dids, total_size, cids = mcli.get_col(CollectionApplication).get_app_dids(user_did), 0, list()
+        from src.modules.database.mongodb_client import mcli
+
+        app_dids, total_size, cids = mcli.get_col_application().get_app_dids(user_did), 0, list()
 
         def get_cid_metadata_from_list(cid_mts, file_mt):
             if not cid_mts:

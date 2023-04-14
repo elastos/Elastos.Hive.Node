@@ -3,9 +3,8 @@ import jwt
 from bson import ObjectId
 
 from src import hive_setting
-from src.modules.database.mongodb_client import mcli
-from src.modules.database.mongodb_collection import mongodb_collection, MongodbCollection, CollectionName
 from src.utils.http_exception import InvalidParameterException
+from src.modules.database.mongodb_collection import mongodb_collection, MongodbCollection, CollectionName
 
 
 class ActionType(Enum):
@@ -35,11 +34,13 @@ class CollectionScriptsTransaction(MongodbCollection):
                 "target_app_did": self.app_did,
             }, hive_setting.PASSWORD, algorithm='HS256')
 
-    @staticmethod
-    def parse_script_transaction_id(transaction_id):
-        row_id, target_did, target_app_did = CollectionScriptsTransaction.parse_transaction_id(transaction_id)
+    @classmethod
+    def parse_script_transaction_id(cls, transaction_id):
+        from src.modules.database.mongodb_client import mcli
 
-        trans = mcli.get_col(CollectionScriptsTransaction, user_did=target_did, app_did=target_app_did).find_one({"_id": ObjectId(row_id)})
+        row_id, target_did, target_app_did = cls.parse_transaction_id(transaction_id)
+
+        trans = mcli.get_col_scripts_transaction(target_did, target_app_did).find_one({"_id": ObjectId(row_id)})
         if not trans:
             raise InvalidParameterException('Invalid transaction id: can not found transaction')
 

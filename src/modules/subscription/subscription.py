@@ -10,9 +10,7 @@ import typing as t
 from flask import g
 
 from src.modules.auth.auth import Auth
-from src.modules.auth.collection_application import CollectionApplication
 from src.modules.subscription.vault import Vault
-from src.modules.subscription.collection_vault import CollectionVault
 from src.modules.database.mongodb_client import MongodbClient, mcli
 from src.modules.payment.order import OrderManager
 from src.utils.did.eladid_wrapper import DID, DIDDocument, DIDURL
@@ -36,7 +34,7 @@ class VaultSubscription(metaclass=Singleton):
         """ :v2 API: """
 
         plan = PaymentConfig.get_free_vault_plan()
-        return self.__get_vault_info(mcli.get_col(CollectionVault).create_vault(g.usr_did, plan))
+        return self.__get_vault_info(mcli.get_col_vault().create_vault(g.usr_did, plan))
 
     def __get_vault_info(self, vault: Vault, files_used=False):
         info = {
@@ -48,18 +46,18 @@ class VaultSubscription(metaclass=Singleton):
             'end_time': int(vault.get_end_time()),
             'created': int(vault.get_started_time()),
             'updated': int(vault.get_modified_time()),
-            'app_count': len(mcli.get_col(CollectionApplication).get_apps(g.usr_did))
+            'app_count': len(mcli.get_col_application().get_apps(g.usr_did))
         }
 
         if files_used:
             info['files_used'] = vault.get_files_usage()
 
-        info.update(mcli.get_col(CollectionVault).get_vault_access_statistics(g.usr_did))
+        info.update(mcli.get_col_vault().get_vault_access_statistics(g.usr_did))
         return info
 
     def unsubscribe(self, force):
         """ :v2 API: """
-        vault = mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        vault = mcli.get_col_vault().get_vault(g.usr_did)
 
         logging.debug(f'start remove the vault of the user={g.usr_did}, _id={str(vault["_id"])}, force={force}')
 
@@ -68,24 +66,24 @@ class VaultSubscription(metaclass=Singleton):
             self.order_manager.archive_orders_receipts(g.usr_did)
 
         # remove the data and info. of the vault.
-        mcli.get_col(CollectionVault).remove_vault(g.usr_did, force)
+        mcli.get_col_vault().remove_vault(g.usr_did, force)
 
     def activate(self):
         """ :v2 API: """
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
-        mcli.get_col(CollectionVault).activate_vault(g.usr_did, is_activate=True)
+        mcli.get_col_vault().get_vault(g.usr_did)
+        mcli.get_col_vault().activate_vault(g.usr_did, is_activate=True)
 
     def deactivate(self):
         """ :v2 API: """
-        mcli.get_col(CollectionVault).get_vault(g.usr_did)
-        mcli.get_col(CollectionVault).activate_vault(g.usr_did, is_activate=False)
+        mcli.get_col_vault().get_vault(g.usr_did)
+        mcli.get_col_vault().activate_vault(g.usr_did, is_activate=False)
 
     def get_info(self, files_used: bool):
         """ :v2 API:
 
         :param files_used for files usage testing
         """
-        vault = mcli.get_col(CollectionVault).get_vault(g.usr_did)
+        vault = mcli.get_col_vault().get_vault(g.usr_did)
         return self.__get_vault_info(vault, files_used)
 
     def get_app_stats(self):
@@ -93,15 +91,16 @@ class VaultSubscription(metaclass=Singleton):
 
         :v2 API: """
 
-        apps = mcli.get_col(CollectionApplication).get_apps(g.usr_did)
+        apps = mcli.get_col_application().get_apps(g.usr_did)
 
         def get_app_detail(user_did, app):
-            app_did, info = app[CollectionApplication.APP_DID], {}
+            app_did, info = app[mcli.get_col_application().APP_DID], {}
             try:
                 info = VaultSubscription.__get_appdid_info_by_did(app_did)
             except Exception as e:
                 logging.error(f'get the info of the app did {app_did} failed: {str(e)}')
 
+            col_application = mcli.get_col_application()
             return {
                 "name": info.get('name', ''),
                 "developer_did": info.get('developer', ''),
@@ -109,10 +108,10 @@ class VaultSubscription(metaclass=Singleton):
                 "redirect_url": info.get('redirect_url', ''),
                 "user_did": user_did,
                 "app_did": app_did,
-                "used_storage_size": CollectionApplication.get_app_storage_used_size(user_did, app_did),
-                "access_count": app.get(CollectionApplication.ACCESS_COUNT, 0),
-                "access_amount": app.get(CollectionApplication.ACCESS_AMOUNT, 0),
-                "access_last_time": app.get(CollectionApplication.ACCESS_LAST_TIME, -1),
+                "used_storage_size": col_application.get_app_storage_used_size(user_did, app_did),
+                "access_count": app.get(col_application.ACCESS_COUNT, 0),
+                "access_amount": app.get(col_application.ACCESS_AMOUNT, 0),
+                "access_last_time": app.get(col_application.ACCESS_LAST_TIME, -1),
             }
 
         results = list(filter(lambda b: b is not None, map(lambda app: get_app_detail(g.usr_did, app), apps)))
@@ -122,7 +121,7 @@ class VaultSubscription(metaclass=Singleton):
         return {"apps": results}
 
     def delete_app(self):
-        CollectionVault.remove_vault_app(g.usr_did, g.app_did)
+        mcli.get_col_vault().remove_vault_app(g.usr_did, g.app_did)
 
     @staticmethod
     def __get_appdid_info_by_did(did_str: str):

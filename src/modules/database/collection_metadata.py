@@ -1,4 +1,3 @@
-from src.modules.database.mongodb_client import mcli
 from src.modules.database.mongodb_collection import MongodbCollection, mongodb_collection, CollectionName, CollectionGenericField
 
 
@@ -19,8 +18,11 @@ class CollectionMetadata(MongodbCollection):
     def __init__(self, col):
         MongodbCollection.__init__(self, col)
 
+        from src.modules.database.mongodb_client import mcli
+        self.mcli = mcli
+
     def sync_all_cols(self):
-        names = mcli.get_user_collection_names(self.user_did, self.app_did)
+        names = self.mcli.get_user_collection_names(self.user_did, self.app_did)
         for name in names:
             self.add_col(name, False, '')
 

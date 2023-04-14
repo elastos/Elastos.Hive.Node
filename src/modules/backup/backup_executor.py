@@ -7,17 +7,17 @@ import time
 import traceback
 from datetime import datetime
 
-from src.modules.backup.backup_server_client import BackupServerClient
-from src.modules.backup.encryption import Encryption
-from src.modules.database.mongodb_client import mcli
-from src.modules.files.collection_file_metadata import CollectionFileMetadata
-from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
-from src.modules.subscription.collection_vault import CollectionVault
-from src.modules.files.ipfs_client import IpfsClient
-from src.modules.files.local_file import LocalFile
 from src.utils.consts import BACKUP_REQUEST_STATE_SUCCESS, BACKUP_REQUEST_STATE_FAILED, USR_DID, BACKUP_REQUEST_STATE_PROCESS, BACKUP_REQUEST_TARGET_HOST, \
     BACKUP_REQUEST_TARGET_TOKEN, BACKUP_REQUEST_ACTION_BACKUP, BACKUP_REQUEST_ACTION_RESTORE
 from src.utils.http_exception import HiveException, BadRequestException
+from src.modules.backup.backup_server_client import BackupServerClient
+from src.modules.backup.encryption import Encryption
+from src.modules.files.collection_file_metadata import CollectionFileMetadata
+from src.modules.files.collection_ipfs_cid_ref import CollectionIpfsCidRef
+from src.modules.subscription.collection_vault import CollectionVault
+from src.modules.database.mongodb_client import mcli, col_backup
+from src.modules.files.ipfs_client import IpfsClient
+from src.modules.files.local_file import LocalFile
 
 
 class ExecutorBase(threading.Thread):
@@ -250,16 +250,16 @@ class RestoreExecutor(ExecutorBase):
 
 
 class BackupServerExecutor(ExecutorBase):
-    def __init__(self, user_did, server, req, **kwargs):
+    def __init__(self, user_did, server, backup, **kwargs):
         super().__init__(user_did, server, 'backup_server', **kwargs)
-        self.req = req
+        self.backup = backup
 
     def execute(self):
         self.update_progress('50')
 
         # request_metadata already pinned to ipfs node
 
-        request_metadata = self.owner.get_server_request_metadata(self.user_did, self.req)
+        request_metadata = self.owner.get_server_request_metadata(self.user_did, self.backup)
         logging.info(f'[BackupServerExecutor] request_metadata: {request_metadata}')
         self.update_progress('60')
         logging.info('[BackupServerExecutor] Success to get request metadata.')
@@ -268,5 +268,5 @@ class BackupServerExecutor(ExecutorBase):
         self.update_progress('80')
         logging.info('[BackupServerExecutor] Success to get pin all CIDs.')
 
-        self.owner.update_storage_usage(self.user_did, request_metadata['backup_size'])
+        col_backup.update_backup_storage_used_size(self.user_did, request_metadata['backup_size'])
         logging.info('[BackupServerExecutor] Success to update storage size.')

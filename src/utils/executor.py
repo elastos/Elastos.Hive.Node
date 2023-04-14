@@ -4,15 +4,14 @@ from concurrent.futures import ThreadPoolExecutor
 from flask_executor import Executor
 from flask import g
 
-from src.utils.consts import HIVE_MODE_TEST, COL_IPFS_BACKUP_SERVER, \
-    VAULT_BACKUP_SERVICE_USING, COL_ORDERS, COL_ORDERS_PRICING_NAME, COL_RECEIPTS
+from src.utils.consts import HIVE_MODE_TEST, COL_ORDERS, COL_ORDERS_PRICING_NAME, COL_RECEIPTS
 from src.utils import hive_job
 from src.utils.scheduler import count_vault_storage_really
 from src.modules.auth.collection_application import CollectionApplication
 from src.modules.auth.collection_register import CollectionRegister
 from src.modules.scripting.collection_scripts_transaction import CollectionScriptsTransaction
 from src.modules.subscription.collection_vault import CollectionVault
-from src.modules.database.mongodb_client import MongodbClient, mcli
+from src.modules.database.mongodb_client import MongodbClient, mcli, col_backup
 from src.modules.backup.backup_client import bc
 from src.modules.backup.backup_server import BackupServer
 
@@ -173,8 +172,13 @@ def rename_pricing_name():
         mcli.get_col(collection_cls).update_many_field_value(field_name, 'Rookie', 'Standard')
         mcli.get_col(collection_cls).update_many_field_value(field_name, 'Advanced', 'Premium')
 
+    def update_pricing_plan_name_ex2(col, field_name):
+        col.update_many_field_value(field_name, 'Free', 'Basic')
+        col.update_many_field_value(field_name, 'Rookie', 'Standard')
+        col.update_many_field_value(field_name, 'Advanced', 'Premium')
+
     update_pricing_plan_name_ex(CollectionVault, CollectionVault.PRICING_USING)
-    update_pricing_plan_name(COL_IPFS_BACKUP_SERVER, VAULT_BACKUP_SERVICE_USING)
+    update_pricing_plan_name_ex2(col_backup, col_backup.PRICING_PLAN_NAME)
     update_pricing_plan_name(COL_ORDERS, COL_ORDERS_PRICING_NAME)
     update_pricing_plan_name(COL_RECEIPTS, COL_ORDERS_PRICING_NAME)
 

@@ -1,23 +1,14 @@
 # -*- coding: utf-8 -*-
 
-###############################################################################
-# constant variables from v1
-###############################################################################
-
 # @deprecated compatible with v1
 # HIVE_MODE_DEV = "dev"
 HIVE_MODE_PROD = "prod"  # for normal run
 HIVE_MODE_TEST = "test"  # run on v1 test cases
 
 # for files service
-CHUNK_SIZE = 4096
 USER_DID = "userDid"
 APP_ID = "appDid"
 APP_INSTANCE_DID = "appInstanceDid"
-
-###############################################################################
-# constant variables added by v2
-###############################################################################
 
 URL_V1 = '/api/v1'
 URL_V2 = '/api/v2'
@@ -28,42 +19,7 @@ URL_SERVER_INTERNAL_BACKUP = '/vault-backup-service/backup'
 URL_SERVER_INTERNAL_RESTORE = '/vault-backup-service/restore'
 URL_SERVER_INTERNAL_STATE = '/vault-backup-service/state'
 
-BACKUP_FILE_SUFFIX = '.backup'
-
-DID = 'did'
-
-OWNER_ID = 'owner_id'
-CREATE_TIME = 'create_time'
-MODIFY_TIME = 'modify_time'
-STATE = 'state'
-STATE_RUNNING = 'running'
-STATE_FINISH = 'finish'
-STATE_FAILED = 'failed'
-ORIGINAL_SIZE = 'original_size'
-IS_UPGRADED = 'is_upgraded'
-VERSION = 'version'
-
-# For backup subscription.
-BKSERVER_REQ_ACTION = 'req_action'
-BKSERVER_REQ_STATE = 'req_state'
-BKSERVER_REQ_STATE_MSG = 'req_state_msg'
-BKSERVER_REQ_CID = 'req_cid'
-BKSERVER_REQ_SHA256 = 'req_sha256'
-BKSERVER_REQ_SIZE = 'req_size'
-BKSERVER_REQ_PUBLIC_KEY = 'public_key'
-
-# @deprecated
-URL_BACKUP_SERVICE = '/api/v2/internal_backup/service'
-URL_BACKUP_FINISH = '/api/v2/internal_backup/finished_confirmation'
-URL_BACKUP_FILES = '/api/v2/internal_backup/files'
-URL_BACKUP_FILE = '/api/v2/internal_backup/file'
-URL_BACKUP_PATCH_HASH = '/api/v2/internal_backup/patch_hash'
-URL_BACKUP_PATCH_DELTA = '/api/v2/internal_backup/patch_delta'
-URL_BACKUP_PATCH_FILE = '/api/v2/internal_backup/patch_file'
-URL_RESTORE_FINISH = '/api/v2/internal_restore/finished_confirmation'
-URL_IPFS_BACKUP_PIN_CIDS = '/api/v2/ipfs-backup-internal/pin_cids'
-URL_IPFS_BACKUP_GET_DBFILES = '/api/v2/ipfs-backup-internal/get_dbfiles'
-URL_IPFS_BACKUP_STATE = '/api/v2/ipfs-backup-internal/state'
+VERSION = 'version'  # only for order
 
 ###############################################################################
 # common field for collections
@@ -78,26 +34,18 @@ USR_DID = 'user_did'
 
 # for backup service
 
-# VAULT_BACKUP_SERVICE_COL = "vault_backup_service"  # management table, only for v1
-VAULT_BACKUP_SERVICE_USING = "backup_using"  # pricing name
-VAULT_BACKUP_SERVICE_MAX_STORAGE = "max_storage"
-VAULT_BACKUP_SERVICE_USE_STORAGE = "use_storage"
-VAULT_BACKUP_SERVICE_START_TIME = "start_time"
-VAULT_BACKUP_SERVICE_END_TIME = "end_time"
-
 COL_IPFS_BACKUP_CLIENT = 'ipfs_backup_client'
-COL_IPFS_BACKUP_SERVER = 'ipfs_backup_server'
 
-BACKUP_TARGET_TYPE = 'type'
+BACKUP_TARGET_TYPE = 'type'  # backup client
 BACKUP_TARGET_TYPE_HIVE_NODE = 'hive_node'
 BACKUP_TARGET_TYPE_GOOGLE_DRIVER = 'google_driver'
 
-BACKUP_REQUEST_ACTION = 'action'
-BACKUP_REQUEST_ACTION_BACKUP = 'backup'
+BACKUP_REQUEST_ACTION = 'action'  # backup client
+BACKUP_REQUEST_ACTION_BACKUP = 'backup'  # the following two actions merge with BackupRequestAction
 BACKUP_REQUEST_ACTION_RESTORE = 'restore'
 
-BACKUP_REQUEST_STATE = 'state'
-BACKUP_REQUEST_STATE_STOP = 'stop'
+BACKUP_REQUEST_STATE = 'state'  # backup client
+BACKUP_REQUEST_STATE_STOP = 'stop'  # the following five states merge with BackupRequestAction
 BACKUP_REQUEST_STATE_PROCESS = 'process'
 BACKUP_REQUEST_STATE_SUCCESS = 'success'
 BACKUP_REQUEST_STATE_FAILED = 'failed'

@@ -6,9 +6,10 @@ from flask import g
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
-from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException
 from src import hive_setting
+from src.utils.http_exception import CollectionNotFoundException, AlreadyExistsException
 from src.modules.database.mongodb_collection import MongodbCollection, CollectionName
+from src.modules.backup.collection_backup import CollectionBackup
 
 
 _T = TypeVar('_T', bound=MongodbCollection)
@@ -184,3 +185,4 @@ class MongodbClient:
 
 
 mcli = MongodbClient()
+col_backup: CollectionBackup = mcli.get_col(CollectionBackup)

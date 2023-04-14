@@ -11,8 +11,7 @@ from src.utils.http_exception import OrderNotFoundException
 from src.utils.payment_config import PaymentConfig
 from src.modules.database.mongodb_collection import CollectionGenericField
 from src.modules.subscription.collection_vault import CollectionVault
-from src.modules.database.mongodb_client import MongodbClient, mcli
-from src.modules.backup.backup import BackupManager
+from src.modules.database.mongodb_client import MongodbClient, mcli, col_backup
 
 
 class Receipt:
@@ -143,7 +142,6 @@ class OrderManager:
     def __init__(self):
         self.ela_address = hive_setting.PAYMENT_RECEIVING_ADDRESS
         self.mcli = MongodbClient()
-        self.backup_manager = BackupManager()
 
     def get_orders(self, user_did, subscription: t.Optional[str], contract_order_id: t.Optional[int]):
         """ get orders by conditional options: subscription, contract_order_id """
@@ -248,7 +246,7 @@ class OrderManager:
         if order.is_for_vault():
             mcli.get_col(CollectionVault).upgrade_vault(user_did, plan)
         else:
-            self.backup_manager.upgrade(user_did, plan)
+            col_backup.upgrade_backup(user_did, plan)
 
     def archive_orders_receipts(self, user_did):
         """ for unsubscribe the vault

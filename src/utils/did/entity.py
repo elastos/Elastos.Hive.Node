@@ -5,10 +5,9 @@ import typing
 
 import base58
 
-from src.utils.consts import DID
 from src.utils.http_exception import BadRequestException, HiveException
 from src.settings import hive_setting
-from src.utils.did.eladid_wrapper import DIDStore, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder, Presentation
+from src.utils.did.eladid_wrapper import DIDStore, DID, DIDDocument, RootIdentity, Issuer, Credential, JWTBuilder, Presentation
 from src.modules.files.local_file import LocalFile
 
 

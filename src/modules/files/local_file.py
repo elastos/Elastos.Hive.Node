@@ -13,10 +13,11 @@ from flask_rangerequest import RangeRequest
 
 from src import hive_setting
 from src.utils.http_exception import BadRequestException
-from src.utils.consts import CHUNK_SIZE
 
 
 class LocalFile:
+    CHUNK_SIZE = 4096
+
     def __init__(self):
         ...
 
@@ -69,28 +70,28 @@ class LocalFile:
                 sha.update(data)
         return sha.hexdigest()
 
-    @staticmethod
-    def write_file_by_request_stream(file_path: Path, use_temp=False):
+    @classmethod
+    def write_file_by_request_stream(cls, file_path: Path, use_temp=False):
         """ used when upload file """
 
         def receiving_data(path: Path):
             with open(path.as_posix(), "bw") as f:
                 while True:
-                    chunk = request.stream.read(CHUNK_SIZE)
+                    chunk = request.stream.read(cls.CHUNK_SIZE)
                     if len(chunk) == 0:
                         break
                     f.write(chunk)
 
         LocalFile.__write_to_file(file_path, receiving_data, use_temp=use_temp)
 
-    @staticmethod
-    def write_file_by_response(response, file_path: Path):
+    @classmethod
+    def write_file_by_response(cls, response, file_path: Path):
         """ used when download file by url """
 
         def receiving_data(path: Path):
             with open(path.as_posix(), 'bw') as f:
                 f.seek(0)
-                for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                for chunk in response.iter_content(chunk_size=cls.CHUNK_SIZE):
                     if chunk:
                         f.write(chunk)
 

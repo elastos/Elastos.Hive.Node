@@ -77,7 +77,7 @@ class CollectionBackup(MongodbCollection):
         self.update_one(self._get_filter(user_did), {'$set': update}, contains_extra=True)
 
     def update_backup_storage_used_size(self, user_did, size):
-        self.update_backup(user_did, {self.STORAGE_USED_SIZE, size})
+        self.update_backup(user_did, {self.STORAGE_USED_SIZE: size})
 
     def update_backup_request(self, action, state, state_msg, cid, sha256, size, public_key):
         update = {

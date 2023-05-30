@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from flask_executor import Executor
 from flask import g
 
-from src.utils.consts import HIVE_MODE_TEST, COL_ORDERS, COL_ORDERS_PRICING_NAME, COL_RECEIPTS
+from src.utils.consts import COL_ORDERS, COL_ORDERS_PRICING_NAME, COL_RECEIPTS
 from src.utils import hive_job
 from src.utils.scheduler import count_vault_storage_really
 from src.modules.scripting.collection_scripts_transaction import CollectionScriptsTransaction
@@ -106,7 +106,7 @@ def update_vault_databases_usage_task(user_did: str, full_url: str):
         logging.getLogger('AFTER REQUEST').info(f'Succeeded to update_vault_databases_usage({user_did}), {full_url}')
 
 
-@hive_job('retry_backup_when_reboot', 'executor')
+@hive_job('retry_backup_when_reboot_executor', 'executor')
 def retry_backup_when_reboot_task():
     """ retry maybe because interrupt by reboot
 
@@ -118,7 +118,7 @@ def retry_backup_when_reboot_task():
     server.retry_backup_request()
 
 
-@hive_job('sync_app_dids', tag='executor')
+@hive_job('sync_app_dids_executor', tag='executor')
 def sync_app_dids_task():
     """ Used for syncing exist user_did's app_dids to the 'application' collection
 
@@ -175,15 +175,14 @@ def rename_pricing_name():
     update_pricing_plan_name(COL_RECEIPTS, COL_ORDERS_PRICING_NAME)
 
 
-def init_executor(app, mode):
+def init_executor(app):
     """ executor for executing thread tasks """
     executor.init_app(app)
 
-    if mode != HIVE_MODE_TEST:
-        app.config['EXECUTOR_TYPE'] = 'thread'
-        app.config['EXECUTOR_MAX_WORKERS'] = 5
+    app.config['EXECUTOR_TYPE'] = 'thread'
+    app.config['EXECUTOR_MAX_WORKERS'] = 5
 
-        pool.submit(retry_backup_when_reboot_task)
-        pool.submit(sync_app_dids_task)
-        pool.submit(count_vault_storage_task)
-        pool.submit(rename_pricing_name)
+    pool.submit(retry_backup_when_reboot_task)
+    pool.submit(sync_app_dids_task)
+    pool.submit(count_vault_storage_task)
+    pool.submit(rename_pricing_name)

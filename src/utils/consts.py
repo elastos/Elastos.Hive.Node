@@ -1,16 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# @deprecated compatible with v1
-# HIVE_MODE_DEV = "dev"
-HIVE_MODE_PROD = "prod"  # for normal run
-HIVE_MODE_TEST = "test"  # run on v1 test cases
-
 # for files service
 USER_DID = "userDid"
 APP_ID = "appDid"
 APP_INSTANCE_DID = "appInstanceDid"
 
-URL_V1 = '/api/v1'
 URL_V2 = '/api/v2'
 URL_SIGN_IN = '/did/signin'
 URL_AUTH = '/did/auth'

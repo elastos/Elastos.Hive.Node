@@ -9,7 +9,7 @@ from src.modules.database.mongodb_client import mcli
 from src.modules.auth.auth import Auth
 from src.utils.did.eladid_wrapper import JWT
 from src.utils.consts import URL_V2, URL_SIGN_IN, URL_AUTH, URL_BACKUP_AUTH, URL_SERVER_INTERNAL_BACKUP, URL_SERVER_INTERNAL_STATE, \
-    URL_SERVER_INTERNAL_RESTORE, URL_V1, USER_DID, APP_ID, APP_INSTANCE_DID
+    URL_SERVER_INTERNAL_RESTORE, USER_DID, APP_ID, APP_INSTANCE_DID
 
 
 def __get_token_details(token, is_internal):
@@ -71,33 +71,6 @@ def _get_token_details_from_header(is_internal=False):
     return __get_token_details(access_token, is_internal=is_internal)
 
 
-def try_to_get_info_for_v1_token():
-    """ used for v1 APIs to later usage, do not need verify token here
-    Skip if failed
-
-    g.usr_did: to update vault database usage
-
-    """
-
-    try:
-        authorization = request.headers.get("Authorization")
-        if not authorization or not authorization.strip().lower().startswith(("token", "bearer")):
-            return
-
-        parts = authorization.split(' ')
-        if len(parts) < 2 or not parts[1]:
-            return
-
-        jwt = JWT.parse(parts[1])
-        props_json = json.loads(jwt.get_claim('props'))
-        if not props_json.get(USER_DID, None):
-            return
-
-        g.usr_did = props_json[USER_DID]
-    except Exception as e:
-        ...
-
-
 class TokenParser:
     EXCEPT_URLS = ['/api/v2/about/version', '/api/v2/node/version', '/api/v2/about/commit_id', '/api/v2/node/commit_id',
                    URL_V2 + URL_SIGN_IN, URL_V2 + URL_AUTH, URL_V2 + URL_BACKUP_AUTH]
@@ -145,10 +118,7 @@ class TokenParser:
         """ Only handle the access token of v2 APIs.
         The token for v1 APIs will be checked on related request handler.
         """
-        if request.full_path.startswith(URL_V1):
-            try_to_get_info_for_v1_token()
-            return
-        elif not request.full_path.startswith(URL_V2) or self.__no_need_auth():
+        if not request.full_path.startswith(URL_V2) or self.__no_need_auth():
             return
 
         # v2 and need handle token

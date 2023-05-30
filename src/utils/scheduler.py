@@ -9,6 +9,7 @@ from pathlib import Path
 
 from flask_apscheduler import APScheduler
 
+from src import hive_setting
 from src.utils import hive_job
 from src.modules.files.local_file import LocalFile
 from src.modules.database.mongodb_client import mcli
@@ -64,7 +65,7 @@ if __name__ == '__main__':
     # init logger
     from src import create_app, hive_setting
 
-    create_app()
+    create_app(None)
 
     # sync_app_dids()
     # count_vault_storage_job()

@@ -153,19 +153,7 @@ function start_direct () {
     LD_LIBRARY_PATH="$PWD/hive/util/did/" python manage.py runserver
 }
 
-function test_v1() {
-    pytest --disable-pytest-warnings -xs tests_v1/hive_auth_test.py
-    pytest --disable-pytest-warnings -xs tests_v1/hive_subscription_test.py
-    pytest --disable-pytest-warnings -xs tests_v1/hive_mongo_test.py
-    pytest --disable-pytest-warnings -xs tests_v1/hive_file_test.py
-    pytest --disable-pytest-warnings -xs tests_v1/hive_scripting_test.py
-    # pytest --disable-pytest-warnings -xs tests_v1/hive_payment_test.py
-    # pytest --disable-pytest-warnings -xs tests_v1/hive_backup_test.py
-    # pytest --disable-pytest-warnings -xs tests_v1/hive_internal_test.py # INFO: skip this
-    # pytest --disable-pytest-warnings -xs tests_v1/hive_pubsub_test.py
-}
-
-function test_v2() {
+function run_test_case_only() {
     pytest --disable-pytest-warnings -xs tests/about_test.py
     pytest --disable-pytest-warnings -xs tests/auth_test.py
     pytest --disable-pytest-warnings -xs tests/subscription_test.py
@@ -186,8 +174,7 @@ function test () {
     rm -rf data
     LD_LIBRARY_PATH="$PWD/src/util/did/" python manage.py runserver &
 
-    test_v1
-    test_v2
+    run_test_case_only
     pkill -f manage.py
 }
 
@@ -222,14 +209,10 @@ case "$1" in
     test)
         test
         ;;
-    test_v1)
-        # INFO: run hive node and enter .venv first before run this command.
-        test_v1
-        ;;
-    test_v2)
+    test_only)
         # INFO: run hive node and enter .venv first before run this command.
         # example: HIVE_PORT=5000 ./run.sh test_v2
-        test_v2
+        run_test_case_only
         ;;
     stop)
         stop
@@ -238,6 +221,6 @@ case "$1" in
         cp -f config/.env.local .env
         ;;
     *)
-    echo "Usage: ./run.sh {setup|prepare|direct|docker|test|test_v1|HIVE_PORT=5000 ./run.sh test_v2|stop|reset_env}"
+    echo "Usage: ./run.sh {setup|prepare|direct|docker|test|HIVE_PORT=5000 ./run.sh test_only|stop|reset_env}"
     exit 1
 esac

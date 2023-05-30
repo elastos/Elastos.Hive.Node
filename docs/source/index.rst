@@ -37,7 +37,7 @@ and getting the access token is first step.
 
 To use the token returned by auth API. Please add this key-value in the header.
 
-.. sourcecode:: http
+.. sourcecode:: text
 
     Authorization: token <the token returned by auth API>
 

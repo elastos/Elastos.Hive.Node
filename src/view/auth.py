@@ -36,7 +36,7 @@ class SignIn(Resource):
         .. code-block:: json
 
             {
-               “challenge”: “<the authentication challenge encoded in JWT>”
+               "challenge": "<the authentication challenge encoded in JWT>"
             }
 
         **Response Error**:
@@ -78,7 +78,7 @@ class Auth(Resource):
         .. code-block:: json
 
             {
-                “token”: “<the access token encoded in JWT>”
+                "token": "<the access token encoded in JWT>"
             }
 
         **Response Error**:

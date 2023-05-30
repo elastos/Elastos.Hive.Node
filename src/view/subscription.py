@@ -296,8 +296,8 @@ class VaultSubscribe(Resource):
         .. code-block:: json
 
             {
-                "service_did": <hive node service did>
-                "pricing_plan": <the using pricing plan>
+                "service_did": "<hive node service did>"
+                "pricing_plan": "<the using pricing plan>"
                 "storage_quota": 50000000, # the max space of the storage for the vault service.
                 "storage_used": 0,
                 "start_time": <the epoch time>,

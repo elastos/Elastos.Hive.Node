@@ -12,7 +12,6 @@ from flask_cors import CORS
 from sentry_sdk import capture_exception
 
 from src.settings import hive_setting
-from src.utils.consts import HIVE_MODE_PROD, HIVE_MODE_TEST
 from src.utils.http_exception import HiveException, InternalServerErrorException, UnauthorizedException
 from src.utils.http_request import RegexConverter, FileFolderPath
 from src.utils.http_response import HiveApi
@@ -23,8 +22,6 @@ from src.utils.auth_token import TokenParser
 from src.utils.did.did_init import init_did_backend
 from src import view
 
-import hive.settings
-import hive.main
 from src.ws import ws_backup
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
@@ -93,13 +90,13 @@ def after_request(response):
     return response
 
 
-def init_log(mode):
+def init_log():
     print("init log")
 
     with open(CONFIG_FILE) as f:
         logging.config.dictConfig(yaml.load(f, Loader=yaml.FullLoader))
 
-    if os.environ.get('TRAVIS') == 'True' or (mode == HIVE_MODE_TEST and os.environ.get('TEST_DEBUG') != 'True'):
+    if os.environ.get('TRAVIS') == 'True':
         # for run all v1 test cases, single test case still needs logs
         logging.disable(logging.CRITICAL)
     else:
@@ -109,39 +106,34 @@ def init_log(mode):
         logging.info("log in console and file with root Logger")
 
 
-def create_app(mode=HIVE_MODE_PROD, hive_config='/etc/hive/.env'):
-    init_log(mode)
+def create_app(mode, hive_config='/etc/hive/.env'):
+    init_log()
     logging.getLogger("src_init").info("##############################")
     logging.getLogger("src_init").info("HIVE NODE IS STARTING")
     logging.getLogger("src_init").info("##############################")
     init_did_backend()
-
-    # init v1 configure items
-    hive.settings.hive_setting.init_config(hive_config)
 
     # init v2 configure items
     hive_setting.init_config(hive_config)
     PaymentConfig.init_config()
 
     # init v1 APIs
-    hive.main.init_app(app, mode)
     ws_backup.init(socketio)
 
-    if mode != HIVE_MODE_TEST:
-        # init v2 APIs
-        view.init_app(api)
+    # init v2 APIs
+    view.init_app(api)
 
-        logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
-        logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
-        if hive_setting.SENTRY_ENABLED and hive_setting.SENTRY_DSN != "":
-            init_sentry_hook(hive_setting.SENTRY_DSN)
-        if hive_setting.ENABLE_CORS:
-            CORS(app, supports_credentials=True)
+    logging.getLogger("src_init").info(f'SENTRY_ENABLED is {hive_setting.SENTRY_ENABLED}.')
+    logging.getLogger("src_init").info(f'ENABLE_CORS is {hive_setting.ENABLE_CORS}.')
+    if hive_setting.SENTRY_ENABLED and hive_setting.SENTRY_DSN != "":
+        init_sentry_hook(hive_setting.SENTRY_DSN)
+    if hive_setting.ENABLE_CORS:
+        CORS(app, supports_credentials=True)
 
+    if os.environ.get('TRAVIS') != 'True':
         from src.utils.scheduler import scheduler_init
         scheduler_init(app)
-
-    init_executor(app, mode)
+        init_executor(app)
 
     return app
 
